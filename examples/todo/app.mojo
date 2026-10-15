@@ -1,7 +1,7 @@
 # TodoMojo: rows come and go, so the screen's structure changes on every tap.
 # The same file runs on Linux (GTK), Mac (AppKit) and iPhone (UIKit).
 
-from mojoui import App, View, VStack, HStack, Text, Button, TITLE, CAPTION, PROMINENT
+from mojoui import App, Event, View, VStack, HStack, Text, Button, TITLE, CAPTION, PROMINENT
 
 comptime ADD = 1
 comptime REMOVE = 1000  # REMOVE + task number
@@ -18,7 +18,8 @@ struct Main(App):
     def title(self) -> String:
         return "TodoMojo"
 
-    def update(mut self, message: Int):
+    def update(mut self, event: Event):
+        var message = event.message
         if message == ADD:
             self.tasks.append(self.next)
             self.next += 1

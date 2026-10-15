@@ -33,3 +33,6 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 ## Goal 3: web, components, todo, Android, GPU
 - D-26 · web host = FastHTML (Python) + HTMX, with the Mojo app compiled as a Python extension module (`PyInit_*` + `PythonModuleBuilder`) over Mojo-as-wasm or a Mojo HTTP server · owner's idea; Mojo has first-class Python modules; FastHTML gives HTML + the JS ecosystem · yes
 - D-27 · plain `python-fasthtml` over fh-saas for the web host · it's a UI framework host, not a SaaS backend; fh-saas can sit on top later · yes
+- D-28 · browser tests drive /usr/bin/chromium with Playwright over chrome-devtools-axi · the axi tool only looks for Google Chrome; Playwright + system Chromium needs no download and is scriptable from the checker · yes
+- D-29 · GTK 'ignore our own changes' flag lives on the GApplication (g_object_set_data) over a Mojo field · signals re-enter while a `mut self` method runs; the compiler may drop a store only a re-entrant reader would see (found by tracing, see journal) · yes
+- D-30 · GTK Toggle = GtkCheckButton (one widget, label included) over GtkSwitch + label · simplest native on/off with a label; reads naturally for todo items · yes

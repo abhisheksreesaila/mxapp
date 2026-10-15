@@ -5,10 +5,11 @@
 # Output: build/<example>/linux/<example>            native GTK app (runs here)
 #         build/<example>/mac/<Name>Mojo.app (+ .zip)  native AppKit app (Apple Silicon)
 #         build/<example>/ios/<Name>Mojo.ipa           native UIKit app (install with apple/install_iphone.sh)
+#         build/<example>/web/mojoui_app.so            the app as a Python module, served by mojoui/hosts/web.py
 # Env: BUNDLE_PREFIX (default com.mojoui) → bundle ID <prefix>.<example>
 set -euo pipefail
 cd "$(dirname "$0")/.."
-EX="${1:?usage: scripts/build.sh <example> linux|mac|ios|all}"
+EX="${1:?usage: scripts/build.sh <example> linux|web|mac|ios|all}"
 WHAT="${2:-all}"
 SRC="examples/$EX/app.mojo"
 test -f "$SRC" || { echo "no $SRC" >&2; exit 2; }
@@ -38,6 +39,13 @@ build_linux() {
   mojo_build hosts/linux_main.mojo -o "$out/$EX" \
     -Xlinker -lgtk-4 -Xlinker -ladwaita-1 -Xlinker -lgobject-2.0 -Xlinker -lglib-2.0 -Xlinker -lgio-2.0
   stamp "$out"; echo "   $out/$EX"
+}
+
+build_web() {
+  local out="build/$EX/web"; mkdir -p "$out"; rm -f "$out/mojoui_app.so"
+  echo "== Web ($EX): Mojo Python module for FastHTML"
+  mojo_build hosts/web_main.mojo --emit shared-lib -o "$out/mojoui_app.so"
+  stamp "$out"; echo "   $out/mojoui_app.so  (serve: pixi run python mojoui/hosts/web.py $out)"
 }
 
 apple_objects() {  # apple_objects <dir> <triple> <host-main>
@@ -76,8 +84,9 @@ build_ios() {
 
 case "$WHAT" in
   linux) build_linux ;;
+  web) build_web ;;
   mac) build_mac ;;
   ios) build_ios ;;
-  all) build_linux; build_mac; build_ios ;;
-  *) echo "usage: scripts/build.sh <example> linux|mac|ios|all" >&2; exit 2 ;;
+  all) build_linux; build_web; build_mac; build_ios ;;
+  *) echo "usage: scripts/build.sh <example> linux|web|mac|ios|all" >&2; exit 2 ;;
 esac

@@ -1,7 +1,7 @@
 # HelloMojo: the whole app. The same file runs on Linux (GTK), Mac (AppKit) and
 # iPhone (UIKit); each platform draws it with its own native controls.
 
-from mojoui import App, View, VStack, Text, Button, TITLE, CAPTION, PROMINENT
+from mojoui import App, Event, View, VStack, Text, Button, TITLE, CAPTION, PROMINENT
 
 comptime GREET = 1
 
@@ -17,8 +17,8 @@ struct Main(App):
     def title(self) -> String:
         return "HelloMojo"
 
-    def update(mut self, message: Int):
-        if message == GREET:
+    def update(mut self, event: Event):
+        if event.message == GREET:
             self.clicks += 1
 
     def view(self) -> View:

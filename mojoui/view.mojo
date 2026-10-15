@@ -1,6 +1,6 @@
 # The declarative layer: a screen is a value (a View) built from small pieces.
 #
-#   VStack(Text("Hello", style=TITLE), Button("Greet", on_tap=GREET))
+#   VStack(Text("Hello", style=TITLE), TextField(self.name, placeholder="Your name", on_change=NAME))
 #
 # A View is a flat list of nodes; node 0 is the root and containers list their
 # children by index. (Mojo can't yet put a List[View] inside View; flat lists
@@ -12,6 +12,13 @@ comptime BUTTON = 2
 comptime VSTACK = 3
 comptime HSTACK = 4
 comptime SPACER = 5
+comptime FIELD = 6  # one-line text input
+comptime TOGGLE = 7  # on/off switch with a label
+comptime DROPDOWN = 8  # pick one of several options
+comptime SLIDER = 9  # 0–100
+comptime PROGRESS = 10  # 0–100, read-only
+comptime DIVIDER = 11
+comptime SCROLL = 12  # one child, scrolls when taller than `size`
 
 # Text styles (each platform maps them to its own type scale)
 comptime BODY = 0
@@ -22,18 +29,49 @@ comptime CAPTION = 3
 # Button styles
 comptime PLAIN = 0
 comptime PROMINENT = 1
+comptime DESTRUCTIVE = 2
 
 comptime NO_MSG = 0
 
 
-@fieldwise_init
 struct Node(Copyable, Movable, Equatable, Writable):
     var kind: Int
-    var text: String  # label text or button title
-    var msg: Int  # message sent when a button is tapped
+    var text: String  # label text, button title, field contents, toggle label
+    var msg: Int  # message sent on tap / change / toggle / select
     var style: Int
-    var spacing: Int  # stacks: gap between children, in points
+    var spacing: Int  # stacks: gap between children
     var children: List[Int]
+    var value: Int  # toggle 0/1, dropdown index, slider/progress 0–100
+    var options: List[String]  # dropdown choices
+    var hint: String  # field placeholder
+    var msg2: Int  # field: message sent on Return
+    var size: Int  # scroll: visible height in points
+
+    def __init__(
+        out self,
+        kind: Int,
+        text: String = "",
+        msg: Int = NO_MSG,
+        style: Int = BODY,
+        spacing: Int = 0,
+        var children: List[Int] = [],
+        value: Int = 0,
+        var options: List[String] = [],
+        hint: String = "",
+        msg2: Int = NO_MSG,
+        size: Int = 0,
+    ):
+        self.kind = kind
+        self.text = text
+        self.msg = msg
+        self.style = style
+        self.spacing = spacing
+        self.children = children^
+        self.value = value
+        self.options = options^
+        self.hint = hint
+        self.msg2 = msg2
+        self.size = size
 
     def __eq__(self, other: Self) -> Bool:
         return (
@@ -43,41 +81,79 @@ struct Node(Copyable, Movable, Equatable, Writable):
             and self.style == other.style
             and self.spacing == other.spacing
             and self.children == other.children
+            and self.value == other.value
+            and self.options == other.options
+            and self.hint == other.hint
+            and self.msg2 == other.msg2
+            and self.size == other.size
         )
 
     def write_to(self, mut writer: Some[Writer]):
-        writer.write("Node(", self.kind, ", '", self.text, "', msg=", self.msg, ", style=", self.style, ", children=", self.children, ")")
+        writer.write("Node(kind=", self.kind, ", '", self.text, "', msg=", self.msg, ", value=", self.value, ", children=", self.children, ")")
 
 
 @fieldwise_init
 struct View(Copyable, Movable):
     var nodes: List[Node]
 
-    def root(self) -> ref[self.nodes] Node:
-        return self.nodes[0]
 
-
-def _leaf(kind: Int, text: String, msg: Int, style: Int) -> View:
+def _one(var node: Node) -> View:
     var nodes = List[Node]()
-    nodes.append(Node(kind, text, msg, style, 0, List[Int]()))
+    nodes.append(node^)
     return View(nodes^)
 
 
+# ---------- leaves ----------
+
 def Text(text: String, style: Int = BODY) -> View:
-    return _leaf(TEXT, text, NO_MSG, style)
+    """A label. Styles: BODY, TITLE, HEADLINE, CAPTION."""
+    return _one(Node(TEXT, text, style=style))
 
 
 def Button(title: String, on_tap: Int, style: Int = PLAIN) -> View:
-    return _leaf(BUTTON, title, on_tap, style)
+    """Sends `on_tap` when tapped. Styles: PLAIN, PROMINENT, DESTRUCTIVE."""
+    return _one(Node(BUTTON, title, on_tap, style=style))
+
+
+def TextField(value: String, placeholder: String = "", on_change: Int = NO_MSG, on_submit: Int = NO_MSG) -> View:
+    """One line of text. Sends `on_change` (event.text = new text) as you type
+    and `on_submit` when Return is pressed."""
+    return _one(Node(FIELD, value, on_change, hint=placeholder, msg2=on_submit))
+
+
+def Toggle(label: String, on: Bool, on_toggle: Int) -> View:
+    """An on/off switch. Sends `on_toggle` with event.number = 1 (on) or 0 (off)."""
+    return _one(Node(TOGGLE, label, on_toggle, value=1 if on else 0))
+
+
+def Dropdown(options: List[String], selected: Int, on_select: Int) -> View:
+    """Pick one option. Sends `on_select` with event.number = index, event.text = option."""
+    return _one(Node(DROPDOWN, "", on_select, value=selected, options=options.copy()))
+
+
+def Slider(value: Int, on_change: Int) -> View:
+    """A 0–100 slider. Sends `on_change` with event.number = the new value."""
+    return _one(Node(SLIDER, "", on_change, value=value))
+
+
+def ProgressBar(value: Int) -> View:
+    """Shows 0–100 progress."""
+    return _one(Node(PROGRESS, value=value))
+
+
+def Divider() -> View:
+    return _one(Node(DIVIDER))
 
 
 def Spacer() -> View:
-    return _leaf(SPACER, "", NO_MSG, BODY)
+    return _one(Node(SPACER))
 
 
-def _stack(kind: Int, items: List[View], spacing: Int) -> View:
+# ---------- containers ----------
+
+def _container(var root: Node, items: List[View]) -> View:
     var nodes = List[Node]()
-    nodes.append(Node(kind, "", NO_MSG, BODY, spacing, List[Int]()))
+    nodes.append(root^)
     for item in items:
         var base = len(nodes)
         nodes[0].children.append(base)
@@ -94,12 +170,12 @@ def VStack(*items: View, spacing: Int = 16) -> View:
     var list = List[View]()
     for item in items:
         list.append(item.copy())
-    return _stack(VSTACK, list, spacing)
+    return _container(Node(VSTACK, spacing=spacing), list)
 
 
 def VStack(items: List[View], spacing: Int = 16) -> View:
     """Children top to bottom, from a list (for rows that come and go)."""
-    return _stack(VSTACK, items, spacing)
+    return _container(Node(VSTACK, spacing=spacing), items)
 
 
 def HStack(*items: View, spacing: Int = 8) -> View:
@@ -107,8 +183,15 @@ def HStack(*items: View, spacing: Int = 8) -> View:
     var list = List[View]()
     for item in items:
         list.append(item.copy())
-    return _stack(HSTACK, list, spacing)
+    return _container(Node(HSTACK, spacing=spacing), list)
 
 
 def HStack(items: List[View], spacing: Int = 8) -> View:
-    return _stack(HSTACK, items, spacing)
+    return _container(Node(HSTACK, spacing=spacing), items)
+
+
+def Scroll(content: View, height: Int = 320) -> View:
+    """Shows `content`, scrolling when it's taller than `height` points."""
+    var list = List[View]()
+    list.append(content.copy())
+    return _container(Node(SCROLL, size=height), list)

@@ -32,3 +32,10 @@ Newest last. What was tried, what happened, dead ends.
 - AppKit and UIKit hosts compiled first try. New needs: `_bzero`, `KGEN_CompilerRT_fprintf(i64 stream, ptr fmt, ...)` (assert-failure path) → stand-in.
 - Todo example: 3 adds + remove → rebuilds; GTK labels Task 1, Task 3, "2 tasks". Checker 7/7.
 - Re-review (goal 2): PASS. Fixed leftovers: untracked __pycache__, comment on the iOS height limit, oversized screens now show a 'Too many items' label instead of leaving stale controls.
+
+## Goal 3: web, components, todo, Android, GPU (2026-10-15, owner asleep)
+- Mojo Python module (`PythonModuleBuilder`, `PyInit_mojoui_app`) built from the unchanged hello app: Python got the same patches the native hosts get. First try.
+- chrome-devtools-axi wants Google Chrome at /opt/google; only /usr/bin/chromium here → Playwright (`pixi add --pypi playwright`) with `executable_path=/usr/bin/chromium`, headless. Clicked Greet 3x → "Hello, Ada! (click 3)".
+- Events with values (`Event(message, text, number)`) + 7 components: 14 core tests pass first try.
+- GTK: `g_signal_connect_data` needed two callback signatures → `ccall()` looks C functions up with dlsym and casts per call (same trick as objc msg).
+- Bug: after Reset, typing stopped reaching update(). Trace: the field's own "changed" signal fired re-entrantly while `apply()` ran, and `self.updating = True` wasn't visible to it (Mojo `mut self` is exclusive; the store can be optimised away). Fix: busy flag kept on the GApplication via g_object_set_data (opaque C calls), checked before handlers touch the host.
