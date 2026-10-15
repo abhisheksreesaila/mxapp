@@ -15,3 +15,8 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-11 · iPhone button uses Liquid Glass (`prominentGlassButtonConfiguration`, iOS 26+) when the class responds to it, else a filled capsule · phone follows the Liquid design language; the check keeps it working on iOS 17-18 · yes
 - D-12 · reviewer findings: fixed 1-9 (protocol miss now printed; build.sh fails on Mojo errors and deletes stale objects; Gatekeeper advice for macOS 15+; BOOL encodings `B`; allowlist + stubs trimmed to exactly what's used; resource seal checked; iOS Dynamic Type; Cmd+W) · #10 (bundle ID clash) is a non-issue: xtool prefixes a per-user ID (ProvisioningIdentifiers.swift:24) · yes
 - D-13 · mark binaries as built with SDK 26 (`-platform_version ios 17.0 26.0`, `macos 14.0 26.0`) over 17/14 · otherwise iOS/macOS 26 run the app in compatibility mode without the current look; unproven without the real SDK, one-line revert · yes
+
+## Goal 2: declarative UI
+- D-14 · view tree stored as a flat list of nodes (parent → child indexes) over a recursive struct · Mojo 1.1 rejects `List[View]` inside `View` ("non-Deinitable"); a flat list is also easy to diff and to pair with native handles · yes
+- D-15 · Linux renderer: GTK4 + libadwaita over SDL3+Clay (ROADMAP decision 4) · the owner asked for *native* rendering; GTK is Linux's native toolkit, it's installed, and it can be run and screenshotted here · yes
+- D-16 · platforms this run: Linux, Mac, iPhone; web/Android/Windows logged as next · only these have a Mojo build target and a native toolkit reachable today · yes

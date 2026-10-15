@@ -22,3 +22,7 @@ Newest last. What was tried, what happened, dead ends.
 - Quirk: Mojo built fine with an unfinished `def broken(` appended to an *imported* module (`hello_core.mojo`); it seems to parse imported modules lazily. Errors in the app file itself fail the build (exit 1), and `build.sh` now stops and leaves no stale objects. The M1 tests cover `hello_core`.
 - Resource seal (`_CodeSignature/CodeResources`) now verified too; tamper test caught.
 - Re-review: PASS. SDK-26 marking judged low risk (no launch check on dev installs; app already uses scenes).
+
+## Goal 2: declarative UI (2026-10-15)
+- Probe: `struct View` holding `List[View]` → "field 'children' has non-'Deinitable' type"; `ImplicitlyDestructible` trait doesn't exist in 1.1. → flat node list (D-14).
+- GTK 4.22.4 + libadwaita 1.9.3 installed; Wayland session available, `grim` for screenshots.
