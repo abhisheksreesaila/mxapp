@@ -183,17 +183,7 @@ def render(s, i, sid):
                         rows=str(max(n["size"] // 24, 2)), autofocus=(s.focus == i), hx_trigger="input",
                         hx_sync="this:queue all", **common)
     if kind == ALERT:
-        return Div(id=nid, hidden=True)  # drawn in the overlay outside the page (see overlay())
-    if kind == -ALERT:  # (only overlay() asks for this: the alert itself)
-        buttons = [Button(o, cls="prominent" if j == len(n["options"]) - 1 else "", autofocus=(j == 0),
-                          **dict(common, hx_vals=json.dumps({"n": i, "number": j}))) for j, o in enumerate(n["options"])]
-        # Modal without scripts: a full-screen backdrop catches every click behind the dialog,
-        # focus starts on the first button, and Escape anywhere answers like the first button
-        # (Cancel), as on the other platforms.
-        dialog = Dialog(H3(n["text"], id=f"{nid}-t"), P(n["hint"]), Div(*buttons, cls="buttons"), open=True,
-                        cls="alert", data_kind="alert", role="alertdialog", aria_labelledby=f"{nid}-t", aria_modal="true")
-        return Div(Div(cls="alert-backdrop"), dialog, id=nid, hx_trigger="keyup[key=='Escape'] from:body",
-                   **dict(common, hx_vals=json.dumps({"n": i, "number": 0})))
+        return Div(id=nid, hidden=True)  # drawn in the overlay beside the page (render_alert)
     if kind == NAVBAR:
         back = (Button("‹ Back", data_kind="navback", **common),) if n["msg"] else ()
         return Header(*back, H2(n["text"]), cls="nav", id=nid, data_kind="nav", data_back="1" if n["msg"] else "0")
@@ -228,13 +218,18 @@ def render(s, i, sid):
 
 
 def render_alert(s, i, sid):
-    """The modal for Alert node i (drawn in the overlay, outside the inert page)."""
-    real = s.nodes[i]
-    s.nodes[i] = dict(real, kind=-ALERT)
-    try:
-        return render(s, i, sid)
-    finally:
-        s.nodes[i] = real
+    """The modal for Alert node i, drawn in the overlay beside the inert page.
+    Modal without scripts: a full-screen backdrop catches every click, focus starts on the
+    first button, and Escape anywhere answers like the first button (Cancel), as elsewhere."""
+    n = s.nodes[i]
+    mid = f"n{i}-modal"  # its own id (the page keeps a hidden placeholder with id n<i>)
+    common = dict(hx_post=f"/e/{sid}", hx_swap="none", hx_include="#mojoui-v")
+    buttons = [Button(o, cls="prominent" if j == len(n["options"]) - 1 else "", autofocus=(j == 0),
+                      hx_vals=json.dumps({"n": i, "number": j}), **common) for j, o in enumerate(n["options"])]
+    dialog = Dialog(H3(n["text"], id=f"{mid}-t"), P(n["hint"]), Div(*buttons, cls="buttons"), open=True,
+                    cls="alert", data_kind="alert", role="alertdialog", aria_labelledby=f"{mid}-t", aria_modal="true")
+    return Div(Div(cls="alert-backdrop"), dialog, id=mid, hx_trigger="keyup[key=='Escape'] from:body",
+               hx_vals=json.dumps({"n": i, "number": 0}), **common)
 
 
 def rows_div(s, i, sid, top):

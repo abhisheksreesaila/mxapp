@@ -218,6 +218,35 @@ def fresh_rows(list: Int, count: Int):
     external_call["g_object_unref", NoneType](model)
 
 
+def refresh_rows(list: Int, count: Int):
+    """Re-binds the rows on screen: fresh items over the range of rows GTK drew since the
+    last refresh (cheap; keeps the scroll position and row widgets), or a new model if the
+    row count changed."""
+    var selection = external_call["gtk_list_view_get_model", Int](list)
+    var model = external_call["gtk_no_selection_get_model", Int](selection)
+    if Int(external_call["g_list_model_get_n_items", c_uint](model)) != count:
+        fresh_rows(list, count)
+        return
+    var app = external_call["g_application_get_default", Int]()
+    var lo = String("mojoui-bound-lo")
+    var hi = String("mojoui-bound-hi")
+    var first = external_call["g_object_get_data", Int](app, lo.as_c_string_span()) - 1
+    var last = external_call["g_object_get_data", Int](app, hi.as_c_string_span()) - 1
+    external_call["g_object_set_data", NoneType](app, lo.as_c_string_span(), 0)  # start tracking afresh:
+    external_call["g_object_set_data", NoneType](app, hi.as_c_string_span(), 0)  # the splice re-binds what's shown
+    var n = min(last + 1, count) - max(first, 0)
+    if first < 0 or n <= 0:
+        return
+    first = max(first, 0)
+    var empty = String("")
+    var additions = List[Int](length=n + 1, fill=Int(empty.unsafe_ptr()))  # n pointers to "" + NULL
+    additions[n] = 0
+    _ = empty.as_c_string_span()  # make sure "" is NUL-terminated
+    external_call["gtk_string_list_splice", NoneType](model, c_uint(first), c_uint(n), Int(additions.unsafe_ptr()))
+    _ = len(additions)  # keep the pointer array alive past the call
+    _ = empty.byte_length()
+
+
 def escape_newlines(text: String) -> String:
     return text.replace("\n", "\\n")
 
@@ -529,7 +558,7 @@ struct GtkHost[A: App](Movable):
         # re-binds rows whose items changed, so the list gets fresh items (scroll is kept).
         for k in range(len(self.rt.shown.nodes)):
             if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
-                fresh_rows(self.widgets[k], self.rt.shown.nodes[k].value)
+                refresh_rows(self.widgets[k], self.rt.shown.nodes[k].value)
         set_busy(False)
 
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
@@ -663,6 +692,15 @@ def on_row_bind[A: App](factory: Int, item: Int, host_addr: Int) abi("C"):
     var position = Int(external_call["gtk_list_item_get_position", c_uint](item))
     var text = host[].rt.app.row(host[].rt.shown.nodes[node].msg2, position)  # asked for on demand
     count_up("mojoui-rows-bound")
+    # Track the range of rows drawn since the last refresh (stored +1; 0 = none yet).
+    var app = external_call["g_application_get_default", Int]()
+    var lo = String("mojoui-bound-lo")
+    var hi = String("mojoui-bound-hi")
+    var low = external_call["g_object_get_data", Int](app, lo.as_c_string_span())
+    if low == 0 or position + 1 < low:
+        external_call["g_object_set_data", NoneType](app, lo.as_c_string_span(), position + 1)
+    if position + 1 > external_call["g_object_get_data", Int](app, hi.as_c_string_span()):
+        external_call["g_object_set_data", NoneType](app, hi.as_c_string_span(), position + 1)
     if position == 0:  # (for the test report: what row 0 shows right now)
         var key = String("mojoui-row0")
         var app = external_call["g_application_get_default", Int]()

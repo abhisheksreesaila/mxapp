@@ -427,8 +427,8 @@ def m8():
     in_page = [int(x) for x in re.findall(r"^LISTROWS: (\d+)$", wout or "", re.M)]
     if not in_page or max(in_page) >= 100:
         problems.append(f"web page held {in_page} rows; must hold far fewer than 10,000")
-    return not problems, "; ".join(problems) or (f"10,000-row list: scrolled to and tapped row 7500 on GTK and web; GTK made {max(built)} row widgets "
-                                                 f"(its recycling cache), the web page held {max(in_page)} rows")
+    return not problems, "; ".join(problems) or (f"10,000-row list: scrolled to and tapped row 7500 on GTK and web; GTK made {max(built)} row widgets in all "
+                                                 f"(rows near the screen, re-made on each refresh), the web page held {max(in_page)} rows")
 
 
 EXPENSES_STEPS = ("type:Amount=12.50;segment:0=Travel;date:0=2026-10-01;textarea:0=Taxi to the airport;tap:Add expense;"
