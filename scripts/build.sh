@@ -9,7 +9,7 @@
 # Env: BUNDLE_PREFIX (default com.mojoui) → bundle ID <prefix>.<example>
 set -euo pipefail
 cd "$(dirname "$0")/.."
-EX="${1:?usage: scripts/build.sh <example> linux|web|mac|ios|all}"
+EX="${1:?usage: scripts/build.sh <example> linux|web|mac|ios|android|all}"
 WHAT="${2:-all}"
 SRC="examples/$EX/app.mojo"
 test -f "$SRC" || { echo "no $SRC" >&2; exit 2; }
@@ -46,6 +46,22 @@ build_web() {
   echo "== Web ($EX): Mojo Python module for FastHTML"
   mojo_build hosts/web_main.mojo --emit shared-lib -o "$out/mojoui_app.so"
   stamp "$out"; echo "   $out/mojoui_app.so  (serve: pixi run python mojoui/hosts/web.py $out)"
+}
+
+build_android() {  # exploration: a real arm64 libmojoui.so, no APK yet (docs/android.md)
+  local out="build/$EX/android"; mkdir -p "$out/lib/arm64-v8a" "$out/stubs"; rm -f "$out"/*.o
+  echo "== Android ($EX): arm64 libmojoui.so for a NativeActivity (exploration)"
+  mojo_build hosts/android_main.mojo --target-triple aarch64-linux-android29 --emit object -o "$out/app.o"
+  mojo_build mojoui/hosts/mojo_rt.mojo --target-triple aarch64-linux-android29 --emit object -o "$out/mojo_rt.o"
+  # Empty stand-ins that only carry the system libraries' names (like apple/sdk/*.tbd);
+  # the device's real libc/liblog provide the functions at run time.
+  echo "" | llvm-mc -triple=aarch64-linux-android -filetype=obj -o "$out/stubs/empty.o"
+  for lib in libc libdl liblog libandroid; do
+    pixi run ld.lld -shared -soname "$lib.so" -o "$out/stubs/$lib.so" "$out/stubs/empty.o"
+  done
+  pixi run ld.lld -shared -soname libmojoui.so -z noexecstack --gc-sections -o "$out/lib/arm64-v8a/libmojoui.so" \
+    "$out/app.o" "$out/mojo_rt.o" "$out"/stubs/*.so
+  stamp "$out"; echo "   $out/lib/arm64-v8a/libmojoui.so"
 }
 
 apple_objects() {  # apple_objects <dir> <triple> <host-main>
@@ -87,7 +103,8 @@ case "$WHAT" in
   web) build_web ;;
   mac) build_mac ;;
   ios) build_ios ;;
+  android) build_android ;;
   all)  # every platform, or only those listed in examples/<example>/platforms
     for p in $(cat "examples/$EX/platforms" 2>/dev/null || echo linux web mac ios); do "build_$p"; done ;;
-  *) echo "usage: scripts/build.sh <example> linux|web|mac|ios|all" >&2; exit 2 ;;
+  *) echo "usage: scripts/build.sh <example> linux|web|mac|ios|android|all" >&2; exit 2 ;;
 esac
