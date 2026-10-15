@@ -58,7 +58,7 @@ build_android() {  # a signed APK: the app + mojoui as libmojoui.so (arm64 phone
   for abi in arm64-v8a:aarch64 x86_64:x86_64; do
     local dir="${abi%%:*}" cpu="${abi##*:}"
     mkdir -p "$out/lib/$dir" "$out/stubs-$dir"
-    mojo_build hosts/android_main.mojo --target-triple "$cpu-linux-android29" --emit object -o "$out/app-$dir.o"
+    mojo_build hosts/android_main.mojo -D MOJOUI_ANDROID --target-triple "$cpu-linux-android29" --emit object -o "$out/app-$dir.o"
     mojo_build mojoui/hosts/mojo_rt.mojo --target-triple "$cpu-linux-android29" --emit object -o "$out/rt-$dir.o"
     # Empty stand-ins carrying only the system libraries' names (like apple/sdk/*.tbd).
     echo "" | llvm-mc -triple="$cpu-linux-android" -filetype=obj -o "$out/stubs-$dir/empty.o"

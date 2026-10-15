@@ -126,6 +126,9 @@ struct AndroidHost[A: App](Movable):
         var v: Int
         if node.kind == TEXT or node.kind == ICON or node.kind == DATE or node.kind == ALERT:
             v = self.view_of("android/widget/TextView")
+            var look = "TextAppearance_DeviceDefault_Small" if node.style == CAPTION else (
+                "TextAppearance_DeviceDefault_Large" if node.style == TITLE or node.style == HEADLINE else "TextAppearance_DeviceDefault")
+            _ = self.jni.call(v, "android/widget/TextView", "setTextAppearance", "(I)V", [self.jni.static_int("android/R$style", look)])
             self.set_text(v, node.text)
             _ = self.jni.call(v, "android/widget/TextView", "setGravity", "(I)V", [CENTERED])
             var size = 16.0
@@ -141,6 +144,8 @@ struct AndroidHost[A: App](Movable):
                 _ = self.jni.call(v, "android/widget/TextView", "setTypeface", "(Landroid/graphics/Typeface;I)V", [0, 1])
             if node.max_w != 0:
                 _ = self.jni.call(v, "android/widget/TextView", "setMaxWidth", "(I)V", [self.dp(node.max_w)])
+                if node.fills:  # fill + max width: exactly the max (when there's room), like the other hosts
+                    _ = self.jni.call(v, "android/widget/TextView", "setMinWidth", "(I)V", [self.dp(node.max_w)])
             if node.kind == ALERT:  # (alerts come in a later goal)
                 _ = self.jni.call(v, "android/view/View", "setVisibility", "(I)V", [8])
         elif node.kind == BUTTON:
@@ -219,6 +224,18 @@ struct AndroidHost[A: App](Movable):
             for j in range(len(node.options)):
                 var b = self.view_of("android/widget/RadioButton")
                 self.set_text(b, node.options[j])
+                if node.kind != RADIO:  # segments: no circles; the chosen one is highlighted
+                    _ = self.jni.call(b, "android/widget/CompoundButton", "setButtonDrawable", "(Landroid/graphics/drawable/Drawable;)V", [0])
+                    var pad = self.dp(14)
+                    _ = self.jni.call(b, "android/view/View", "setPadding", "(IIII)V", [pad, self.dp(10), pad, self.dp(10)])
+                    var states = self.jni.new("android/graphics/drawable/StateListDrawable", "()V", [])
+                    var checked = self.jni.ints([Int32(self.jni.static_int("android/R$attr", "state_checked"))])
+                    var fill = self.jni.new("android/graphics/drawable/ColorDrawable", "(I)V", [0x330A84FF])
+                    _ = self.jni.call(states, "android/graphics/drawable/StateListDrawable", "addState", "([ILandroid/graphics/drawable/Drawable;)V", [checked, fill])
+                    _ = self.jni.call(b, "android/view/View", "setBackground", "(Landroid/graphics/drawable/Drawable;)V", [states])
+                    self.jni.drop(fill)
+                    self.jni.drop(checked)
+                    self.jni.drop(states)
                 _ = self.jni.call(b, "android/view/View", "setId", "(I)V", [j + 1])
                 _ = self.jni.call(v, "android/view/ViewGroup", "addView", "(Landroid/view/View;)V", [b])
                 self.jni.drop(b)
@@ -265,7 +282,7 @@ struct AndroidHost[A: App](Movable):
                 var c = node.children[k]
                 if between and k > 0:
                     var gap = self.view_of("android/view/View")
-                    var gp = self.jni.new("android/widget/LinearLayout$LayoutParams", "(IIF)V", [0 if not vertical else MATCH, 0 if vertical else WRAP, fbits(1)])
+                    var gp = self.jni.new("android/widget/LinearLayout$LayoutParams", "(IIF)V", [0, 0, fbits(1)])
                     _ = self.jni.call(v, "android/view/ViewGroup", "addView", "(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V", [gap, gp])
                     self.jni.drop(gp)
                     self.jni.drop(gap)
@@ -346,9 +363,8 @@ struct AndroidHost[A: App](Movable):
             h = self.dp(240)
         if n.kind == SPACER:
             weight = 1
-        if n.fills and n.max_w != 0 and vertical:  # as wide as its max (the text view caps itself)
+        if n.fills and n.max_w != 0 and vertical:  # as wide as its max (the text view sizes itself)
             w = WRAP
-            _ = 0
         var p = self.jni.new("android/widget/LinearLayout$LayoutParams", "(IIF)V", [w, h, fbits(weight)])
         if k > 0 and parent.kind != SCROLL:
             var gap = self.dp(parent.spacing)
@@ -374,7 +390,8 @@ struct AndroidHost[A: App](Movable):
             _ = self.jni.call(holder, "android/widget/LinearLayout", "setGravity", "(I)V", [CENTERED])
             var pad = self.dp(24)
             _ = self.jni.call(holder, "android/view/View", "setPadding", "(IIII)V", [pad, pad, pad, pad])
-            var p = self.jni.new("android/widget/LinearLayout$LayoutParams", "(II)V", [WRAP, WRAP])
+            ref top = self.rt.shown.nodes[0]  # the screen's own size settings
+            var p = self.jni.new("android/widget/LinearLayout$LayoutParams", "(II)V", [self.dp(top.w) if top.w != 0 else WRAP, self.dp(top.h) if top.h != 0 else WRAP])
             _ = self.jni.call(holder, "android/view/ViewGroup", "addView", "(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V", [root, p])
             var scroll = self.view_of("android/widget/ScrollView")
             _ = self.jni.call(scroll, "android/widget/ScrollView", "setFillViewport", "(Z)V", [1])
@@ -574,9 +591,15 @@ struct AndroidHost[A: App](Movable):
                     self.apply(d)
             self.canvases[k].last_x = px
             self.canvases[k].last_y = py
-        elif action == 1 and not self.canvases[k].moved:  # up, without moving: a tap
-            var d = self.rt.gesture(node, TAP, px, py, 0, 0, 1)
-            self.apply(d)
+        elif action == 1:  # up: the rest of a drag, or a tap if it never moved
+            var dx = px - self.canvases[k].last_x
+            var dy = py - self.canvases[k].last_y
+            if not self.canvases[k].moved and abs(dx) + abs(dy) <= 3:
+                var d = self.rt.gesture(node, TAP, px, py, 0, 0, 1)
+                self.apply(d)
+            elif not self.canvases[k].fresh and abs(dx) + abs(dy) > 0:
+                var d = self.rt.gesture(node, PAN, px, py, dx, dy, 1)
+                self.apply(d)
 
 
 def host_at[A: App](addr: Int) -> Pointer[AndroidHost[A], MutUntrackedOrigin]:

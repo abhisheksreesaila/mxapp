@@ -30,3 +30,9 @@ def jni_frame(env: Int, cls: Int, host: Int, nanos: Int) abi("C"):
 @export("Java_dev_mojoui_MojoActivity_row")
 def jni_row(env: Int, cls: Int, host: Int, view: Int32, index: Int32) abi("C") -> Int:
     return android_row[Main](env, host, Int(view), Int(index))
+
+
+@export("JNI_OnLoad")
+def jni_on_load(vm: Int, reserved: Int) abi("C") -> Int32:
+    """Android calls this when the library loads: the JNI version we use (1.6)."""
+    return Int32(0x00010006)

@@ -1,282 +1,190 @@
-"""Milestone checker for GOAL.md (goal 6: GPU Data Lens; goal 5's checks run as M8, earlier goals' inside them).
+"""Milestone checker for GOAL.md (goal 7: Android; goal 6's checks run as M7, earlier goals' inside them).
 Rebuilds from scratch, prints PASS/FAIL per milestone.
 
 Run: scripts/check   (earlier goals' checkers: docs/goals/0N-check.py)
 
-The lens is driven with the shared step language (scripts/drive.py) plus canvas steps:
-  drag:0=100,50   pan canvas 0 by (100, 50) points
-  zoom:0=2        zoom canvas 0 by 2× around its centre
-  frames:0=180    let canvas 0 run 180 display frames; prints FRAMES: n in ms = fps, draws d
-Each host reports CANVAS: <w>x<h> pt <W>x<H> px scale <s> colours <k> draws <d>.
+Android runs use the emulator (AVD "mojoui", started headless if needed) and real input
+from adb (scripts/android_drive.py), with the same step language as GTK and the web.
 """
 
 import importlib.util
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-# Goal 5's checker (and through it goals 3–4): its helpers and milestones, pointed at this repo.
-_spec = importlib.util.spec_from_file_location("goal5", ROOT / "docs/goals/05-check.py")
-g5 = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(g5)
-g5.ROOT, g5.BUILD = ROOT, ROOT / "build"
-run, gtk, web, apple_ok, state, BUILD = g5.run, g5.gtk, g5.web, g5.apple_ok, g5.state, g5.BUILD
-# libSystem's maths and clock (D-61): the lens's trip generator uses sin/cos, PointCloud times frames.
-g5.ALLOWED |= {"_sin", "_cos", "___sincos_stret", "_clock_gettime_nsec_np"}
+_spec = importlib.util.spec_from_file_location("goal6", ROOT / "docs/goals/06-check.py")
+g6 = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(g6)
+g5 = g6.g5
+run, gtk, state, BUILD = g6.run, g6.gtk, g6.state, g6.BUILD
 
-EXAMPLES = g5.EXAMPLES + ["lens"]
-TOTAL = 20_000_000
-# Lines that depend on the canvas's size or on timing, so they differ between hosts by design.
-GEOMETRY_OR_TIMING = ("LABEL: In view", "LABEL: Frame", "LABEL: Device")
+import android_drive  # noqa: E402
 
-
-def lens_state(out):
-    return [l for l in state(out) if not l.startswith(GEOMETRY_OR_TIMING)]
+EXAMPLES = g6.EXAMPLES
+SDK = android_drive.SDK
+ANDROID_LIBS = {"libc.so", "liblog.so", "libm.so", "libdl.so"}
+# What a libmojoui.so may ask Android's system libraries for (bionic libc, libm, liblog).
+ANDROID_SYMBOLS = {"__android_log_write", "clock_gettime", "cos", "sin", "dup", "fclose", "fdopen", "fflush", "free",
+                   "memcpy", "memmove", "memset", "posix_memalign", "strlen", "write"}
+SHOWN = r"^(LABEL|BUTTON|FIELD|TOGGLE|DROPDOWN|SLIDER|PROGRESS|IMAGE|SEGMENTED|TABS|RADIO): "
 
 
-def canvas(out):
-    m = re.search(r"^CANVAS: (\d+)x(\d+) pt (\d+)x(\d+) px scale ([\d.]+) colours (\d+) draws (\d+)$", out, re.M)
-    return None if not m else dict(wpt=int(m[1]), hpt=int(m[2]), wpx=int(m[3]), hpx=int(m[4]), scale=float(m[5]),
-                                   colours=int(m[6]), draws=int(m[7]))
+def shown_state(out):
+    return [l for l in out.splitlines() if re.match(SHOWN, l)]
 
 
-def frames(out):
-    m = re.search(r"^FRAMES: (\d+) in ([\d.]+) ms = ([\d.]+) fps, draws (\d+)$", out, re.M)
-    return None if not m else dict(n=int(m[1]), ms=float(m[2]), fps=float(m[3]), draws=int(m[4]))
+def droid(example, steps, shot=None, **kw):
+    try:
+        r, out = android_drive.android_run(example, steps, shot=shot, **kw)
+    except Exception as e:  # a crashing run is a failing run
+        return None, f"android run crashed: {e!r}"
+    if r.returncode != 0:
+        return None, out[-600:]
+    return r, out
 
 
-def view_line(out):
-    """(centre x, centre y, zoom) from the lens's 'View:' label."""
-    m = re.search(r"^LABEL: View: centre \(([-\d.]+), ([-\d.]+)\), zoom ([\d.]+)×$", out, re.M)
-    return None if not m else (float(m[1]), float(m[2]), float(m[3]))
-
-
-def matching(out):
-    m = re.search(r"^LABEL: Matching: ([\d,]+) of ([\d,]+) trips$", out, re.M)
-    return None if not m else (int(m[1].replace(",", "")), int(m[2].replace(",", "")))
-
-
-def gtk_shown(steps, shot=None):
-    """GTK run with the window on screen (it must be shown to lay out, draw and tick)."""
-    return gtk("lens", steps, shot=shot or str(BUILD / "lens" / "shown.png"))
+def build_tools():
+    return sorted((SDK / "build-tools").iterdir())[-1]
 
 
 # ---------- milestones ----------
 
 def m1():
-    t = run(["pixi", "run", "mojo", "run", "-I", ".", "tests/test_canvas.mojo"], timeout=600)
-    if "CANVAS TESTS PASSED" not in t.stdout:
-        return False, f"canvas tests: {(t.stdout + t.stderr)[-500:]}"
-    t2 = run(["pixi", "run", "mojo", "run", "-I", ".", "tests/test_mojoui.mojo"], timeout=600)
-    if t2.returncode != 0 or "FAIL" in t2.stdout:
-        return False, f"core tests: {(t2.stdout + t2.stderr)[-300:]}"
-    return True, "Canvas node, gesture/frame events, draw(), Surface, version → redraw patch; core tests pass"
+    problems = []
+    apk = next((BUILD / "hello" / "android").glob("*.apk"), None)
+    if apk is None:
+        return False, "no hello APK"
+    v = subprocess.run([str(build_tools() / "apksigner"), "verify", str(apk)], capture_output=True, text=True)
+    if v.returncode != 0:
+        problems.append(f"apksigner: {v.stderr.strip()[-200:]}")
+    names = subprocess.run(["unzip", "-Z1", str(apk)], capture_output=True, text=True).stdout.split()
+    for want in ("classes.dex", "AndroidManifest.xml", "lib/arm64-v8a/libmojoui.so", "lib/x86_64/libmojoui.so"):
+        if want not in names:
+            problems.append(f"APK lacks {want}")
+    javas = [p for d in ("mojoui", "hosts", "examples", "apple") for p in (ROOT / d).rglob("*.java")]
+    if [str(p.relative_to(ROOT)) for p in javas] != ["mojoui/hosts/android/MojoActivity.java"]:
+        problems.append(f"Java files should be just the framework's one: {javas}")
+    elif len(javas[0].read_text().splitlines()) > 80:
+        problems.append(f"MojoActivity.java is {len(javas[0].read_text().splitlines())} lines (> 80)")
+    for ex in ("hello", "gallery", "todo", "layout", "lens"):
+        for abi in ("arm64-v8a", "x86_64"):
+            so = BUILD / ex / "android" / "lib" / abi / "libmojoui.so"
+            if not so.exists():
+                problems.append(f"{ex}: no {abi} library")
+                continue
+            needed = set(re.findall(r"\(NEEDED\).*\[(.+?)\]", run(["llvm-readelf", "-d", str(so)]).stdout))
+            undefined = set(run(["llvm-nm", "-D", "--undefined-only", "-j", str(so)]).stdout.split())
+            if not needed <= ANDROID_LIBS:
+                problems.append(f"{ex}/{abi} needs {sorted(needed - ANDROID_LIBS)}")
+            if not undefined <= ANDROID_SYMBOLS:
+                problems.append(f"{ex}/{abi} uses {sorted(undefined - ANDROID_SYMBOLS)}")
+    return not problems, "; ".join(problems) or (
+        "signed APKs (arm64-v8a + x86_64), one 75-line framework Java file, libraries need only Android's libc/libm/liblog")
 
 
 def m2():
-    problems = []
-    r, base = gtk_shown("")
+    r, out = droid("hello", "tap:Greet;tap:Greet;tap:Greet", shot=str(BUILD / "hello" / "android.png"))
     if r is None:
-        return False, base
-    c = canvas(base)
-    if not c:
-        return False, f"no CANVAS line: {base[-400:]}"
-    if abs(c["wpx"] - round(c["wpt"] * c["scale"])) > 1 or abs(c["hpx"] - round(c["hpt"] * c["scale"])) > 1:
-        problems.append(f"canvas drawn at {c['wpx']}x{c['hpx']} px, laid out at {c['wpt']}x{c['hpt']} pt × {c['scale']}")
-    if c["wpt"] < 400 or c["hpt"] < 300:
-        problems.append(f"canvas too small: {c['wpt']}x{c['hpt']} pt")
-    if c["colours"] < 50:
-        problems.append(f"canvas looks blank ({c['colours']} colours)")
-    r1, dragged = gtk_shown("drag:0=100,50")
-    r2, zoomed = gtk_shown("drag:0=100,50;zoom:0=2")
-    v0, v1, v2 = view_line(base), view_line(dragged or ""), view_line(zoomed or "")
-    if not (v0 and v1 and v2):
-        return False, f"no View label: {base[-300:]}"
-    dx, dy = v1[0] - v0[0], v1[1] - v0[1]
-    if not (dx < 0 and dy < 0 and abs(dx / dy - 2) < 0.01):
-        problems.append(f"drag (100, 50) should move the centre up-left by 2:1, got {v0} → {v1}")
-    if not (abs(v2[2] - 2 * v1[2]) < 1e-6 and v2[:2] == v1[:2]):
-        problems.append(f"zoom 2× at the centre should double zoom, keep the centre: {v1} → {v2}")
-    return not problems, "; ".join(problems) or (
-        f"canvas {c['wpt']}x{c['hpt']} pt drawn at {c['wpx']}x{c['hpx']} px (scale {c['scale']}), {c['colours']} colours; drag + zoom reach update()")
+        return False, out
+    if "LABEL: Hello, Ada! (click 3)" not in out or "BUTTON: Greet" not in out:
+        return False, f"after 3 real taps: {shown_state(out)}"
+    return True, "hello APK runs on Android 16 (emulator); 3 real taps → 'Hello, Ada! (click 3)' in a real TextView"
+
+
+def same_as_gtk(example, steps, name):
+    r, out = droid(example, steps)
+    if r is None:
+        return False, out
+    rg, gout = gtk(example, steps)
+    if rg is None:
+        return False, gout
+    a, g = shown_state(out), [l for l in state(gout) if re.match(SHOWN, l)]
+    if a != g:
+        return False, f"{name}: Android and GTK differ:\n  android {a}\n  gtk     {g}"
+    return True, f"{name}: {len(a)} views identical to GTK after real input"
 
 
 def m3():
-    r, out = gtk_shown("toggle:Play;frames:0=180")
-    if r is None:
-        return False, out
-    f = frames(out)
-    if not f:
-        return False, f"no FRAMES line: {out[-400:]}"
-    mt = matching(out)
-    problems = []
-    if not mt or mt[1] != TOTAL:
-        problems.append(f"lens should hold {TOTAL:,} points: {mt}")
-    if f["fps"] < 55:
-        problems.append(f"{f['fps']} fps < 55")
-    if f["draws"] < f["n"] - 5:
-        problems.append(f"only {f['draws']} redraws in {f['n']} frames")
-    return not problems, "; ".join(problems) or f"GTK, playing, {TOTAL:,} points: {f['n']} frames in {f['ms']:.0f} ms = {f['fps']} fps, {f['draws']} redraws"
-
-
-def bench():
-    exe = BUILD / "bench_lens"
-    b = run(["pixi", "run", "mojo", "build", "-I", "examples/lens", "-I", ".", "tests/bench_lens.mojo", "-o", str(exe)], timeout=900)
-    if b.returncode != 0:
-        return None, f"bench build failed: {(b.stdout + b.stderr)[-500:]}"
-    r = run([str(exe)], timeout=600)
-    m = re.search(r"^BENCH: (.*)$", r.stdout, re.M)
-    if r.returncode != 0 or not m:
-        return None, f"bench failed: {(r.stdout + r.stderr)[-500:]}"
-    return dict(kv.split("=", 1) for kv in m[1].split()), r.stdout
+    return same_as_gtk("gallery", g5.GALLERY_STEPS, "gallery (typing, Return, switch, dropdown, slider, reset)")
 
 
 def m4():
-    b, out = bench()
-    if b is None:
-        return False, out
-    problems = []
-    ms = float(b["gpu_median_ms"])
-    if int(b["points"]) != TOTAL or b["size"] != "1920x1080":
-        problems.append(f"bench should draw {TOTAL:,} points at 1920x1080: {b}")
-    if ms > 8:
-        problems.append(f"GPU frame {ms} ms > 8 ms")
-    if int(b["uploads"]) != 1:
-        problems.append(f"data uploaded {b['uploads']} times (want once)")
-    if b["matched_gpu"] != b["matched_cpu"]:
-        problems.append(f"GPU matched {b['matched_gpu']} != CPU {b['matched_cpu']}")
-    if float(b["same_pixels"]) < 0.999:
-        problems.append(f"only {b['same_pixels']} of pixels match the CPU")
-    return not problems, "; ".join(problems) or (
-        f"{TOTAL:,} points at 1920x1080: GPU {ms} ms/frame (bin + shade + copy), CPU {b['cpu_ms']} ms; "
-        f"matched {b['matched_gpu']} on both; {float(b['same_pixels']) * 100:.3f}% identical pixels; uploaded once")
+    return same_as_gtk("todo", g5.TODO_STEPS, "todo (goal 3's steps)")
 
 
 def m5():
-    problems = []
-    src = (ROOT / "examples/lens/app.mojo").read_text()
-    imports = set(re.findall(r"^\s*(?:from|import)\s+([\w.]+)", src, re.M))
-    if any(not (i == "mojoui" or i.startswith("mojoui.")) for i in imports):
-        problems.append(f"lens imports more than mojoui: {sorted(imports)}")
-    if g5.PLATFORM_WORDS.search(src):
-        problems.append(f"lens mentions a platform API: {g5.PLATFORM_WORDS.search(src)[0]}")
-    b, out = bench()
-    if b is None:
+    r, out = droid("layout", "tab:0=Boxes")
+    if r is None:
         return False, out
-    counts = {}
-    for steps in ["", "segment:0=Taxi", "segment:0=Rideshare", "segment:0=Bike", "slide:0=30", "segment:0=Bike;slide:0=30"]:
-        r, o = gtk_shown(steps) if steps == "" else gtk("lens", steps)
-        mt = matching(o or "")
-        if r is None or not mt:
-            return False, f"lens run '{steps}' failed: {(o or '')[-300:]}"
-        counts[steps] = mt[0]
-    if counts[""] != TOTAL:
-        problems.append(f"all trips should match at start: {counts['']}")
-    kinds = counts["segment:0=Taxi"] + counts["segment:0=Rideshare"] + counts["segment:0=Bike"]
-    if kinds != TOTAL or min(counts["segment:0=Taxi"], counts["segment:0=Rideshare"], counts["segment:0=Bike"]) == 0:
-        problems.append(f"the three kinds should split all trips: {counts}")
-    if str(counts["segment:0=Bike;slide:0=30"]) != b.get("naive_bike_hour30"):
-        problems.append(f"Bike at the hour-30 setting: app {counts['segment:0=Bike;slide:0=30']} vs an independent count {b.get('naive_bike_hour30')}")
-    if not 0 < counts["slide:0=30"] < TOTAL:
-        problems.append(f"the hour slider should filter: {counts['slide:0=30']}")
-    shot = BUILD / "lens" / "shown.png"
+    saved = dict(g5._layout_cache)
+    g5._layout_cache.clear()
+    g5._layout_cache["android"] = (True, g5.boxes(out))
+    problems = []
     try:
-        from PIL import Image
-        colours = len(set(Image.open(shot).convert("RGB").getdata()))
-        if colours < 500:
-            problems.append(f"screenshot has only {colours} colours")
-    except Exception as e:
-        problems.append(f"screenshot unreadable: {e!r}")
-    return not problems, "; ".join(problems) or (
-        f"imports only mojoui; kinds split {TOTAL:,} trips; hour filter matches an independent count ({counts['segment:0=Bike;slide:0=30']:,}); rich screenshot")
-
-
-LENS_STEPS = "segment:0=Rideshare;slide:0=40;drag:0=120,-60;zoom:0=2"
+        for name in ("m2", "m3", "m4", "m5", "m6", "m7"):  # goal 5's relations, measured on Android
+            ok, msg = getattr(g5, name)()
+            if not ok:
+                problems.append(f"goal 5 {name.upper()}: {msg}")
+    finally:
+        g5._layout_cache.clear()
+        g5._layout_cache.update(saved)
+    return not problems, "; ".join(problems) or "padding, fixed/min/max sizes, fill, grow, justify and align hold on Android (real view bounds, dp)"
 
 
 def m6():
     problems = []
-    r, wout = web("lens", LENS_STEPS, shot=str(BUILD / "lens" / "web.png"))
+    shot = BUILD / "lens" / "android.png"
+    r, out = droid("lens", "", shot=str(shot), landscape=True, dpi=200)
     if r is None:
-        return False, wout
-    rg, gout = gtk("lens", LENS_STEPS)
-    if rg is None:
-        return False, gout
-    c = canvas(wout)
-    if not c:
-        return False, f"no CANVAS on the web: {wout[-400:]}"
-    if abs(c["wpx"] - round(c["wpt"] * c["scale"])) > 1 or abs(c["hpx"] - round(c["hpt"] * c["scale"])) > 1:
-        problems.append(f"web frame {c['wpx']}x{c['hpx']} px for a {c['wpt']}x{c['hpt']} pt canvas × {c['scale']}")
-    if c["colours"] < 50:
-        problems.append(f"web canvas looks blank ({c['colours']} colours)")
-    ws, gs = lens_state(wout), lens_state(gout)
-    if ws != gs:
-        problems.append(f"web and GTK differ:\n  web {ws}\n  gtk {gs}")
-    if not view_line(wout) or view_line(wout)[2] != 2.0:
-        problems.append(f"real wheel/drag didn't reach the app on the web: {view_line(wout)}")
-    # A frame that changes the screen's shape (playback ends, a button appears) must reach the page.
-    b = run(["pixi", "run", "mojo", "build", "-I", "tests/frame_rebuild", "-I", ".", "hosts/web_main.mojo", "--emit", "shared-lib",
-             "-o", str(BUILD / "frame_rebuild" / "web" / "mojoui_app.so")], timeout=900)
-    import drive
-    rr, rout = drive.web_run(BUILD / "frame_rebuild" / "web", "toggle:Play;wait:Replay;tap:Replay") if b.returncode == 0 else (None, b.stderr[-300:])
-    if rr is None or rr.returncode != 0 or "LABEL: Frames: 0" not in rout or "TOGGLE: Play=off" not in rout:
-        problems.append(f"a frame-driven rebuild didn't reach the page: {rout[-300:]}")
-    rp, pout = web("lens", "toggle:Play;frames:0=60")
-    f = frames(pout or "")
-    if rp is None or not f:
-        problems.append(f"web playing: no FRAMES: {(pout or '')[-300:]}")
-    elif f["fps"] < 20:
-        problems.append(f"web streams {f['fps']} fps < 20")
-    return not problems, "; ".join(problems) or (
-        f"web canvas {c['wpx']}x{c['hpx']} px, real drag + wheel reach the app, state identical to GTK; playing {f['fps']} fps")
+        return False, out
+    try:
+        from PIL import Image
+        img = Image.open(shot).convert("RGB")
+        w, h = img.size
+        colours = len(set(img.crop((w // 3, h // 6, w * 9 // 10, h * 5 // 6)).getdata()))  # the canvas side
+        if colours < 500:
+            problems.append(f"canvas looks blank ({colours} colours)")
+    except Exception as e:
+        problems.append(f"screenshot unreadable: {e!r}")
+    view = lambda o: next((l for l in o.splitlines() if l.startswith("LABEL: View:")), None)
+    r2, moved = droid("lens", "drag:0=96,48", landscape=True, dpi=200)
+    rg, gmoved = gtk("lens", "drag:0=96,48")
+    if r2 is None or rg is None:
+        return False, (moved if r2 is None else gmoved)[-300:]
+    if not view(moved) or view(moved) != view(gout := gmoved) or view(moved) == view(out):
+        problems.append(f"a real swipe should pan like GTK's drag: android {view(moved)} vs gtk {view(gout)} (start {view(out)})")
+    return not problems, "; ".join(problems) or f"lens on Android (CPU, 2M trips) draws the map; a real swipe pans it as on GTK: {view(moved)}"
 
 
 def m7():
     problems = []
-    for plat in ("mac", "ios"):
-        ok, msg = apple_ok("lens", plat)
+    for name in ("m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8"):
+        ok, msg = getattr(g6, name)()
         if not ok:
-            problems.append(msg)
-    for host, words in {"mojoui/hosts/appkit.mojo": ["CANVAS", "NSImageView", "displayLinkWithTarget", "NSPanGestureRecognizer",
-                                                      "NSMagnificationGestureRecognizer", "draw_canvas"],
-                        "mojoui/hosts/uikit.mojo": ["CANVAS", "UIImageView", "CADisplayLink", "UIPanGestureRecognizer",
-                                                     "UIPinchGestureRecognizer", "draw_canvas"]}.items():
-        text = (ROOT / host).read_text()
-        missing = [w for w in words if w not in text]
-        if missing:
-            problems.append(f"{host} lacks {missing}")
-    bad = g5.same_source("lens", ["linux", "web", "mac", "ios"])
-    if bad:
-        problems.append(f"not built from the same app.mojo: {bad}")
-    return not problems, "; ".join(problems) or "lens builds, links and signs for Mac + iPhone (CPU path, Apple system functions only); Canvas mapped to image view + display link + pan/pinch"
+            problems.append(f"goal 6 {name.upper()}: {msg[:200]}")
+    return not problems, "; ".join(problems) or "goal 6's checks (and goals 3–5's inside them) still pass"
 
 
 def m8():
     problems = []
-    for name in ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10", "m11"]:
-        ok, msg = getattr(g5, name)()
-        if not ok:
-            problems.append(f"goal 5 {name.upper()}: {msg[:200]}")
-    return not problems, "; ".join(problems) or "goal 5's checks (and goals 3–4's inside them) still pass"
-
-
-def m9():
-    problems = []
     readme = (ROOT / "README.md").read_text()
-    for m in ("Canvas(", "on_gesture", "on_frame", "def draw(", "Surface", "mojoui.gpu", "PAN", "ZOOM", "examples/lens/app.mojo"):
-        if m not in readme:
-            problems.append(f"README.md doesn't show {m}")
-    report = ROOT / "docs/report.md"
-    text = report.read_text() if report.exists() else ""
-    if not re.search(r"\d+(\.\d+)? fps", text) or not re.search(r"\d+(\.\d+)? ms", text):
-        problems.append("docs/report.md lacks fps and ms numbers")
-    imgs = re.findall(r"\]\((img/[^)]+\.png)\)", text)
+    android = (ROOT / "docs/android.md").read_text()
+    if not re.search(r"\*\*Android\*\*[^\n]*runs", readme):
+        problems.append("README status doesn't say Android runs")
+    for word in ("MojoActivity.java", "JNI", "emulator", "scripts/android_drive.py"):
+        if word not in android:
+            problems.append(f"docs/android.md doesn't mention {word}")
+    imgs = re.findall(r"\]\((img/android[^)]*\.png)\)", android)
     if not imgs or any(not (ROOT / "docs" / i).exists() for i in imgs):
-        problems.append(f"report screenshots missing: {imgs}")
-    return not problems, "; ".join(problems) or "README documents Canvas, gestures, frames, draw(), mojoui.gpu; report has numbers + screenshots"
+        problems.append(f"docs/android.md screenshots missing: {imgs}")
+    ok, msg = g6.m9()
+    if not ok:
+        problems.append(msg)
+    return not problems, "; ".join(problems) or "README and docs/android.md describe what runs on Android, with screenshots"
 
 
 def main():
@@ -289,9 +197,12 @@ def main():
         b = run(["scripts/build.sh", ex, "all"], timeout=3600)
         if b.returncode != 0:
             print(f"build {ex} failed:\n" + (b.stdout + b.stderr)[-1500:])
+        if ex in ("hello", "gallery", "layout", "lens"):  # ("all" means their platforms file, or Linux/web/Apple)
+            a = run(["scripts/build.sh", ex, "android"], timeout=3600)
+            if a.returncode != 0:
+                print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7),
-                     ("M8", m8), ("M9", m9)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7), ("M8", m8)]:
         try:
             ok, msg = fn()
         except Exception as e:  # a crashing check is a failing check
