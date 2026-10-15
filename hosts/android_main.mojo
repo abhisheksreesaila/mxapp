@@ -1,27 +1,32 @@
-# Android entry point (exploration, see docs/android.md): the app module
-# (`app.mojo`, chosen with -I) built into libmojoui.so for a NativeActivity.
-#
-# Today this proves the app and the mojoui core run as Android arm64 native code:
-# Android calls ANativeActivity_onCreate on the UI thread; we create the app,
-# build its first screen and log it. Drawing it with real Android views (via JNI)
-# and receiving taps is the next step; docs/android.md explains the blocker.
-from std.ffi import external_call, c_int
-
+# Android entry point: the app module (`app.mojo`, chosen with -I) built into libmojoui.so.
+# MojoActivity.java (the framework's one Java file) loads it and calls these native methods;
+# JNI finds them by name (Java_<package>_<class>_<method>).
 from app import Main
-from mojoui.app import Runtime
+from mojoui.hosts.android import android_create, android_event, android_touch, android_frame, android_row
 
 
-def log(text: String):
-    var tag = String("mojoui")
-    var t = text
-    _ = external_call["__android_log_write", c_int](c_int(4), tag.as_c_string_span(), t.as_c_string_span())  # INFO
+@export("Java_dev_mojoui_MojoActivity_create")
+def jni_create(env: Int, cls: Int, activity: Int) abi("C") -> Int:
+    return android_create[Main](env, activity)
 
 
-@export("ANativeActivity_onCreate")
-def on_create(activity: Int, saved_state: Int, saved_state_size: Int) abi("C"):
-    var rt = Runtime(Main())
-    var buttons = 0
-    for n in rt.shown.nodes:
-        if n.kind == 2:
-            buttons += 1
-    log(rt.app.title() + ": first screen has " + String(len(rt.shown.nodes)) + " nodes, " + String(buttons) + " buttons")
+@export("Java_dev_mojoui_MojoActivity_event")
+def jni_event(env: Int, cls: Int, host: Int, view: Int32, kind: Int32, text: Int, number: Int32) abi("C"):
+    android_event[Main](env, host, Int(view), Int(kind), text, Int(number))
+
+
+@export("Java_dev_mojoui_MojoActivity_touch")
+def jni_touch(
+    env: Int, cls: Int, host: Int, view: Int32, action: Int32, x: Float32, y: Float32, x2: Float32, y2: Float32, pointers: Int32
+) abi("C"):
+    android_touch[Main](env, host, Int(view), Int(action), Float64(x), Float64(y), Float64(x2), Float64(y2), Int(pointers))
+
+
+@export("Java_dev_mojoui_MojoActivity_frame")
+def jni_frame(env: Int, cls: Int, host: Int, nanos: Int) abi("C"):
+    android_frame[Main](env, host, nanos)
+
+
+@export("Java_dev_mojoui_MojoActivity_row")
+def jni_row(env: Int, cls: Int, host: Int, view: Int32, index: Int32) abi("C") -> Int:
+    return android_row[Main](env, host, Int(view), Int(index))

@@ -77,3 +77,9 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-63 · M5 import rule tightened to the project's strict one (only `mojoui`, no `std.`), with `mojoui.maths` re-exporting maths · the earlier goals' checkers already enforce it (it caught the lens); one rule, not two · yes
 - D-64 · canvases tick only while needed (frames asked for, a redraw or a resize due) over ticking every display frame forever · idle canvases mustn't drain laptop and phone batteries; GTK re-arms on patches and window size changes, Apple display links pause and wake · yes
 - D-65 · GTK test windows are fixed-size (non-resizable at the app's window_size) over taking whatever tile the desktop gives · checks measured different canvas sizes depending on what else was open on the owner's workspace; real (non-test) windows stay resizable · yes
+
+## Goal 7: Android
+- D-66 · the framework's Java file is an Activity plus listeners (75 lines), over a ~40-line listener used with NativeActivity · NativeActivity claims the window for native drawing (it must be handed back) and its native thread can't find app classes without class-loader tricks; an Activity that calls Mojo avoids both; still one framework file, never app code · yes
+- D-67 · JNI functions called by their slot in the JNIEnv table (from the JDK's jni.h), cast per call, over generated bindings · the same trick as objc_msgSend on Apple; no C, no binding generator · yes
+- D-68 · tested on the Android 36 x86_64 emulator, with the APK also carrying arm64-v8a for phones · no phone was connected; the emulator runs the x86_64 library natively under KVM · yes
+- D-69 · listeners are silenced by a Java field (`quiet`) while Mojo changes views, over a Mojo field · the GTK lesson: callbacks arrive re-entrantly, so the flag must live outside Mojo · yes

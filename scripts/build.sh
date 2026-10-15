@@ -48,20 +48,44 @@ build_web() {
   stamp "$out"; echo "   $out/mojoui_app.so  (serve: pixi run python mojoui/hosts/web.py $out)"
 }
 
-build_android() {  # exploration: a real arm64 libmojoui.so, no APK yet (docs/android.md)
-  local out="build/$EX/android"; mkdir -p "$out/lib/arm64-v8a" "$out/stubs"; rm -f "$out"/*.o
-  echo "== Android ($EX): arm64 libmojoui.so for a NativeActivity (exploration)"
-  mojo_build hosts/android_main.mojo --target-triple aarch64-linux-android29 --emit object -o "$out/app.o"
-  mojo_build mojoui/hosts/mojo_rt.mojo --target-triple aarch64-linux-android29 --emit object -o "$out/mojo_rt.o"
-  # Empty stand-ins that only carry the system libraries' names (like apple/sdk/*.tbd);
-  # the device's real libc/liblog provide the functions at run time.
-  echo "" | llvm-mc -triple=aarch64-linux-android -filetype=obj -o "$out/stubs/empty.o"
-  for lib in libc liblog; do  # only what the library uses
-    pixi run ld.lld -shared -soname "$lib.so" -o "$out/stubs/$lib.so" "$out/stubs/empty.o"
+build_android() {  # a signed APK: the app + mojoui as libmojoui.so (arm64 phones, x86_64 emulators) + one Java file
+  local out="build/$EX/android"; mkdir -p "$out"; rm -rf "$out"/lib "$out"/*.o "$out"/*.apk "$out"/classes "$out"/dex
+  local sdk="${ANDROID_HOME:-$HOME/Android/Sdk}"
+  local bt; bt="$(ls -d "$sdk"/build-tools/* 2>/dev/null | sort -V | tail -n1)"
+  local jar; jar="$(ls -d "$sdk"/platforms/android-*/android.jar 2>/dev/null | sort -V | tail -n1)"
+  [[ -n "$bt" && -n "$jar" ]] || { echo "no Android SDK at $sdk (run scripts/android_setup.sh)" >&2; return 1; }
+  echo "== Android ($EX): Android views via JNI, $(basename "$(dirname "$jar")")"
+  for abi in arm64-v8a:aarch64 x86_64:x86_64; do
+    local dir="${abi%%:*}" cpu="${abi##*:}"
+    mkdir -p "$out/lib/$dir" "$out/stubs-$dir"
+    mojo_build hosts/android_main.mojo --target-triple "$cpu-linux-android29" --emit object -o "$out/app-$dir.o"
+    mojo_build mojoui/hosts/mojo_rt.mojo --target-triple "$cpu-linux-android29" --emit object -o "$out/rt-$dir.o"
+    # Empty stand-ins carrying only the system libraries' names (like apple/sdk/*.tbd).
+    echo "" | llvm-mc -triple="$cpu-linux-android" -filetype=obj -o "$out/stubs-$dir/empty.o"
+    for lib in libc liblog libm libdl; do
+      pixi run ld.lld -shared -soname "$lib.so" -o "$out/stubs-$dir/$lib.so" "$out/stubs-$dir/empty.o"
+    done
+    pixi run ld.lld -shared -soname libmojoui.so -z noexecstack --gc-sections -o "$out/lib/$dir/libmojoui.so" \
+      "$out/app-$dir.o" "$out/rt-$dir.o" "$out"/stubs-"$dir"/*.so
   done
-  pixi run ld.lld -shared -soname libmojoui.so -z noexecstack --gc-sections -o "$out/lib/arm64-v8a/libmojoui.so" \
-    "$out/app.o" "$out/mojo_rt.o" "$out"/stubs/*.so
-  stamp "$out"; echo "   $out/lib/arm64-v8a/libmojoui.so"
+  # The framework's one Java file → dex
+  mkdir -p "$out/classes" "$out/dex"
+  javac -nowarn --release 11 -cp "$jar" -d "$out/classes" mojoui/hosts/android/MojoActivity.java
+  "$bt/d8" --release --min-api 29 --lib "$jar" --output "$out/dex" $(find "$out/classes" -name '*.class')
+  # Manifest → base APK, then the dex and the libraries, aligned and signed
+  local pkg="dev.mojoui.$EX"
+  sed -e "s/__PACKAGE__/$pkg/" -e "s/__LABEL__/$NAME/" mojoui/hosts/android/AndroidManifest.xml > "$out/AndroidManifest.xml"
+  "$bt/aapt2" link --manifest "$out/AndroidManifest.xml" -I "$jar" --min-sdk-version 29 --target-sdk-version 36 \
+    --version-code 1 --version-name 0.1 -o "$out/base.apk"
+  (cd "$out/dex" && zip -q ../base.apk classes.dex)
+  (cd "$out" && zip -q -r base.apk lib)
+  "$bt/zipalign" -f -p 4 "$out/base.apk" "$out/aligned.apk"
+  local ks="build/android-debug.keystore"  # a local debug key (never committed: build/ is ignored)
+  [[ -f "$ks" ]] || keytool -genkeypair -keystore "$ks" -storepass android -keypass android -alias debug \
+    -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=mojo-ui debug" >/dev/null 2>&1
+  "$bt/apksigner" sign --ks "$ks" --ks-pass pass:android --out "$out/$NAME.apk" "$out/aligned.apk"
+  rm -f "$out/base.apk" "$out/aligned.apk"
+  stamp "$out"; echo "   $out/$NAME.apk ($pkg)"
 }
 
 apple_objects() {  # apple_objects <dir> <triple> <host-main>
