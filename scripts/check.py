@@ -1,4 +1,4 @@
-"""Milestone checker for GOAL.md (goal 3). Rebuilds from scratch, prints PASS/FAIL per milestone.
+"""Milestone checker for GOAL.md (goal 4; goal 3's checks run as M10). Rebuilds from scratch, prints PASS/FAIL per milestone.
 
 Run: scripts/check   (earlier goals' checkers: docs/goals/0N-check.py)
 
@@ -23,8 +23,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 sys.path.insert(0, str(ROOT / "scripts"))
-EXAMPLES = ["hello", "gallery", "todo", "gpu"]
-NATIVE_APPLE = ["hello", "gallery", "todo"]
+EXAMPLES = ["hello", "gallery", "todo", "gpu", "kitchen", "expenses"]
+NATIVE_APPLE = ["hello", "gallery", "todo", "kitchen", "expenses"]
 
 ALLOWED = {
     # libobjc
@@ -50,8 +50,11 @@ def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+STATE_KINDS = "LABEL|BUTTON|FIELD|TOGGLE|DROPDOWN|SLIDER|PROGRESS|IMAGE|SEGMENTED|RADIO|TEXTAREA|ALERT|TABS|NAV|DATE|ICON|GRID|LIST"
+
+
 def state(out):
-    return [l for l in out.splitlines() if re.match(r"^(LABEL|BUTTON|FIELD|TOGGLE|DROPDOWN|SLIDER|PROGRESS|IMAGE): ", l)]
+    return [l for l in out.splitlines() if re.match(rf"^({STATE_KINDS}): ", l)]
 
 
 # ---------- hosts ----------
@@ -158,7 +161,7 @@ def same_source(example, platforms):
 
 # ---------- milestones ----------
 
-def m1():
+def g3_m1():
     r, out = web("hello", "tap:Greet;tap:Greet;tap:Greet")
     if r is None:
         return False, out
@@ -176,7 +179,7 @@ def m1():
     return True, "Chromium clicked Greet 3x on the FastHTML page → 'Hello, Ada! (click 3)'; GTK hello still passes and draws"
 
 
-def m2():
+def g3_m2():
     r = run(["pixi", "run", "mojo", "run", "-I", ".", "tests/test_mojoui.mojo"])
     out = r.stdout + r.stderr
     needed = ["TextField", "Toggle", "Dropdown", "Slider", "ProgressBar", "Divider", "Scroll"]
@@ -201,7 +204,7 @@ def gallery_ok(out):
     return not missing, missing
 
 
-def m3():
+def g3_m3():
     r, out = gtk("gallery", GALLERY_STEPS)
     if r is None:
         return False, out
@@ -210,7 +213,7 @@ def m3():
     return ok, "GTK: typed, toggled, chose, slid, pressed Return on real widgets; every echo label right" if ok else f"missing {missing}: {out[-500:]}"
 
 
-def m4():
+def g3_m4():
     r, out = web("gallery", GALLERY_STEPS)
     if r is None:
         return False, out
@@ -219,7 +222,7 @@ def m4():
     return ok, "Chromium: same interactions, same echoed state" if ok else f"missing {missing}: {out[-500:]}"
 
 
-def m5():
+def g3_m5():
     problems = []
     for ex in NATIVE_APPLE:
         for plat in ("mac", "ios"):
@@ -242,7 +245,7 @@ TODO_EXPECT = ["TOGGLE: Write Mojo=off", "DROPDOWN: All", "LABEL: 1 left · 0 do
 TODO_GONE = ["Buy milk", "Walk the dog", "Feed the cat", "TOGGLE: Just a draft"]
 
 
-def m6():
+def g3_m6():
     problems = []
     r1, gout = gtk("todo", TODO_STEPS)
     r2, wout = web("todo", TODO_STEPS)
@@ -278,7 +281,7 @@ def m6():
     return not problems, "; ".join(problems) or "todo: GTK and Chromium give identical state; Mac + iPhone build; apps import only mojoui"
 
 
-def m7():
+def g3_m7():
     so = BUILD / "todo" / "android" / "lib" / "arm64-v8a" / "libmojoui.so"
     doc = ROOT / "docs" / "android.md"
     if so.exists():
@@ -294,7 +297,7 @@ def m7():
     return False, "no Android build and no docs/android.md"
 
 
-def m8():
+def g3_m8():
     problems = []
     r1, gout = gtk("gpu", "tap:Run on GPU")
     r2, wout = web("gpu", "tap:Run on GPU")
@@ -315,7 +318,7 @@ def m8():
     return not problems, "; ".join(problems) or "GPU kernel ran on the NVIDIA GPU; result shown in GTK and web, verified against the CPU; no-GPU run degrades gracefully"
 
 
-def m9():
+def g3_m9():
     problems = []
     readme = (ROOT / "README.md").read_text()
     for word in ("Linux", "Mac", "iPhone", "Web", "Android", "GPU", "TextField", "Dropdown", "examples/todo/app.mojo"):
@@ -328,6 +331,133 @@ def m9():
     return not problems, "; ".join(problems) or "README covers every platform and component; all paths exist"
 
 
+# ---------- goal 4 ----------
+
+KITCHEN_STEPS = ("segment:0=Week;radio:0=Large;tab:0=Text;textarea:0=Line one\\nLine two;tab:0=More;"
+                 "date:0=2026-12-25;tap:Delete everything;alert:Cancel;tap:Delete everything;alert:Delete;"
+                 "tab:0=Choices;tap:Open details;back;tab:0=List;scroll:0=7500;row:0=7500")
+KITCHEN_SUMMARY = "LABEL: Week · Large · 2 lines · 2026-12-25 · deleted 1 · details 1 · row 7500"
+
+
+def both(example, steps):
+    """Runs steps on GTK and web; returns (problems, gtk_state, web_state, gtk_out)."""
+    r1, gout = gtk(example, steps)
+    r2, wout = web(example, steps)
+    if r1 is None or r2 is None:
+        return [(gout if r1 is None else wout)[-500:]], [], [], ""
+    gs, ws = state(gout), state(wout)
+    problems = [] if gs == ws else [f"GTK and web differ:\n  gtk={gs}\n  web={ws}"]
+    if same_source(example, ["linux", "web"]):
+        problems.append(f"{example}: builds not from the current app.mojo")
+    return problems, gs, ws, gout
+
+
+def kitchen_has(expected, steps=KITCHEN_STEPS):
+    problems, gs, _, _ = both("kitchen", steps)
+    missing = [e for e in expected if e not in gs]
+    if missing:
+        problems.append(f"missing {missing} in {gs}")
+    return not problems, "; ".join(problems)
+
+
+def m1():
+    ok, msg = kitchen_has(["SEGMENTED: Week", "RADIO: Large", "LABEL: Period: Week · Size: Large"], "segment:0=Week;radio:0=Large")
+    return ok, msg or "Segmented + Radio: chosen on GTK and web, echoed, identical"
+
+
+def m2():
+    ok, msg = kitchen_has(["TEXTAREA: Line one\\nLine two", "LABEL: 2 lines, 17 characters"], "tab:0=Text;textarea:0=Line one\\nLine two")
+    return ok, msg or "TextArea: two lines typed and echoed on GTK and web, identical"
+
+
+def m3():
+    ok, msg = kitchen_has(["ALERT: Delete everything? | This can't be undone. | Cancel, Delete"], "tab:0=More;tap:Delete everything")
+    if not ok:
+        return ok, msg
+    ok, msg = kitchen_has(["LABEL: Deleted 1 time"], "tab:0=More;tap:Delete everything;alert:Cancel;tap:Delete everything;alert:Delete")
+    return ok, msg or "Alert shown while in the view; Cancel and Delete answered on GTK and web, identical"
+
+
+def m4():
+    ok, msg = kitchen_has(["NAV: Details (back)", "LABEL: This is the details screen."], "tap:Open details")
+    if not ok:
+        return ok, msg
+    ok, msg = kitchen_has(["TABS: More", "LABEL: Details opened 1 time"], "tap:Open details;back;tab:0=More")
+    return ok, msg or "Tabs switch sections; NavBar opens a screen and Back returns, on GTK and web, identical"
+
+
+def m5():
+    ok, msg = kitchen_has(["DATE: 2026-12-25", "LABEL: Date: 2026-12-25"], "tab:0=More;date:0=2026-12-25")
+    return ok, msg or "DatePicker set on GTK and web; event carried 2026-12-25; identical"
+
+
+def m6():
+    ok, msg = kitchen_has(["ICON: star", "ICON: trash", "ICON: gear"], "tab:0=More")
+    return ok, msg or "Icons: star, trash, gear shown with each platform's own icons"
+
+
+def m7():
+    ok, msg = kitchen_has(["GRID: 3 columns, 6 items", "LABEL: Cell 6"], "tab:0=More")
+    return ok, msg or "Grid: 6 items in rows of 3 on GTK and web"
+
+
+def m8():
+    problems, gs, _, gout = both("kitchen", "tab:0=List;scroll:0=7500;row:0=7500")
+    if "LIST: 10000 rows" not in gs or "LABEL: Tapped row 7500" not in gs:
+        problems.append(f"list state wrong: {gs}")
+    built = [int(x) for x in re.findall(r"^LISTBUILT: (\d+)$", gout, re.M)]
+    if not built or max(built) >= 500:
+        problems.append(f"GTK built {built} rows; must build far fewer than 10,000")
+    return not problems, "; ".join(problems) or f"10,000-row list: scrolled to and tapped row 7500 on GTK and web; GTK built only {max(built)} rows"
+
+
+EXPENSES_STEPS = ("type:Amount=12.50;segment:0=Travel;date:0=2026-10-01;textarea:0=Taxi to the airport;tap:Add expense;"
+                  "tab:0=History;row:0=0;tap:Delete;alert:Cancel;tap:Delete;alert:Delete;tab:0=Insights")
+
+
+def m9():
+    problems, gs, _, _ = both("expenses", EXPENSES_STEPS)
+    if "TABS: Insights" not in gs or not any(l.startswith("LABEL: Total: ") and "5000 expenses" in l for l in gs):
+        problems.append(f"expenses end state wrong: {gs}")
+    if not any(l.startswith("ICON: ") for l in gs) or not any(l.startswith("GRID: ") for l in gs):
+        problems.append("Insights should show icons in a grid")
+    r1, gout = gtk("expenses", "type:Amount=12.50;segment:0=Travel;tap:Add expense;tab:0=History")
+    if r1 is None or not any("Travel" in l and "12.50" in l for l in state(gout)):
+        problems.append(f"added expense not at the top of History: {state(gout) if r1 else gout[-300:]}")
+    for plat in ("mac", "ios"):
+        ok, msg = apple_ok("expenses", plat)
+        if not ok:
+            problems.append(msg)
+    return not problems, "; ".join(problems) or "Expenses app: add → history → detail → confirm delete → insights; GTK and web identical; Mac + iPhone build"
+
+
+def m10():
+    problems = []
+    for name, fn in [("M1", g3_m1), ("M2", g3_m2), ("M3", g3_m3), ("M4", g3_m4), ("M5", g3_m5), ("M6", g3_m6),
+                     ("M7", g3_m7), ("M8", g3_m8)]:
+        ok, msg = fn()
+        if not ok:
+            problems.append(f"goal 3 {name}: {msg[:200]}")
+    for plat in ("mac", "ios"):
+        ok, msg = apple_ok("kitchen", plat)
+        if not ok:
+            problems.append(msg)
+    return not problems, "; ".join(problems) or "goal 3's M1–M8 still pass; kitchen builds for Mac + iPhone"
+
+
+def m11():
+    problems = []
+    readme = (ROOT / "README.md").read_text()
+    for c in ("Segmented", "Radio", "TextArea", "Alert", "Tabs", "NavBar", "DatePicker", "Icon", "Grid", "LazyList",
+              "examples/expenses/app.mojo"):
+        if c not in readme:
+            problems.append(f"README.md doesn't mention {c}")
+    ok, msg = g3_m9()
+    if not ok:
+        problems.append(msg)
+    return not problems, "; ".join(problems) or "README covers every component and the expenses app; all paths exist"
+
+
 def main():
     for ex in EXAMPLES:
         shutil.rmtree(BUILD / ex, ignore_errors=True)
@@ -338,7 +468,8 @@ def main():
         if b.returncode != 0:
             print(f"build {ex} failed:\n" + (b.stdout + b.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7), ("M8", m8), ("M9", m9)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7),
+                     ("M8", m8), ("M9", m9), ("M10", m10), ("M11", m11)]:
         try:
             ok, msg = fn()
         except Exception as e:  # a crashing check is a failing check
