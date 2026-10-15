@@ -29,3 +29,7 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-23 · apps name the parameter `message`, not `msg`, over loosening the checker's platform-word list · `msg` is the Objective-C helper's name; the checker stays strict · yes
 - D-24 · removed experiment 1's hand-written Mac/iPhone apps and `apple/build.sh` · superseded by the declarative hosts + `scripts/build.sh`; still in git history · yes (git)
 - D-25 · review round 1 fixes: AppKit centre = 1 on arm64, row alignment CenterY = 10; node limit checked where tags are made (both Apple hosts); old controls deliberately not released (documented why); iOS content in the safe area with large buttons everywhere; goal 1's "no C/ObjC/Swift sources" check restored in M5 (I had dropped it unlogged); M2 now also shows the window and asserts GTK drew a PNG (a window flashes for a moment during `scripts/check`) · yes
+
+## Goal 3: web, components, todo, Android, GPU
+- D-26 · web host = FastHTML (Python) + HTMX, with the Mojo app compiled as a Python extension module (`PyInit_*` + `PythonModuleBuilder`) over Mojo-as-wasm or a Mojo HTTP server · owner's idea; Mojo has first-class Python modules; FastHTML gives HTML + the JS ecosystem · yes
+- D-27 · plain `python-fasthtml` over fh-saas for the web host · it's a UI framework host, not a SaaS backend; fh-saas can sit on top later · yes
