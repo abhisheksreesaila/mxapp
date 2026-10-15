@@ -206,6 +206,18 @@ def buffer_text(buffer: Int) -> String:
     return text
 
 
+def fresh_rows(list: Int, count: Int):
+    """Gives a GtkListView a new model of `count` placeholder items, so every visible
+    row is bound again (asking the app for its text); the scroll position is kept."""
+    var model = external_call["gtk_string_list_new", Int](0)
+    var empty = String("")
+    for _ in range(count):
+        external_call["gtk_string_list_append", NoneType](model, empty.as_c_string_span())
+    var selection = external_call["gtk_list_view_get_model", Int](list)
+    external_call["gtk_no_selection_set_model", NoneType](selection, model)
+    external_call["g_object_unref", NoneType](model)
+
+
 def escape_newlines(text: String) -> String:
     return text.replace("\n", "\\n")
 
@@ -392,6 +404,7 @@ struct GtkHost[A: App](Movable):
             set_node(factory, i)
             connect3(factory, "setup", on_row_setup[Self.A], self_addr)
             connect3(factory, "bind", on_row_bind[Self.A], self_addr)
+            connect3(factory, "unbind", on_row_unbind, self_addr)
             var list = external_call["gtk_list_view_new", Int](selection, factory)
             external_call["gtk_list_view_set_single_click_activate", NoneType](list, c_int(1))
             add_class(list, "boxed-list")
@@ -495,13 +508,7 @@ struct GtkHost[A: App](Movable):
                     b = external_call["gtk_widget_get_next_sibling", Int](b)
                     j += 1
             elif p.op == SET_VALUE and kind == LAZYLIST:
-                var model = external_call["gtk_string_list_new", Int](0)
-                var empty = String("")
-                for _ in range(p.number):
-                    external_call["gtk_string_list_append", NoneType](model, empty.as_c_string_span())
-                var selection = external_call["gtk_list_view_get_model", Int](w)
-                external_call["gtk_no_selection_set_model", NoneType](selection, model)
-                external_call["g_object_unref", NoneType](model)
+                pass  # the refresh below hands it a model of the new length
             elif p.op == SET_VALUE:
                 if kind == TOGGLE:
                     external_call["gtk_check_button_set_active", NoneType](w, c_int(p.number))
@@ -518,13 +525,11 @@ struct GtkHost[A: App](Movable):
                 external_call["g_object_unref", NoneType](tex)
             # SET_MSG needs nothing: events look the message up in rt.shown.
         # Ask for the visible rows of every long list again: row text isn't part of the
-        # view, so an edit that keeps the row count wouldn't show otherwise.
+        # view, so an edit that keeps the row count wouldn't show otherwise. GTK only
+        # re-binds rows whose items changed, so the list gets fresh items (scroll is kept).
         for k in range(len(self.rt.shown.nodes)):
             if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
-                var selection = external_call["gtk_list_view_get_model", Int](self.widgets[k])
-                var model = external_call["gtk_no_selection_get_model", Int](selection)
-                var n = external_call["g_list_model_get_n_items", c_uint](model)
-                external_call["g_list_model_items_changed", NoneType](model, c_uint(0), n, n)
+                fresh_rows(self.widgets[k], self.rt.shown.nodes[k].value)
         set_busy(False)
 
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
@@ -658,8 +663,26 @@ def on_row_bind[A: App](factory: Int, item: Int, host_addr: Int) abi("C"):
     var position = Int(external_call["gtk_list_item_get_position", c_uint](item))
     var text = host[].rt.app.row(host[].rt.shown.nodes[node].msg2, position)  # asked for on demand
     count_up("mojoui-rows-bound")
+    if position == 0:  # (for the test report: what row 0 shows right now)
+        var key = String("mojoui-row0")
+        var app = external_call["g_application_get_default", Int]()
+        var free_name = String("g_free")
+        var g_free = external_call["dlsym", Int](0, free_name.as_c_string_span())
+        external_call["g_object_set_data_full", NoneType](app, key.as_c_string_span(),
+            external_call["g_strdup", Int](text.as_c_string_span()), g_free)
+        var owner = String("mojoui-row0-item")
+        external_call["g_object_set_data", NoneType](app, owner.as_c_string_span(), item)
     var label = external_call["gtk_list_item_get_child", Int](item)
     external_call["gtk_label_set_text", NoneType](label, text.as_c_string_span())
+
+
+def on_row_unbind(factory: Int, item: Int, host_addr: Int) abi("C"):
+    var owner = String("mojoui-row0-item")
+    var app = external_call["g_application_get_default", Int]()
+    if external_call["g_object_get_data", Int](app, owner.as_c_string_span()) == item:  # row 0's widget left
+        var key = String("mojoui-row0")
+        external_call["g_object_set_data", NoneType](app, key.as_c_string_span(), 0)
+        external_call["g_object_set_data", NoneType](app, owner.as_c_string_span(), 0)
 
 
 def on_row_activate[A: App](list: Int, position: Int, host_addr: Int) abi("C"):
@@ -847,12 +870,21 @@ def run_step[A: App](host_addr: Int, step: String):
 
 
 def report[A: App](host_addr: Int):
-    """Prints every widget's state as GTK reports it, in screen order."""
+    """Prints every widget's state as GTK reports it, in screen order (alerts last,
+    since they float above the page on every host)."""
+    report_pass[A](host_addr, False)
+    report_pass[A](host_addr, True)
+
+
+def report_pass[A: App](host_addr: Int, alerts: Bool):
     var host = host_at[A](host_addr)
-    print("NATIVE: GTK " + String(external_call["gtk_get_major_version", c_int]()) + "." + String(external_call["gtk_get_minor_version", c_int]()))
+    if not alerts:
+        print("NATIVE: GTK " + String(external_call["gtk_get_major_version", c_int]()) + "." + String(external_call["gtk_get_minor_version", c_int]()))
     for i in range(len(host[].rt.shown.nodes)):
         ref n = host[].rt.shown.nodes[i]
         var w = host[].widgets[i]
+        if (n.kind == ALERT) != alerts:
+            continue
         if n.kind == TEXT:
             print("LABEL: " + c_str(external_call["gtk_label_get_text", Int](w)))
         elif n.kind == BUTTON:
@@ -882,7 +914,7 @@ def report[A: App](host_addr: Int):
                 b = external_call["gtk_widget_get_next_sibling", Int](b)
         elif n.kind == TEXTAREA:
             print("TEXTAREA: " + escape_newlines(buffer_text(external_call["gtk_text_view_get_buffer", Int](w))))
-        elif n.kind == ALERT:
+        if n.kind == ALERT:
             var line = c_str(external_call["adw_alert_dialog_get_heading", Int](w)) + " | " + c_str(external_call["adw_alert_dialog_get_body", Int](w)) + " | "
             for j in range(len(n.options)):
                 var id = String(j)
@@ -910,6 +942,11 @@ def report[A: App](host_addr: Int):
             print("LIST: " + String(external_call["g_list_model_get_n_items", c_uint](selection)) + " rows")
             print("LISTBUILT: " + String(counter("mojoui-rows-built")))
             print("LISTBOUND: " + String(counter("mojoui-rows-bound")))
+            var key = String("mojoui-row0")
+            var app = external_call["g_application_get_default", Int]()
+            var row0 = external_call["g_object_get_data", Int](app, key.as_c_string_span())
+            if row0 != 0:  # only while row 0 is on screen (as on the web)
+                print("LISTROW: " + c_str(row0))
         elif n.kind == IMAGE:
             var paintable = external_call["gtk_picture_get_paintable", Int](w)
             print("IMAGE: " + String(external_call["gdk_texture_get_width", c_int](paintable)) + "x" + String(external_call["gdk_texture_get_height", c_int](paintable)))

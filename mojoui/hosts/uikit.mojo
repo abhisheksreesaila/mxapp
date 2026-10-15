@@ -264,8 +264,8 @@ struct UIKitHost[A: App](Movable):
             if n.kind == ALERT:
                 has_alert = True
         var root_vc = msg(self.window, "rootViewController")
-        if not has_alert and root_vc != 0 and msg(root_vc, "presentedViewController") != 0:
-            _ = msg(root_vc, "dismissViewControllerAnimated:completion:", 1, 0)  # the alert left the view
+        if not has_alert and root_vc != 0 and is_alert(msg(root_vc, "presentedViewController")):
+            _ = msg(root_vc, "dismissViewControllerAnimated:completion:", 1, 0)  # our alert left the view
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)  # 0 = nil: patches become no-ops
         self.extras = List[Int](length=len(self.rt.shown.nodes), fill=0)
         if len(self.rt.shown.nodes) >= (1 << NODE_BITS):
@@ -343,6 +343,11 @@ struct UIKitHost[A: App](Movable):
 def ui_image(pixels: List[UInt32], width: Int, height: Int) -> Int:
     """A UIImage from RGBA pixels, via PNG bytes made in Mojo (mojoui/png.mojo)."""
     return msg(cls("UIImage"), "imageWithData:", ns_data(encode_png(pixels, width, height)))
+
+
+def is_alert(controller: Int) -> Bool:
+    """Whether a presented view controller is an alert (not, say, the date picker's calendar)."""
+    return controller != 0 and msg[Int8](controller, "isKindOfClass:", cls("UIAlertController")) != 0
 
 
 def radio_button(title: String, selected: Bool) -> Int:
@@ -506,7 +511,7 @@ def on_present_alert[A: App](target: Int, cmd: Int, number: Int) abi("C"):
         var action = msg(cls("UIAlertAction"), "actionWithTitle:style:handler:", ns_string(n.options[j]), style, handler)
         _ = msg(alert, "addAction:", action)
     var root = msg(host[].window, "rootViewController")
-    if msg(root, "presentedViewController") != 0:
+    if is_alert(msg(root, "presentedViewController")):
         return  # already showing it (the screen was rebuilt twice while the alert was in the view)
     _ = msg(root, "presentViewController:animated:completion:", alert, 1, 0)
 

@@ -50,7 +50,7 @@ def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-STATE_KINDS = "LABEL|BUTTON|FIELD|TOGGLE|DROPDOWN|SLIDER|PROGRESS|IMAGE|SEGMENTED|RADIO|TEXTAREA|ALERT|TABS|NAV|DATE|ICON|GRID|LIST"
+STATE_KINDS = "LABEL|BUTTON|FIELD|TOGGLE|DROPDOWN|SLIDER|PROGRESS|IMAGE|SEGMENTED|RADIO|TEXTAREA|ALERT|TABS|NAV|DATE|ICON|GRID|LIST|LISTROW"
 
 
 def state(out):
@@ -419,6 +419,10 @@ def m8():
     built = [int(x) for x in re.findall(r"^LISTBUILT: (\d+)$", gout, re.M)]
     if not built or max(built) >= 500:
         problems.append(f"GTK built {built} rows; must build far fewer than 10,000")
+    # Editing a row without changing the count must show on screen (rows aren't in the view).
+    ok, msg = kitchen_has(["LISTROW: Row 0 · 0 points · bumped 2"], "tab:0=List;tap:Bump row 0;tap:Bump row 0")
+    if not ok:
+        problems.append(f"row refresh: {msg}")
     _, wout = web("kitchen", "tab:0=List;scroll:0=7500;row:0=7500")
     in_page = [int(x) for x in re.findall(r"^LISTROWS: (\d+)$", wout or "", re.M)]
     if not in_page or max(in_page) >= 100:

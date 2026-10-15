@@ -19,7 +19,7 @@ from types import SimpleNamespace
 ROOT = Path(__file__).resolve().parent.parent
 CHROMIUM = "/usr/bin/chromium"
 
-DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind]')].map(e => {
+DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui-overlay [data-kind]')].map(e => {
   const k = e.dataset.kind;
   if (k === 'label') return 'LABEL: ' + e.textContent;
   if (k === 'button') return 'BUTTON: ' + e.textContent;
@@ -40,7 +40,9 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind]')].map(e
   if (k === 'date') return 'DATE: ' + e.value;
   if (k === 'icon') return 'ICON: ' + (e.querySelector('svg') ? e.dataset.icon : '?');
   if (k === 'grid') return 'GRID: ' + e.dataset.columns + ' columns, ' + e.children.length + ' items';
-  if (k === 'list') return 'LIST: ' + e.querySelector('.rows').dataset.count + ' rows' + String.fromCharCode(10) + 'LISTROWS: ' + e.querySelectorAll('.row').length;
+  if (k === 'list') { const r0 = e.querySelector('[data-row="0"]');
+    return 'LIST: ' + e.querySelector('.rows').dataset.count + ' rows' + String.fromCharCode(10) + 'LISTROWS: ' + e.querySelectorAll('.row').length
+      + (r0 ? String.fromCharCode(10) + 'LISTROW: ' + r0.textContent : ''); }
 }).filter(Boolean).join('\\n')"""
 
 

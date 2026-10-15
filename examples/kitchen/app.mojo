@@ -17,6 +17,7 @@ comptime OPEN = 8
 comptime BACK = 9
 comptime ROW = 10
 comptime ROWS_LIST = 1
+comptime BUMP = 11
 
 
 def times(n: Int) -> String:
@@ -34,6 +35,7 @@ struct Main(App):
     var in_details: Bool
     var details_opened: Int
     var tapped: Int
+    var bumped: Int
 
     def __init__(out self):
         self.tab = 0
@@ -46,6 +48,7 @@ struct Main(App):
         self.in_details = False
         self.details_opened = 0
         self.tapped = -1
+        self.bumped = 0
 
     def title(self) -> String:
         return "Kitchen sink"
@@ -75,9 +78,14 @@ struct Main(App):
             self.in_details = False
         elif m == ROW:
             self.tapped = event.number
+        elif m == BUMP:
+            self.bumped += 1
 
     def row(self, list_id: Int, index: Int) -> String:
-        return "Row " + String(index) + " · " + String(index * index % 997) + " points"
+        var text = "Row " + String(index) + " · " + String(index * index % 997) + " points"
+        if index == 0:
+            text += " · bumped " + String(self.bumped)
+        return text
 
     def lines(self) -> Int:
         if self.notes == "":
@@ -138,6 +146,7 @@ struct Main(App):
         else:
             body = VStack(
                 LazyList(10000, ROWS_LIST, on_tap=ROW, height=320),
+                Button("Bump row 0", on_tap=BUMP),
                 Text("Tapped row " + (String(self.tapped) if self.tapped >= 0 else "none"), style=CAPTION),
                 spacing=12,
             )

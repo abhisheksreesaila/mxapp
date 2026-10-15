@@ -58,14 +58,18 @@ def parse_cents(text: String) -> Int:
     var cents = 0
     var digits = 0
     var decimals = -1
+    var since_comma = -1  # digits since the last comma (-1: no comma yet)
     for byte in String(text.strip()).as_bytes():
         var b = Int(byte)
         if b == ord("$") and digits == 0 and decimals < 0:
             continue
-        if b == ord(",") and decimals < 0 and digits > 0:
+        if b == ord(","):  # only as a thousands separator: 1,234 or 12,345
+            if decimals >= 0 or digits == 0 or (since_comma >= 0 and since_comma != 3) or (since_comma < 0 and digits > 3):
+                return -1
+            since_comma = 0
             continue
         if b == ord("."):
-            if decimals >= 0:
+            if decimals >= 0 or (since_comma >= 0 and since_comma != 3):
                 return -1
             decimals = 0
         elif ord("0") <= b <= ord("9"):
@@ -76,9 +80,13 @@ def parse_cents(text: String) -> Int:
                 decimals += 1
             else:
                 digits += 1
+                if since_comma >= 0:
+                    since_comma += 1
         else:
             return -1
     if digits == 0 and decimals <= 0:
+        return -1
+    if decimals < 0 and since_comma >= 0 and since_comma != 3:
         return -1
     if decimals <= 0:
         cents *= 100

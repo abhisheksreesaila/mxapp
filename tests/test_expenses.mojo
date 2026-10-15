@@ -12,7 +12,9 @@ def test_parse_cents() raises:
     assert_equal(parse_cents("1,234.50"), 123450)
     assert_equal(parse_cents(".99"), 99)
     assert_equal(parse_cents("9999999.99"), 999999999)
-    for bad in ["", "abc", "1.2.3", "12.345", "99999999", "99999999999999999999", "0", "0.00", "-5", "$", "."]:
+    assert_equal(parse_cents("12,345"), 1234500)
+    for bad in ["", "abc", "1.2.3", "12.345", "99999999", "99999999999999999999", "0", "0.00", "-5", "$", ".",
+                "1,2,3", "12,,3", ",123", "1,23", "1,2345", "1234,567", "1,234,56", "1.5,0"]:
         assert_equal(parse_cents(bad), -1, bad)
 
 

@@ -183,6 +183,8 @@ def render(s, i, sid):
                         rows=str(max(n["size"] // 24, 2)), autofocus=(s.focus == i), hx_trigger="input",
                         hx_sync="this:queue all", **common)
     if kind == ALERT:
+        return Div(id=nid, hidden=True)  # drawn in the overlay outside the page (see overlay())
+    if kind == -ALERT:  # (only overlay() asks for this: the alert itself)
         buttons = [Button(o, cls="prominent" if j == len(n["options"]) - 1 else "", autofocus=(j == 0),
                           **dict(common, hx_vals=json.dumps({"n": i, "number": j}))) for j, o in enumerate(n["options"])]
         # Modal without scripts: a full-screen backdrop catches every click behind the dialog,
@@ -225,6 +227,16 @@ def render(s, i, sid):
     return Div(*kids, cls=cls, id=nid, style=f"gap:{n['spacing']}px")
 
 
+def render_alert(s, i, sid):
+    """The modal for Alert node i (drawn in the overlay, outside the inert page)."""
+    real = s.nodes[i]
+    s.nodes[i] = dict(real, kind=-ALERT)
+    try:
+        return render(s, i, sid)
+    finally:
+        s.nodes[i] = real
+
+
 def rows_div(s, i, sid, top):
     """The tall inner box of LazyList node i, holding only the rows around scroll position `top`."""
     n = s.nodes[i]
@@ -240,7 +252,7 @@ def rows_html(s, i, sid, top):
     first = max(0, top // row_h - 5)
     texts = json.loads(s.mod.rows(s.handle, i, first, LIST_WINDOW))
     return [Div(t, cls="row", data_row=str(first + k), style=f"top:{(first + k) * row_h}px;height:{row_h}px",
-                role="button", tabindex="0", hx_trigger="click, keyup[key=='Enter']",
+                role="button", tabindex="0", hx_trigger="click, keyup[key=='Enter'], keyup[key==' ']",
                 hx_post=f"/e/{sid}", hx_vals=json.dumps({"n": i, "number": first + k}), hx_swap="none",
                 hx_target="this",  # htmx inherits hx-target: without this, rows inherit the list's
                 hx_include="#mojoui-v") for k, t in enumerate(texts)]  # "find .rows", fail to find it, and silently send nothing
@@ -261,10 +273,15 @@ def make_app(module_dir):
 
     def root(s, sid, oob=False):
         version = Input(type="hidden", id="mojoui-v", name="v", value=str(s.shape))
-        el = Main(version, render(s, 0, sid), id="mojoui-root")
+        alerts = [i for i, n in enumerate(s.nodes) if n["kind"] == ALERT]
+        # While an alert is up the page behind is inert (no clicks, no keyboard focus);
+        # the alert lives in an overlay beside it.
+        page = Main(version, render(s, 0, sid), id="mojoui-root", inert=bool(alerts))
+        layer = Div(*[render_alert(s, i, sid) for i in alerts], id="mojoui-overlay")
         if oob:
-            el.attrs["hx-swap-oob"] = "true"
-        return el
+            page.attrs["hx-swap-oob"] = "true"
+            layer.attrs["hx-swap-oob"] = "true"
+        return page, layer
 
     @app.get("/static/htmx.min.js")
     def htmx_js():
@@ -282,7 +299,7 @@ def make_app(module_dir):
                 with old.lock:
                     old.closed = True
                     mod.close(old.handle)
-        return Title(mod.title(s.handle)), root(s, sid)
+        return Title(mod.title(s.handle)), *root(s, sid)
 
     @app.get("/img/{sid}/{n}")
     def image(sid: str, n: int):
