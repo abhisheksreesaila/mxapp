@@ -142,7 +142,17 @@ def m2():
     if r is None:
         return False, out
     ok = r.returncode == 0 and "LABEL: Hello, Ada! (click 3)" in out and "NATIVE: GTK" in out
-    return ok, "real GtkButton tapped 3x, real GtkLabel reads 'Hello, Ada! (click 3)'" if ok else out.strip()[-400:]
+    if not ok:
+        return False, out.strip()[-400:]
+    # Also show the window for real and have GTK draw it (it appears for a moment).
+    with tempfile.TemporaryDirectory() as tmp:
+        png = Path(tmp) / "hello.png"
+        exe = BUILD / "hello" / "linux" / "hello"
+        r = run([str(exe)], env={"MOJOUI_TEST": "Greet", "MOJOUI_SHOT": str(png)}, timeout=60)
+        data = png.read_bytes() if png.exists() else b""
+        if not data.startswith(b"\x89PNG") or len(data) < 5000:
+            return False, f"window wasn't drawn: {(r.stdout + r.stderr).strip()[-300:]}"
+    return True, "real GtkButton tapped 3x (signal), real GtkLabel reads 'Hello, Ada! (click 3)'; window shown and drawn by GTK"
 
 
 def m3():
@@ -153,8 +163,17 @@ def m4():
     return apple_ok("hello", "ios")
 
 
+def foreign_sources():
+    """Goal 1's rule, kept: no C, Objective-C or Swift sources anywhere in the framework or apps."""
+    dirs = ["mojoui", "hosts", "examples", "apple"]
+    return [str(p.relative_to(ROOT)) for d in dirs for p in (ROOT / d).rglob("*") if p.suffix in {".c", ".m", ".swift", ".h"}]
+
+
 def m5():
     problems = []
+    bad = foreign_sources()
+    if bad:
+        problems.append(f"foreign sources: {bad}")
     for ex in EXAMPLES:
         src = ROOT / "examples" / ex / "app.mojo"
         if not src.exists():
@@ -171,7 +190,7 @@ def m5():
             stamp = BUILD / ex / plat / "app.sha256"
             if not stamp.exists() or stamp.read_text().strip() != want:
                 problems.append(f"{ex}/{plat} not built from the current app.mojo")
-    return not problems, "; ".join(problems) or "app files import only mojoui; Linux, Mac and iPhone builds all compiled the identical file"
+    return not problems, "; ".join(problems) or "app files import only mojoui; no C/ObjC/Swift sources; Linux, Mac and iPhone builds all compiled the identical file"
 
 
 def m6():

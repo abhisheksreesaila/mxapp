@@ -87,10 +87,42 @@ def test_diff_reports_message_changes() raises:
     assert_equal(d.patches[0], Patch(SET_MSG, 1, "", 2))
 
 
+def test_button_title_change_is_a_patch() raises:
+    var d = diff(VStack(Button("Start", on_tap=1)), VStack(Button("Stop", on_tap=1)))
+    assert_false(d.rebuild)
+    assert_equal(len(d.patches), 1)
+    assert_equal(d.patches[0], Patch(SET_TEXT, 1, "Stop", 0))
+
+
+def test_style_change_rebuilds() raises:
+    var d = diff(VStack(Text("x", style=BODY)), VStack(Text("x", style=TITLE)))
+    assert_true(d.rebuild)
+    assert_equal(len(d.patches), 0)
+
+
+def test_text_and_message_change_together() raises:
+    var d = diff(VStack(Button("a", on_tap=1)), VStack(Button("b", on_tap=2)))
+    assert_false(d.rebuild)
+    assert_equal(len(d.patches), 2)
+    assert_equal(d.patches[0], Patch(SET_TEXT, 1, "b", 0))
+    assert_equal(d.patches[1], Patch(SET_MSG, 1, "", 2))
+
+
+def test_spacer_is_a_leaf() raises:
+    var v = HStack(Text("left"), Spacer(), Text("right"))
+    assert_equal(len(v.nodes), 4)
+    assert_equal(v.nodes[0].children, [1, 2, 3])
+    assert_equal(v.nodes[2], Node(SPACER, "", NO_MSG, BODY, 0, []))
+
+
 def main() raises:
     test_builders_make_a_flat_tree()
     test_tap_changes_only_the_label()
     test_unknown_message_changes_nothing()
     test_new_row_rebuilds()
     test_diff_reports_message_changes()
+    test_button_title_change_is_a_patch()
+    test_style_change_rebuilds()
+    test_text_and_message_change_together()
+    test_spacer_is_a_leaf()
     print("ALL TESTS PASSED")

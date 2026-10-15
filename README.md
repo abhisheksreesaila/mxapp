@@ -50,7 +50,7 @@ A second example with rows that come and go: `examples/todo/app.mojo` (`scripts/
 
 ## Write your own app
 1. Make a folder in `examples/` with an `app.mojo` that defines `struct Main(App)`: `__init__`, `title()`, `update(message)`, `view()`.
-2. Build blocks: `VStack(...)`, `HStack(...)` (also from a `List[View]` for rows), `Text(text, style=TITLE|HEADLINE|BODY|CAPTION)`, `Button(title, on_tap=MESSAGE, style=PROMINENT|PLAIN)`, `Spacer()`.
+2. Build blocks: `VStack(...)`, `HStack(...)` (also from a `List[View]` for rows), `Text(text, style=TITLE|HEADLINE|BODY|CAPTION)`, `Button(title, on_tap=MESSAGE, style=PROMINENT|PLAIN)`, `Spacer()` (expands on Linux; on Mac and iPhone it's an empty view for now).
 3. `scripts/build.sh` with the folder name, e.g. `scripts/build.sh hello all`.
 
 The app file imports only `mojoui`; it never touches GTK, AppKit or UIKit.
@@ -66,5 +66,6 @@ The app file imports only `mojoui`; it never touches GTK, AppKit or UIKit.
 - **Linux:** runs here. `scripts/check` taps the real GTK buttons and reads the real labels back.
 - **Mac and iPhone:** build, link and sign here, and pass symbol, entry-point and signature checks. **Not yet run on real hardware**.
 - Not yet: text input, images, lists that scroll, web, Android, Windows. See `ROADMAP.md`.
+- Limits: up to 65,535 nodes per screen; every rebuild keeps the old controls in memory (fine for small apps).
 
 History: `EXPERIMENTS.md` (what was tried), `docs/decisions.md`, `docs/journal.md`, `docs/goals/` (earlier goals and reports).

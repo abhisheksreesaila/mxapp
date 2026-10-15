@@ -32,7 +32,9 @@ def get_stack_trace(buf: Int, depth: Int) abi("C") -> Int:
 def runtime_fprintf(stream: Int, fmt: Int) abi("C") -> c_int:
     """Used only when a Mojo internal check fails, right before stopping.
 
-    Writes the raw format string to stderr; %-codes aren't expanded. (C declares
+    Writes the raw format string to stderr; %-codes aren't expanded, so on a
+    device you see "At: %s:%llu:%llu: Assert Error: %s" without the details:
+    reproduce on Linux (full Mojo runtime) to read the real message. (C declares
     this variadic; on Apple arm64 the extra arguments go on the stack, so taking
     just the first two is safe.)
     """

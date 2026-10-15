@@ -24,6 +24,8 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ## 2026-10-14 · Experiment 2: Mac and iPhone apps written only in Mojo (autopilot)
 
+_Later moved: `apple/objc.mojo` and `apple/mojo_rt.mojo` now live in `mojoui/hosts/`; the hand-written apps were replaced by the declarative hosts (Experiment 3)._
+
 **Goal (owner's words):** "Create a Mojo app for macOS which I can test, then do it for iOS. Mojo all the way." Contract: `GOAL.md`; decisions: `docs/decisions.md`; step-by-step: `docs/journal.md`.
 
 **Setup:** Linux x86-64, Mojo 1.1.0 via pixi (`pixi.toml`), `ld64.lld` from conda-forge, `rcodesign`, xtool (not signed in).

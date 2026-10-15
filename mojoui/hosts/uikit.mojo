@@ -70,6 +70,11 @@ struct UIKitHost[A: App](Movable):
         return w
 
     def show(mut self, self_addr: Int):
+        # Old controls are deliberately never released: that keeps a tapped button
+        # alive while the screen is replaced in the middle of its own action.
+        if len(self.rt.shown.nodes) >= (1 << NODE_BITS):
+            print("mojoui: screen has", len(self.rt.shown.nodes), "nodes; the limit is 65535")
+            return
         if self.root != 0:
             _ = msg(self.root, "removeFromSuperview")
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
@@ -103,21 +108,25 @@ def make_button(title: String, prominent: Bool) -> Int:
         maker = "glassButtonConfiguration" if glass else "grayButtonConfiguration"
     var config = msg(config_cls, maker)
     _ = msg(config, "setTitle:", ns_string(title))
-    _ = msg(config, "setButtonSize:", 3 if prominent else 0)  # large / medium
+    _ = msg(config, "setButtonSize:", 3)  # large: comfortable touch targets for every button
     _ = msg(config, "setCornerStyle:", 4)  # capsule
     return msg(cls("UIButton"), "buttonWithConfiguration:primaryAction:", config, 0)
 
 
 def pin_center(view: Int, inside: Int):
-    """Auto Layout: centre `view` in `inside`, at most its width minus margins."""
+    """Auto Layout: centre `view` in the safe area (clear of the Dynamic Island and
+    home indicator), at most its width minus margins."""
+    var guide = msg(inside, "safeAreaLayoutGuide")
     _ = msg(view, "setTranslatesAutoresizingMaskIntoConstraints:", 0)
     for anchor in ["centerXAnchor", "centerYAnchor"]:
-        var c = msg(msg(view, anchor), "constraintEqualToAnchor:", msg(inside, anchor))
+        var c = msg(msg(view, anchor), "constraintEqualToAnchor:", msg(guide, anchor))
         _ = msg(c, "setActive:", 1)
     var w = msg(
-        msg(view, "widthAnchor"), "constraintLessThanOrEqualToAnchor:constant:", msg(inside, "widthAnchor"), Float64(-48)
+        msg(view, "widthAnchor"), "constraintLessThanOrEqualToAnchor:constant:", msg(guide, "widthAnchor"), Float64(-48)
     )
     _ = msg(w, "setActive:", 1)
+    var h = msg(msg(view, "heightAnchor"), "constraintLessThanOrEqualToAnchor:", msg(guide, "heightAnchor"))
+    _ = msg(h, "setActive:", 1)
 
 
 def on_tap[A: App](target: Int, cmd: Int, button: Int) abi("C"):

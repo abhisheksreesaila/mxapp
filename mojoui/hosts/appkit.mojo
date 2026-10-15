@@ -33,7 +33,7 @@ struct AppKitHost[A: App](Movable):
         var w: Int
         if node.kind == TEXT:
             w = msg(cls("NSTextField"), "labelWithString:", ns_string(node.text))
-            _ = msg(w, "setAlignment:", 2)  # NSTextAlignmentCenter
+            _ = msg(w, "setAlignment:", 1)  # NSTextAlignmentCenter (1 on Apple Silicon; 2 is right)
             var size = Float64(13)
             var bold = False
             if node.style == TITLE:
@@ -55,7 +55,7 @@ struct AppKitHost[A: App](Movable):
         else:
             w = new("NSStackView")
             _ = msg(w, "setOrientation:", 1 if node.kind == VSTACK else 0)
-            _ = msg(w, "setAlignment:", 9 if node.kind == VSTACK else 12)  # centre X / centre Y
+            _ = msg(w, "setAlignment:", 9 if node.kind == VSTACK else 10)  # NSLayoutAttributeCenterX / CenterY
             _ = msg(w, "setSpacing:", Float64(node.spacing))
             for c in node.children:
                 _ = msg(w, "addArrangedSubview:", self.build(c, self_addr))
@@ -63,6 +63,12 @@ struct AppKitHost[A: App](Movable):
         return w
 
     def show(mut self, self_addr: Int):
+        # Old controls are deliberately never released: that keeps a tapped button
+        # alive while its window content is replaced in the middle of its own action.
+        # (Adding `release` later means delaying it until the tap handler returns.)
+        if len(self.rt.shown.nodes) >= (1 << NODE_BITS):
+            print("mojoui: screen has", len(self.rt.shown.nodes), "nodes; the limit is 65535")
+            return
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
         var root = self.build(0, self_addr)
         var holder = new("NSStackView")  # centres the app's root in the window
@@ -114,8 +120,8 @@ def run[A: App]() -> c_int:
     var host = alloc(Layout[AppKitHost[A]].single()).unsafe_leak()  # lives as long as the app
     host.unsafe_write(AppKitHost[A]())
     var addr = Int(host)
-    if (addr >> (63 - NODE_BITS)) != 0 or len(host[].rt.shown.nodes) >= (1 << NODE_BITS):
-        print("mojoui: can't pack host address and node into a button tag")
+    if (addr >> (63 - NODE_BITS)) != 0:
+        print("mojoui: can't pack host address into a button tag")
         return 1
 
     var app = msg(cls("NSApplication"), "sharedApplication")
