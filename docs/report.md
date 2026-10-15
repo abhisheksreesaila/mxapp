@@ -34,7 +34,7 @@ scripts/build.sh gpu linux && build/gpu/linux/gpu                               
 ## 3 decisions worth your second look (`docs/decisions.md`)
 1. **D-26, the web runs the Mojo app inside Python.** FastHTML imports the app compiled as a Python module and sends plain HTML; HTMX posts events back. One app state per browser tab, held on the server. This was your FastHTML idea. The cons: every click is a round trip to the server, and state lives in server memory.
 2. **D-36, Android stopped at a real library plus a plan.** Android only delivers taps to Java objects, so there are three options: a ~40-line Java listener shim (recommended), a pure-Mojo polling workaround, or a hand-built dex. Packaging also needs Google's SDK licence. Both are your call: `docs/android.md`.
-3. **D-34 and D-37, the web host had a real bug** (typing then Return straight away lost the task), found by review and fixed. A stricter checker then caught a second web bug, which is also fixed. I proved the checks bite by putting each bug back.
+3. **D-34 and D-37, the web host had a real bug** (typing then Return straight away lost the task), found by review and fixed. The check for the first now types and presses Return with no pause. A stricter checker then caught a second web bug, which is also fixed; I put that bug back to prove the check catches it.
 
 ## Ran here vs. needs you
 | Ran here | Needs you |
