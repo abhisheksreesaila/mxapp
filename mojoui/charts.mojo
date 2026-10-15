@@ -183,12 +183,15 @@ struct BarChart(Movable):
     var values: List[Float64]
     var labels: List[String]  # the value text for each bar
     var selected: Int
+    var table: Bool  # a table: names left, values right, a slim data bar under each row
 
-    def __init__(out self, var names: List[String], var values: List[Float64], var labels: List[String], selected: Int = -1):
+    def __init__(out self, var names: List[String], var values: List[Float64], var labels: List[String], selected: Int = -1,
+                 table: Bool = False):
         self.names = names^
         self.values = values^
         self.labels = labels^
         self.selected = selected
+        self.table = table
 
     def row_height(self, s_height: Float64) -> Float64:
         return s_height / Float64(max(len(self.names), 1))
@@ -198,6 +201,9 @@ struct BarChart(Movable):
         s.fill(CARD_BG)
         var n = len(self.names)
         if n == 0:
+            return
+        if self.table:
+            self.draw_table(s, font)
             return
         var name_w = 0.0
         var value_w = 0.0
@@ -220,6 +226,26 @@ struct BarChart(Movable):
             var base = cy + 4.5 * k
             font.draw(s, self.names[i], x0 - 12 * k, base, 13 * k, INK if on else INK3, MEDIUM if self.selected == i else REGULAR, RIGHT)
             font.draw(s, self.labels[i], x0 + bar_w + 8 * k, base, 13 * k, INK if on else INK3, MEDIUM)
+
+    def draw_table(self, mut s: Surface, font: Font):
+        var k = s.scale
+        var n = len(self.names)
+        var top = 0.0
+        for v in self.values:
+            top = max(top, v)
+        var rh = self.row_height(Float64(s.height))
+        var w = Float64(s.width)
+        for i in range(n):
+            var y = rh * Float64(i)
+            var on = self.selected < 0 or self.selected == i
+            var base = y + rh / 2 + 1 * k
+            font.draw(s, self.names[i], 0, base, 13 * k, INK if on else INK3, MEDIUM if self.selected == i else REGULAR)
+            font.draw(s, self.labels[i], w, base, 13 * k, INK if on else INK3, MEDIUM, RIGHT)
+            var bar = w * (self.values[i] / top if top > 0 else 0)
+            rect(s, 0, base + 6 * k, w, 3 * k, rgba(240, 240, 240), 1.5 * k)
+            rect(s, 0, base + 6 * k, bar, 3 * k, BRAND if on else BRAND_TINT, 1.5 * k)
+            if i < n - 1:
+                hline(s, 0, w, y + rh - 1, GRID)
 
     def hit(self, height_pt: Float64, y_pt: Float64) -> Int:
         """The row a tap at y (points) landed on, or -1."""
@@ -346,6 +372,7 @@ struct ColumnChart(Movable):
         for v in self.values:
             vmax = max(vmax, v)
         var slot = (right - left) / Float64(n)
+        var last_label_end = -1e9
         hline(s, left, right, bottom, STROKE)
         for i in range(n):
             var on = self.selected < 0 or self.selected == i
@@ -358,8 +385,11 @@ struct ColumnChart(Movable):
             if i < len(self.top_labels) and self.top_labels[i] != "":
                 font.draw(s, self.top_labels[i], x + bw / 2, bottom - bh - 7 * k, 12 * k, INK if on else INK3, MEDIUM, CENTRE)
             if self.labels[i] != "":
-                font.draw(s, self.labels[i], x + bw / 2, bottom + 17 * k, 12 * k, INK2 if on else INK3,
-                          MEDIUM if self.selected == i else REGULAR, CENTRE)
+                var lw = font.measure(self.labels[i], 12 * k)
+                if x + bw / 2 - lw / 2 >= last_label_end + 6 * k and x + bw / 2 + lw / 2 <= Float64(s.width):  # only labels that fit
+                    font.draw(s, self.labels[i], x + bw / 2, bottom + 17 * k, 12 * k, INK2 if on else INK3,
+                              MEDIUM if self.selected == i else REGULAR, CENTRE)
+                    last_label_end = x + bw / 2 + lw / 2
 
     def hit(self, width_pt: Float64, x_pt: Float64) -> Int:
         var n = len(self.values)

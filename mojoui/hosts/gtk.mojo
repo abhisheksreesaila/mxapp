@@ -294,6 +294,7 @@ struct GtkCanvas(Copyable, Movable):
     var widget: Int  # GtkPicture showing the pixels as a texture
     var drag: Int  # GtkGestureDrag
     var scroll: Int  # GtkEventControllerScroll
+    var click: Int  # GtkGestureClick
     var pixels: List[UInt32]
     var wpx: Int
     var hpx: Int
@@ -317,6 +318,7 @@ struct GtkCanvas(Copyable, Movable):
         self.widget = widget
         self.drag = 0
         self.scroll = 0
+        self.click = 0
         self.pixels = List[UInt32]()
         self.wpx = 0
         self.hpx = 0
@@ -520,6 +522,7 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_widget_add_controller", NoneType](w, click)
             c.drag = drag
             c.scroll = scroll
+            c.click = click
             self.canvases.append(c^)
             self.arm(ci, self_addr)
             # A picture asks for its texture's size in pixels, which would grow the canvas each
@@ -1331,7 +1334,7 @@ def run_step[A: App](host_addr: Int, step: String):
         else:
             var s = String("activate")
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span(), c_uint(position))
-    elif verb == "drag" or verb == "zoom" or verb == "frames":
+    elif verb == "drag" or verb == "zoom" or verb == "frames" or verb == "tapat":
         var kv = split_at(rest, "=")
         var node = find(host[], CANVAS, "", to_int(kv[0]))
         var ci = -1
@@ -1341,7 +1344,15 @@ def run_step[A: App](host_addr: Int, step: String):
         if ci < 0:
             print("TEST: no canvas", kv[0])
             return
-        if verb == "drag":  # the drag gesture's own signals, as a real drag sends them
+        if verb == "tapat":  # a click at (x, y) thousandths of the canvas: the click gesture's own signal
+            var xy = split_at(kv[1], ",")
+            var cw = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].canvases[ci].widget)))
+            var chh = Float64(Int(external_call["gtk_widget_get_height", c_int](host[].canvases[ci].widget)))
+            var released = String("released")
+            host[].canvases[ci].moved = False
+            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].click, released.as_c_string_span(), c_int(1),
+                Float64(to_int(xy[0])) / 1000.0 * cw, Float64(to_int(xy[1])) / 1000.0 * chh)
+        elif verb == "drag":  # the drag gesture's own signals, as a real drag sends them
             var xy = split_at(kv[1], ",")
             var dx = Float64(to_int(xy[0]))
             var dy = Float64(to_int(xy[1]))
@@ -1547,6 +1558,10 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
         external_call["gtk_style_context_add_provider_for_display", NoneType](display, provider, c_uint(801))
         add_class(host[].window, "fluent")
     var size = host[].rt.app.window_size()
+    var forced = getenv("MOJOUI_WINDOW")  # tests: "1280x800" checks a smaller laptop screen
+    if forced != "":
+        var wh = split_at(forced, "x")
+        size = (to_int(wh[0]), to_int(wh[1]))
     external_call["gtk_window_set_default_size", NoneType](host[].window, c_int(size[0]), c_int(size[1]))
     for prop in ["notify::default-width", "notify::default-height", "notify::maximized", "notify::fullscreened"]:
         connect3(host[].window, prop, on_window_resized[A], host_addr)

@@ -12,7 +12,7 @@
 
 from mojoui.canvas import Surface
 from mojoui.text import Font
-from mojoui.charts import KpiTile, BarChart, LineChart, ColumnChart, money, compact, BRAND
+from mojoui.charts import KpiTile, BarChart, LineChart, ColumnChart, money, compact, BRAND, DATA
 
 
 def json_string(s: String) -> String:
@@ -206,13 +206,15 @@ struct FlintChart(Movable):
                 var labels = List[String]()
                 for v in values:
                     labels.append(self.label("x", v))
-                BarChart(self.texts_of("y"), values^, labels^, selected).draw(s, font)
+                BarChart(self.texts_of("y"), values^, labels^, selected, self.chart_type == "Bar Table").draw(s, font)
             else:  # categories along the bottom: columns
                 var values = self.numbers_of("y")
                 var tops = List[String]()
                 for v in values:
                     tops.append(self.label("y", v) if len(values) <= 12 else "")
-                ColumnChart(self.texts_of("x"), values^, tops^, selected, 0.35 if len(values) <= 12 else 0.14).draw(s, font)
+                var many = len(values) > 12  # a distribution: narrow bars in the second palette colour
+                ColumnChart(self.texts_of("x"), values^, tops^, selected, 0.14 if many else 0.35,
+                            materialize[DATA]()[1] if many else BRAND).draw(s, font)
 
     def hit(self, width_pt: Float64, height_pt: Float64, font: Font, x_pt: Float64, y_pt: Float64) -> Int:
         """The row a tap at (x, y) points landed on, or -1."""

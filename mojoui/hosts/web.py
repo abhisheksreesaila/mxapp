@@ -112,7 +112,7 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .lazylist .row:hover, .lazylist .row:focus-visible { background: var(--surface); }
 #mojoui-root.full { max-width: none; padding: 0; height: 100dvh; align-items: stretch; }
 #mojoui-root.full > div { flex: 1 1 0; min-width: 0; }
-.canvas { position: relative; min-width: 240px; min-height: 240px; overflow: hidden; background: var(--surface); }
+.canvas { position: relative; overflow: hidden; background: var(--surface); }
 .canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .canvas canvas:active { cursor: grabbing; }
 .vstack.card { background: light-dark(#fff, #2c2c2e); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 0 0 1px var(--line); }
@@ -417,7 +417,12 @@ def render_node(s, i, sid):
                    hx_target=f"#rows{i}", hx_swap="outerHTML", hx_sync="this:replace",
                    hx_vals="js:{top: event.target.scrollTop}", hx_include="#mojoui-v")
     if kind == CANVAS:
-        return Div(Canvas(), canvas_meta(n, i), id=nid, cls="canvas", data_kind="canvas", data_node=str(i), data_sid=sid)
+        # Its own size only when the app's layout doesn't size it (as on the other hosts).
+        sized_w = n["w"] or (n["width_from_parent"] if "width_from_parent" in n else n["grows"] or n["fills"])
+        sized_h = n["h"] or (n["height_from_parent"] if "height_from_parent" in n else n["grows"] or n["fills"])
+        own = ";".join(([] if sized_w else ["width:320px"]) + ([] if sized_h else ["height:240px"]))
+        return Div(Canvas(), canvas_meta(n, i), id=nid, cls="canvas", data_kind="canvas", data_node=str(i), data_sid=sid,
+                   style=own or None)
     if kind == DIVIDER:
         return Hr(id=nid)
     if kind == SPACER:

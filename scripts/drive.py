@@ -128,12 +128,15 @@ def step(page, s):
     elif verb == "row":
         k, _, row = rest.partition("=")
         page.locator("[data-kind=list]").nth(int(k)).locator(f'[data-row="{int(row)}"]').click()
-    elif verb in ("drag", "zoom", "frames"):  # canvas steps: real mouse input on the canvas
+    elif verb in ("drag", "zoom", "frames", "tapat"):  # canvas steps: real mouse input on the canvas
         k, _, arg = rest.partition("=")
         canvas = page.locator("[data-kind=canvas]").nth(int(k))
         box = canvas.bounding_box()
         cx, cy = round(box["x"] + box["width"] / 2), round(box["y"] + box["height"] / 2)
-        if verb == "drag":
+        if verb == "tapat":  # a click at (x, y) thousandths of the canvas
+            fx, fy = (int(v) / 1000 for v in arg.split(","))
+            page.mouse.click(box["x"] + fx * box["width"], box["y"] + fy * box["height"])
+        elif verb == "drag":
             dx, dy = (int(v) for v in arg.split(","))
             page.mouse.move(cx, cy)
             page.mouse.down()
@@ -162,7 +165,7 @@ def step(page, s):
     settle(page)
 
 
-def web_run(module_dir, steps, shot=None):
+def web_run(module_dir, steps, shot=None, viewport=(900, 900)):
     """Returns (result, output) like a process run: result.returncode is 0 on success."""
     from playwright.sync_api import sync_playwright
 
@@ -181,7 +184,7 @@ def web_run(module_dir, steps, shot=None):
                 time.sleep(0.1)
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path=CHROMIUM, headless=True)
-            page = browser.new_page(viewport={"width": 900, "height": 900})
+            page = browser.new_page(viewport={"width": viewport[0], "height": viewport[1]})
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.goto(url)
@@ -206,6 +209,8 @@ def web_run(module_dir, steps, shot=None):
 
 if __name__ == "__main__":
     shot = sys.argv[3] if len(sys.argv) > 3 else None
-    r, out = web_run(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "", shot=shot)
+    import os
+    size = tuple(int(v) for v in os.environ.get("VIEWPORT", "900x900").split("x"))
+    r, out = web_run(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "", shot=shot, viewport=size)
     print(out, end="")
     sys.exit(r.returncode)

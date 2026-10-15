@@ -238,6 +238,7 @@ struct Main(App):
     var version: Int
     # results
     var month_rev: List[Int]
+    var month_orders: List[Int]
     var cat_rev: List[Int]
     var region_rev: List[Int]
     var product_rev: List[Int]
@@ -262,6 +263,7 @@ struct Main(App):
         self.gpu = self.table.on_gpu()
         self.version = 0
         self.month_rev = List[Int]()
+        self.month_orders = List[Int]()
         self.cat_rev = List[Int]()
         self.region_rev = List[Int]()
         self.product_rev = List[Int]()
@@ -311,6 +313,7 @@ struct Main(App):
         self.milliseconds = m.milliseconds + c.milliseconds + r.milliseconds + p.milliseconds + s.milliseconds + y.milliseconds + yu.milliseconds
         self.passes = 7
         self.month_rev = m.sums.copy()
+        self.month_orders = m.counts.copy()
         self.cat_rev = c.sums.copy()
         self.region_rev = r.sums.copy()
         self.product_rev = p.sums.copy()
@@ -335,8 +338,16 @@ struct Main(App):
             t += values[y]
         return t
 
-    def change(self, values: List[Int]) -> String:
-        """Year-on-year change of the selected year (or 2025 against 2024 when all years are shown)."""
+    def change(self, values: List[Int], monthly: List[Int]) -> String:
+        """Year-on-year change: the selected month against the same month a year before, else the
+        selected year (or 2025 when all years are shown) against the year before."""
+        if self.month >= 0:
+            if len(monthly) == 0:
+                return "in " + materialize[MONTH_NAMES]()[self.month % 12] + " " + String(2023 + self.month // 12)
+            if self.month < 12 or monthly[self.month - 12] == 0:
+                return "First year of data"
+            var pct = (Float64(monthly[self.month]) / Float64(monthly[self.month - 12]) - 1.0) * 100.0
+            return ("+" if pct >= 0 else "") + fixed(pct, 1) + "% vs " + materialize[MONTH_NAMES]()[self.month % 12] + " " + String(2022 + self.month // 12)
         var y = 2 if self.year == 0 else self.year - 1
         if y == 0 or values[y - 1] == 0:
             return "First year of data"
@@ -468,14 +479,14 @@ struct Main(App):
         self.sizes[canvas] = (surface.points_width(), surface.points_height())
         if canvas == KPI_REVENUE:
             var c = self.kpi("Revenue", self.total(self.year_rev), self.spark(self.month_rev)).number("trend", self.spark(self.month_rev))
-            c.draw(surface, self.font, -1, True, self.change(self.year_rev))
+            c.draw(surface, self.font, -1, True, self.change(self.year_rev, self.month_rev))
         elif canvas == KPI_ORDERS:
-            self.kpi("Orders", self.total(self.year_orders), List[Float64]()).draw(surface, self.font, -1, False, self.change(self.year_orders))
+            self.kpi("Orders", self.total(self.year_orders), List[Float64]()).draw(surface, self.font, -1, False, self.change(self.year_orders, self.month_orders))
         elif canvas == KPI_AOV:
             var aov = self.total(self.year_rev) // max(self.total(self.year_orders), 1)
             self.kpi("Average order", aov, List[Float64]()).semantic("value", "Price").draw(surface, self.font, -1, False, "per order line")
         elif canvas == KPI_UNITS:
-            self.kpi("Units sold", self.total(self.year_units), List[Float64]()).draw(surface, self.font, -1, False, self.change(self.year_units))
+            self.kpi("Units sold", self.total(self.year_units), List[Float64]()).draw(surface, self.font, -1, False, self.change(self.year_units, List[Int]()))
         elif canvas == CHART_MONTH:
             var first = 0 if self.year == 0 else (self.year - 1) * 12
             self.month_chart().draw(surface, self.font, self.month - first if self.month >= 0 else -1)
