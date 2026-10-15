@@ -4,6 +4,18 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-15 · Experiment 8: Android (autopilot)
+
+**Goal (owner's words):** "one code compile and you get for everything"; the Java listener approved; SDK installed and licences accepted by the owner. Contract `GOAL.md`, report `docs/report.md`.
+
+**What worked:** Mojo drives Android's own views through JNI (function-table slots from jni.h); one 78-line framework Java file; signed APKs for arm64 phones and x86_64 emulators. On the Android 16 emulator, with real input: hello, gallery and todo end in the same state as GTK; goal 5's layout rules hold; the Data Lens runs (CPU, 2M trips) and a real swipe pans it like GTK.
+
+**What broke and how it was fixed:** the root's fixed width; slider taps on the thumb; Apple-only clock symbol; option-id collisions; edge-to-edge drawing on Android 15+; MAX release functions pulled in by freeing the app. See `docs/journal.md`.
+
+**Next:** a real phone; goal-4 components on Android; MX frame.
+
+---
+
 ## 2026-10-15 · Experiment 7: GPU Data Lens (autopilot)
 
 **Goal (owner's words):** "a real fancy app which takes advantage of GPUs… same code base which builds a web and a Linux and later a Mac app." Contract `GOAL.md`, report `docs/report.md`.

@@ -83,7 +83,7 @@ def m1():
             if not undefined <= ANDROID_SYMBOLS:
                 problems.append(f"{ex}/{abi} uses {sorted(undefined - ANDROID_SYMBOLS)}")
     return not problems, "; ".join(problems) or (
-        "signed APKs (arm64-v8a + x86_64), one 75-line framework Java file, libraries need only Android's libc/libm/liblog")
+        "signed APKs (arm64-v8a + x86_64), one framework Java file (≤ 80 lines), libraries need only Android's libc/libm/liblog")
 
 
 def m2():
@@ -117,7 +117,9 @@ def m4():
 
 
 def m5():
-    r, out = droid("layout", "tab:0=Boxes")
+    # At 300 dpi the whole example fits on screen (uiautomator reports only views on screen);
+    # the rules are in dp, so the density doesn't change them.
+    r, out = droid("layout", "tab:0=Boxes", dpi=300)
     if r is None:
         return False, out
     rt, tout = droid("layout", "tab:0=About;tab:0=Boxes;tab:0=About")  # switching tabs really switches (real taps)

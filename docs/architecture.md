@@ -141,7 +141,7 @@ flowchart LR
 
 Android's views are Java objects, and JNI (Java's C interface) gives native code a table of functions to create and call them. `mojoui/hosts/jni.mojo` calls those functions by their slot in the table, cast to each call's C signature: the same role `objc_msgSend` plays on Apple (D-67). `mojoui/hosts/android.mojo` maps the view tree onto `LinearLayout`, `TextView`, `Button`, `EditText`, `Switch`, `Spinner`, `SeekBar`, `RadioGroup`, `ListView` and `ImageView`, with layout settings as `LayoutParams`, weights and gravity.
 
-- **The one Java file:** Android only calls a *Java object* back (a click listener, a text watcher, a list adapter, a frame callback). `mojoui/hosts/android/MojoActivity.java` (75 lines, framework only) is the Activity: it loads the Mojo library and forwards every callback to it (D-66).
+- **The one Java file:** Android only calls a *Java object* back (a click listener, a text watcher, a list adapter, a frame callback). `mojoui/hosts/android/MojoActivity.java` (78 lines, framework only) is the Activity: it loads the Mojo library and forwards every callback to it (D-66).
 - **Canvas:** an `ImageView` showing a bitmap of the app's pixels, `Choreographer` for frames, touch events turned into PAN/ZOOM/TAP. Android builds use the CPU path.
 - **Proven on the emulator** with real input from `adb` (`scripts/android_drive.py`): the same steps as GTK and the web end in the same state. Not yet on a physical phone. Details: `docs/android.md`.
 

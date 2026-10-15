@@ -19,7 +19,7 @@ Android's views are Java objects, so the host talks to them through **JNI**, Jav
 
 `mojoui/hosts/android.mojo` builds the views: `LinearLayout` for stacks (layout settings become `LayoutParams`, weights, gravity and padding), `TextView`, `Button`, `EditText`, `Switch`, `Spinner`, `SeekBar`, `ProgressBar`, `ImageView`, `RadioGroup`, `ListView`, `ScrollView`. Each view's id is its node index + 1, so a callback names its node.
 
-**The one Java file** is `mojoui/hosts/android/MojoActivity.java` (75 lines), part of the framework and never of an app. Android only calls Java objects back: click listeners, text watchers, adapters, frame callbacks. So this Activity loads `libmojoui.so`, calls Mojo's `create()`, and forwards every callback to Mojo (`event`, `touch`, `frame`, `row`). It's an Activity rather than a ~40-line listener used with NativeActivity (D-66). NativeActivity claims the window for native drawing and can't easily find app classes from its thread.
+**The one Java file** is `mojoui/hosts/android/MojoActivity.java` (78 lines), part of the framework and never of an app. Android only calls Java objects back: click listeners, text watchers, adapters, frame callbacks. So this Activity loads `libmojoui.so`, calls Mojo's `create()`, and forwards every callback to Mojo (`event`, `touch`, `frame`, `row`). It's an Activity rather than a ~40-line listener used with NativeActivity (D-66). NativeActivity claims the window for native drawing and can't easily find app classes from its thread.
 
 While Mojo changes views itself, a Java field (`quiet`) silences their listeners. The flag lives in Java because callbacks arrive re-entrantly (D-69, the same lesson as GTK).
 
@@ -35,9 +35,9 @@ The build cross-compiles the app and mojoui for `aarch64-linux-android29` (phone
 **Built with `-D MOJOUI_ANDROID`:** this compiles out the GPU path, and uses `clock_gettime`, because Mojo's `perf_counter_ns()` calls Apple's `clock_gettime_nsec_np` even on Android (`mojoui/clock.mojo`).
 
 ## How it's checked
-`scripts/check` boots the emulator (AVD `mojoui`, Android 16, x86_64) headless and installs each APK. `scripts/android_drive.py` then drives it with **real input** from `adb shell input`: taps, typed text, Return, swipes, and taps on the slider until it reads the value. It reads the state back from the real views with `uiautomator dump`, using the same step language and state lines as the GTK test mode and the web driver. It also checks the APK's signature and contents, and that the libraries ask Android only for libc/libm/liblog functions.
+`scripts/check` boots the emulator (AVD `mojoui`, Android 16, x86_64) headless and installs each APK. `scripts/android_drive.py` then drives it with **real input** from `adb shell input`: taps, typed text, Return, swipes, and taps on the slider until it reads the value. It reads the state back from the real views with `uiautomator dump`, using the same step language and state lines as the GTK test mode and the web driver. Labels, fields, switches, choices and buttons are read as Android shows them. Slider and progress values are read from the accessibility description the host gives them (the gallery's own "Volume 70" label confirms the value independently). It also checks the APK's signature and contents, and that the libraries ask Android only for libc/libm/liblog functions.
 
 ## Limits
 - Not yet run on a physical phone.
 - The Data Lens's sidebar is laid out for desktops; on a phone in portrait it leaves little room for the map. The checks run it in landscape at a lower screen density.
-- One Java file (75 lines) remains, by design: Android only calls Java objects back.
+- One Java file (78 lines) remains, by design: Android only calls Java objects back.

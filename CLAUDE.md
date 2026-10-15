@@ -3,7 +3,7 @@
 Mode: experiment
 Ship: direct
 
-Current experiment: `GOAL.md` (goal 6: GPU Data Lens — native controls + a GPU Canvas; goals 1–5 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 7: Android with Android's own views via JNI; goals 1–6 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 
@@ -13,7 +13,8 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 3. `EXPERIMENTS.md`: what has actually been tried and what happened. **Trust this over the spec when they disagree.**
 
 ## Where things stand
-- **Newest (Experiment 7, 2026-10-15):** Canvas view + GPU PointCloud + Data Lens (`examples/lens`): 20M points, 1.5 ms/frame on the GPU, ~60 fps on GTK and streamed to the web; Mac/iPhone CPU path (builds, not run). See `docs/report.md`.
+- **Newest (Experiment 8, 2026-10-15):** Android: Mojo drives Android views through JNI (`mojoui/hosts/android.mojo`, one framework Java file); runs on the emulator with real input, same results as GTK. Emulator: `ANDROID_AVD_HOME=~/.config/.android/avd`, AVD `mojoui`. See `docs/report.md`, `docs/android.md`.
+- **Experiment 7 (2026-10-15):** Canvas view + GPU PointCloud + Data Lens (`examples/lens`): 20M points, 1.5 ms/frame on the GPU, ~60 fps on GTK and streamed to the web; Mac/iPhone CPU path (builds, not run). See `docs/goals/06-report.md`.
 - **Experiment 6 (2026-10-15):** layout settings (padding, sizes, grow, fill, align, justify) on every host; no layout engine (ROADMAP decision 10).
 - **Experiment 5 (2026-10-15):** segmented, radio, text area, alert, tabs, navbar, date, icon, grid, lazy list; Pocket Expenses (`examples/expenses`).
 - **Experiment 4 (2026-10-15):** web host (FastHTML), all common components, a real todo app, a GPU example, Android exploration. Linux + web run and are tested here; see `docs/report.md`.
