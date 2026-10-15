@@ -3,7 +3,7 @@
 Status: approach approved (2026-10-15: the ~40-line Java listener, option b); waiting for the Android SDK (`scripts/android_setup.sh`) and a phone
 
 ## Works today (checked on Linux)
-- **Mojo targets Android.** `mojo build --target-triple aarch64-linux-android29 --emit object` compiles mojoui apps as they are (all but the GPU example, which needs NVIDIA/AMD).
+- **Mojo targets Android.** `mojo build --target-triple aarch64-linux-android29 --emit object` compiles mojoui apps as they are (all but the GPU example, which needs an NVIDIA GPU; AMD untested).
 - **A real Android library.** `scripts/build.sh todo android` builds `build/todo/android/lib/arm64-v8a/libmojoui.so`, 37 KB: the todo app plus the mojoui core, with the `ANativeActivity_onCreate` entry Android calls on the UI thread. It needs only Android's own `libc` and `liblog`. There's no Mojo runtime library (the runtime functions are Mojo, `mojoui/hosts/mojo_rt.mojo`) and no Java.
 - It's linked on Linux by `ld.lld` against empty libraries that carry only the system libraries' names, the same trick as `apple/sdk/`.
 

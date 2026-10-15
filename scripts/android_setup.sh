@@ -210,6 +210,10 @@ if ! command -v java >/dev/null 2>&1; then
   warn "sdkmanager needs Java 17 or newer, and none was found. Install one (e.g. 'pixi global install openjdk'), then re-run."
   exit 1
 fi
+if [[ $(java -version 2>&1 | grep -oE 'version "[0-9]+' | grep -oE '[0-9]+$' || echo 0) -lt 17 ]]; then
+  warn "sdkmanager needs Java 17 or newer; this one is older: $(java -version 2>&1 | head -n1)"
+  exit 1
+fi
 
 stage "Download Google's command-line tools"
 say "Google's SDK comes with its own licence, so you download it and accept it, not me."

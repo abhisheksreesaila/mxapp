@@ -158,7 +158,7 @@ Every Linux and web result above is checked by `scripts/check`, which rebuilds e
 
 ## Try it
 
-You need x86-64 Linux with GTK 4 and libadwaita 1.7 or newer, [pixi](https://pixi.sh), Chromium at `/usr/bin/chromium` (for `scripts/check`), and an NVIDIA GPU for the GPU path (without one, the GPU examples fall back to the CPU).
+You need x86-64 Linux with GTK 4 and libadwaita 1.7 or newer, [pixi](https://pixi.sh), Chromium at `/usr/bin/chromium` (for `scripts/check`), and an NVIDIA GPU for the GPU path (without one, the Data Lens falls back to the CPU; the fractal example needs a GPU).
 
 ```bash
 pixi install                                      # Mojo 1.1, MAX (GPU), FastHTML, linker tools
