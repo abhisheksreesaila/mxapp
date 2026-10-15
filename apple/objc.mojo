@@ -2,15 +2,18 @@
 #
 # Every Apple UI call is a message: objc_msgSend(object, selector, args...).
 # Mojo can't declare one C symbol with several signatures in a module, so we
-# look objc_msgSend up at runtime and call it with whatever arguments we pass.
+# look objc_msgSend's address up once per call and cast it to the exact C
+# signature of that call: msg(button, "setTag:", 42), msg[Float64](view, "alpha").
 #
-# Apple Silicon only (arm64). There, a CGRect/NSRect passed by value travels in
-# four float registers, exactly like four Float64 arguments, so we pass rects as
-# x, y, width, height. That would be wrong on Intel Macs.
+# Apple Silicon only (arm64). There, a CGRect/NSRect (or edge insets) passed by
+# value travels in four float registers, exactly like four Float64 arguments,
+# so we pass rects as x, y, width, height. That would be wrong on Intel Macs.
 #
 # Pass Objective-C BOOLs as Int 1 or 0, not Mojo Bool, so the whole register is set.
 
-from std.ffi import OwnedDLHandle, external_call
+from std.ffi import external_call
+
+comptime RTLD_DEFAULT = -2  # Apple's "search every loaded library" handle
 
 
 def cls(name: String) -> Int:
@@ -25,63 +28,29 @@ def sel(name: String) -> Int:
     return external_call["sel_registerName", Int](n.as_c_string_span())
 
 
-def msg[T: RegisterPassable = Int](obj: Int, name: String) raises -> T:
-    """Sends a message with no arguments: [obj name]."""
-    var proc = OwnedDLHandle()
-    var send = proc.get_function[T]("objc_msgSend")
-    return send(obj, sel(name))
+def protocol(name: String) -> Int:
+    var n = name
+    return external_call["objc_getProtocol", Int](n.as_c_string_span())
 
 
-def msg[
-    T: RegisterPassable = Int, A: RegisterPassable = Int
-](obj: Int, name: String, a: A) raises -> T:
-    """Sends a message with one argument."""
-    var proc = OwnedDLHandle()
-    var send = proc.get_function[T]("objc_msgSend")
-    return send(obj, sel(name), a)
+def msg[T: RegisterPassable = Int, *A: AnyType](obj: Int, name: String, *args: *A) -> T:
+    """Sends a message: [obj name:args...]. T is the C return type (default: an object/Int)."""
+    var fn_name = String("objc_msgSend")
+    var addr = external_call["dlsym", Int](RTLD_DEFAULT, fn_name.as_c_string_span())
+    var raw = Pointer[NoneType, MutUntrackedOrigin](unsafe_from_address=addr)
+    var send = Pointer(to=raw).unsafe_bitcast[
+        def(o: Int, s: Int, *a: *A) thin abi("C") -> T
+    ]()[]
+    return send(obj, sel(name), *args)
 
 
-def msg[
-    T: RegisterPassable = Int,
-    A: RegisterPassable = Int,
-    B: RegisterPassable = Int,
-](obj: Int, name: String, a: A, b: B) raises -> T:
-    """Sends a message with two arguments."""
-    var proc = OwnedDLHandle()
-    var send = proc.get_function[T]("objc_msgSend")
-    return send(obj, sel(name), a, b)
+def new(class_name: String) -> Int:
+    """[[Class alloc] init], e.g. new("NSStackView")."""
+    return msg(cls(class_name), "new")
 
 
-def msg[
-    T: RegisterPassable = Int,
-    A: RegisterPassable = Int,
-    B: RegisterPassable = Int,
-    C: RegisterPassable = Int,
-](obj: Int, name: String, a: A, b: B, c: C) raises -> T:
-    """Sends a message with three arguments."""
-    var proc = OwnedDLHandle()
-    var send = proc.get_function[T]("objc_msgSend")
-    return send(obj, sel(name), a, b, c)
-
-
-def msg_rect[
-    T: RegisterPassable = Int
-](
-    obj: Int,
-    name: String,
-    x: Float64,
-    y: Float64,
-    w: Float64,
-    h: Float64,
-) raises -> T:
-    """Sends a message whose only argument is a rect, e.g. initWithFrame:."""
-    var proc = OwnedDLHandle()
-    var send = proc.get_function[T]("objc_msgSend")
-    return send(obj, sel(name), x, y, w, h)
-
-
-def ns_string(text: String) raises -> Int:
-    """Makes an NSString from a Mojo String (UTF-8, no copy of the terminator needed)."""
+def ns_string(text: String) -> Int:
+    """Makes an NSString from a Mojo String (UTF-8; no terminator needed)."""
     comptime UTF8 = 4  # NSUTF8StringEncoding
     var s = msg(cls("NSString"), "alloc")
     s = msg(s, "initWithBytes:length:encoding:", Int(text.unsafe_ptr()), text.byte_length(), UTF8)
@@ -94,13 +63,22 @@ def new_class(name: String, superclass: String) -> Int:
     return external_call["objc_allocateClassPair", Int](cls(superclass), n.as_c_string_span(), 0)
 
 
+def add_method[F: AnyType](c: Int, selector: String, imp: F, types: String):
+    """Adds a method whose body is a Mojo `abi("C")` function.
+
+    `types` is the Objective-C type encoding, e.g. "v@:@" = returns void, takes (self, _cmd, id).
+    """
+    var t = types
+    _ = external_call["class_addMethod", Int8](c, sel(selector), imp, t.as_c_string_span())
+
+
+def add_protocol(c: Int, name: String):
+    _ = external_call["class_addProtocol", Int8](c, protocol(name))
+
+
 def register_class(c: Int):
     external_call["objc_registerClassPair", NoneType](c)
 
 
 def pool_push() -> Int:
     return external_call["objc_autoreleasePoolPush", Int]()
-
-
-def pool_pop(p: Int):
-    external_call["objc_autoreleasePoolPop", NoneType](p)

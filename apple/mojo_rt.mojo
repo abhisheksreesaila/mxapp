@@ -1,0 +1,28 @@
+# The three Mojo runtime functions a small Mojo app needs, written in Mojo,
+# so the app is self-contained (no Modular runtime library, no C shim).
+#
+# UNOFFICIAL: names and signatures were read from compiled Mojo 1.1 code
+# (LLVM IR call sites). Recheck with `llvm-nm -u` after upgrading Mojo.
+# Must be its own file: Mojo refuses to define these in a module that calls them.
+
+from std.ffi import external_call, c_int
+
+
+@export("KGEN_CompilerRT_AlignedAlloc")
+def aligned_alloc(align: Int, size: Int) abi("C") -> Int:
+    var out: Int = 0
+    var a = align if align >= 8 else 8  # posix_memalign needs >= pointer size
+    if external_call["posix_memalign", c_int](Pointer(to=out), a, size) != 0:
+        return 0
+    return out
+
+
+@export("KGEN_CompilerRT_AlignedFree")
+def aligned_free(ptr: Int) abi("C"):
+    external_call["free", NoneType](ptr)
+
+
+@export("KGEN_CompilerRT_GetStackTrace")
+def get_stack_trace(buf: Int, depth: Int) abi("C") -> Int:
+    """Returns 0: "no stack trace". Error messages still work; traces don't."""
+    return 0

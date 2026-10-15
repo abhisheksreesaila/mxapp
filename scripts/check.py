@@ -58,8 +58,9 @@ def dylibs(binary):
     return set(re.findall(r"cmd LC_LOAD_DYLIB\n\s+cmdsize \d+\n\s+name (\S+)", load_commands(binary)))
 
 
-def signature_ok(path):
-    r = run(["rcodesign", "verify", str(path)])
+def signature_ok(exe, plist):
+    # rcodesign's own verify is documented as unreliable, so recompute the hashes ourselves.
+    r = run([sys.executable, "scripts/verify_signature.py", str(exe), str(plist)])
     return r.returncode == 0, (r.stdout + r.stderr).strip()[-300:]
 
 
@@ -115,7 +116,12 @@ def bundle_ok(app, want_dylibs, platform, plist_keys):
     missing = [k for k in plist_keys if k not in plist]
     if missing:
         problems.append(f"Info.plist missing {missing}")
-    sig, msg = signature_ok(app if platform == "MACOS" else exe)
+    entry = re.search(r"entryoff (\d+)", lc)
+    sym = run(["llvm-nm", "--defined-only", str(exe)]).stdout
+    m = re.search(r"^([0-9a-f]+) T _mojo_entry$", sym, re.M)
+    if not entry or not m or int(m.group(1), 16) - 0x100000000 != int(entry.group(1)):
+        problems.append("entry point is not _mojo_entry")
+    sig, msg = signature_ok(exe, plist_path)
     if not sig:
         problems.append(f"signature: {msg}")
     return not problems, "; ".join(problems) or f"{desc.split(':', 1)[1].strip()}; loads {len(libs)} system libs; signed"

@@ -10,3 +10,5 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-06 · enter the app through the linker's `-e _mojo_entry` (LC_MAIN) over a C `main` · removes the last C file · yes
 - D-07 · iOS uses the scene lifecycle (UIWindowScene) over a classic app-delegate window · recent iOS releases require scenes; it also avoids needing the screen size · yes
 - D-08 · keep `ios-xtool/` (SwiftUI skin) as a fallback, marked superseded, over deleting it · reversible and costs nothing · yes
+- D-09 · own signature verifier (`scripts/verify_signature.py`: recompute page + Info.plist hashes) over `rcodesign verify` · rcodesign says its verify is buggy and it fails on every ad-hoc signature; checking on the executable, not the bundle folder. Also tightened: entry point must be `_mojo_entry`, no stray bytes after the signature · yes
+- D-10 · one variadic `msg()` that casts `objc_msgSend`'s address (copied from Mojo's own `_DLCallable`) over five `OwnedDLHandle` overloads · fewer lines, no dlopen/dlclose per call, nothing raises · yes
