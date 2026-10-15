@@ -44,15 +44,16 @@ def axis_money(cents: Int) -> String:
     """Money for an axis label: no trailing zeros ($5M, $2.5M, $750K)."""
     var t = money(cents)
     var unit = String("")
+    var n = t.byte_length()
     if t.endswith("B") or t.endswith("M") or t.endswith("K"):
-        unit = String(t[byte = t.byte_length() - 1 :])
-        t = String(t[byte = : t.byte_length() - 1])
+        unit = String(t[byte = n - 1 :])
+        n -= 1
     if "." in t:
-        while t.endswith("0"):
-            t = String(t[byte = : t.byte_length() - 1])
-        if t.endswith("."):
-            t = String(t[byte = : t.byte_length() - 1])
-    return t + unit
+        while n > 0 and String(t[byte = n - 1 : n]) == "0":
+            n -= 1
+        if n > 0 and String(t[byte = n - 1 : n]) == ".":
+            n -= 1
+    return String(t[byte = : n]) + unit
 
 
 def compact(x: Float64) -> String:
