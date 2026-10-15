@@ -12,3 +12,4 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-08 · keep `ios-xtool/` (SwiftUI skin) as a fallback, marked superseded, over deleting it · reversible and costs nothing · yes
 - D-09 · own signature verifier (`scripts/verify_signature.py`: recompute page + Info.plist hashes) over `rcodesign verify` · rcodesign says its verify is buggy and it fails on every ad-hoc signature; checking on the executable, not the bundle folder. Also tightened: entry point must be `_mojo_entry`, no stray bytes after the signature · yes
 - D-10 · one variadic `msg()` that casts `objc_msgSend`'s address (copied from Mojo's own `_DLCallable`) over five `OwnedDLHandle` overloads · fewer lines, no dlopen/dlclose per call, nothing raises · yes
+- D-11 · iPhone button uses Liquid Glass (`prominentGlassButtonConfiguration`, iOS 26+) when the class responds to it, else a filled capsule · phone follows the Liquid design language; the check keeps it working on iOS 17-18 · yes

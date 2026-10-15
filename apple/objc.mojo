@@ -73,7 +73,9 @@ def add_method[F: AnyType](c: Int, selector: String, imp: F, types: String):
 
 
 def add_protocol(c: Int, name: String):
-    _ = external_call["class_addProtocol", Int8](c, protocol(name))
+    var p = protocol(name)
+    if p != 0:  # unknown protocol: skip rather than add a null entry
+        _ = external_call["class_addProtocol", Int8](c, p)
 
 
 def register_class(c: Int):
