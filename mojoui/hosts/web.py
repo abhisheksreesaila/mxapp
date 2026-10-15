@@ -112,9 +112,11 @@ def render(s, i, sid):
     if kind == FIELD:
         # The form makes Return submit (on_submit); typing posts on_change. Both go through
         # the form's queue, so a fast Return can't overtake the typing it follows.
+        # hx-vals is inherited from ancestors, so the input says second=0 explicitly
+        # (otherwise it would pick up the form's second=1 and every keystroke would "submit").
         field = Input(type="text", name="text", value=n["text"], placeholder=n["hint"], data_kind="field",
                       autocomplete="off", autofocus=(s.focus == i), hx_trigger="input",
-                      hx_sync="closest form:queue all", **common)
+                      hx_sync="closest form:queue all", **dict(common, hx_vals=json.dumps({"n": i, "second": 0})))
         return Form(field, cls="field", id=nid, hx_post=post, hx_vals=json.dumps({"n": i, "second": 1}),
                     hx_swap="none", hx_include="#mojoui-v", hx_sync="this:queue all")
     if kind == TOGGLE:

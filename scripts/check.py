@@ -234,9 +234,10 @@ def m5():
 TODO_STEPS = ("enter:What needs doing?=Buy milk;type:What needs doing?=Walk the dog;tap:Add;"
               "enter:What needs doing?=Write Mojo;enter:What needs doing?=Feed the cat;"
               "toggle:Buy milk;toggle:Feed the cat;select:0=Active;tap:Remove@0;"
-              "select:0=Done;tap:Clear done;select:0=All")
-TODO_EXPECT = ["TOGGLE: Write Mojo=off", "DROPDOWN: All", "LABEL: 1 left · 0 done", "PROGRESS: 0", "FIELD: "]
-TODO_GONE = ["Buy milk", "Walk the dog", "Feed the cat"]
+              "select:0=Done;tap:Clear done;select:0=All;type:What needs doing?=Just a draft")
+# The last step types without submitting: it must stay a draft, not become a task.
+TODO_EXPECT = ["TOGGLE: Write Mojo=off", "DROPDOWN: All", "LABEL: 1 left · 0 done", "PROGRESS: 0", "FIELD: Just a draft"]
+TODO_GONE = ["Buy milk", "Walk the dog", "Feed the cat", "TOGGLE: Just a draft"]
 
 
 def m6():
