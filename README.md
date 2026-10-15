@@ -1,62 +1,180 @@
 # mojo-ui
 
-Write an app once in **Mojo**, declaratively. Each platform draws it with its **own native controls**: GTK on Linux, plain HTML on the **Web** (served by FastHTML), AppKit on Mac, UIKit on iPhone. A Mojo function can even run on the **GPU** to make what you see.
+**Write an app once in Mojo. Compile it. Get a native Linux app, a web app, a Mac app and an iPhone app, with Android on the way. When the machine has a GPU, the same file lights it up.**
+
+![The Data Lens: native controls on the left, 20 million points drawn on the GPU on the right](docs/img/lens-gtk.png)
+
+> An experiment, built in the open. Linux and the web run and are tested on every change; Mac and iPhone build and sign but haven't run on real hardware yet. See [Status](#status-honestly).
+
+## Why
+
+Every app team today writes the same app several times: Swift for iPhone and Mac, Kotlin for Android, TypeScript for the web, sometimes C++ or Rust for the fast parts. Then they keep them in sync forever.
+
+Cross-platform frameworks fix the "several times" part, but each asks you to give something up:
+
+- **Draw everything yourself** (Flutter, most Rust GUI kits): one codebase, but the app doesn't look or behave quite like the platform, and accessibility and text input have to be rebuilt.
+- **Wrap a web page** (Electron, Tauri): easy, but it's a browser in a box, and the fast parts are written in a second language.
+- **Drive native widgets from a scripting language** (React Native): native look, but a JavaScript runtime sits between your code and the screen.
+
+And none of them lets you write the **GPU code** in the same language as the buttons. Charts over millions of rows, image filters and on-device AI all end up in a separate shader or CUDA language, behind a boundary that copies data.
+
+**mojo-ui's bet:** one language, Mojo, that is as easy to read as Python, compiles to native code like C++ or Rust, and can run the same functions on the GPU. You describe the screen; each platform draws it with **its own native controls**; the heavy lifting runs on the GPU when there is one. No Swift, no Kotlin, no app JavaScript, no shader language.
+
+## One file, every platform
+
+```mermaid
+flowchart LR
+    A["app.mojo<br/>(your whole app)"] --> B{"scripts/build.sh app all"}
+    B --> L["Linux<br/>GTK 4 window"]
+    B --> W["Web<br/>FastHTML server + browser"]
+    B --> M["Mac<br/>AppKit .app"]
+    B --> I["iPhone<br/>UIKit .ipa"]
+    B -.-> D["Android<br/>Android views (next)"]
+    A -. "same functions" .-> G["GPU kernels<br/>(NVIDIA / AMD today)"]
+```
+
+Here is a complete app. It's the whole file: no project setup, no platform folders.
 
 ```mojo
-# examples/todo/app.mojo (trimmed): one file, every platform
-struct Main(App):
-    var tasks: List[Task]
-    var draft: String
-    ...
-    def update(mut self, event: Event):
-        if event.message == DRAFT:
-            self.draft = event.text
-        elif event.message == ADD:  # Return carries the field's text; the Add button uses the draft
-            var title = event.text if event.text != "" else self.draft
-            self.tasks.append(Task(self.next_id, title, False))
-        ...
+from mojoui import App, Event, View, VStack, Text, Button, TITLE, PROMINENT
 
-    def view(self) -> View:
+comptime GREET = 1                         # a message: "the Greet button was tapped"
+
+
+struct Main(App):
+    var clicks: Int                        # the app's state
+
+    def __init__(out self):
+        self.clicks = 0
+
+    def title(self) -> String:
+        return "Hello"
+
+    def update(mut self, event: Event):    # state changes only here
+        if event.message == GREET:
+            self.clicks += 1
+
+    def view(self) -> View:                # the screen, described from the state
         return VStack(
-            Text("Todo", style=TITLE),
-            HStack(
-                TextField(self.draft, placeholder="What needs doing?", on_change=DRAFT, on_submit=ADD),
-                Button("Add", on_tap=ADD, style=PROMINENT),
-            ),
-            HStack(Text("Show"), Dropdown(filters, self.filter, on_select=FILTER)),
-            Scroll(VStack(rows, spacing=8), height=260),
-            ProgressBar(percent),
+            Text("Hello, Ada! (" + String(self.clicks) + ")", style=TITLE),
+            Button("Greet", on_tap=GREET, style=PROMINENT),
         )
 ```
 
-`view()` describes the whole screen; `update()` changes the state when something happens. After every event, mojoui compares the new screen with the old one: if only text or values changed it updates just those controls, and if rows came or went it rebuilds the content.
-
-| Linux (GTK) | Web (FastHTML) |
-|---|---|
-| ![TodoMojo on Linux](docs/img/todo-linux.png) | ![TodoMojo on the web](docs/img/todo-web.png) |
-| ![GPU fractal on Linux](docs/img/gpu-linux.png) | ![Component gallery on the web](docs/img/gallery-web.png) |
-| ![Pocket Expenses on Linux](docs/img/expenses-Add-linux.png) | ![Pocket Expenses insights on the web](docs/img/expenses-Insights-web.png) |
-
-These are real screenshots, rendered by GTK and by Chromium from the same Mojo files.
-
-## Run it
-
 ```bash
-pixi install                          # Mojo 1.1, MAX (GPU), FastHTML, linker tools (pixi.toml)
-scripts/build.sh todo all             # every platform the example supports
-scripts/check                         # rebuilds everything and checks every milestone in GOAL.md
+scripts/build.sh hello all      # → Linux app, web module, Mac app, iPhone app
 ```
 
-| Platform | Native toolkit | Run it | Status |
-|---|---|---|---|
-| **Linux** | GTK4 + libadwaita | `scripts/build.sh todo linux && build/todo/linux/todo` | runs; tested here |
-| **Web** | HTML controls + HTMX, served by FastHTML | `scripts/build.sh todo web && pixi run python mojoui/hosts/web.py build/todo/web` → http://127.0.0.1:5001 | runs; tested in Chromium |
-| **Mac** (Apple Silicon) | AppKit | `scripts/build.sh todo mac`, copy the zip to your Mac (see `apple/README.md`) | builds + signs; not yet run on a Mac |
-| **iPhone** | UIKit (Liquid Glass on iOS 26) | `apple/install_iphone.sh todo` (free Apple ID) | builds + signs; not yet run on an iPhone |
-| **Android** | (planned: Android views via JNI) | `scripts/build.sh todo android` builds the arm64 library | exploration; see `docs/android.md` |
-| **Windows** | use the Web version | | no Mojo for Windows yet |
+That's the whole model, the same one as Elm, SwiftUI and React: **state → `view()` → screen**, and **tap → `update()` → new state**. You never touch GTK, HTML, AppKit or UIKit; the build enforces it (`examples/hello/app.mojo`).
 
-On the web, the Mojo app runs on the server inside Python (FastHTML), compiled as a Python module, so Python libraries and the JS ecosystem are both at hand. One app state per browser tab.
+On the iPhone the Greet button is a real `UIButton` with Liquid Glass; on the Mac it's an `NSButton`; on Linux a GTK button; on the web an HTML `<button>`. Each looks and behaves the way its platform's users expect, including keyboard, screen reader and text input.
+
+## The hybrid: native controls plus a GPU canvas
+
+Native controls can't show 20 million points, so mojo-ui has one more view, `Canvas`. The app paints it itself, and everything around it stays native:
+
+```mojo
+def view(self) -> View:
+    return HStack(
+        sidebar,                                           # native controls
+        Canvas(0, self.version, on_gesture=PAN_OR_ZOOM).grow().fill(),
+    )
+
+def draw(mut self, canvas: Int, mut surface: Surface):     # called at the canvas's real pixel size
+    self.trips.bin[place](surface.width, surface.height, self.knobs())   # runs on the GPU
+    self.trips.shade[colour](surface, self.knobs())
+```
+
+`place` and `colour` are ordinary Mojo functions. On a machine with a GPU they run as GPU kernels; without one, the very same functions run on the CPU. The **Data Lens** example (`examples/lens/app.mojo`) uses this to redraw 20 million trips:
+
+| | Measured (RTX 3090) |
+|---|---|
+| One 1920×1080 frame, all 20M points counted and coloured | **1.6 ms** on the GPU (≈140 ms on the CPU, identical pixels) |
+| Linux window, playing through the day | **59 fps** on a 60 Hz display |
+| Browser (the server's GPU paints, frames are streamed) | **60 fps** in headless Chromium on the same machine |
+
+![The same app in the browser](docs/img/lens-web.png)
+
+This is how serious apps are built anyway (Maps, Figma and photo editors are native chrome around a GPU surface). The difference is that here both halves are one language and one file.
+
+## What Mojo brings
+
+| | Why it matters for apps |
+|---|---|
+| **Reads like Python** | `def`, `struct`, `if`, `for`. App developers can read it on day one. |
+| **Compiles to native code** | No virtual machine or JavaScript runtime between your code and the screen. The Linux build is a normal executable; the Mac and iPhone builds contain no Swift and no C. |
+| **The GPU in the same language** | The function that draws a pixel or counts a point is plain Mojo, compiled for the GPU. No shader language, no second codebase. |
+| **Python when you want it** | Mojo can call any Python library and be called from Python. That's how the web version works: the Mojo app runs inside a FastHTML (Python) server. |
+| **C and the operating system directly** | Mojo calls C functions and the Objective-C runtime with no binding generator. That's how one Mojo file drives GTK, AppKit and UIKit. |
+| **One memory, no copies** | UI state, data and GPU buffers live in one program, so a 20-million-row dataset isn't serialised between languages. |
+
+**The honest cons:** Mojo is young (version 1.1). It has a small ecosystem, no official iPhone, Android or WebAssembly target (mojo-ui cross-compiles with a few hand-written runtime functions), and no Windows release yet. AI agents write it less fluently than Swift or TypeScript.
+
+## How it compares
+
+| | Language | How the screen is drawn | Native look | GPU code | Platforms |
+|---|---|---|---|---|---|
+| **Flutter** | Dart | its own engine draws every pixel | imitated | shaders in a separate language | iOS, Android, web, desktop |
+| **React Native** | JavaScript/TypeScript | native widgets, driven from a JS runtime | yes | via native modules | iOS, Android (web via add-ons) |
+| **Compose Multiplatform** | Kotlin | native on Android; drawn by its own engine elsewhere | Android only | via platform code | Android, iOS, desktop, web |
+| **Tauri** (Rust) | Rust + HTML/JS | the system's web view | web look | via Rust crates (wgpu, separate shaders) | desktop, iOS, Android |
+| **Dioxus** (Rust) | Rust | web view, WebAssembly, server-streamed, or its own renderer | web look | via Rust crates | web, desktop, mobile |
+| **Slint / Iced / egui** (Rust) | Rust | their own renderer draws every pixel | imitated | via wgpu (separate shaders) | desktop, embedded, some mobile |
+| **mojo-ui** | **Mojo** | **native widgets, plus GPU canvases** | **yes** | **same language, same file** | Linux, web, Mac, iPhone (Android next) |
+
+**Rust, the poster child.** Rust proved that a compiled, safe language can run everywhere, and its UI kits are impressive. But a Rust app with a GPU-heavy view usually means three languages: Rust for logic, WGSL or another shader language for the GPU, and HTML/CSS/JS when it uses a web view. Rust is also a hard language for app developers coming from Python or JavaScript. Mojo's pitch is Rust-class speed with Python-class readability, and the GPU in the same language.
+
+**Where others are ahead today:** maturity, tooling, documentation, app-store pipelines and real production users. Flutter and React Native ship to millions of phones; mojo-ui is an experiment.
+
+### Today and tomorrow
+
+| Today (working, measured here) | Tomorrow (planned) |
+|---|---|
+| The web app runs in the server (Mojo inside FastHTML); the browser gets plain HTML and streamed canvas frames | Mojo compiled to WebAssembly, running in the browser (Mojo 1.1 has no WebAssembly target yet; a first probe converted Mojo's LLVM output) |
+| GPU on Linux (NVIDIA/AMD) | Apple GPUs on Mac and iPhone (Mac/iPhone use the CPU path today) |
+| Canvas frames copied GPU → memory → screen | Zero-copy: the GPU writes straight into the screen's texture |
+| Android: a real arm64 library builds | Android app with native views (a ~40-line Java file forwards taps) |
+| Synthetic data | MX frame (a Mojo dataframe) feeding billions of rows straight into the GPU |
+
+## Status (honestly)
+
+| Platform | Draws with | Status |
+|---|---|---|
+| **Linux** | GTK 4 + libadwaita | runs; every check drives the real widgets |
+| **Web** | HTML controls + HTMX, served by FastHTML; Canvas frames streamed | runs; checked in Chromium, same results as Linux |
+| **Mac** (Apple Silicon) | AppKit | builds and signs; **not yet run on a Mac** |
+| **iPhone** | UIKit | builds and signs; **not yet run on an iPhone** |
+| **Android** | Android views via JNI (planned) | the arm64 library builds; `docs/android.md` |
+| **Windows** | the web version | no Mojo for Windows yet |
+
+Every claim above is checked by a script: `scripts/check` rebuilds everything and drives each app on GTK and in a headless browser. Each experiment's contract, results and decisions are kept in the repo.
+
+## Learn more
+- **[How it works](docs/architecture.md):** the view tree, the update loop, how each platform is reached (GTK through C, Apple through the Objective-C runtime, the web through Python, FastHTML and HTMX), the GPU canvas, and why it's built this way.
+- **[Decisions](docs/decisions.md):** every fork in the road, with the reason and whether it can be undone.
+- **[Experiments](EXPERIMENTS.md):** what was tried, what broke and what was learned. The latest report is `docs/report.md`.
+- **[Roadmap](ROADMAP.md):** the vision and the long-term stages.
+
+## Try it
+
+```bash
+pixi install                                      # Mojo 1.1, MAX (GPU), FastHTML, linker tools
+scripts/build.sh lens linux && build/lens/linux/lens               # the Data Lens, native window
+scripts/build.sh lens web && pixi run python mojoui/hosts/web.py build/lens/web   # → http://127.0.0.1:5001
+scripts/check                                     # rebuild everything and prove every milestone
+```
+
+| Platform | Run it |
+|---|---|
+| Linux | `scripts/build.sh todo linux && build/todo/linux/todo` |
+| Web | `scripts/build.sh todo web && pixi run python mojoui/hosts/web.py build/todo/web` |
+| Mac | `scripts/build.sh todo mac`, copy the zip to an Apple Silicon Mac (`apple/README.md`) |
+| iPhone | `apple/install_iphone.sh todo` (free Apple ID) |
+| Android | `scripts/build.sh todo android` (library only for now) |
+
+---
+
+# Reference
 
 ## Components
 
@@ -85,6 +203,7 @@ On the web, the Mojo app runs on the server inside Python (FastHTML), compiled a
 | `Divider()`, `Spacer()` | a line; empty space | | | | |
 
 See them in `examples/gallery/app.mojo` and `examples/kitchen/app.mojo`.
+
 
 ## Layout
 
@@ -165,24 +284,4 @@ def update(mut self, event: Event):
 
 The app file imports only `mojoui`; it never touches GTK, HTML, AppKit or UIKit (`scripts/check` enforces this).
 
-## How it works
-- `mojoui/view.mojo`: the building blocks; a screen is a flat list of nodes.
-- `mojoui/diff.mojo`: compares two screens → small patches or "rebuild".
-- `mojoui/app.mojo`: the `App` trait, `Event`, and the update loop every platform shares.
-- `mojoui/hosts/`: one native renderer per platform:
-  - `gtk.mojo` (Linux);
-  - `web.mojo` + `web.py` (FastHTML; htmx vendored in `mojoui/hosts/static/`);
-  - `appkit.mojo` and `uikit.mojo` (Apple). These call the frameworks through the Objective-C runtime (`objc.mojo`), so there's no Swift or C anywhere.
-- `mojoui/canvas.mojo`: `Surface`, the pixels a Canvas is painted into.
-- `mojoui/gpu.mojo`: run a Mojo function per pixel, or bin millions of points (`PointCloud`), on the GPU, with the same functions on the CPU when there's no GPU.
-- `hosts/`: tiny entry points that import your `app.mojo` and start the right renderer.
-- `scripts/build.sh` builds; `scripts/check` proves; `scripts/drive.py` drives the web app in headless Chromium using the same test steps as the GTK test mode.
-
-## Status and limits
-- **Runs here:** Linux and the web, including the GPU fractal and the Data Lens (20M points, GPU). `scripts/check` drives the real widgets: GTK through its signals, the browser through Playwright. It reads them back and requires GTK and the web to end in identical states.
-- **Mac and iPhone:** they compile, link and sign here. For goals up to 5, a reviewer checked the compiled code for every native call that passes or returns floating-point values or rectangles; the Canvas calls (goal 6) were reviewed in source, and only the CGPoint return was checked in the compiled code. **They haven't been run on real hardware yet.**
-- **Android:** a real arm64 library builds. Drawing with Android views and receiving taps needs a decision and Google's SDK licence: `docs/android.md`.
-- **Not yet:** controls inside lazy-list rows (rows are text plus one tap), a bottom tab bar on iPhone (tabs are a segmented switcher at the top), accessibility labels beyond the platforms' defaults, and JS "islands" on the web.
-- **Limits:** up to 65,535 nodes per screen; Mac/iPhone keep replaced controls in memory (fine for small apps). Canvas frames take two CPU copies on their way to the screen (GPU → the app's pixels → the platform's image or texture); each web tab builds its own dataset (3 s and ~640 MB for the lens).
-
-History: `EXPERIMENTS.md` (what was tried), `docs/decisions.md`, `docs/journal.md`, `docs/goals/` (earlier goals, reports and checkers).
+How the pieces fit together, platform by platform: [docs/architecture.md](docs/architecture.md).

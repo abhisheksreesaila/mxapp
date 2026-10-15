@@ -21,6 +21,9 @@ Same idea as Apple: Mojo drives the platform's own UI toolkit directly.
    - **Recommendation:** (b). It's one small, boring file, and the rest stays Mojo.
 4. **Packaging an APK:** the APK needs a binary `AndroidManifest.xml` (aapt2, or a small encoder we write), the library, the dex for (b), and an APK v2 signature (apksigner).
 
+## Setting up the SDK
+Run `scripts/android_setup.sh`: a step-by-step wizard for the parts only the owner can do (download Google's command-line tools, accept the licences, connect a phone). It then installs platform-tools, build-tools and a platform.
+
 ## What needs you
 - **A decision:** is a ~40-line Java listener shim (option b) acceptable, or should Android stay Mojo-only (option a, polling)?
 - **The Android SDK licence:** aapt2, apksigner, d8 and the emulator come from Google's SDK, which needs you to accept Google's licence (`sdkmanager --licenses`). I didn't accept it for you.
