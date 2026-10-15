@@ -3,7 +3,7 @@
 Mode: experiment
 Ship: direct
 
-Current experiment: `GOAL.md` (goal 5: layout settings mapped onto native layout; goals 1–4 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 6: GPU Data Lens — native controls + a GPU Canvas; goals 1–5 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 
