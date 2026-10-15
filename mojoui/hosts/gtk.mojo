@@ -310,6 +310,7 @@ struct GtkCanvas(Copyable, Movable):
     var pinch: Float64  # the pinch's scale so far
     var moved: Bool  # the current press became a drag (so it's not a tap)
     var armed: Bool  # a tick callback is running (only while frames, a redraw or a resize may be due)
+    var quiet: Int  # idle ticks in a row (layout runs after ticks, so wait a few before stopping)
 
     def __init__(out self, node: Int, widget: Int):
         self.node = node
@@ -332,6 +333,7 @@ struct GtkCanvas(Copyable, Movable):
         self.pinch = 1
         self.moved = False
         self.armed = False
+        self.quiet = 0
 
 
 struct GtkHost[A: App](Movable):
@@ -762,6 +764,8 @@ struct GtkHost[A: App](Movable):
     def arm(mut self, ci: Int, self_addr: Int):
         """Ticks canvas ci on every display frame until it's idle again (no frames asked for,
         current version drawn at the current size): idle canvases don't wake the CPU."""
+        if 0 <= ci < len(self.canvases):
+            self.canvases[ci].quiet = 0
         if 0 <= ci < len(self.canvases) and not self.canvases[ci].armed:
             self.canvases[ci].armed = True
             _ = external_call["gtk_widget_add_tick_callback", c_uint](self.canvases[ci].widget, on_tick[Self.A], self_addr, 0)
@@ -813,8 +817,12 @@ struct GtkHost[A: App](Movable):
             self.canvases[ci].last_us = 0
         self.draw_canvas(ci, self_addr)
         if ci < len(self.canvases) and self.idle(ci):
-            self.canvases[ci].armed = False
-            return False
+            self.canvases[ci].quiet += 1
+            if self.canvases[ci].quiet >= 3:
+                self.canvases[ci].armed = False
+                return False
+        elif ci < len(self.canvases):
+            self.canvases[ci].quiet = 0
         return True
 
     def draw_canvas(mut self, ci: Int, self_addr: Int):
@@ -890,6 +898,16 @@ def on_tick[A: App](widget: Int, clock: Int, host_addr: Int) abi("C") -> c_int:
 
 def on_window_resized[A: App](window: Int, pspec: Int, host_addr: Int) abi("C"):
     host_at[A](host_addr)[].arm_all(host_addr)  # canvases redraw at their new size
+
+
+def on_surface_layout[A: App](surface: Int, width: c_int, height: c_int, host_addr: Int) abi("C"):
+    host_at[A](host_addr)[].arm_all(host_addr)  # the compositor resized the window (e.g. tiling)
+
+
+def on_window_realize[A: App](window: Int, host_addr: Int) abi("C"):
+    var surface = external_call["gtk_native_get_surface", Int](window)
+    if surface != 0:
+        connect_any(surface, "layout", on_surface_layout[A], host_addr)
 
 
 def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi("C"):
@@ -1487,6 +1505,7 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     external_call["gtk_window_set_default_size", NoneType](host[].window, c_int(size[0]), c_int(size[1]))
     for prop in ["notify::default-width", "notify::default-height", "notify::maximized", "notify::fullscreened"]:
         connect3(host[].window, prop, on_window_resized[A], host_addr)
+    connect(host[].window, "realize", on_window_realize[A], host_addr)
     host[].show(host_addr)
     var steps = getenv("MOJOUI_TEST")
     var testing = is_set("MOJOUI_TEST")  # set, even to "": report the widgets' state
@@ -1496,6 +1515,8 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
         # themselves, and someone working at the desktop mustn't type into them by accident.
         external_call["gtk_widget_set_can_focus", NoneType](host[].window, c_int(0))
         external_call["gtk_widget_set_can_target", NoneType](host[].window, c_int(0))
+        # A fixed size, so measurements don't depend on how the desktop tiles windows.
+        external_call["gtk_window_set_resizable", NoneType](host[].window, c_int(0))
         var title = String("mojoui test window (closes by itself)")
         external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
     if not testing or shot != "":
