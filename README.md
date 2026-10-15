@@ -288,3 +288,6 @@ def update(mut self, event: Event):
 The app file imports only `mojoui`; it never touches GTK, HTML, AppKit or UIKit (`scripts/check` enforces this).
 
 How the pieces fit together, platform by platform: [docs/architecture.md](docs/architecture.md).
+
+## License
+MIT: see [LICENSE](LICENSE). Vendored third-party files keep their own licences: HTMX (BSD 0-Clause) and Lucide icons (ISC), in `mojoui/hosts/static/`.
