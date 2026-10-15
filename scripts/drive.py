@@ -40,7 +40,7 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind]')].map(e
   if (k === 'date') return 'DATE: ' + e.value;
   if (k === 'icon') return 'ICON: ' + (e.querySelector('svg') ? e.dataset.icon : '?');
   if (k === 'grid') return 'GRID: ' + e.dataset.columns + ' columns, ' + e.children.length + ' items';
-  if (k === 'list') return 'LIST: ' + e.dataset.count + ' rows';
+  if (k === 'list') return 'LIST: ' + e.querySelector('.rows').dataset.count + ' rows' + String.fromCharCode(10) + 'LISTROWS: ' + e.querySelectorAll('.row').length;
 }).filter(Boolean).join('\\n')"""
 
 
@@ -88,7 +88,10 @@ def step(page, s):
         k, _, text = rest.partition("=")
         page.locator("textarea[data-kind=textarea]").nth(int(k)).fill(text.replace("\\n", "\n"))
     elif verb == "alert":
-        page.locator("dialog[data-kind=alert] button").filter(has_text=exact(rest)).first.click()
+        if rest == "Escape":
+            page.keyboard.press("Escape")  # the dialog's own cancel
+        else:
+            page.locator("dialog[data-kind=alert] button").filter(has_text=exact(rest)).first.click()
     elif verb == "back":
         page.locator("[data-kind=navback]").first.click()
     elif verb == "date":

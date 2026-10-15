@@ -343,6 +343,8 @@ struct GtkHost[A: App](Movable):
                 var id = String(j)
                 var label = node.options[j]
                 external_call["adw_alert_dialog_add_response", NoneType](w, id.as_c_string_span(), label.as_c_string_span())
+            var cancel = String("0")  # Escape answers with the first button (Cancel), as on Apple platforms
+            external_call["adw_alert_dialog_set_close_response", NoneType](w, cancel.as_c_string_span())
             set_node(w, i)
             connect3(w, "response", on_alert_response[Self.A], self_addr)
             _ = external_call["g_object_ref_sink", Int](w)
@@ -355,6 +357,8 @@ struct GtkHost[A: App](Movable):
                 var icon = String("go-previous-symbolic")
                 var back = external_call["gtk_button_new_from_icon_name", Int](icon.as_c_string_span())
                 add_class(back, "flat")
+                var tip = String("Back")
+                external_call["gtk_widget_set_tooltip_text", NoneType](back, tip.as_c_string_span())  # also its accessible name
                 set_node(back, i)
                 connect(back, "clicked", on_clicked[Self.A], self_addr)
                 external_call["gtk_box_append", NoneType](w, back)
@@ -442,7 +446,7 @@ struct GtkHost[A: App](Movable):
         external_call["gtk_widget_set_margin_start", NoneType](root, c_int(32))
         external_call["gtk_widget_set_margin_end", NoneType](root, c_int(32))
         external_call["gtk_window_set_child", NoneType](self.window, root)
-        if self.dialog != 0 and getenv("MOJOUI_TEST") == "":  # tests drive the dialog without showing it
+        if self.dialog != 0 and (getenv("MOJOUI_TEST") == "" or getenv("MOJOUI_SHOT") != ""):  # plain tests drive it unseen
             external_call["adw_dialog_present", NoneType](self.dialog, self.window)
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
@@ -469,8 +473,6 @@ struct GtkHost[A: App](Movable):
                 elif kind == FIELD:
                     if c_str(external_call["gtk_editable_get_text", Int](w)) != p.text:  # don't fight the typist
                         external_call["gtk_editable_set_text", NoneType](w, t.as_c_string_span())
-            elif p.op == SET_TEXT and kind == TEXTAREA:
-                pass  # (handled below)
             if p.op == SET_TEXT and kind == TEXTAREA:
                 var buffer = external_call["gtk_text_view_get_buffer", Int](w)
                 if buffer_text(buffer) != p.text:  # don't fight the typist
@@ -515,6 +517,14 @@ struct GtkHost[A: App](Movable):
                 external_call["gtk_picture_set_paintable", NoneType](w, tex)
                 external_call["g_object_unref", NoneType](tex)
             # SET_MSG needs nothing: events look the message up in rt.shown.
+        # Ask for the visible rows of every long list again: row text isn't part of the
+        # view, so an edit that keeps the row count wouldn't show otherwise.
+        for k in range(len(self.rt.shown.nodes)):
+            if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
+                var selection = external_call["gtk_list_view_get_model", Int](self.widgets[k])
+                var model = external_call["gtk_no_selection_get_model", Int](selection)
+                var n = external_call["g_list_model_get_n_items", c_uint](model)
+                external_call["g_list_model_items_changed", NoneType](model, c_uint(0), n, n)
         set_busy(False)
 
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
@@ -647,6 +657,7 @@ def on_row_bind[A: App](factory: Int, item: Int, host_addr: Int) abi("C"):
         return
     var position = Int(external_call["gtk_list_item_get_position", c_uint](item))
     var text = host[].rt.app.row(host[].rt.shown.nodes[node].msg2, position)  # asked for on demand
+    count_up("mojoui-rows-bound")
     var label = external_call["gtk_list_item_get_child", Int](item)
     external_call["gtk_label_set_text", NoneType](label, text.as_c_string_span())
 
@@ -790,11 +801,13 @@ def run_step[A: App](host_addr: Int, step: String):
         for j in range(len(opts)):
             if opts[j] == rest:
                 index = j
-        if index < 0:
+        var id = String(index)
+        if rest == "Escape":  # what AdwAlertDialog sends on Escape: its close response
+            id = c_str(external_call["adw_alert_dialog_get_close_response", Int](host[].widgets[i]))
+        elif index < 0:
             print("TEST: no alert button", rest)
             return
         var signal = String("response")
-        var id = String(index)
         external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], signal.as_c_string_span(), id.as_c_string_span())
     elif verb == "back":
         var i = find(host[], NAVBAR, "", 0)
@@ -802,6 +815,9 @@ def run_step[A: App](host_addr: Int, step: String):
             print("TEST: no navbar")
             return
         var back = external_call["gtk_widget_get_first_child", Int](host[].widgets[i])
+        if host[].rt.shown.nodes[i].msg == 0 or back == external_call["gtk_widget_get_last_child", Int](host[].widgets[i]):
+            print("TEST: no back button")
+            return
         var s = String("clicked")
         external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](back, s.as_c_string_span())
     elif verb == "date":
@@ -872,6 +888,8 @@ def report[A: App](host_addr: Int):
                 var id = String(j)
                 line += (", " if j > 0 else "") + c_str(external_call["adw_alert_dialog_get_response_label", Int](w, id.as_c_string_span()))
             print("ALERT: " + line)
+            if getenv("MOJOUI_SHOT") != "":
+                print("ALERTSHOWN: " + ("yes" if external_call["gtk_widget_get_mapped", c_int](w) != 0 else "no"))
         elif n.kind == NAVBAR:
             var title = external_call["gtk_widget_get_last_child", Int](w)
             var has_back = external_call["gtk_widget_get_first_child", Int](w) != title
@@ -891,6 +909,7 @@ def report[A: App](host_addr: Int):
             var selection = external_call["gtk_list_view_get_model", Int](w)
             print("LIST: " + String(external_call["g_list_model_get_n_items", c_uint](selection)) + " rows")
             print("LISTBUILT: " + String(counter("mojoui-rows-built")))
+            print("LISTBOUND: " + String(counter("mojoui-rows-bound")))
         elif n.kind == IMAGE:
             var paintable = external_call["gtk_picture_get_paintable", Int](w)
             print("IMAGE: " + String(external_call["gdk_texture_get_width", c_int](paintable)) + "x" + String(external_call["gdk_texture_get_height", c_int](paintable)))
@@ -911,6 +930,9 @@ def save_png(window: Int, path: String):
     var snap = external_call["gtk_snapshot_new", Int]()
     external_call["gdk_paintable_snapshot", NoneType](paintable, snap, Float64(Int(w)), Float64(Int(h)))
     var node = external_call["gtk_snapshot_free_to_node", Int](snap)
+    if node == 0:  # nothing drawn yet (e.g. a dialog window took the first frame)
+        print("SHOT: skipped (window had no frame to capture)")
+        return
     var renderer = external_call["gtk_native_get_renderer", Int](window)
     var texture = external_call["gsk_renderer_render_texture", Int](renderer, node, 0)
     var p = path

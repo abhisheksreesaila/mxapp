@@ -1,6 +1,6 @@
 # Compare the screen before and after an update, so hosts change only what changed.
 
-from mojoui.view import View
+from mojoui.view import View, NAVBAR, ALERT
 
 comptime SET_TEXT = 1  # label text, button title, field contents, toggle label
 comptime SET_MSG = 2
@@ -45,6 +45,11 @@ def same_shape(a: View, b: View) -> Bool:
             or x.msg2 != y.msg2
             or x.size != y.size
         ):
+            return False
+        # A Back button appearing or going, or an alert's question changing, is a new layout.
+        if x.kind == NAVBAR and (x.msg == 0) != (y.msg == 0):
+            return False
+        if x.kind == ALERT and (x.text != y.text or x.hint != y.hint):
             return False
     return True
 

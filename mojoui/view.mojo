@@ -213,9 +213,10 @@ def Icon(name: String, size: Int = 24) -> View:
     return _one(Node(ICON, name, size=size))
 
 
-def LazyList(count: Int, list_id: Int, on_tap: Int = NO_MSG, height: Int = 320, row_height: Int = 44) -> View:
+def LazyList(count: Int, list_id: Int, on_tap: Int = NO_MSG, height: Int = 320, row_height: Int = 48) -> View:
     """A long list: only the rows on screen are built, asking the app's `row(list_id, index)`
-    for their text. Tapping a row sends `on_tap` (event.number = row index)."""
+    for their text. Tapping a row sends `on_tap` (event.number = row index).
+    Hosts ask for the visible rows again after every update, so edited rows refresh."""
     return _one(Node(LAZYLIST, "", on_tap, value=count, msg2=list_id, size=height, spacing=row_height))
 
 

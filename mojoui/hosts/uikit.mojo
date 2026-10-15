@@ -186,6 +186,7 @@ struct UIKitHost[A: App](Movable):
                 var chevron = msg(cls("UIImage"), "systemImageNamed:", ns_string("chevron.backward"))
                 var back = msg(msg(cls("UIBarButtonItem"), "alloc"), "initWithImage:style:target:action:", chevron, 0, self.target, sel("tap:"))
                 _ = msg(back, "setTag:", tag_for(self_addr, i))
+                _ = msg(back, "setAccessibilityLabel:", ns_string("Back"))
                 _ = msg(item, "setLeftBarButtonItem:", back)
             _ = msg(w, "setItems:animated:", msg(cls("NSArray"), "arrayWithObject:", item), 0)
             constrain(w, "widthAnchor", Float64(340))
@@ -258,6 +259,13 @@ struct UIKitHost[A: App](Movable):
         # while the screen is replaced in the middle of its own action.
         if self.root != 0:
             _ = msg(self.root, "removeFromSuperview")
+        var has_alert = False
+        for n in self.rt.shown.nodes:
+            if n.kind == ALERT:
+                has_alert = True
+        var root_vc = msg(self.window, "rootViewController")
+        if not has_alert and root_vc != 0 and msg(root_vc, "presentedViewController") != 0:
+            _ = msg(root_vc, "dismissViewControllerAnimated:completion:", 1, 0)  # the alert left the view
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)  # 0 = nil: patches become no-ops
         self.extras = List[Int](length=len(self.rt.shown.nodes), fill=0)
         if len(self.rt.shown.nodes) >= (1 << NODE_BITS):
@@ -292,8 +300,6 @@ struct UIKitHost[A: App](Movable):
                 var buttons = msg(w, "arrangedSubviews")
                 for j in range(msg(buttons, "count")):
                     set_radio(msg(buttons, "objectAtIndex:", j), j == p.number)
-            elif p.op == SET_VALUE and node.kind == LAZYLIST:
-                _ = msg(w, "reloadData")
             elif p.op == SET_TEXT:
                 if node.kind == TEXT:
                     _ = msg(w, "setText:", ns_string(p.text))
@@ -318,6 +324,10 @@ struct UIKitHost[A: App](Movable):
             elif p.op == SET_IMAGE:
                 _ = msg(w, "setImage:", ui_image(node.pixels, node.spacing, node.size))
             # SET_MSG needs nothing: events look the message up in rt.shown.
+        # Ask for the visible rows of every long list again: row text isn't part of the view.
+        for k in range(len(self.rt.shown.nodes)):
+            if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
+                _ = msg(self.widgets[k], "reloadData")
 
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
         """A control changed: build the event, run update(), patch the controls."""
@@ -489,17 +499,22 @@ def on_present_alert[A: App](target: Int, cmd: Int, number: Int) abi("C"):
     var alert = msg(cls("UIAlertController"), "alertControllerWithTitle:message:preferredStyle:", ns_string(n.text), ns_string(n.hint), 1)
     var handler = data_block(on_alert_action[A], "v16@?0@8", tag)
     for j in range(len(n.options)):
+        var lower = n.options[j].lower()
         var style = 1 if (j == 0 and len(n.options) > 1) else 0  # the first of several is Cancel
+        if j > 0 and (lower.startswith("delete") or lower.startswith("remove")):
+            style = 2  # destructive: shown in red
         var action = msg(cls("UIAlertAction"), "actionWithTitle:style:handler:", ns_string(n.options[j]), style, handler)
         _ = msg(alert, "addAction:", action)
     var root = msg(host[].window, "rootViewController")
+    if msg(root, "presentedViewController") != 0:
+        return  # already showing it (the screen was rebuilt twice while the alert was in the view)
     _ = msg(root, "presentViewController:animated:completion:", alert, 1, 0)
 
 
 def on_row_count[A: App](target: Int, cmd: Int, table: Int, section: Int) abi("C") -> Int:
     var t = from_tag(table)
     var host = host_at[A](t[0])
-    if t[1] >= len(host[].rt.shown.nodes):
+    if t[1] >= len(host[].rt.shown.nodes) or host[].rt.shown.nodes[t[1]].kind != LAZYLIST:
         return 0
     return host[].rt.shown.nodes[t[1]].value
 
@@ -509,7 +524,7 @@ def on_row_cell[A: App](target: Int, cmd: Int, table: Int, index_path: Int) abi(
     var t = from_tag(table)
     var host = host_at[A](t[0])
     var cell = msg(table, "dequeueReusableCellWithIdentifier:forIndexPath:", ns_string("row"), index_path)
-    if t[1] < len(host[].rt.shown.nodes):
+    if t[1] < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[t[1]].kind == LAZYLIST:
         var row = msg(index_path, "row")
         var config = msg(cell, "defaultContentConfiguration")
         _ = msg(config, "setText:", ns_string(host[].rt.app.row(host[].rt.shown.nodes[t[1]].msg2, row)))

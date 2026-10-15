@@ -293,6 +293,13 @@ struct WithRows(App):
         return "list " + String(list_id) + " row " + String(index)
 
 
+def test_back_button_and_alert_question_changes_rebuild() raises:
+    assert_true(diff(VStack(NavBar("A")), VStack(NavBar("A", on_back=2))).rebuild)
+    var b: List[String] = ["OK"]
+    assert_true(diff(VStack(Alert("Q1", "m", b, on_choose=1)), VStack(Alert("Q2", "m", b, on_choose=1))).rebuild)
+    assert_false(diff(VStack(NavBar("A", on_back=2)), VStack(NavBar("B", on_back=3))).rebuild)  # title/message: patches
+
+
 def test_apps_provide_rows_on_demand() raises:
     var rt = Runtime(WithRows())
     assert_equal(rt.app.row(7, 999), "list 7 row 999")
@@ -321,4 +328,5 @@ def main() raises:
     test_goal4_components_record_their_values()
     test_segment_and_date_changes_are_patches_but_alert_appearing_rebuilds()
     test_apps_provide_rows_on_demand()
+    test_back_button_and_alert_question_changes_rebuild()
     print("ALL TESTS PASSED")

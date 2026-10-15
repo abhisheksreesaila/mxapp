@@ -375,7 +375,18 @@ def m3():
     if not ok:
         return ok, msg
     ok, msg = kitchen_has(["LABEL: Deleted 1 time"], "tab:0=More;tap:Delete everything;alert:Cancel;tap:Delete everything;alert:Delete")
-    return ok, msg or "Alert shown while in the view; Cancel and Delete answered on GTK and web, identical"
+    if not ok:
+        return ok, msg
+    # Escape must answer like Cancel (not leave the app stuck), on both.
+    ok, msg = kitchen_has(["LABEL: Deleted 1 time"], "tab:0=More;tap:Delete everything;alert:Escape;tap:Delete everything;alert:Delete")
+    if not ok:
+        return ok, f"Escape: {msg}"
+    # And the GTK alert really appears on screen (not just driven unseen).
+    with tempfile.TemporaryDirectory() as tmp:
+        r, out = gtk("kitchen", "tab:0=More;tap:Delete everything", shot=str(Path(tmp) / "a.png"))
+        if r is None or "ALERTSHOWN: yes" not in out:
+            return False, f"GTK alert wasn't shown on screen: {out[-300:]}"
+    return True, "Alert shown on screen while in the view; Cancel, Delete and Escape answered on GTK and web, identical"
 
 
 def m4():
@@ -408,7 +419,12 @@ def m8():
     built = [int(x) for x in re.findall(r"^LISTBUILT: (\d+)$", gout, re.M)]
     if not built or max(built) >= 500:
         problems.append(f"GTK built {built} rows; must build far fewer than 10,000")
-    return not problems, "; ".join(problems) or f"10,000-row list: scrolled to and tapped row 7500 on GTK and web; GTK built only {max(built)} rows"
+    _, wout = web("kitchen", "tab:0=List;scroll:0=7500;row:0=7500")
+    in_page = [int(x) for x in re.findall(r"^LISTROWS: (\d+)$", wout or "", re.M)]
+    if not in_page or max(in_page) >= 100:
+        problems.append(f"web page held {in_page} rows; must hold far fewer than 10,000")
+    return not problems, "; ".join(problems) or (f"10,000-row list: scrolled to and tapped row 7500 on GTK and web; GTK made {max(built)} row widgets "
+                                                 f"(its recycling cache), the web page held {max(in_page)} rows")
 
 
 EXPENSES_STEPS = ("type:Amount=12.50;segment:0=Travel;date:0=2026-10-01;textarea:0=Taxi to the airport;tap:Add expense;"
@@ -416,6 +432,9 @@ EXPENSES_STEPS = ("type:Amount=12.50;segment:0=Travel;date:0=2026-10-01;textarea
 
 
 def m9():
+    t = run(["pixi", "run", "mojo", "run", "-I", "examples/expenses", "-I", ".", "tests/test_expenses.mojo"])
+    if "EXPENSES TESTS PASSED" not in t.stdout:
+        return False, f"expenses unit tests: {(t.stdout + t.stderr)[-300:]}"
     problems, gs, _, _ = both("expenses", EXPENSES_STEPS)
     if "TABS: Insights" not in gs or not any(l.startswith("LABEL: Total: ") and "5000 expenses" in l for l in gs):
         problems.append(f"expenses end state wrong: {gs}")

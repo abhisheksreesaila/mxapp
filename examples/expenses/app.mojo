@@ -54,26 +54,32 @@ def money(cents: Int) -> String:
 
 
 def parse_cents(text: String) -> Int:
-    """ "12.5" → 1250; -1 if it isn't an amount."""
-    var t = String(text.strip())
-    if t == "":
-        return -1
+    """ "12.5", "$12.50" or "1,234.50" → cents; -1 if it isn't a sensible amount (max $9,999,999.99)."""
     var cents = 0
+    var digits = 0
     var decimals = -1
-    for byte in t.as_bytes():
+    for byte in String(text.strip()).as_bytes():
         var b = Int(byte)
+        if b == ord("$") and digits == 0 and decimals < 0:
+            continue
+        if b == ord(",") and decimals < 0 and digits > 0:
+            continue
         if b == ord("."):
             if decimals >= 0:
                 return -1
             decimals = 0
         elif ord("0") <= b <= ord("9"):
-            if decimals >= 2:
+            if decimals >= 2 or (decimals < 0 and digits >= 7):
                 return -1
             cents = cents * 10 + b - ord("0")
             if decimals >= 0:
                 decimals += 1
+            else:
+                digits += 1
         else:
             return -1
+    if digits == 0 and decimals <= 0:
+        return -1
     if decimals <= 0:
         cents *= 100
     elif decimals == 1:

@@ -289,13 +289,12 @@ struct AppKitHost[A: App](Movable):
                 var buttons = msg(w, "arrangedSubviews")
                 for j in range(msg(buttons, "count")):
                     _ = msg(msg(buttons, "objectAtIndex:", j), "setState:", 1 if j == p.number else 0)
-            elif p.op == SET_VALUE and kind == LAZYLIST:
-                _ = msg(w, "reloadData")
             elif p.op == SET_TEXT and kind == TEXTAREA:
                 if from_ns(msg(w, "string")) != p.text:  # don't fight the typist
                     _ = msg(w, "setString:", ns_string(p.text))
             elif p.op == SET_TEXT and kind == DATE:
-                _ = msg(w, "setDateValue:", ns_date(p.text))
+                if date_text(msg(w, "dateValue")) != p.text:  # don't fight someone mid-edit
+                    _ = msg(w, "setDateValue:", ns_date(p.text))
             elif p.op == SET_TEXT and kind == NAVBAR:
                 var views = msg(w, "arrangedSubviews")
                 _ = msg(msg(views, "lastObject"), "setStringValue:", ns_string(p.text))
@@ -303,6 +302,10 @@ struct AppKitHost[A: App](Movable):
                 ref img = self.rt.shown.nodes[p.node]
                 _ = msg(w, "setImage:", ns_image(img.pixels, img.spacing, img.size))
             # SET_MSG needs nothing: events look the message up in rt.shown.
+        # Ask for the visible rows of every long list again: row text isn't part of the view.
+        for k in range(len(self.rt.shown.nodes)):
+            if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
+                _ = msg(self.widgets[k], "reloadData")
 
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
         """A control changed: build the event, run update(), patch the controls."""
@@ -420,7 +423,7 @@ def on_show_alert[A: App](target: Int, cmd: Int, number: Int) abi("C"):
 def on_row_count[A: App](target: Int, cmd: Int, table: Int) abi("C") -> Int:
     var t = from_tag(table)
     var host = host_at[A](t[0])
-    if t[1] >= len(host[].rt.shown.nodes):
+    if t[1] >= len(host[].rt.shown.nodes) or host[].rt.shown.nodes[t[1]].kind != LAZYLIST:
         return 0
     return host[].rt.shown.nodes[t[1]].value
 
@@ -429,7 +432,7 @@ def on_row_value[A: App](target: Int, cmd: Int, table: Int, column: Int, row: In
     """NSTableView asks for one row's text only when it scrolls into view."""
     var t = from_tag(table)
     var host = host_at[A](t[0])
-    if t[1] >= len(host[].rt.shown.nodes):
+    if t[1] >= len(host[].rt.shown.nodes) or host[].rt.shown.nodes[t[1]].kind != LAZYLIST:
         return 0
     return ns_string(host[].rt.app.row(host[].rt.shown.nodes[t[1]].msg2, row))
 

@@ -76,12 +76,12 @@ img.image { max-width: 100%; height: auto; border-radius: 12px; image-rendering:
 .segmented, .tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: var(--surface); }
 .segmented label, .tabs label { position: relative; }
 .segmented input, .tabs input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.segmented span, .tabs span { display: inline-flex; align-items: center; min-height: 42px; padding: 0 16px; border-radius: 9px; font-weight: 600; }
+.segmented span, .tabs span { display: inline-flex; align-items: center; min-height: 48px; padding: 0 16px; border-radius: 9px; font-weight: 600; }
 .segmented input:checked + span, .tabs input:checked + span { background: light-dark(#fff, #3a3a3c); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
 .segmented input:focus-visible + span, .tabs input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--accent) 60%, transparent); }
 .tabs span { padding: 0 20px; }
 .radio { display: flex; flex-direction: column; gap: 2px; }
-.radio label { display: inline-flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
+.radio label { display: inline-flex; gap: 10px; align-items: center; min-height: 48px; cursor: pointer; }
 .radio input { width: 20px; height: 20px; accent-color: var(--accent); }
 textarea { font: inherit; width: 320px; max-width: 80vw; padding: 10px 12px; border-radius: 12px; resize: vertical;
            border: 1px solid var(--line); background: light-dark(#fff, #2c2c2e); color: inherit; }
@@ -90,8 +90,9 @@ input[type=date] { font: inherit; min-height: 48px; padding: 6px 12px; border-ra
 header.nav { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 420px; }
 header.nav h2 { margin: 0; font-size: 22px; }
 header.nav button { padding: 10px 14px; }
-dialog.alert { border: 0; border-radius: 18px; padding: 22px; max-width: 320px; text-align: center; position: fixed; inset: 0;
-               margin: auto; height: fit-content; box-shadow: 0 0 0 100vmax rgba(0,0,0,.35), 0 20px 50px rgba(0,0,0,.3);
+.alert-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 10; }
+dialog.alert { position: fixed; inset: 0; margin: auto; height: fit-content; z-index: 11; border: 0; border-radius: 18px;
+               padding: 22px; max-width: 320px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.3);
                background: light-dark(#fff, #2c2c2e); color: inherit; }
 dialog.alert h3 { margin: 0 0 6px; } dialog.alert p { margin: 0 0 16px; color: var(--muted); }
 dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
@@ -101,7 +102,7 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
             background: light-dark(#fff, #2c2c2e); border: 1px solid var(--line); }
 .lazylist .row { position: absolute; left: 0; right: 0; display: flex; align-items: center; padding: 0 14px; cursor: pointer;
                  border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lazylist .row:hover { background: var(--surface); }
+.lazylist .row:hover, .lazylist .row:focus-visible { background: var(--surface); }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
 """
 
@@ -127,6 +128,7 @@ class Session:
         self.focus = None  # field to focus after the next rebuild
         self.lock = threading.Lock()
         self.closed = False  # set (under lock) when the tab is evicted; its Mojo handle is gone
+        self.list_top = {}  # LazyList node → last scroll position, to re-send its visible rows
 
 
 def render(s, i, sid):
@@ -175,17 +177,21 @@ def render(s, i, sid):
                              **dict(common, hx_vals=json.dumps({"n": i, "number": j}))), Span(o))
                  for j, o in enumerate(n["options"])]
         cls, kind_name = {SEGMENTED: ("segmented", "segmented"), TABS: ("tabs", "tabs"), RADIO: ("radio", "radio")}[kind]
-        return Div(*items, cls=cls, id=nid, role="tablist" if kind == TABS else "radiogroup", data_kind=kind_name,
-                   data_group=group)
+        return Div(*items, cls=cls, id=nid, role="radiogroup", data_kind=kind_name, data_group=group)
     if kind == TEXTAREA:
         return Textarea(n["text"], name="text", placeholder=n["hint"], id=nid, data_kind="textarea",
                         rows=str(max(n["size"] // 24, 2)), autofocus=(s.focus == i), hx_trigger="input",
                         hx_sync="this:queue all", **common)
     if kind == ALERT:
-        buttons = [Button(o, cls="prominent" if j == len(n["options"]) - 1 else "",
+        buttons = [Button(o, cls="prominent" if j == len(n["options"]) - 1 else "", autofocus=(j == 0),
                           **dict(common, hx_vals=json.dumps({"n": i, "number": j}))) for j, o in enumerate(n["options"])]
-        return Dialog(H3(n["text"]), P(n["hint"]), Div(*buttons, cls="buttons"), open=True, cls="alert", id=nid,
-                      data_kind="alert", role="alertdialog")
+        # Modal without scripts: a full-screen backdrop catches every click behind the dialog,
+        # focus starts on the first button, and Escape anywhere answers like the first button
+        # (Cancel), as on the other platforms.
+        dialog = Dialog(H3(n["text"], id=f"{nid}-t"), P(n["hint"]), Div(*buttons, cls="buttons"), open=True,
+                        cls="alert", data_kind="alert", role="alertdialog", aria_labelledby=f"{nid}-t", aria_modal="true")
+        return Div(Div(cls="alert-backdrop"), dialog, id=nid, hx_trigger="keyup[key=='Escape'] from:body",
+                   **dict(common, hx_vals=json.dumps({"n": i, "number": 0})))
     if kind == NAVBAR:
         back = (Button("‹ Back", data_kind="navback", **common),) if n["msg"] else ()
         return Header(*back, H2(n["text"]), cls="nav", id=nid, data_kind="nav", data_back="1" if n["msg"] else "0")
@@ -200,12 +206,14 @@ def render(s, i, sid):
         return Div(*kids, cls="grid", id=nid, data_kind="grid", data_columns=str(n["value"]),
                    style=f"grid-template-columns:repeat({n['value']}, auto);gap:{n['spacing']}px")
     if kind == LAZYLIST:
-        row_h, count = n["spacing"] or 44, n["value"]
-        return Div(Div(*rows_html(s, i, sid, 0), cls="rows", style=f"height:{count * row_h}px;position:relative"),
-                   cls="lazylist", id=nid, data_kind="list", data_count=str(count), data_row_height=str(row_h),
-                   style=f"height:{n['size']}px",
-                   hx_post=f"/rows/{sid}/{i}", hx_trigger="scroll throttle:60ms", hx_target="find .rows",
-                   hx_swap="innerHTML", hx_vals="js:{top: event.target.scrollTop}", hx_include="#mojoui-v")
+        row_h = n["spacing"] or 48
+        # Scroll events ask for the rows around the new position: throttled while scrolling, plus a
+        # trailing request when it stops (so a fast drag ends on the right rows); newest reply wins.
+        return Div(rows_div(s, i, sid, s.list_top.get(i, 0)),
+                   cls="lazylist", id=nid, data_kind="list", data_row_height=str(row_h), style=f"height:{n['size']}px",
+                   hx_post=f"/rows/{sid}/{i}", hx_trigger="scroll throttle:60ms, scroll delay:150ms",
+                   hx_target=f"#rows{i}", hx_swap="outerHTML", hx_sync="this:replace",
+                   hx_vals="js:{top: event.target.scrollTop}", hx_include="#mojoui-v")
     if kind == DIVIDER:
         return Hr(id=nid)
     if kind == SPACER:
@@ -217,13 +225,22 @@ def render(s, i, sid):
     return Div(*kids, cls=cls, id=nid, style=f"gap:{n['spacing']}px")
 
 
+def rows_div(s, i, sid, top):
+    """The tall inner box of LazyList node i, holding only the rows around scroll position `top`."""
+    n = s.nodes[i]
+    row_h, count = n["spacing"] or 48, n["value"]
+    return Div(*rows_html(s, i, sid, top), cls="rows", id=f"rows{i}", data_count=str(count),
+               style=f"height:{count * row_h}px;position:relative")
+
+
 def rows_html(s, i, sid, top):
     """The rows of LazyList node i around scroll position `top` (only these exist in the page)."""
     n = s.nodes[i]
-    row_h, count = n["spacing"] or 44, n["value"]
+    row_h, count = n["spacing"] or 48, n["value"]
     first = max(0, top // row_h - 5)
     texts = json.loads(s.mod.rows(s.handle, i, first, LIST_WINDOW))
     return [Div(t, cls="row", data_row=str(first + k), style=f"top:{(first + k) * row_h}px;height:{row_h}px",
+                role="button", tabindex="0", hx_trigger="click, keyup[key=='Enter']",
                 hx_post=f"/e/{sid}", hx_vals=json.dumps({"n": i, "number": first + k}), hx_swap="none",
                 hx_target="this",  # htmx inherits hx-target: without this, rows inherit the list's
                 hx_include="#mojoui-v") for k, t in enumerate(texts)]  # "find .rows", fail to find it, and silently send nothing
@@ -234,8 +251,9 @@ def make_app(module_dir):
     mod = importlib.import_module("mojoui_app")
     app = FastHTML(default_hdrs=False, secret_key=uuid.uuid4().hex, hdrs=(  # no .sesskey file
         Meta(charset="utf-8"), Meta(name="viewport", content="width=device-width, initial-scale=1, viewport-fit=cover"),
-        # No attribute inheritance: every element states its own hx-* attributes. (Inheritance
-        # caused two silent bugs: a text input inheriting its form's hx-vals, list rows their list's hx-target.)
+        # No attribute inheritance: every element states its own hx-* attributes (list rows once
+        # inherited their list's hx-target and silently sent nothing). Note: hx-vals is still
+        # merged from ancestors even so, so elements set every key they rely on themselves.
         Meta(name="htmx-config", content='{"disableInheritance": true}'),
         Script(src="/static/htmx.min.js"), Style(CSS)))
     sessions = OrderedDict()  # sid → Session, oldest first
@@ -287,8 +305,9 @@ def make_app(module_dir):
             return ""
         with s.lock:
             if s.closed or v != s.shape or not 0 <= n < len(s.nodes) or s.nodes[n]["kind"] != LAZYLIST:
-                return ""
-            return tuple(rows_html(s, n, sid, max(top, 0)))
+                return Response(status_code=204)  # htmx leaves the list alone on 204
+            s.list_top[n] = max(top, 0)
+            return rows_div(s, n, sid, s.list_top[n])
 
     @app.post("/e/{sid}")
     def event(sid: str, n: int, v: int = -1, second: int = 0, text: str = "", number: int = 0, on: str = ""):
@@ -310,6 +329,7 @@ def make_app(module_dir):
             if d["rebuild"]:
                 s.shape += 1
                 s.images.clear()
+                s.list_top.clear()
                 typing = (FIELD, TEXTAREA)
                 s.focus = n if source["kind"] in typing and n < len(s.nodes) and s.nodes[n]["kind"] == source["kind"] else None
                 out = root(s, sid, oob=True)
@@ -330,9 +350,18 @@ def make_app(module_dir):
                     changed.append(i)
             out = []
             for i in changed:
+                if s.nodes[i]["kind"] == LAZYLIST:
+                    continue  # refreshed below without resetting its scroll position
                 el = render(s, i, sid)
                 el.attrs["hx-swap-oob"] = "true"
                 out.append(el)
+            # Re-send the visible rows of every long list: row text isn't part of the view,
+            # so an edit that keeps the count wouldn't show otherwise.
+            for i, node in enumerate(s.nodes):
+                if node["kind"] == LAZYLIST:
+                    el = rows_div(s, i, sid, s.list_top.get(i, 0))
+                    el.attrs["hx-swap-oob"] = "true"
+                    out.append(el)
             return tuple(out) if out else ""
 
     return app
