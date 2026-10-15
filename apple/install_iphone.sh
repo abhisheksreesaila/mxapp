@@ -202,17 +202,19 @@ run_wizard() {
 
 TOTAL_STAGES=7
 cd "$(dirname "$0")/.."
-IPA=build/ios/HelloMojo.ipa
+EX="${1:-hello}"   # which example: apple/install_iphone.sh todo
+NAME="$(tr '[:lower:]' '[:upper:]' <<< "${EX:0:1}")${EX:1}Mojo"
+IPA="build/$EX/ios/$NAME.ipa"
 
-banner "Install HelloMojo (all Mojo) on your iPhone"
+banner "Install $NAME (all Mojo) on your iPhone"
 
 stage "Build the app"
 if [[ -f "$IPA" ]]; then
   say "Found $IPA."
-  if confirm "Rebuild it from the Mojo source first?"; then apple/build.sh ios; fi
+  if confirm "Rebuild it from the Mojo source first?"; then scripts/build.sh "$EX" ios; fi
 else
   say "No app yet, so building it now (about a minute)."
-  apple/build.sh ios
+  scripts/build.sh "$EX" ios
 fi
 pause
 
@@ -259,7 +261,7 @@ done
 timeout 15 xtool devices || true
 pause
 
-stage "Install HelloMojo"
+stage "Install $NAME"
 say "xtool signs the app with your Apple ID and copies it to the phone."
 note "With a free Apple ID the app works for 7 days; run this wizard again to renew it."
 if confirm "Install $IPA now?"; then
@@ -278,8 +280,12 @@ step "Settings → General → VPN & Device Management → your Apple ID → Tru
 pause "Press Enter when both are done"
 
 stage "Try it"
-step "Open HelloMojo on the home screen."
-step "Tap Greet. You should see: Hello, Ada! (click 1). Each tap counts up."
+step "Open $NAME on the home screen."
+if [[ "$EX" == hello ]]; then
+  step "Tap Greet. You should see: Hello, Ada! (click 1). Each tap counts up."
+else
+  step "Tap the buttons: the screen should follow examples/$EX/app.mojo."
+fi
 say "Every line behind that screen is Mojo: logic, UI calls and startup."
 note "If it closes straight away, run: xtool devices, then tell Claude what happened."
 pause "Press Enter to finish"

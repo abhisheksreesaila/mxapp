@@ -4,6 +4,24 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-15 · Experiment 3: declarative Mojo UI, rendered natively (autopilot)
+
+**Goal (owner's words):** "All I want is Mojo declarative code and then it's rendered natively on all the platforms." Contract: `GOAL.md`.
+
+**What worked (`scripts/check` 7/7):**
+- `mojoui`: `VStack`/`HStack`/`Text`/`Button`/`Spacer` build a flat node tree; `App` trait (`view()`, `update()`); a diff turns each update into in-place patches or a rebuild.
+- Three native renderers from the same tree: GTK4 + libadwaita (Linux), AppKit (Mac), UIKit (iPhone). One `app.mojo` per example, importing only `mojoui`.
+- **Linux runs here:** the checker taps the real GtkButtons and reads the real GtkLabels; screenshots rendered by GTK (`docs/img/`).
+- Mac and iPhone: compile, link and sign from the identical app file; only Apple system functions; entry `_mojo_entry`.
+
+**What broke and how it was fixed:** recursive `View` not allowed → flat nodes; `App` needs `Deinitable`; borrow checker caught a held reference during recursive builds; a new runtime function (`KGEN_CompilerRT_fprintf`) → Mojo stand-in. Details in `docs/journal.md`.
+
+**Not verified yet:** running on a real Mac and iPhone.
+
+**Next:** run on hardware; then text input, scrolling lists, images; web host.
+
+---
+
 ## 2026-10-14 · Experiment 2: Mac and iPhone apps written only in Mojo (autopilot)
 
 **Goal (owner's words):** "Create a Mojo app for macOS which I can test, then do it for iOS. Mojo all the way." Contract: `GOAL.md`; decisions: `docs/decisions.md`; step-by-step: `docs/journal.md`.

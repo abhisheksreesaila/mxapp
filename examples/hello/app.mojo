@@ -17,8 +17,8 @@ struct Main(App):
     def title(self) -> String:
         return "HelloMojo"
 
-    def update(mut self, msg: Int):
-        if msg == GREET:
+    def update(mut self, message: Int):
+        if message == GREET:
             self.clicks += 1
 
     def view(self) -> View:

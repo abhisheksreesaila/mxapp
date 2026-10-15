@@ -1,4 +1,4 @@
-# The three Mojo runtime functions a small Mojo app needs, written in Mojo,
+# The Mojo runtime functions a small Mojo app needs, written in Mojo,
 # so the app is self-contained (no Modular runtime library, no C shim).
 #
 # UNOFFICIAL: names and signatures were read from compiled Mojo 1.1 code
@@ -26,3 +26,16 @@ def aligned_free(ptr: Int) abi("C"):
 def get_stack_trace(buf: Int, depth: Int) abi("C") -> Int:
     """Returns 0: "no stack trace". Error messages still work; traces don't."""
     return 0
+
+
+@export("KGEN_CompilerRT_fprintf")
+def runtime_fprintf(stream: Int, fmt: Int) abi("C") -> c_int:
+    """Used only when a Mojo internal check fails, right before stopping.
+
+    Writes the raw format string to stderr; %-codes aren't expanded. (C declares
+    this variadic; on Apple arm64 the extra arguments go on the stack, so taking
+    just the first two is safe.)
+    """
+    var n = external_call["strlen", Int](fmt)
+    _ = external_call["write", Int](2, fmt, n)
+    return c_int(n)

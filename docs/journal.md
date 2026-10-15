@@ -26,3 +26,8 @@ Newest last. What was tried, what happened, dead ends.
 ## Goal 2: declarative UI (2026-10-15)
 - Probe: `struct View` holding `List[View]` → "field 'children' has non-'Deinitable' type"; `ImplicitlyDestructible` trait doesn't exist in 1.1. → flat node list (D-14).
 - GTK 4.22.4 + libadwaita 1.9.3 installed; Wayland session available, `grim` for screenshots.
+- `App` trait needed `Deinitable` for `Runtime[A]` to hold an `A` ("non-'Deinitable' type 'A'").
+- GTK host built; borrow checker caught `ref node` held across recursive `build()` that mutates self → copy the node first.
+- First GTK run: real buttons tapped, real label "Hello, Ada! (click 3)". Screenshot: button stretched full width → centre VStack children (native stacks do).
+- AppKit and UIKit hosts compiled first try. New needs: `_bzero`, `KGEN_CompilerRT_fprintf(i64 stream, ptr fmt, ...)` (assert-failure path) → stand-in.
+- Todo example: 3 adds + remove → rebuilds; GTK labels Task 1, Task 3, "2 tasks". Checker 7/7.

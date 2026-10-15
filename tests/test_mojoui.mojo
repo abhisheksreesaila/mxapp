@@ -28,8 +28,8 @@ struct Counter(App):
     def title(self) -> String:
         return "Counter"
 
-    def update(mut self, msg: Int):
-        if msg == GREET:
+    def update(mut self, message: Int):
+        if message == GREET:
             self.n += 1
 
     def view(self) -> View:
@@ -61,8 +61,8 @@ struct Rows(App):
     def title(self) -> String:
         return "Rows"
 
-    def update(mut self, msg: Int):
-        if msg == ADD:
+    def update(mut self, message: Int):
+        if message == ADD:
             self.count += 1
 
     def view(self) -> View:

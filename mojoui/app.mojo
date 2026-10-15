@@ -5,11 +5,15 @@ from mojoui.diff import Diff, diff
 
 
 trait App(Movable, Deinitable):
+    def __init__(out self):
+        """The starting state. Hosts create the app themselves."""
+        ...
+
     def title(self) -> String:
         """The window title."""
         ...
 
-    def update(mut self, msg: Int):
+    def update(mut self, message: Int):
         """Changes the state in response to a message (e.g. a button tap)."""
         ...
 

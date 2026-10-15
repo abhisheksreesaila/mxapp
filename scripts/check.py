@@ -24,8 +24,8 @@ ALLOWED = {
     "_objc_getClass", "_objc_getProtocol", "_sel_registerName", "_objc_allocateClassPair",
     "_objc_registerClassPair", "_class_addMethod", "_class_addProtocol", "_objc_autoreleasePoolPush",
     # libSystem
-    "_dlsym", "_dup", "_fclose", "_fdopen", "_fflush", "_memcpy", "_memmove", "_memset", "_memcmp",
-    "_strlen", "_write", "_posix_memalign", "_free", "_malloc", "_realloc", "_abort",
+    "_dlsym", "_dup", "_fclose", "_fdopen", "_fflush", "_memcpy", "_memmove", "_memset", "_bzero",
+    "_strlen", "_write", "_posix_memalign", "_free",
     # UIKit
     "_UIApplicationMain",
 }
