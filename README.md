@@ -68,7 +68,7 @@ On the web, the Mojo app runs on the server inside Python (FastHTML), compiled a
 | `Dropdown(options, selected, on_select=)` | pick one; `event.number`, `event.text` | GtkDropDown | select | NSPopUpButton | menu button |
 | `Slider(value, on_change=)` | 0–100 | GtkScale | range | NSSlider | UISlider |
 | `ProgressBar(value)` | 0–100 | GtkProgressBar | progress | NSProgressIndicator | UIProgressView |
-| `Image(pixels, width, height)` | RGBA pixels | GtkPicture | PNG img | placeholder (next) | placeholder (next) |
+| `Image(pixels, width, height)` | RGBA pixels | GtkPicture | PNG img | NSImageView | UIImageView |
 | `VStack(...)`, `HStack(...)` | layout; also from a `List[View]` for rows | GtkBox | flexbox | NSStackView | UIStackView |
 | `Scroll(view, height=)` | scrolls tall content | GtkScrolledWindow | overflow | NSScrollView | UIScrollView |
 | `Divider()`, `Spacer()` | a line; empty space | | | | |
@@ -104,7 +104,7 @@ The app file imports only `mojoui`; it never touches GTK, HTML, AppKit or UIKit 
 - **Runs here:** Linux and the web, including the GPU example. `scripts/check` drives the real widgets: GTK through its signals, the browser through Playwright. It reads them back and requires GTK and the web to end in identical states.
 - **Mac and iPhone:** they compile, link and sign here. A reviewer checked the compiled code for every native call that passes or returns floating-point values or rectangles, plus the selectors and constants. **They haven't been run on real hardware yet.**
 - **Android:** a real arm64 library builds. Drawing with Android views and receiving taps needs a decision and Google's SDK licence: `docs/android.md`.
-- **Not yet:** images on Mac/iPhone, lists of thousands of rows (no virtualisation), navigation between screens, accessibility labels beyond the platforms' defaults, and JS "islands" on the web.
+- **Not yet:** lists of thousands of rows (no virtualisation), navigation between screens, accessibility labels beyond the platforms' defaults, and JS "islands" on the web.
 - **Limits:** up to 65,535 nodes per screen; Mac/iPhone keep replaced controls in memory (fine for small apps).
 
 History: `EXPERIMENTS.md` (what was tried), `docs/decisions.md`, `docs/journal.md`, `docs/goals/` (earlier goals, reports and checkers).

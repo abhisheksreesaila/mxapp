@@ -149,8 +149,8 @@ def ProgressBar(value: Int) -> View:
 def Image(pixels: List[UInt32], width: Int, height: Int) -> View:
     """A picture from RGBA pixels (row by row; each UInt32 holds R, G, B, A from the low byte up).
     If there aren't exactly width × height pixels, it shows a transparent picture of that size."""
-    var w = max(width, 0)
-    var h = max(height, 0)
+    var w = max(width, 1)  # at least 1×1: a 0-sized PNG isn't valid
+    var h = max(height, 1)
     if len(pixels) != w * h:
         return _one(Node(IMAGE, spacing=w, size=h, pixels=List[UInt32](length=w * h, fill=0)))
     return _one(Node(IMAGE, spacing=w, size=h, pixels=pixels.copy()))

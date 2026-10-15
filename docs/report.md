@@ -7,18 +7,18 @@
 - on **Mac** and **iPhone**, building and signing from the same file, but not yet run on real hardware;
 - on **Android**, as far as a real arm64 library.
 
-The **GPU** example runs a plain Mojo function as a GPU kernel on your RTX 3090.
+The **GPU** example runs a plain Mojo function as a GPU kernel on your RTX 3090. **Images** work everywhere: GTK, the web, and Mac/iPhone, via a PNG encoder written in Mojo.
 
 ```
 $ scripts/check
 PASS  M1  Chromium clicked Greet 3x on the FastHTML page → 'Hello, Ada! (click 3)'; GTK hello still passes and draws
-PASS  M2  core tests pass; every component built and tested
+PASS  M2  core + PNG tests pass; every component built and tested
 PASS  M3  GTK: typed, toggled, chose, slid, pressed Return on real widgets; every echo label right
 PASS  M4  Chromium: same interactions, same echoed state
 PASS  M5  hello, gallery, todo: Mac + iPhone build, link, sign; only Apple system functions
 PASS  M6  todo: GTK and Chromium give identical state; Mac + iPhone build; apps import only mojoui
 PASS  M7  todo for Android arm64: libmojoui.so with a native entry point; no APK yet (see docs/android.md)
-PASS  M8  GPU kernel ran on the NVIDIA GPU; result shown in GTK and web, verified against the CPU
+PASS  M8  GPU kernel ran on the NVIDIA GPU; result shown in GTK and web, verified against the CPU; no-GPU run degrades gracefully
 PASS  M9  README covers every platform and component; all paths exist
 ```
 
@@ -41,7 +41,7 @@ scripts/build.sh gpu linux && build/gpu/linux/gpu                               
 |---|---|
 | Linux GTK app: every component, driven through real signals | Run the Mac and iPhone builds (`apple/README.md`) |
 | Web app in Chromium: every component, the same final state as GTK | Android: choose Java shim or Mojo-only, accept the SDK licence, provide a phone |
-| GPU kernel on the RTX 3090, verified against the CPU | GPU on Mac (Apple GPU) isn't wired up |
+| GPU kernel on the RTX 3090, verified against the CPU; no-GPU machines degrade gracefully | GPU on Mac (Apple GPU) isn't wired up |
 | Mac/iPhone: compile, link, sign; reviewer checked the calling convention in the compiled code | |
 
-**Next:** run it on your Mac and iPhone. Then pick the Android route, and add images on Apple (the Mojo PNG encoder is already in, `mojoui/png.mojo`).
+**Next:** run it on your Mac and iPhone, then pick the Android route.

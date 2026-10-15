@@ -134,9 +134,16 @@ struct UIKitHost[A: App](Movable):
             shown = w
         elif node.kind == IMAGE:
             w = msg(msg(cls("UIImageView"), "alloc"), "initWithImage:", ui_image(node.pixels, node.spacing, node.size))
-            _ = msg(w, "setContentMode:", 1)  # scale aspect fit, if the screen is narrower than the picture
-            constrain(w, "widthAnchor", Float64(node.spacing))
-            constrain(w, "heightAnchor", Float64(node.size))
+            _ = msg(w, "setContentMode:", 1)  # scale aspect fit
+            # At most its pixel width (shrinks on narrow screens), always its own aspect ratio.
+            var most = msg(msg(w, "widthAnchor"), "constraintLessThanOrEqualToConstant:", Float64(node.spacing))
+            _ = msg(most, "setActive:", 1)
+            var want = msg(msg(w, "widthAnchor"), "constraintEqualToConstant:", Float64(node.spacing))
+            _ = msg(want, "setPriority:", Float32(750))  # preferred, but the screen width wins
+            _ = msg(want, "setActive:", 1)
+            var ratio = Float64(node.size) / Float64(max(node.spacing, 1))
+            var aspect = msg(msg(w, "heightAnchor"), "constraintEqualToAnchor:multiplier:", msg(w, "widthAnchor"), ratio)
+            _ = msg(aspect, "setActive:", 1)
             shown = w
         elif node.kind == SPACER:
             w = new("UIView")

@@ -48,3 +48,4 @@ Newest last. What was tried, what happened, dead ends.
 - First fractal was all black: the camera glided through the set's interior → fixed centre on a spiral. GtkPicture grew past its pixels → content-fit scale-down + centre.
 - Review (goal 3, round 1): NEEDS WORK — web lost a task on instant Return (reproduced by reviewer), CDN JS, .sesskey committed, checker weaker than goal 2's, etc. All fixed (D-34, D-35); new `enter:` step reproduces the race; harsher todo run identical on GTK and web.
 - htmx inherits hx-vals from ancestors: the field's input inherited the form's second=1 → typing = submit. M6 still passed because the shape-version check rejected the duplicate; added a draft-only final step so M6 catches it too.
+- GPU memory per web tab measured with nvidia-smi: 512 MiB at 1, 2, 5 and 10 sessions → MAX shares one CUDA context per process; no per-tab cost.

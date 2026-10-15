@@ -36,6 +36,7 @@ def test_png_decodes_to_the_same_pixels() raises:
         var at = y * (1 + 300 * 4) + 1 + x * 4
         assert_equal(Int(py=raw[at]), Int(p & 0xFF))
         assert_equal(Int(py=raw[at + 1]), Int((p >> 8) & 0xFF))
+        assert_equal(Int(py=raw[at + 2]), Int((p >> 16) & 0xFF))
         assert_equal(Int(py=raw[at + 3]), Int((p >> 24) & 0xFF))
 
 
