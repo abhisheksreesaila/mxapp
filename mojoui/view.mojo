@@ -50,6 +50,14 @@ comptime DESTRUCTIVE = 2
 
 comptime NO_MSG = 0
 
+# Layout (flexbox names; each host maps them onto its own layout system)
+comptime AUTO = 0  # the host's default
+comptime START = 1
+comptime CENTER = 2
+comptime END = 3
+comptime STRETCH = 4  # align only
+comptime BETWEEN = 5  # justify only
+
 
 struct Node(Copyable, Movable, Equatable, Writable):
     var kind: Int
@@ -64,6 +72,18 @@ struct Node(Copyable, Movable, Equatable, Writable):
     var msg2: Int  # field: message sent on Return
     var size: Int  # scroll: visible height in points; image: height
     var pixels: List[UInt32]  # image: RGBA bytes, one UInt32 per pixel (R in the low byte)
+    # Layout settings (0 = not set). Sizes include padding (border-box) on every host.
+    var pad_v: Int  # padding top and bottom
+    var pad_h: Int  # padding left and right
+    var w: Int  # fixed width
+    var h: Int  # fixed height
+    var min_w: Int
+    var max_w: Int
+    var grows: Bool  # take the free space along the parent's direction
+    var fills: Bool  # stretch across the parent's direction
+    var align_items: Int  # stacks: cross-axis alignment of children (START/CENTER/END/STRETCH)
+    var justify_items: Int  # stacks: main-axis placement of children (START/CENTER/END/BETWEEN)
+    var name: String  # a tag for tests and accessibility
 
     def __init__(
         out self,
@@ -92,6 +112,17 @@ struct Node(Copyable, Movable, Equatable, Writable):
         self.msg2 = msg2
         self.size = size
         self.pixels = pixels^
+        self.pad_v = 0
+        self.pad_h = 0
+        self.w = 0
+        self.h = 0
+        self.min_w = 0
+        self.max_w = 0
+        self.grows = False
+        self.fills = False
+        self.align_items = AUTO
+        self.justify_items = AUTO
+        self.name = ""
 
     def __eq__(self, other: Self) -> Bool:
         return (
@@ -107,6 +138,15 @@ struct Node(Copyable, Movable, Equatable, Writable):
             and self.msg2 == other.msg2
             and self.size == other.size
             and self.pixels == other.pixels
+            and self.same_layout(other)
+        )
+
+    def same_layout(self, other: Self) -> Bool:
+        return (
+            self.pad_v == other.pad_v and self.pad_h == other.pad_h and self.w == other.w and self.h == other.h
+            and self.min_w == other.min_w and self.max_w == other.max_w and self.grows == other.grows
+            and self.fills == other.fills and self.align_items == other.align_items
+            and self.justify_items == other.justify_items and self.name == other.name
         )
 
     def write_to(self, mut writer: Some[Writer]):
@@ -116,6 +156,65 @@ struct Node(Copyable, Movable, Equatable, Writable):
 @fieldwise_init
 struct View(Copyable, Movable):
     var nodes: List[Node]
+
+    # Layout settings: chain them on any view, e.g. Text("Hi").padding(8).grow().
+    # They apply to the view itself (node 0).
+
+    def padding(var self, all: Int) -> View:
+        """Space inside the view's edges, on all four sides."""
+        self.nodes[0].pad_v = all
+        self.nodes[0].pad_h = all
+        return self^
+
+    def padding(var self, vertical: Int, horizontal: Int) -> View:
+        """Space inside the view's edges: top/bottom and left/right."""
+        self.nodes[0].pad_v = vertical
+        self.nodes[0].pad_h = horizontal
+        return self^
+
+    def width(var self, points: Int) -> View:
+        """A fixed width (including padding)."""
+        self.nodes[0].w = points
+        return self^
+
+    def height(var self, points: Int) -> View:
+        """A fixed height (including padding)."""
+        self.nodes[0].h = points
+        return self^
+
+    def min_width(var self, points: Int) -> View:
+        self.nodes[0].min_w = points
+        return self^
+
+    def max_width(var self, points: Int) -> View:
+        """At most this wide; text wraps to fit."""
+        self.nodes[0].max_w = points
+        return self^
+
+    def grow(var self) -> View:
+        """Take the free space along the parent stack's direction (flex-grow)."""
+        self.nodes[0].grows = True
+        return self^
+
+    def fill(var self) -> View:
+        """Stretch across the parent stack's direction (align-self: stretch)."""
+        self.nodes[0].fills = True
+        return self^
+
+    def align(var self, how: Int) -> View:
+        """On a stack: line children up across its direction (START, CENTER, END, STRETCH)."""
+        self.nodes[0].align_items = how
+        return self^
+
+    def justify(var self, how: Int) -> View:
+        """On a stack: place children along its direction (START, CENTER, END, BETWEEN)."""
+        self.nodes[0].justify_items = how
+        return self^
+
+    def tag(var self, name: String) -> View:
+        """Names the view, for tests and accessibility."""
+        self.nodes[0].name = name
+        return self^
 
 
 def _one(var node: Node) -> View:

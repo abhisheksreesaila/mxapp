@@ -62,14 +62,15 @@ button.prominent { background: var(--accent); color: #fff; padding: 10px 26px; }
 button.destructive { color: var(--danger); }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 2px; }
 form.field { margin: 0; }
-input[type=text] { font: inherit; width: 220px; max-width: 70vw; min-height: 48px; padding: 8px 12px; border-radius: 12px;
+form.field { display: flex; }
+input[type=text] { font: inherit; width: var(--control-width, 220px); max-width: 70vw; min-height: 48px; padding: 8px 12px; border-radius: 12px;
                    border: 1px solid var(--line); background: light-dark(#fff, #2c2c2e); color: inherit; }
 label.toggle { display: inline-flex; gap: 10px; align-items: center; min-height: 48px; cursor: pointer; }
 label.toggle input { width: 22px; height: 22px; accent-color: var(--accent); }
 select { font: inherit; min-height: 48px; padding: 6px 12px; border-radius: 12px; border: 1px solid var(--line);
          background: light-dark(#fff, #2c2c2e); color: inherit; }
-input[type=range] { width: 240px; min-height: 48px; accent-color: var(--accent); }
-progress { width: 240px; height: 8px; accent-color: var(--accent); }
+input[type=range] { width: var(--control-width, 240px); min-height: 48px; accent-color: var(--accent); }
+progress { width: var(--control-width, 240px); height: 8px; accent-color: var(--accent); }
 hr { width: 280px; border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 img.image { max-width: 100%; height: auto; border-radius: 12px; image-rendering: auto; }
 .scroll { overflow-y: auto; width: 100%; display: flex; justify-content: center; }
@@ -83,7 +84,7 @@ img.image { max-width: 100%; height: auto; border-radius: 12px; image-rendering:
 .radio { display: flex; flex-direction: column; gap: 2px; }
 .radio label { display: inline-flex; gap: 10px; align-items: center; min-height: 48px; cursor: pointer; }
 .radio input { width: 20px; height: 20px; accent-color: var(--accent); }
-textarea { font: inherit; width: 320px; max-width: 80vw; padding: 10px 12px; border-radius: 12px; resize: vertical;
+textarea { font: inherit; width: var(--control-width, 320px); max-width: 80vw; padding: 10px 12px; border-radius: 12px; resize: vertical;
            border: 1px solid var(--line); background: light-dark(#fff, #2c2c2e); color: inherit; }
 input[type=date] { font: inherit; min-height: 48px; padding: 6px 12px; border-radius: 12px; border: 1px solid var(--line);
                    background: light-dark(#fff, #2c2c2e); color: inherit; }
@@ -131,7 +132,46 @@ class Session:
         self.list_top = {}  # LazyList node → last scroll position, to re-send its visible rows
 
 
+ALIGN_CSS = {1: "flex-start", 2: "center", 3: "flex-end", 4: "stretch"}  # START, CENTER, END, STRETCH
+JUSTIFY_CSS = {1: "flex-start", 2: "center", 3: "flex-end", 5: "space-between"}  # START, CENTER, END, BETWEEN
+SIZED_CONTROLS = (FIELD, TEXTAREA, SLIDER, PROGRESS, DROPDOWN, DATE)
+
+
 def render(s, i, sid):
+    """One mojoui node → FastHTML components, plus its layout settings as CSS flexbox
+    (a direct mapping: the browser's own layout does the work)."""
+    el = render_node(s, i, sid)
+    n = s.nodes[i]
+    css = []
+    if n["pad_v"] or n["pad_h"]:
+        css.append(f"padding:{n['pad_v']}px {n['pad_h']}px")
+    if n["w"]:
+        css.append(f"width:{n['w']}px;flex-shrink:0")
+    if n["h"]:
+        css.append(f"height:{n['h']}px")
+    if n["min_w"]:
+        css.append(f"min-width:{n['min_w']}px")
+    if n["max_w"]:
+        css.append(f"max-width:{n['max_w']}px")
+    if n["grows"]:
+        css.append("flex-grow:1;min-width:0")
+    if n["fills"]:
+        css.append("align-self:stretch")
+    if n["align_items"] in ALIGN_CSS:
+        css.append(f"align-items:{ALIGN_CSS[n['align_items']]}")
+    if n["justify_items"] in JUSTIFY_CSS:
+        css.append(f"justify-content:{JUSTIFY_CSS[n['justify_items']]}")
+    if n["kind"] in SIZED_CONTROLS and (n["w"] or n["grows"] or n["fills"]):
+        css.append("--control-width:100%")  # the control inside takes the size it was given
+    if css:
+        old = el.attrs.get("style", "")
+        el.attrs["style"] = (old + ";" if old else "") + ";".join(css)
+    if n["name"]:
+        el.attrs["data-tag"] = n["name"]
+    return el
+
+
+def render_node(s, i, sid):
     """One mojoui node → FastHTML components. Ids are n<i> so patches can find them;
     data-kind marks controls for tests and for anyone reading the HTML."""
     n = s.nodes[i]

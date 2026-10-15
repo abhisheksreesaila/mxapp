@@ -46,6 +46,8 @@ def same_shape(a: View, b: View) -> Bool:
             or x.size != y.size
         ):
             return False
+        if not x.same_layout(y):  # layout settings changed: lay it out again
+            return False
         # A Back button appearing or going, or an alert's question changing, is a new layout.
         if x.kind == NAVBAR and (x.msg == 0) != (y.msg == 0):
             return False

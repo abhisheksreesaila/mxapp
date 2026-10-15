@@ -43,7 +43,10 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
   if (k === 'list') { const r0 = e.querySelector('[data-row="0"]');
     return 'LIST: ' + e.querySelector('.rows').dataset.count + ' rows' + String.fromCharCode(10) + 'LISTROWS: ' + e.querySelectorAll('.row').length
       + (r0 ? String.fromCharCode(10) + 'LISTROW: ' + r0.textContent : ''); }
-}).filter(Boolean).join('\\n')"""
+}).filter(Boolean).concat([...document.querySelectorAll('[data-tag]')].map(e => {
+  const r = e.getBoundingClientRect();
+  return 'BOX: ' + e.dataset.tag + ' ' + [r.x, r.y, r.width, r.height].map(v => v.toFixed(1)).join(' ');
+})).join(String.fromCharCode(10))"""
 
 
 def free_port():

@@ -13,6 +13,7 @@ from std.memory.alloc import alloc, Layout
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
+    START, CENTER, END, STRETCH, BETWEEN, Node,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
@@ -171,6 +172,13 @@ def parse_date(text: String) -> Tuple[Int, Int, Int]:
     return (2000, 1, 1)
 
 
+def one_decimal(v: Float32) -> String:
+    var tenths = Int(Float64(v) * 10 + (0.5 if v >= 0 else -0.5))
+    var sign = "-" if tenths < 0 else ""
+    tenths = abs(tenths)
+    return sign + String(tenths // 10) + "." + String(tenths % 10)
+
+
 def two(n: Int) -> String:
     return ("0" if n < 10 else "") + String(n)
 
@@ -247,6 +255,16 @@ def refresh_rows(list: Int, count: Int):
     _ = empty.byte_length()
 
 
+def spacer(orientation: Int) -> Int:
+    """An empty widget that soaks up free space (for justify)."""
+    var s = external_call["gtk_box_new", Int](c_int(orientation), c_int(0))
+    if orientation == HORIZONTAL:
+        external_call["gtk_widget_set_hexpand", NoneType](s, c_int(1))
+    else:
+        external_call["gtk_widget_set_vexpand", NoneType](s, c_int(1))
+    return s
+
+
 def escape_newlines(text: String) -> String:
     return text.replace("\n", "\\n")
 
@@ -258,6 +276,8 @@ struct GtkHost[A: App](Movable):
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
     var dialog: Int  # the open alert dialog, if any
+    var css: Int  # one GtkCssProvider for padding classes
+    var css_rules: String
     var focus: Int  # text field to keep focused across the next rebuild (-1: none)
 
     def __init__(out self, var app: Self.A):
@@ -265,7 +285,59 @@ struct GtkHost[A: App](Movable):
         self.window = 0
         self.widgets = List[Int]()
         self.dialog = 0
+        self.css = 0
+        self.css_rules = ""
         self.focus = -1
+
+    def padding_class(mut self, v: Int, h: Int) -> String:
+        """A CSS class giving `v`/`h` padding (GTK has no padding setter; CSS does it)."""
+        var name = "mui-p-" + String(v) + "-" + String(h)
+        if ("." + name + " ") not in self.css_rules:
+            if self.css == 0:
+                self.css = external_call["gtk_css_provider_new", Int]()
+                var display = external_call["gdk_display_get_default", Int]()
+                external_call["gtk_style_context_add_provider_for_display", NoneType](display, self.css, c_uint(800))
+            self.css_rules += "." + name + " { padding: " + String(v) + "px " + String(h) + "px; }\n"
+            var rules = self.css_rules
+            external_call["gtk_css_provider_load_from_string", NoneType](self.css, rules.as_c_string_span())
+        return name
+
+    def apply_layout(mut self, i: Int, w: Int) -> Int:
+        """Maps node i's own layout settings onto its GTK widget; returns what goes into the parent."""
+        var node = self.rt.shown.nodes[i].copy()
+        if node.pad_v != 0 or node.pad_h != 0:
+            add_class(w, self.padding_class(node.pad_v, node.pad_h))
+        var want_w = max(node.w, node.min_w)
+        if want_w != 0 or node.h != 0:
+            external_call["gtk_widget_set_size_request", NoneType](w, c_int(want_w if want_w != 0 else -1), c_int(node.h if node.h != 0 else -1))
+        if node.max_w != 0:  # AdwClamp: never wider than max_w (text inside wraps)
+            var clamp = external_call["adw_clamp_new", Int]()
+            external_call["adw_clamp_set_maximum_size", NoneType](clamp, c_int(node.max_w))
+            external_call["adw_clamp_set_tightening_threshold", NoneType](clamp, c_int(node.max_w))
+            external_call["adw_clamp_set_child", NoneType](clamp, w)
+            return clamp
+        return w
+
+    def place_child(self, parent: Node, child_node: Node, child: Int):
+        """Aligns a stack's child: the stack's align, then the child's own fill/grow."""
+        var vertical = parent.kind == VSTACK
+        var cross = ALIGN_CENTER
+        if parent.align_items == START:
+            cross = 1  # GTK_ALIGN_START
+        elif parent.align_items == END:
+            cross = 2  # GTK_ALIGN_END
+        if parent.align_items == STRETCH or child_node.fills or child_node.kind == SPACER:
+            cross = 0  # GTK_ALIGN_FILL
+        if vertical:
+            external_call["gtk_widget_set_halign", NoneType](child, c_int(cross))
+            if child_node.grows:
+                external_call["gtk_widget_set_vexpand", NoneType](child, c_int(1))
+                external_call["gtk_widget_set_valign", NoneType](child, c_int(0))
+        else:
+            external_call["gtk_widget_set_valign", NoneType](child, c_int(cross))
+            if child_node.grows:
+                external_call["gtk_widget_set_hexpand", NoneType](child, c_int(1))
+                external_call["gtk_widget_set_halign", NoneType](child, c_int(0))
 
     def build(mut self, i: Int, self_addr: Int) -> Int:
         """Creates the GTK widget for node i (and its children)."""
@@ -461,17 +533,23 @@ struct GtkHost[A: App](Movable):
             w = external_call["gtk_box_new", Int](c_int(orientation), c_int(node.spacing))
             if node.kind == HSTACK:
                 external_call["gtk_widget_set_halign", NoneType](w, c_int(ALIGN_CENTER))
-            for c in node.children:
+            # justify: GtkBox packs from the start; invisible expanding spacers do the rest.
+            var j = node.justify_items
+            if j == CENTER or j == END:
+                external_call["gtk_box_append", NoneType](w, spacer(orientation))
+            for k in range(len(node.children)):
+                var c = node.children[k]
+                if j == BETWEEN and k > 0:
+                    external_call["gtk_box_append", NoneType](w, spacer(orientation))
                 var child = self.build(c, self_addr)
-                if node.kind == VSTACK and self.rt.shown.nodes[c].kind != SPACER:
-                    external_call["gtk_widget_set_halign", NoneType](child, c_int(ALIGN_CENTER))
-                if node.kind == HSTACK:
-                    external_call["gtk_widget_set_valign", NoneType](child, c_int(ALIGN_CENTER))
+                self.place_child(node, self.rt.shown.nodes[c], child)
                 external_call["gtk_box_append", NoneType](w, child)
+            if j == CENTER:
+                external_call["gtk_box_append", NoneType](w, spacer(orientation))
         set_node(w, i)
         if self.widgets[i] == 0:  # (some branches already stored an inner control)
             self.widgets[i] = w
-        return w
+        return self.apply_layout(i, w)
 
     def show(mut self, self_addr: Int):
         """(Re)builds the window's content from rt.shown."""
@@ -918,6 +996,15 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
     var host = host_at[A](host_addr)
     if not alerts:
         print("NATIVE: GTK " + String(external_call["gtk_get_major_version", c_int]()) + "." + String(external_call["gtk_get_minor_version", c_int]()))
+        if external_call["gtk_widget_get_mapped", c_int](host[].window) != 0:  # laid out, so measurable
+            for i in range(len(host[].rt.shown.nodes)):
+                if host[].rt.shown.nodes[i].name != "":
+                    var rect = List[Float32](length=4, fill=0)  # graphene_rect_t: x, y, width, height
+                    var ok = external_call["gtk_widget_compute_bounds", c_int](host[].widgets[i], host[].window, Int(rect.unsafe_ptr()))
+                    if ok != 0:
+                        print("BOX: " + host[].rt.shown.nodes[i].name + " " + one_decimal(rect[0]) + " " + one_decimal(rect[1])
+                              + " " + one_decimal(rect[2]) + " " + one_decimal(rect[3]))
+                    _ = len(rect)
     for i in range(len(host[].rt.shown.nodes)):
         ref n = host[].rt.shown.nodes[i]
         var w = host[].widgets[i]

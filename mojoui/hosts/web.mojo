@@ -41,7 +41,11 @@ def view_to_json(v: View) -> String:
             out += ","
         out += '{"kind":' + String(n.kind) + ',"text":' + json_str(n.text) + ',"msg":' + String(n.msg)
         out += ',"style":' + String(n.style) + ',"spacing":' + String(n.spacing) + ',"value":' + String(n.value)
-        out += ',"hint":' + json_str(n.hint) + ',"msg2":' + String(n.msg2) + ',"size":' + String(n.size) + ',"options":['
+        out += ',"hint":' + json_str(n.hint) + ',"msg2":' + String(n.msg2) + ',"size":' + String(n.size)
+        out += ',"pad_v":' + String(n.pad_v) + ',"pad_h":' + String(n.pad_h) + ',"w":' + String(n.w) + ',"h":' + String(n.h)
+        out += ',"min_w":' + String(n.min_w) + ',"max_w":' + String(n.max_w) + ',"grows":' + ("true" if n.grows else "false")
+        out += ',"fills":' + ("true" if n.fills else "false") + ',"align_items":' + String(n.align_items)
+        out += ',"justify_items":' + String(n.justify_items) + ',"name":' + json_str(n.name) + ',"options":['
         for j in range(len(n.options)):
             if j > 0:
                 out += ","

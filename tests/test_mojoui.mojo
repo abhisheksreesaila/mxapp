@@ -300,6 +300,27 @@ def test_back_button_and_alert_question_changes_rebuild() raises:
     assert_false(diff(VStack(NavBar("A", on_back=2)), VStack(NavBar("B", on_back=3))).rebuild)  # title/message: patches
 
 
+def test_layout_settings_chain_onto_the_view_itself() raises:
+    var v = HStack(Text("a").grow(), Button("b", on_tap=1).width(120).tag("pay"), spacing=8).padding(16, 8).justify(BETWEEN).fill()
+    assert_equal(v.nodes[0].pad_v, 16)
+    assert_equal(v.nodes[0].pad_h, 8)
+    assert_equal(v.nodes[0].justify_items, BETWEEN)
+    assert_true(v.nodes[0].fills)
+    assert_true(v.nodes[1].grows)
+    assert_false(v.nodes[2].grows)
+    assert_equal(v.nodes[2].w, 120)
+    assert_equal(v.nodes[2].name, "pay")
+    assert_equal(v.nodes[0].children, [1, 2])  # settings don't change the tree
+
+
+def test_layout_change_rebuilds_but_same_layout_still_patches() raises:
+    assert_true(diff(VStack(Text("x")), VStack(Text("x").padding(4))).rebuild)
+    assert_true(diff(VStack(Text("x")).align(START), VStack(Text("x")).align(END)).rebuild)
+    var d = diff(VStack(Text("x").width(100)), VStack(Text("y").width(100)))
+    assert_false(d.rebuild)
+    assert_equal(d.patches[0], Patch(SET_TEXT, 1, "y", 0))
+
+
 def test_apps_provide_rows_on_demand() raises:
     var rt = Runtime(WithRows())
     assert_equal(rt.app.row(7, 999), "list 7 row 999")
@@ -329,4 +350,6 @@ def main() raises:
     test_segment_and_date_changes_are_patches_but_alert_appearing_rebuilds()
     test_apps_provide_rows_on_demand()
     test_back_button_and_alert_question_changes_rebuild()
+    test_layout_settings_chain_onto_the_view_itself()
+    test_layout_change_rebuilds_but_same_layout_still_patches()
     print("ALL TESTS PASSED")
