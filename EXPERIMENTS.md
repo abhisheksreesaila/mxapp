@@ -4,6 +4,25 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-15 · Experiment 4: web, components, a real todo, GPU, Android (autopilot, overnight)
+
+**Goal (owner's words):** "render the web… build all the components… a todo list… the same declarative code in Mojo runs on all of them… try Android… an app that's great on GPUs." Contract: `GOAL.md`; report: `docs/report.md`.
+
+**What worked (`scripts/check` 9/9):**
+- **Web:** FastHTML + HTMX host; the Mojo app runs inside Python as an extension module (`PythonModuleBuilder`). Plain HTML controls; htmx vendored. Tested in headless Chromium (Playwright + system Chromium).
+- **Components:** `Event(message, text, number)`; TextField, Toggle, Dropdown, Slider, ProgressBar, Divider, Scroll, Image on GTK, web, AppKit and UIKit (iOS dropdown = menu button with a hand-built Objective-C block; images via a PNG encoder written in Mojo).
+- **Todo app:** one `app.mojo`; the same 13 test steps on GTK and in Chromium end in identical states; builds and signs for Mac + iPhone.
+- **GPU:** `mojoui/gpu.mojo` runs a plain Mojo function per pixel as a GPU kernel (MAX 26.6): 480×320 Mandelbrot on an RTX 3090 in ~0.1 ms vs ~15–80 ms CPU, pixel-identical; degrades gracefully with no GPU.
+- **Android:** apps compile for aarch64-linux-android; the todo app links into a 37 KB `libmojoui.so` (NativeActivity entry, only libc + liblog).
+
+**What broke and how it was fixed:** GTK re-entrancy vs Mojo's exclusive `mut self` (busy flag moved into GTK); rebuilding inside a signal handler (deferred to idle); web lost a task on instant Return (shared HTMX queue + submit carries the text); htmx inherits hx-vals (typing counted as Return); no-GPU crashed in DeviceContext (device count first). Details: `docs/journal.md`.
+
+**Not verified yet:** Mac and iPhone on real hardware; Android drawing/taps (needs a decision + Google's SDK licence: `docs/android.md`).
+
+**Next:** run on Mac/iPhone; choose the Android route.
+
+---
+
 ## 2026-10-15 · Experiment 3: declarative Mojo UI, rendered natively (autopilot)
 
 **Goal (owner's words):** "All I want is Mojo declarative code and then it's rendered natively on all the platforms." Contract: `GOAL.md`.

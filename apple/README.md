@@ -6,7 +6,7 @@ The same declarative app (for example `examples/hello/app.mojo`) is drawn with A
 scripts/build.sh hello mac    # → build/hello/mac/HelloMojo.app and HelloMojo-mac.zip
 scripts/build.sh hello ios    # → build/hello/ios/HelloMojo.ipa
 ```
-Use `todo` instead of `hello` for the second example.
+Use `gallery` (every component) or `todo` (a real todo app) instead of `hello`.
 
 ## Mac (Apple Silicon)
 

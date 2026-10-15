@@ -3,7 +3,7 @@
 Mode: experiment
 Ship: direct
 
-Current experiment: `GOAL.md` (goal 2: declarative Mojo UI rendered natively on Linux, Mac, iPhone; goal 1 in `docs/goals/`). Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 3: web, components, todo, GPU, Android; goals 1–2 in `docs/goals/`). Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 
@@ -13,7 +13,8 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 3. `EXPERIMENTS.md`: what has actually been tried and what happened. **Trust this over the spec when they disagree.**
 
 ## Where things stand
-- **Newest (Experiment 3, 2026-10-15):** declarative UI. Apps are `examples/<name>/app.mojo` (`view()`/`update()`), drawn natively by `mojoui/hosts/` (GTK, AppKit, UIKit). Build with `scripts/build.sh <name> all`. Linux runs and is tested here; Mac/iPhone build and sign but haven't run on hardware yet.
+- **Newest (Experiment 4, 2026-10-15):** web host (FastHTML), all common components, a real todo app, a GPU example, Android exploration. Linux + web run and are tested here; see `docs/report.md`.
+- **Experiment 3 (2026-10-15):** declarative UI. Apps are `examples/<name>/app.mojo` (`view()`/`update()`), drawn natively by `mojoui/hosts/` (GTK, AppKit, UIKit). Build with `scripts/build.sh <name> all`. Linux runs and is tested here; Mac/iPhone build and sign but haven't run on hardware yet.
 - **Done:** M0 (Mojo ↔ C both directions, Mojo keeps state across calls from C) and M5 steps 1–2 (Mojo compiles to iPhone objects; the app needs only two Mojo runtime functions, covered by `spike/kgen_shim.c`).
 - **Next, main track (Linux):** M1, the real `core/` (`State`, `Msg`, `update`, `view`, `ViewTree`) with tests. See SPEC §5 and §9.
 - **Next, side track (iPhone):** M5 step 3 via xtool, using `ios-xtool/`. Needs the owner's machine, an iPhone, and Xcode.xip downloaded from Apple. See `ios-xtool/README.md`.
@@ -52,10 +53,11 @@ m0_call_c.mojo     M0: Mojo calling C
 bridge/            C side: mojoui_bridge.c (bridge), host_main.c (C shell driving Mojo)
 spike/             iOS spike: tiny.mojo, kgen_shim.c (runtime stand-in)
 scripts/m0_linux.sh  reproduces Experiment 1 end to end on Linux
-mojoui/            the framework: view.mojo (VStack/Text/Button…), diff.mojo, app.mojo (App, Runtime), hosts/ (gtk, appkit, uikit, objc, mojo_rt)
+mojoui/            the framework: view.mojo (components), diff.mojo, app.mojo (App, Event, Runtime), gpu.mojo, png.mojo, hosts/ (gtk, web.mojo+web.py, appkit, uikit, objc, mojo_rt)
 hosts/             entry points per platform (import your app.mojo)
-examples/          hello/, todo/: one app.mojo each, for every platform
-scripts/build.sh   build an example for linux|mac|ios|all
+examples/          hello/, gallery/, todo/, gpu/: one app.mojo each (optional `platforms` file)
+scripts/build.sh   build an example for linux|web|mac|ios|android|all
+scripts/drive.py   drives the web app in headless Chromium with the GTK test-mode steps
 apple/             Info.plists, sdk/ (.tbd stubs), install_iphone.sh, README
 GOAL.md            current experiment contract; scripts/check proves it; docs/decisions.md, docs/journal.md
 ios-xtool/         superseded: earlier SwiftUI skin + prebuilt Mojo iPhone library
