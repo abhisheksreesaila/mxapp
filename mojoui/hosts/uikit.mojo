@@ -12,7 +12,7 @@ from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
-    TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL,
+    TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE
@@ -42,6 +42,7 @@ struct UIKitHost[A: App](Movable):
     var choose: Int  # the block every dropdown option calls
     var widgets: List[Int]  # the control for each node
     var extras: List[Int]  # a second view for some nodes (a toggle's label)
+    var focus: Int  # text field to keep focused across the next rebuild (-1: none)
 
     def __init__(out self):
         self.rt = Runtime(Self.A())
@@ -52,6 +53,7 @@ struct UIKitHost[A: App](Movable):
         self.choose = 0
         self.widgets = List[Int]()
         self.extras = List[Int]()
+        self.focus = -1
 
     def wire(self, w: Int, i: Int, self_addr: Int, action: String, events: Int):
         _ = msg(w, "setTag:", tag_for(self_addr, i))
@@ -87,7 +89,7 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setReturnKeyType:", 9)  # Done
             self.wire(w, i, self_addr, "changed:", EDITING_CHANGED)
             _ = msg(w, "addTarget:action:forControlEvents:", self.target, sel("submit:"), EDITING_DID_END_ON_EXIT)
-            constrain(w, "widthAnchor", Float64(240))
+            constrain(w, "widthAnchor", Float64(200))  # leaves room for a button beside it on an iPhone SE
             constrain(w, "heightAnchor", Float64(44))
             shown = w
         elif node.kind == TOGGLE:
@@ -129,6 +131,9 @@ struct UIKitHost[A: App](Movable):
             constrain(w, "widthAnchor", Float64(280))
             constrain(w, "heightAnchor", Float64(1))
             shown = w
+        elif node.kind == IMAGE:  # not built yet on Apple platforms: a placeholder
+            w = label("(image: coming to iPhone)", CAPTION)
+            shown = w
         elif node.kind == SPACER:
             w = new("UIView")
             shown = w
@@ -169,6 +174,9 @@ struct UIKitHost[A: App](Movable):
             self.root = self.build(0, self_addr)
         _ = msg(self.view, "addSubview:", self.root)
         pin_center(self.root, self.view)
+        if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
+            _ = msg(self.widgets[self.focus], "becomeFirstResponder")  # keep the keyboard up
+        self.focus = -1
 
     def apply(mut self, d: Diff, self_addr: Int):
         if d.rebuild:
@@ -206,6 +214,7 @@ struct UIKitHost[A: App](Movable):
         var message = n.msg2 if second else n.msg
         if message == 0:
             return
+        self.focus = node if n.kind == FIELD else -1
         var d = self.rt.dispatch(Event(message, text, number))
         self.apply(d, self_addr)
 

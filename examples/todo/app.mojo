@@ -10,8 +10,8 @@ comptime DRAFT = 1  # typing in the field
 comptime ADD = 2  # Add button or Return
 comptime FILTER = 3  # All / Active / Done
 comptime CLEAR_DONE = 4
-comptime TICK = 1000  # TICK + task id
-comptime REMOVE = 2000  # REMOVE + task id
+comptime TICK = 1_000_000  # TICK + task id (ids stay below a million)
+comptime REMOVE = 2_000_000  # REMOVE + task id
 
 comptime ALL = 0
 comptime ACTIVE = 1
@@ -45,7 +45,8 @@ struct Main(App):
         if m == DRAFT:
             self.draft = event.text
         elif m == ADD:
-            var title = String(self.draft.strip())
+            # Return in the field carries its text; the Add button uses the draft.
+            var title = String((event.text if event.text != "" else self.draft).strip())
             if title != "":
                 self.tasks.append(Task(self.next_id, title, False))
                 self.next_id += 1

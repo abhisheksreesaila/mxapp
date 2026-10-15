@@ -194,6 +194,32 @@ def test_progress_change_is_a_value_patch() raises:
     assert_equal(d.patches[1], Patch(SET_VALUE, 2, "", 55))
 
 
+def test_image_holds_pixels_and_patches_when_they_change() raises:
+    var a: List[UInt32] = [1, 2, 3, 4]
+    var b: List[UInt32] = [1, 2, 3, 5]
+    var v = VStack(Image(a, 2, 2))
+    assert_equal(v.nodes[1], Node(IMAGE, spacing=2, size=2, pixels=[1, 2, 3, 4]))
+    var d = diff(v, VStack(Image(b, 2, 2)))
+    assert_false(d.rebuild)
+    assert_equal(len(d.patches), 1)
+    assert_equal(d.patches[0], Patch(SET_IMAGE, 1, "", 0))
+    assert_true(diff(v, VStack(Image(a, 4, 1))).rebuild)  # new size: rebuild
+
+
+def test_hint_submit_and_scroll_size_changes_rebuild() raises:
+    assert_true(diff(VStack(TextField("", placeholder="a")), VStack(TextField("", placeholder="b"))).rebuild)
+    assert_true(diff(VStack(TextField("", on_submit=1)), VStack(TextField("", on_submit=2))).rebuild)
+    assert_true(diff(Scroll(Text("x"), height=100), Scroll(Text("x"), height=200)).rebuild)
+
+
+def test_toggle_label_change_is_a_text_patch() raises:
+    var d = diff(VStack(Toggle("Off", False, on_toggle=1)), VStack(Toggle("On", True, on_toggle=1)))
+    assert_false(d.rebuild)
+    assert_equal(len(d.patches), 2)
+    assert_equal(d.patches[0], Patch(SET_TEXT, 1, "On", 0))
+    assert_equal(d.patches[1], Patch(SET_VALUE, 1, "", 1))
+
+
 def test_spacer_is_a_leaf() raises:
     var v = HStack(Text("left"), Spacer(), Text("right"))
     assert_equal(len(v.nodes), 4)
@@ -216,4 +242,7 @@ def main() raises:
     test_text_and_message_change_together()
     test_progress_change_is_a_value_patch()
     test_spacer_is_a_leaf()
+    test_image_holds_pixels_and_patches_when_they_change()
+    test_hint_submit_and_scroll_size_changes_rebuild()
+    test_toggle_label_change_is_a_text_patch()
     print("ALL TESTS PASSED")

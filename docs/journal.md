@@ -43,3 +43,7 @@ Newest last. What was tried, what happened, dead ends.
 - AppKit + UIKit hosts for every component compile; only Apple system functions. iOS dropdown = UIButton menu (showsMenuAsPrimaryAction + changesSelectionAsPrimaryAction) whose UIActions call a hand-built global Objective-C block (Mojo invoke function); identifier "<tag>:<index>".
 - Todo app: same 10 steps in GTK and Chromium → identical state reports.
 - GTK CRITICAL g_object_notify_by_pspec: rebuilding inside the dropdown's own notify handler destroyed it mid-signal → rebuilds deferred to g_idle_add; test steps run pending GTK work between steps. Screenshot after a deferred rebuild was empty → wait ~300 ms of real frames.
+- GPU: plain `mojo` ships only std; `pixi add --pypi max` (26.6) gives `max.gpu` + `layout`. Modular's Mandelbrot example ran on the RTX 3090 first try.
+- Generic per-pixel kernel: kernel params must be `thin` functions; `Int` isn't DevicePassable → Int32 sizes. 480×320 in ~0.1 ms, identical to CPU.
+- First fractal was all black: the camera glided through the set's interior → fixed centre on a spiral. GtkPicture grew past its pixels → content-fit scale-down + centre.
+- Review (goal 3, round 1): NEEDS WORK — web lost a task on instant Return (reproduced by reviewer), CDN JS, .sesskey committed, checker weaker than goal 2's, etc. All fixed (D-34, D-35); new `enter:` step reproduces the race; harsher todo run identical on GTK and web.

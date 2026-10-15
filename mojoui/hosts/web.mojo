@@ -6,7 +6,7 @@
 from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
-from mojoui.view import View
+from mojoui.view import View, DROPDOWN, IMAGE
 from mojoui.diff import Diff
 from mojoui.app import App, Event, Runtime
 
@@ -25,6 +25,9 @@ def json_str(s: String) -> String:
             out += "\\r"
         elif c == "\t":
             out += "\\t"
+        elif c.byte_length() == 1 and Int(c.as_bytes()[0]) < 0x20:  # other control characters
+            var b = Int(c.as_bytes()[0])
+            out += "\\u00" + String("0123456789abcdef"[byte = b // 16]) + String("0123456789abcdef"[byte = b % 16])
         else:
             out += c
     return out + '"'
@@ -83,10 +86,30 @@ def web_view[A: App](handle: Int) -> String:
     return view_to_json(session_at[A](handle)[].shown)
 
 
-def web_event[A: App](handle: Int, message: Int, text: String, number: Int) -> String:
+def web_event[A: App](handle: Int, node: Int, second: Bool, text: String, number: Int) -> String:
+    """A control changed: look its message up in the current screen (like the native
+    hosts do), run update(), and return what changed. Bad node → nothing happens."""
     var rt = session_at[A](handle)
-    var d = rt[].dispatch(Event(message, text, number))
+    if node < 0 or node >= len(rt[].shown.nodes):
+        return '{"ignored":true}'
+    ref n = rt[].shown.nodes[node]
+    var message = n.msg2 if second else n.msg
+    if message == 0:
+        return '{"ignored":true}'
+    var event_text = text
+    if n.kind == DROPDOWN:  # the option's text comes from the screen, not the browser
+        event_text = n.options[number] if 0 <= number < len(n.options) else String("")
+    var d = rt[].dispatch(Event(message, event_text, number))
     return diff_to_json(d, rt[].shown)
+
+
+def web_image[A: App](handle: Int, node: Int) -> String:
+    """Where an image's RGBA pixels are: "address width height" (valid until the next event)."""
+    var rt = session_at[A](handle)
+    if node < 0 or node >= len(rt[].shown.nodes) or rt[].shown.nodes[node].kind != IMAGE:
+        return "0 0 0"
+    ref n = rt[].shown.nodes[node]
+    return String(Int(n.pixels.unsafe_ptr())) + " " + String(n.spacing) + " " + String(n.size)
 
 
 def web_close[A: App](handle: Int):

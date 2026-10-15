@@ -77,17 +77,30 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/uvicorn-0.54.0-pyh53cf698_0.conda
+      - pypi: https://files.pythonhosted.org/packages/0d/a8/adbad0b5b2328fa674c3f40c8116778eccbdd77ed64cd5c2ea4c0fcb9689/max_mojo_libs-26.6.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/10/11/fc59bc55d46e3138c529d5a8e8f98366cc66cd3950cb8e155e8588f6dd87/max_shmem_libs-26.6.0-py3-none-manylinux_2_34_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/46/64/f33fdfe95aca76601194a7064d14816c7c22c4eccc1b03a5335785895fa3/msgspec-0.22.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/65/8b/78c19b805d52323122385b9c3f000144608deac38635455978af6d14807b/playwright-1.64.0-py3-none-manylinux1_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/81/12/5347938b1f9a6453f0dbdfcc3e2388a1320ef9b9ec17fbefbc4ab647ea98/pyee-14.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/83/8d/4fb2147d140b6ea688f6d256b3119d6554a3d50095d802f01bf24234bd7d/mojo_compiler_mojo_libs-1.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/85/cb/ab0c123c514ed4e94c0dc9ee2e86362633e6b998cfc05de7fc9ac2eb9690/greenlet-3.5.6-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/8a/0e/97c33bf5009bdbac74fd2beace167cab3f978feb69cc36f1ef79360d6c4e/exceptiongroup-1.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/15/1633010b26e88e872c93b67c0b6c5e174fb74cb6fb5c1472b4d51d4a8f22/platformdirs-4.13.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/1e/69f18cd59c58c67224f5c3fa39cc17d1adc0649a064d8806eb7c350bebce/mblack-26.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/93/f3/abf242879fe2f26809faa351bfb52d0746c25dde78796c3c5b5443355ea5/mojo_lldb_libs-1.1.0-py3-none-manylinux_2_34_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b5/70/5d8df3b09e25bce090399cf48e452d25c935ab72dad19406c77f4e828045/psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/ca/a8/2a97b86145d44fda3fe5d21d535ecdf0800e97e501521e946f626105742b/max_core-26.6.0-py3-none-manylinux_2_34_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/d1/b1/74babcc824a57904e919f3af16d86c08b524c0691504baf038ef2d7f655c/taskgroup-0.2.2-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/da/24/3bd070f3269dc609d8f26b2643f62ef91bb415841c0b294805aaf7fe06da/numpy-2.5.4-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/dd/c0/4118df04da5776700839642477bdda0b1f906a99c69c8f2f94d4aea9fef4/mojo-1.1.0-py3-none-manylinux_2_34_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/e8/5e/31522e5336d63ab0fad18980cccf6c5cc2085c1a041ea3723eb916a17c08/mojo_compiler-1.1.0-py3-none-manylinux_2_34_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/fe/f0/20705a23c5a21127fa91fc5a62ba60bfdd816e0857f18455343bbf8ac2d8/max-26.6.0-cp313-cp313-manylinux_2_34_x86_64.whl
       macos-13:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/anyio-4.15.1-pyh5ded981_1.conda
@@ -140,15 +153,27 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.3-h8b90a29_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hbeba79b_4.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
+      - pypi: https://files.pythonhosted.org/packages/0d/a8/adbad0b5b2328fa674c3f40c8116778eccbdd77ed64cd5c2ea4c0fcb9689/max_mojo_libs-26.6.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/65/33/641220f74abac08a98c1c204cc71af7571ede1527afea1e03b5db13eb423/max_core-26.6.0-py3-none-macosx_13_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/68/e9/f535cccbb05c92c92af9b45f719994dd54c78d1c9964392dc6e15a3c345d/mojo-1.1.0-py3-none-macosx_13_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7b/29/1b39441a9932fc273bb689fc2246edf3ab536fd8bacb8ac46ab367f369b4/mojo_lldb_libs-1.1.0-py3-none-macosx_13_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/7e/47/4ee8cf2041538076d1a11bb3c2b3ed18791b52c1edec8e31ca244d841389/mojo_compiler-1.1.0-py3-none-macosx_13_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/80/c4/f5af4c1ca8c1eeb2e92ccca14ce8effdeec651d5ab6053c589b074eda6e1/psutil-7.2.2-cp36-abi3-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/81/12/5347938b1f9a6453f0dbdfcc3e2388a1320ef9b9ec17fbefbc4ab647ea98/pyee-14.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/83/8c/b0ea9477fb1f0d4484bbc5cba21678cc9969704d8d7f3f158d1db35f8e14/numpy-2.5.4-cp313-cp313-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/83/8d/4fb2147d140b6ea688f6d256b3119d6554a3d50095d802f01bf24234bd7d/mojo_compiler_mojo_libs-1.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/8a/0e/97c33bf5009bdbac74fd2beace167cab3f978feb69cc36f1ef79360d6c4e/exceptiongroup-1.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/15/1633010b26e88e872c93b67c0b6c5e174fb74cb6fb5c1472b4d51d4a8f22/platformdirs-4.13.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/1e/69f18cd59c58c67224f5c3fa39cc17d1adc0649a064d8806eb7c350bebce/mblack-26.6.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b4/b3/99f6c07a7f59adb3830e42cda2e2093dc1c2cbd1f69fe4393ead30c88257/playwright-1.64.0-py3-none-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/cc/e3/357baa8d2a9164a98dfd7ef9d3a58125df0ed981be909945bdd337be7194/msgspec-0.22.0-cp313-cp313-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/d1/b1/74babcc824a57904e919f3af16d86c08b524c0691504baf038ef2d7f655c/taskgroup-0.2.2-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/dc/0f/8c27b2ea1bdab7ec20fd1da68a5bda61dd4000693d22442095a721561101/max-26.6.0-cp313-cp313-macosx_13_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/f1/a1/e720a38852366c589e1a46cf570b886507ad2cf591050c203365638baab0/greenlet-3.5.6-cp313-cp313-macosx_11_0_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl
 packages:
@@ -1326,6 +1351,30 @@ packages:
     - zstd >=1.5.7,<1.6.0a0
   size: 433687
   timestamp: 1786599629846
+- pypi: https://files.pythonhosted.org/packages/0d/a8/adbad0b5b2328fa674c3f40c8116778eccbdd77ed64cd5c2ea4c0fcb9689/max_mojo_libs-26.6.0-py3-none-any.whl
+  name: max-mojo-libs
+  version: 26.6.0
+  sha256: 7880630afbfb544bd66cf7ab725f5e7b91fcaac02c7e4c9a74a877eba1546e2b
+- pypi: https://files.pythonhosted.org/packages/10/11/fc59bc55d46e3138c529d5a8e8f98366cc66cd3950cb8e155e8588f6dd87/max_shmem_libs-26.6.0-py3-none-manylinux_2_34_x86_64.whl
+  name: max-shmem-libs
+  version: 26.6.0
+  sha256: 1189ea141744c365fdfa4d248620841efa58cb3f0ad97e15477dfb4a2c1c4df1
+- pypi: https://files.pythonhosted.org/packages/46/64/f33fdfe95aca76601194a7064d14816c7c22c4eccc1b03a5335785895fa3/msgspec-0.22.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+  name: msgspec
+  version: 0.22.0
+  sha256: c6c310ef83e7e291b01a63298828f848348bb99e84a1098c4b3923c05674d032
+  requires_dist:
+  - tomli ; python_full_version < '3.11' and extra == 'toml'
+  - tomli-w ; extra == 'toml'
+  - pyyaml ; extra == 'yaml'
+  requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/65/33/641220f74abac08a98c1c204cc71af7571ede1527afea1e03b5db13eb423/max_core-26.6.0-py3-none-macosx_13_0_arm64.whl
+  name: max-core
+  version: 26.6.0
+  sha256: ab557b50c78587b2a5078d5a381251a227b93078b3b6343a99ba0be5898bc27b
+  requires_dist:
+  - mojo-compiler==1.1.0
+  - max-mojo-libs==26.6.0
 - pypi: https://files.pythonhosted.org/packages/65/8b/78c19b805d52323122385b9c3f000144608deac38635455978af6d14807b/playwright-1.64.0-py3-none-manylinux1_x86_64.whl
   name: playwright
   version: 1.64.0
@@ -1342,6 +1391,13 @@ packages:
   - mojo-compiler==1.1.0
   - mblack==26.6.0
   - mojo-lldb-libs==1.1.0
+- pypi: https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl
+  name: pygments
+  version: 2.21.0
+  sha256: 2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9
+  requires_dist:
+  - colorama>=0.4.6 ; extra == 'windows-terminal'
+  requires_python: '>=3.9'
 - pypi: https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl
   name: mypy-extensions
   version: 1.1.0
@@ -1357,12 +1413,70 @@ packages:
   sha256: 02daffdfd8fcd56ecfb74e93d2adfaf4551cbb0b384094508fd00c1d5d81cb00
   requires_dist:
   - mojo-compiler-mojo-libs==1.1.0
+- pypi: https://files.pythonhosted.org/packages/80/c4/f5af4c1ca8c1eeb2e92ccca14ce8effdeec651d5ab6053c589b074eda6e1/psutil-7.2.2-cp36-abi3-macosx_11_0_arm64.whl
+  name: psutil
+  version: 7.2.2
+  sha256: 1a7b04c10f32cc88ab39cbf606e117fd74721c831c98a27dc04578deb0c16979
+  requires_dist:
+  - psleak ; extra == 'dev'
+  - pytest ; extra == 'dev'
+  - pytest-instafail ; extra == 'dev'
+  - pytest-xdist ; extra == 'dev'
+  - setuptools ; extra == 'dev'
+  - abi3audit ; extra == 'dev'
+  - black ; extra == 'dev'
+  - check-manifest ; extra == 'dev'
+  - coverage ; extra == 'dev'
+  - packaging ; extra == 'dev'
+  - pylint ; extra == 'dev'
+  - pyperf ; extra == 'dev'
+  - pypinfo ; extra == 'dev'
+  - pytest-cov ; extra == 'dev'
+  - requests ; extra == 'dev'
+  - rstcheck ; extra == 'dev'
+  - ruff ; extra == 'dev'
+  - sphinx ; extra == 'dev'
+  - sphinx-rtd-theme ; extra == 'dev'
+  - toml-sort ; extra == 'dev'
+  - twine ; extra == 'dev'
+  - validate-pyproject[all] ; extra == 'dev'
+  - virtualenv ; extra == 'dev'
+  - vulture ; extra == 'dev'
+  - wheel ; extra == 'dev'
+  - colorama ; os_name == 'nt' and extra == 'dev'
+  - pyreadline3 ; os_name == 'nt' and extra == 'dev'
+  - pywin32 ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'dev'
+  - wheel ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'dev'
+  - wmi ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'dev'
+  - psleak ; extra == 'test'
+  - pytest ; extra == 'test'
+  - pytest-instafail ; extra == 'test'
+  - pytest-xdist ; extra == 'test'
+  - setuptools ; extra == 'test'
+  - pywin32 ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'test'
+  - wheel ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'test'
+  - wmi ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'test'
+  requires_python: '>=3.6'
 - pypi: https://files.pythonhosted.org/packages/81/12/5347938b1f9a6453f0dbdfcc3e2388a1320ef9b9ec17fbefbc4ab647ea98/pyee-14.0.0-py3-none-any.whl
   name: pyee
   version: 14.0.0
   sha256: 3ac2d3229a9677f7de2c33d7f52fe25b638a46b19c413fea2edc8c6d0a644e4d
   requires_dist:
   - typing-extensions
+  requires_python: '>=3.12'
+- pypi: https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl
+  name: rich
+  version: 15.0.0
+  sha256: 33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb
+  requires_dist:
+  - ipywidgets>=7.5.1,<9 ; extra == 'jupyter'
+  - markdown-it-py>=2.2.0
+  - pygments>=2.13.0,<3.0.0
+  requires_python: '>=3.9.0'
+- pypi: https://files.pythonhosted.org/packages/83/8c/b0ea9477fb1f0d4484bbc5cba21678cc9969704d8d7f3f158d1db35f8e14/numpy-2.5.4-cp313-cp313-macosx_11_0_arm64.whl
+  name: numpy
+  version: 2.5.4
+  sha256: 7415db95818b39ec475a5eea54d9e3b6bc83e3912158e46da3438cdce399804d
   requires_python: '>=3.12'
 - pypi: https://files.pythonhosted.org/packages/83/8d/4fb2147d140b6ea688f6d256b3119d6554a3d50095d802f01bf24234bd7d/mojo_compiler_mojo_libs-1.1.0-py3-none-any.whl
   name: mojo-compiler-mojo-libs
@@ -1379,6 +1493,14 @@ packages:
   - psutil ; extra == 'test'
   - setuptools ; extra == 'test'
   requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/8a/0e/97c33bf5009bdbac74fd2beace167cab3f978feb69cc36f1ef79360d6c4e/exceptiongroup-1.3.1-py3-none-any.whl
+  name: exceptiongroup
+  version: 1.3.1
+  sha256: a7a39a3bd276781e98394987d3a5701d0c4edffb633bb7a5144577f82c773598
+  requires_dist:
+  - typing-extensions>=4.6.0 ; python_full_version < '3.13'
+  - pytest>=6 ; extra == 'test'
+  requires_python: '>=3.7'
 - pypi: https://files.pythonhosted.org/packages/8d/15/1633010b26e88e872c93b67c0b6c5e174fb74cb6fb5c1472b4d51d4a8f22/platformdirs-4.13.0-py3-none-any.whl
   name: platformdirs
   version: 4.13.0
@@ -1398,6 +1520,45 @@ packages:
   name: mojo-lldb-libs
   version: 1.1.0
   sha256: 782ff566b14100634a717d5b59602e6b310f4480107e391047db31d14f3497aa
+- pypi: https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl
+  name: mdurl
+  version: 0.1.2
+  sha256: 84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8
+  requires_python: '>=3.7'
+- pypi: https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl
+  name: markdown-it-py
+  version: 4.2.0
+  sha256: 9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a
+  requires_dist:
+  - mdurl~=0.1
+  - psutil ; extra == 'benchmarking'
+  - pytest ; extra == 'benchmarking'
+  - pytest-benchmark ; extra == 'benchmarking'
+  - commonmark~=0.9 ; extra == 'compare'
+  - markdown~=3.4 ; extra == 'compare'
+  - mistletoe~=1.0 ; extra == 'compare'
+  - mistune~=3.0 ; extra == 'compare'
+  - panflute~=2.3 ; extra == 'compare'
+  - markdown-it-pyrs ; extra == 'compare'
+  - linkify-it-py>=1,<3 ; extra == 'linkify'
+  - mdit-py-plugins>=0.5.0 ; extra == 'plugins'
+  - gprof2dot ; extra == 'profiling'
+  - mdit-py-plugins>=0.5.0 ; extra == 'rtd'
+  - myst-parser ; extra == 'rtd'
+  - pyyaml ; extra == 'rtd'
+  - sphinx ; extra == 'rtd'
+  - sphinx-copybutton ; extra == 'rtd'
+  - sphinx-design ; extra == 'rtd'
+  - sphinx-book-theme~=1.0 ; extra == 'rtd'
+  - jupyter-sphinx ; extra == 'rtd'
+  - ipykernel ; extra == 'rtd'
+  - coverage ; extra == 'testing'
+  - pytest ; extra == 'testing'
+  - pytest-cov ; extra == 'testing'
+  - pytest-regressions ; extra == 'testing'
+  - pytest-timeout ; extra == 'testing'
+  - requests ; extra == 'testing'
+  requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/b4/b3/99f6c07a7f59adb3830e42cda2e2093dc1c2cbd1f69fe4393ead30c88257/playwright-1.64.0-py3-none-macosx_11_0_arm64.whl
   name: playwright
   version: 1.64.0
@@ -1406,6 +1567,151 @@ packages:
   - pyee>=13,<15
   - greenlet>=3.1.1,<4.0.0
   requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/b5/70/5d8df3b09e25bce090399cf48e452d25c935ab72dad19406c77f4e828045/psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl
+  name: psutil
+  version: 7.2.2
+  sha256: 076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9
+  requires_dist:
+  - psleak ; extra == 'dev'
+  - pytest ; extra == 'dev'
+  - pytest-instafail ; extra == 'dev'
+  - pytest-xdist ; extra == 'dev'
+  - setuptools ; extra == 'dev'
+  - abi3audit ; extra == 'dev'
+  - black ; extra == 'dev'
+  - check-manifest ; extra == 'dev'
+  - coverage ; extra == 'dev'
+  - packaging ; extra == 'dev'
+  - pylint ; extra == 'dev'
+  - pyperf ; extra == 'dev'
+  - pypinfo ; extra == 'dev'
+  - pytest-cov ; extra == 'dev'
+  - requests ; extra == 'dev'
+  - rstcheck ; extra == 'dev'
+  - ruff ; extra == 'dev'
+  - sphinx ; extra == 'dev'
+  - sphinx-rtd-theme ; extra == 'dev'
+  - toml-sort ; extra == 'dev'
+  - twine ; extra == 'dev'
+  - validate-pyproject[all] ; extra == 'dev'
+  - virtualenv ; extra == 'dev'
+  - vulture ; extra == 'dev'
+  - wheel ; extra == 'dev'
+  - colorama ; os_name == 'nt' and extra == 'dev'
+  - pyreadline3 ; os_name == 'nt' and extra == 'dev'
+  - pywin32 ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'dev'
+  - wheel ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'dev'
+  - wmi ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'dev'
+  - psleak ; extra == 'test'
+  - pytest ; extra == 'test'
+  - pytest-instafail ; extra == 'test'
+  - pytest-xdist ; extra == 'test'
+  - setuptools ; extra == 'test'
+  - pywin32 ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'test'
+  - wheel ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'test'
+  - wmi ; implementation_name != 'pypy' and os_name == 'nt' and extra == 'test'
+  requires_python: '>=3.6'
+- pypi: https://files.pythonhosted.org/packages/ca/a8/2a97b86145d44fda3fe5d21d535ecdf0800e97e501521e946f626105742b/max_core-26.6.0-py3-none-manylinux_2_34_x86_64.whl
+  name: max-core
+  version: 26.6.0
+  sha256: 294ba53f7ffa73368d53d5ffdbe0a891da87265e92c095c05877ea3bc70bc471
+  requires_dist:
+  - mojo-compiler==1.1.0
+  - max-mojo-libs==26.6.0
+  - max-shmem-libs==26.6.0
+- pypi: https://files.pythonhosted.org/packages/cc/e3/357baa8d2a9164a98dfd7ef9d3a58125df0ed981be909945bdd337be7194/msgspec-0.22.0-cp313-cp313-macosx_11_0_arm64.whl
+  name: msgspec
+  version: 0.22.0
+  sha256: 5aa24eb475d070ecbbe5b21080fc3ce4b0b76c60de25cfe0c9678d8fb44bb42f
+  requires_dist:
+  - tomli ; python_full_version < '3.11' and extra == 'toml'
+  - tomli-w ; extra == 'toml'
+  - pyyaml ; extra == 'yaml'
+  requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/d1/b1/74babcc824a57904e919f3af16d86c08b524c0691504baf038ef2d7f655c/taskgroup-0.2.2-py2.py3-none-any.whl
+  name: taskgroup
+  version: 0.2.2
+  sha256: e2c53121609f4ae97303e9ea1524304b4de6faf9eb2c9280c7f87976479a52fb
+  requires_dist:
+  - exceptiongroup
+  - typing-extensions>=4.12.2,<5
+- pypi: https://files.pythonhosted.org/packages/da/24/3bd070f3269dc609d8f26b2643f62ef91bb415841c0b294805aaf7fe06da/numpy-2.5.4-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+  name: numpy
+  version: 2.5.4
+  sha256: 6ffa07666f8da0eef81d149934a626d0d95fbd6838432a33e66245423a9062c0
+  requires_python: '>=3.12'
+- pypi: https://files.pythonhosted.org/packages/dc/0f/8c27b2ea1bdab7ec20fd1da68a5bda61dd4000693d22442095a721561101/max-26.6.0-cp313-cp313-macosx_13_0_arm64.whl
+  name: max
+  version: 26.6.0
+  sha256: 42bd99e97e01b9f690466ce28909a154dc063c959fb0cb5df8f992f91f7ce0f4
+  requires_dist:
+  - max-core==26.6.0
+  - click>=8.0.0
+  - exceptiongroup>=0.2.2
+  - msgspec>=0.19.0
+  - numpy>=1.18
+  - psutil>=7.0.0
+  - rich>=13.0.1
+  - taskgroup>=0.2.2
+  - typing-extensions>=4.12.2
+  - max[benchmark,serve] ; extra == 'all'
+  - mojo ; extra == 'all'
+  - huggingface-hub>=0.28.0 ; extra == 'benchmark'
+  - jinja2>=3.1.0 ; extra == 'benchmark'
+  - requests>=2.32.3 ; extra == 'benchmark'
+  - openai>=2.11.0 ; extra == 'benchmark'
+  - prometheus-client>=0.21.0 ; extra == 'benchmark'
+  - pillow>=12.3.0 ; extra == 'benchmark'
+  - pydantic-settings>=2.7.1 ; extra == 'benchmark'
+  - pydantic ; extra == 'benchmark'
+  - pyyaml>=6.0.1 ; extra == 'benchmark'
+  - tiktoken>=0.5.0 ; extra == 'benchmark'
+  - tqdm>=4.67.1 ; extra == 'benchmark'
+  - transformers>=5.12.0,<5.13.0 ; extra == 'benchmark'
+  - aiohttp>=3.10.5 ; extra == 'benchmark'
+  - cyclopts>=4.2.5 ; extra == 'benchmark'
+  - datasets>=2.21.0 ; extra == 'benchmark'
+  - tabulate>=0.9.0 ; extra == 'benchmark'
+  - huggingface-hub>=0.28.0 ; extra == 'serve'
+  - jinja2>=3.1.0 ; extra == 'serve'
+  - requests>=2.32.3 ; extra == 'serve'
+  - openai>=2.11.0 ; extra == 'serve'
+  - prometheus-client>=0.21.0 ; extra == 'serve'
+  - pillow>=12.3.0 ; extra == 'serve'
+  - pydantic-settings>=2.7.1 ; extra == 'serve'
+  - pydantic ; extra == 'serve'
+  - pyyaml>=6.0.1 ; extra == 'serve'
+  - tiktoken>=0.5.0 ; extra == 'serve'
+  - tqdm>=4.67.1 ; extra == 'serve'
+  - transformers>=5.12.0,<5.13.0 ; extra == 'serve'
+  - aiofiles>=24.1.0 ; extra == 'serve'
+  - asgiref>=3.8.1 ; extra == 'serve'
+  - av>=14.0.0 ; extra == 'serve'
+  - fastapi>=0.115.3 ; extra == 'serve'
+  - gguf>=0.17.1 ; extra == 'serve'
+  - grpcio>=1.67.0 ; extra == 'serve'
+  - hf-transfer>=0.1.9 ; extra == 'serve'
+  - httpx>=0.28.1,<0.29 ; extra == 'serve'
+  - jsonschema>=4.23.0 ; extra == 'serve'
+  - llguidance>=0.7.30 ; extra == 'serve'
+  - opentelemetry-api>=1.29.0 ; extra == 'serve'
+  - opentelemetry-exporter-otlp-proto-http>=1.27.0 ; extra == 'serve'
+  - opentelemetry-exporter-prometheus>=0.50b0 ; extra == 'serve'
+  - opentelemetry-sdk>=1.29.0,<1.36.0 ; extra == 'serve'
+  - protobuf>=6.33.5,<6.34.0 ; extra == 'serve'
+  - pydantic-core ; extra == 'serve'
+  - pyinstrument>=5.0.1 ; extra == 'serve'
+  - python-json-logger>=2.0.7 ; extra == 'serve'
+  - pyzmq>=26.3.0 ; extra == 'serve'
+  - regex>=2024.11.6 ; extra == 'serve'
+  - scipy>=1.13.0 ; extra == 'serve'
+  - sentencepiece>=0.2.0 ; extra == 'serve'
+  - sse-starlette>=2.1.2,<2.2 ; extra == 'serve'
+  - starlette>=0.47.2 ; extra == 'serve'
+  - taskgroup>=0.2.2 ; extra == 'serve'
+  - uvicorn>=0.34.0 ; extra == 'serve'
+  - uvloop>=0.21.0 ; extra == 'serve'
+  requires_python: '>=3.10,<3.15'
 - pypi: https://files.pythonhosted.org/packages/dd/c0/4118df04da5776700839642477bdda0b1f906a99c69c8f2f94d4aea9fef4/mojo-1.1.0-py3-none-manylinux_2_34_x86_64.whl
   name: mojo
   version: 1.1.0
@@ -1440,3 +1746,75 @@ packages:
   - typing-extensions>=4 ; extra == 'optional'
   - google-re2>=1.1 ; extra == 're2'
   requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/fe/f0/20705a23c5a21127fa91fc5a62ba60bfdd816e0857f18455343bbf8ac2d8/max-26.6.0-cp313-cp313-manylinux_2_34_x86_64.whl
+  name: max
+  version: 26.6.0
+  sha256: c65eed6a3716b7a7cf8c589ecb5d644dadce7e116d7422028679d71dbc2a35b7
+  requires_dist:
+  - max-core==26.6.0
+  - click>=8.0.0
+  - exceptiongroup>=0.2.2
+  - msgspec>=0.19.0
+  - numpy>=1.18
+  - psutil>=7.0.0
+  - rich>=13.0.1
+  - taskgroup>=0.2.2
+  - typing-extensions>=4.12.2
+  - max[serve,benchmark] ; extra == 'all'
+  - mojo ; extra == 'all'
+  - huggingface-hub>=0.28.0 ; extra == 'benchmark'
+  - jinja2>=3.1.0 ; extra == 'benchmark'
+  - requests>=2.32.3 ; extra == 'benchmark'
+  - openai>=2.11.0 ; extra == 'benchmark'
+  - prometheus-client>=0.21.0 ; extra == 'benchmark'
+  - pillow>=12.3.0 ; extra == 'benchmark'
+  - pydantic-settings>=2.7.1 ; extra == 'benchmark'
+  - pydantic ; extra == 'benchmark'
+  - pyyaml>=6.0.1 ; extra == 'benchmark'
+  - tiktoken>=0.5.0 ; extra == 'benchmark'
+  - tqdm>=4.67.1 ; extra == 'benchmark'
+  - transformers>=5.12.0,<5.13.0 ; extra == 'benchmark'
+  - aiohttp>=3.10.5 ; extra == 'benchmark'
+  - cyclopts>=4.2.5 ; extra == 'benchmark'
+  - datasets>=2.21.0 ; extra == 'benchmark'
+  - tabulate>=0.9.0 ; extra == 'benchmark'
+  - huggingface-hub>=0.28.0 ; extra == 'serve'
+  - jinja2>=3.1.0 ; extra == 'serve'
+  - requests>=2.32.3 ; extra == 'serve'
+  - openai>=2.11.0 ; extra == 'serve'
+  - prometheus-client>=0.21.0 ; extra == 'serve'
+  - pillow>=12.3.0 ; extra == 'serve'
+  - pydantic-settings>=2.7.1 ; extra == 'serve'
+  - pydantic ; extra == 'serve'
+  - pyyaml>=6.0.1 ; extra == 'serve'
+  - tiktoken>=0.5.0 ; extra == 'serve'
+  - tqdm>=4.67.1 ; extra == 'serve'
+  - transformers>=5.12.0,<5.13.0 ; extra == 'serve'
+  - aiofiles>=24.1.0 ; extra == 'serve'
+  - asgiref>=3.8.1 ; extra == 'serve'
+  - av>=14.0.0 ; extra == 'serve'
+  - fastapi>=0.115.3 ; extra == 'serve'
+  - gguf>=0.17.1 ; extra == 'serve'
+  - grpcio>=1.67.0 ; extra == 'serve'
+  - hf-transfer>=0.1.9 ; extra == 'serve'
+  - httpx>=0.28.1,<0.29 ; extra == 'serve'
+  - jsonschema>=4.23.0 ; extra == 'serve'
+  - llguidance>=0.7.30 ; extra == 'serve'
+  - opentelemetry-api>=1.29.0 ; extra == 'serve'
+  - opentelemetry-exporter-otlp-proto-http>=1.27.0 ; extra == 'serve'
+  - opentelemetry-exporter-prometheus>=0.50b0 ; extra == 'serve'
+  - opentelemetry-sdk>=1.29.0,<1.36.0 ; extra == 'serve'
+  - protobuf>=6.33.5,<6.34.0 ; extra == 'serve'
+  - pydantic-core ; extra == 'serve'
+  - pyinstrument>=5.0.1 ; extra == 'serve'
+  - python-json-logger>=2.0.7 ; extra == 'serve'
+  - pyzmq>=26.3.0 ; extra == 'serve'
+  - regex>=2024.11.6 ; extra == 'serve'
+  - scipy>=1.13.0 ; extra == 'serve'
+  - sentencepiece>=0.2.0 ; extra == 'serve'
+  - sse-starlette>=2.1.2,<2.2 ; extra == 'serve'
+  - starlette>=0.47.2 ; extra == 'serve'
+  - taskgroup>=0.2.2 ; extra == 'serve'
+  - uvicorn>=0.34.0 ; extra == 'serve'
+  - uvloop>=0.21.0 ; extra == 'serve'
+  requires_python: '>=3.10,<3.15'

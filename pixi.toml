@@ -18,3 +18,4 @@ python-fasthtml = ">=0.14.13,<0.15"
 [pypi-dependencies]
 mojo = ">=1.1, <1.2"
 playwright = ">=1.64.0, <2"
+max = ">=26.6.0, <27"

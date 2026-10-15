@@ -28,6 +28,7 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind]')].map(e
   if (k === 'dropdown') return 'DROPDOWN: ' + e.options[e.selectedIndex].text;
   if (k === 'slider') return 'SLIDER: ' + e.value;
   if (k === 'progress') return 'PROGRESS: ' + e.value;
+  if (k === 'image') return 'IMAGE: ' + e.naturalWidth + 'x' + e.naturalHeight;
 }).filter(Boolean).join('\\n')"""
 
 
@@ -45,6 +46,7 @@ def settle(page):
     """Wait for HTMX's delayed triggers to fire and its requests to finish."""
     page.wait_for_timeout(250)
     page.wait_for_function("() => !document.querySelector('.htmx-request')", timeout=10000)
+    page.wait_for_function("() => [...document.images].every(i => i.complete)", timeout=10000)
     page.wait_for_timeout(50)
 
 
@@ -53,13 +55,13 @@ def step(page, s):
     if verb == "tap":
         title, _, nth = rest.partition("@")
         page.locator("[data-kind=button]").filter(has_text=exact(title)).nth(int(nth or 0)).click()
-    elif verb in ("type", "submit"):
+    elif verb in ("type", "submit", "enter"):
         hint, _, text = rest.partition("=")
         field = page.locator(f"input[data-kind=field][placeholder={hint!r}]").first
-        if verb == "type":
+        if verb in ("type", "enter"):
             field.fill(text)
-        else:
-            field.press("Enter")
+        if verb in ("submit", "enter"):
+            field.press("Enter")  # for "enter": straight after typing, no wait
     elif verb == "toggle":
         page.locator("[data-kind=toggle]").filter(has=page.locator("span", has_text=exact(rest))).first.locator("input").click()
     elif verb == "select":

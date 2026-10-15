@@ -19,6 +19,7 @@ comptime SLIDER = 9  # 0–100
 comptime PROGRESS = 10  # 0–100, read-only
 comptime DIVIDER = 11
 comptime SCROLL = 12  # one child, scrolls when taller than `size`
+comptime IMAGE = 13  # pixels (RGBA), `spacing` x `size` in size
 
 # Text styles (each platform maps them to its own type scale)
 comptime BODY = 0
@@ -45,7 +46,8 @@ struct Node(Copyable, Movable, Equatable, Writable):
     var options: List[String]  # dropdown choices
     var hint: String  # field placeholder
     var msg2: Int  # field: message sent on Return
-    var size: Int  # scroll: visible height in points
+    var size: Int  # scroll: visible height in points; image: height
+    var pixels: List[UInt32]  # image: RGBA bytes, one UInt32 per pixel (R in the low byte)
 
     def __init__(
         out self,
@@ -60,6 +62,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
         hint: String = "",
         msg2: Int = NO_MSG,
         size: Int = 0,
+        var pixels: List[UInt32] = [],
     ):
         self.kind = kind
         self.text = text
@@ -72,6 +75,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
         self.hint = hint
         self.msg2 = msg2
         self.size = size
+        self.pixels = pixels^
 
     def __eq__(self, other: Self) -> Bool:
         return (
@@ -86,6 +90,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
             and self.hint == other.hint
             and self.msg2 == other.msg2
             and self.size == other.size
+            and self.pixels == other.pixels
         )
 
     def write_to(self, mut writer: Some[Writer]):
@@ -139,6 +144,11 @@ def Slider(value: Int, on_change: Int) -> View:
 def ProgressBar(value: Int) -> View:
     """Shows 0–100 progress."""
     return _one(Node(PROGRESS, value=value))
+
+
+def Image(pixels: List[UInt32], width: Int, height: Int) -> View:
+    """A picture from RGBA pixels (row by row; each UInt32 holds R, G, B, A from the low byte up)."""
+    return _one(Node(IMAGE, spacing=width, size=height, pixels=pixels.copy()))
 
 
 def Divider() -> View:

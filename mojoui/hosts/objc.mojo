@@ -116,7 +116,7 @@ def global_block[F: ImplicitlyCopyable & Deinitable](invoke: F, signature: Strin
     """An Objective-C block whose body is a Mojo `abi("C")` function.
 
     Built by hand as a *global* block (the kind the compiler emits for blocks that
-    capture nothing): {isa, flags, reserved, invoke, descriptor} with a descriptor
+    capture nothing): {isa, flags+reserved, invoke, descriptor} (32 bytes) with a descriptor
     {reserved, size, signature}. Copying a global block returns it unchanged, so
     APIs that keep the block (like UIAction's handler) are safe. It lives forever.
     `invoke` must take the block itself first, then the block's arguments.
@@ -131,9 +131,9 @@ def global_block[F: ImplicitlyCopyable & Deinitable](invoke: F, signature: Strin
     sig.unsafe_offset(signature.byte_length()).unsafe_write(Int8(0))
     var desc = unsafe_alloc[Int](3)
     desc.unsafe_write(0)  # reserved
-    desc.unsafe_offset(1).unsafe_write(40)  # sizeof the block literal
+    desc.unsafe_offset(1).unsafe_write(32)  # sizeof the block literal
     desc.unsafe_offset(2).unsafe_write(Int(sig))
-    var block = unsafe_alloc[Int](5)
+    var block = unsafe_alloc[Int](4)
     block.unsafe_write(isa)
     block.unsafe_offset(1).unsafe_write(BLOCK_IS_GLOBAL | BLOCK_HAS_SIGNATURE)  # flags (low 32 bits), reserved = 0
     block.unsafe_offset(2).unsafe_write(fn_address(invoke))

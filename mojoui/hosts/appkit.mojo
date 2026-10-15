@@ -11,7 +11,7 @@ from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
-    TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL,
+    TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE
@@ -32,12 +32,21 @@ struct AppKitHost[A: App](Movable):
     var window: Int
     var target: Int  # MojoTarget object that receives every event
     var widgets: List[Int]
+    var focus: Int  # text field to keep focused across the next rebuild (-1: none)
 
     def __init__(out self):
         self.rt = Runtime(Self.A())
         self.window = 0
         self.target = 0
         self.widgets = List[Int]()
+        self.focus = -1
+
+    def submit_field_shown(self) -> Bool:
+        """Whether a text field handles Return itself (then no button may also claim it)."""
+        for n in self.rt.shown.nodes:
+            if n.kind == FIELD and n.msg2 != 0:
+                return True
+        return False
 
     def wire(self, w: Int, i: Int, self_addr: Int, action: String):
         _ = msg(w, "setTag:", tag_for(self_addr, i))
@@ -64,8 +73,10 @@ struct AppKitHost[A: App](Movable):
             w = msg(cls("NSButton"), "buttonWithTitle:target:action:", ns_string(node.text), self.target, sel("tap:"))
             _ = msg(w, "setTag:", tag_for(self_addr, i))
             if node.style == PROMINENT:
-                _ = msg(w, "setKeyEquivalent:", ns_string("\r"))  # the blue default button; Return taps it
+                if not self.submit_field_shown():  # else Return would fire the field and the button
+                    _ = msg(w, "setKeyEquivalent:", ns_string("\r"))  # the blue default button; Return taps it
                 _ = msg(w, "setControlSize:", 3)  # NSControlSizeLarge
+                _ = msg(w, "setBezelColor:", msg(cls("NSColor"), "controlAccentColor"))
             elif node.style == DESTRUCTIVE:
                 _ = msg(w, "setHasDestructiveAction:", 1)
                 _ = msg(w, "setContentTintColor:", msg(cls("NSColor"), "systemRedColor"))
@@ -110,6 +121,9 @@ struct AppKitHost[A: App](Movable):
             w = new("NSBox")
             _ = msg(w, "setBoxType:", 2)  # NSBoxSeparator
             constrain(w, "widthAnchor", Float64(280))
+            constrain(w, "heightAnchor", Float64(1))
+        elif node.kind == IMAGE:  # not built yet on Apple platforms: a placeholder
+            w = msg(cls("NSTextField"), "labelWithString:", ns_string("(image: coming to Mac)"))
         elif node.kind == SPACER:
             w = new("NSView")
         elif node.kind == SCROLL:
@@ -150,6 +164,9 @@ struct AppKitHost[A: App](Movable):
         _ = msg(holder, "setEdgeInsets:", Float64(32), Float64(32), Float64(32), Float64(32))
         _ = msg(holder, "addArrangedSubview:", root)
         _ = msg(self.window, "setContentView:", holder)
+        if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
+            _ = msg(self.window, "makeFirstResponder:", self.widgets[self.focus])  # keep typing
+        self.focus = -1
 
     def apply(mut self, d: Diff, self_addr: Int):
         if d.rebuild:
@@ -181,6 +198,7 @@ struct AppKitHost[A: App](Movable):
         var message = n.msg2 if second else n.msg
         if message == 0:
             return
+        self.focus = node if n.kind == FIELD else -1
         var d = self.rt.dispatch(Event(message, text, number))
         self.apply(d, self_addr)
 

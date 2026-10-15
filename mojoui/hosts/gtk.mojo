@@ -11,10 +11,10 @@ from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
-    View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL,
+    View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
-from mojoui.diff import Diff, SET_TEXT, SET_VALUE
+from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
 from mojoui.app import App, Event, Runtime
 
 comptime G_APPLICATION_NON_UNIQUE = 32
@@ -92,6 +92,16 @@ def busy() -> Bool:
     return external_call["g_object_get_data", Int](app, key.as_c_string_span()) != 0
 
 
+def texture(pixels: List[UInt32], w: Int, h: Int) -> Int:
+    """A GdkMemoryTexture holding a copy of the RGBA pixels."""
+    comptime GDK_MEMORY_R8G8B8A8 = 5
+    var n = len(pixels) * 4
+    var bytes = external_call["g_bytes_new", Int](Int(pixels.unsafe_ptr()), n)  # copies
+    var tex = external_call["gdk_memory_texture_new", Int](c_int(w), c_int(h), c_int(GDK_MEMORY_R8G8B8A8), bytes, w * 4)
+    external_call["g_bytes_unref", NoneType](bytes)
+    return tex
+
+
 def width(widget: Int, w: Int):
     external_call["gtk_widget_set_size_request", NoneType](widget, c_int(w), c_int(-1))
 
@@ -102,11 +112,13 @@ struct GtkHost[A: App](Movable):
     var rt: Runtime[Self.A]
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
+    var focus: Int  # text field to keep focused across the next rebuild (-1: none)
 
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
         self.window = 0
         self.widgets = List[Int]()
+        self.focus = -1
 
     def build(mut self, i: Int, self_addr: Int) -> Int:
         """Creates the GTK widget for node i (and its children)."""
@@ -167,6 +179,15 @@ struct GtkHost[A: App](Movable):
         elif node.kind == DIVIDER:
             w = external_call["gtk_separator_new", Int](c_int(HORIZONTAL))
             width(w, 280)
+        elif node.kind == IMAGE:
+            var tex = texture(node.pixels, node.spacing, node.size)
+            w = external_call["gtk_picture_new_for_paintable", Int](tex)
+            external_call["g_object_unref", NoneType](tex)
+            external_call["gtk_picture_set_can_shrink", NoneType](w, c_int(0))
+            external_call["gtk_picture_set_content_fit", NoneType](w, c_int(3))  # scale-down: never bigger than its pixels
+            external_call["gtk_widget_set_halign", NoneType](w, c_int(ALIGN_CENTER))
+            external_call["gtk_widget_set_valign", NoneType](w, c_int(ALIGN_CENTER))
+            external_call["gtk_widget_set_size_request", NoneType](w, c_int(node.spacing), c_int(node.size))
         elif node.kind == SPACER:
             w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
             external_call["gtk_widget_set_hexpand", NoneType](w, c_int(1))
@@ -206,6 +227,9 @@ struct GtkHost[A: App](Movable):
         external_call["gtk_widget_set_margin_start", NoneType](root, c_int(32))
         external_call["gtk_widget_set_margin_end", NoneType](root, c_int(32))
         external_call["gtk_window_set_child", NoneType](self.window, root)
+        if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
+            _ = external_call["gtk_widget_grab_focus", c_int](self.widgets[self.focus])  # keep typing
+        self.focus = -1
         set_busy(False)
 
     def apply(mut self, d: Diff, self_addr: Int):
@@ -237,6 +261,11 @@ struct GtkHost[A: App](Movable):
                     external_call["gtk_range_set_value", NoneType](w, Float64(p.number))
                 elif kind == PROGRESS:
                     external_call["gtk_progress_bar_set_fraction", NoneType](w, Float64(p.number) / 100.0)
+            elif p.op == SET_IMAGE:
+                ref img = self.rt.shown.nodes[p.node]
+                var tex = texture(img.pixels, img.spacing, img.size)
+                external_call["gtk_picture_set_paintable", NoneType](w, tex)
+                external_call["g_object_unref", NoneType](tex)
             # SET_MSG needs nothing: events look the message up in rt.shown.
         set_busy(False)
 
@@ -246,6 +275,7 @@ struct GtkHost[A: App](Movable):
         var message = n.msg2 if second else n.msg
         if message == 0:
             return
+        self.focus = node if n.kind == FIELD else -1
         var d = self.rt.dispatch(Event(message, text, number))
         self.apply(d, self_addr)
 
@@ -354,16 +384,16 @@ def run_step[A: App](host_addr: Int, step: String):
             return
         var s = String("clicked")
         external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span())
-    elif verb == "type" or verb == "submit":
+    elif verb == "type" or verb == "submit" or verb == "enter":
         var kv = split_at(rest, "=")
         var i = find(host[], FIELD, kv[0], 0, by_hint=True)
         if i < 0:
             print("TEST: no field", kv[0])
             return
-        if verb == "type":
+        if verb == "type" or verb == "enter":
             var t = kv[1]
             external_call["gtk_editable_set_text", NoneType](host[].widgets[i], t.as_c_string_span())
-        else:
+        if verb == "submit" or verb == "enter":  # "enter": Return straight after typing
             var s = String("activate")
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span())
     elif verb == "toggle":
@@ -385,6 +415,9 @@ def run_step[A: App](host_addr: Int, step: String):
         for j in range(len(opts)):
             if opts[j] == kv[1]:
                 index = j
+        if index < 0:
+            print("TEST: no option", kv[1])
+            return
         external_call["gtk_drop_down_set_selected", NoneType](host[].widgets[i], c_uint(index))
     elif verb == "slide":
         var kv = split_at(rest, "=")
@@ -421,6 +454,9 @@ def report[A: App](host_addr: Int):
             print("SLIDER: " + String(Int(external_call["gtk_range_get_value", Float64](w) + 0.5)))
         elif n.kind == PROGRESS:
             print("PROGRESS: " + String(Int(external_call["gtk_progress_bar_get_fraction", Float64](w) * 100.0 + 0.5)))
+        elif n.kind == IMAGE:
+            var paintable = external_call["gtk_picture_get_paintable", Int](w)
+            print("IMAGE: " + String(external_call["gdk_texture_get_width", c_int](paintable)) + "x" + String(external_call["gdk_texture_get_height", c_int](paintable)))
 
 
 def save_png(window: Int, path: String):

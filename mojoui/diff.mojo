@@ -5,6 +5,7 @@ from mojoui.view import View
 comptime SET_TEXT = 1  # label text, button title, field contents, toggle label
 comptime SET_MSG = 2
 comptime SET_VALUE = 3  # toggle, dropdown index, slider, progress
+comptime SET_IMAGE = 4  # new pixels (same size); hosts read them from the shown view
 
 
 @fieldwise_init
@@ -61,4 +62,6 @@ def diff(old: View, new: View) -> Diff:
             patches.append(Patch(SET_MSG, i, "", b.msg))
         if a.value != b.value:
             patches.append(Patch(SET_VALUE, i, "", b.value))
+        if a.pixels != b.pixels:
+            patches.append(Patch(SET_IMAGE, i, "", 0))
     return Diff(False, patches^)

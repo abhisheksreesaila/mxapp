@@ -51,7 +51,7 @@ def sha(path):
 
 
 def state(out):
-    return [l for l in out.splitlines() if re.match(r"^(LABEL|BUTTON|FIELD|TOGGLE|DROPDOWN|SLIDER|PROGRESS): ", l)]
+    return [l for l in out.splitlines() if re.match(r"^(LABEL|BUTTON|FIELD|TOGGLE|DROPDOWN|SLIDER|PROGRESS|IMAGE): ", l)]
 
 
 # ---------- hosts ----------
@@ -64,15 +64,21 @@ def gtk(example, steps, shot=None):
     if shot:
         env["MOJOUI_SHOT"] = shot
     r = run([str(exe)], env=env, timeout=120)
-    return r, r.stdout + r.stderr
+    out = r.stdout + r.stderr
+    if r.returncode != 0 or "CRITICAL" in out or "TEST: " in out:  # GTK warnings or a step that didn't apply
+        return None, f"GTK run failed (exit {r.returncode}):\n{out[-600:]}"
+    return r, out
 
 
 def web(example, steps, shot=None):
     import drive  # scripts/drive.py: starts the FastHTML host, drives Chromium
     try:
-        return drive.web_run(BUILD / example / "web", steps, shot=shot)
+        r, out = drive.web_run(BUILD / example / "web", steps, shot=shot)
     except Exception as e:  # a crashing run is a failing run
         return None, f"web run crashed: {e!r}"
+    if r.returncode != 0:  # page errors
+        return None, out[-600:]
+    return r, out
 
 
 # ---------- Apple checks (from goals 1–2) ----------
@@ -156,8 +162,18 @@ def m1():
     r, out = web("hello", "tap:Greet;tap:Greet;tap:Greet")
     if r is None:
         return False, out
-    ok = "LABEL: Hello, Ada! (click 3)" in state(out) and not same_source("hello", ["web"])
-    return ok, "Chromium clicked Greet 3x on the FastHTML page; it reads 'Hello, Ada! (click 3)'" if ok else out[-500:]
+    if "LABEL: Hello, Ada! (click 3)" not in state(out) or same_source("hello", ["web", "linux"]):
+        return False, out[-500:]
+    # Goal 2's checks, kept: the GTK hello still works and GTK really draws its window.
+    with tempfile.TemporaryDirectory() as tmp:
+        shot = str(Path(tmp) / "hello.png")
+        r, gout = gtk("hello", "tap:Greet;tap:Greet;tap:Greet", shot=shot)
+        if r is None or "LABEL: Hello, Ada! (click 3)" not in state(gout):
+            return False, f"GTK hello regressed: {gout[-300:]}"
+        data = Path(shot).read_bytes() if Path(shot).exists() else b""
+        if not data.startswith(b"\x89PNG") or len(data) < 5000:
+            return False, "GTK didn't draw the hello window"
+    return True, "Chromium clicked Greet 3x on the FastHTML page → 'Hello, Ada! (click 3)'; GTK hello still passes and draws"
 
 
 def m2():
@@ -171,8 +187,10 @@ def m2():
     return ok, "core tests pass; every component built and tested" if ok else f"missing {missing}; {out[-300:]}"
 
 
-GALLERY_STEPS = "type:Your name=Grace;toggle:Notifications;select:0=Large;slide:0=70;tap:Reset@0;type:Your name=Ada"
-GALLERY_EXPECT = ["LABEL: Hello, Ada", "TOGGLE: Notifications=on", "DROPDOWN: Large", "SLIDER: 70", "PROGRESS: 70", "FIELD: Ada"]
+GALLERY_STEPS = ("type:Your name=Grace;toggle:Notifications;select:0=Large;slide:0=70;tap:Reset@0;"
+                 "type:Your name=Ada;submit:Your name")
+GALLERY_EXPECT = ["LABEL: Hello, Ada", "FIELD: Ada", "TOGGLE: Notifications=on", "LABEL: Notifications are on",
+                  "DROPDOWN: Large", "LABEL: Volume 70", "SLIDER: 70", "PROGRESS: 70", "BUTTON: Say hello (1)"]
 
 
 def gallery_ok(out):
@@ -186,7 +204,8 @@ def m3():
     if r is None:
         return False, out
     ok, missing = gallery_ok(out)
-    return (r.returncode == 0 and ok), "GTK: typed, toggled, chose, slid on real widgets; state echoed" if ok else f"missing {missing}: {out[-500:]}"
+    ok = ok and not same_source("gallery", ["linux"])
+    return ok, "GTK: typed, toggled, chose, slid, pressed Return on real widgets; every echo label right" if ok else f"missing {missing}: {out[-500:]}"
 
 
 def m4():
@@ -194,6 +213,7 @@ def m4():
     if r is None:
         return False, out
     ok, missing = gallery_ok(out)
+    ok = ok and not same_source("gallery", ["web"])
     return ok, "Chromium: same interactions, same echoed state" if ok else f"missing {missing}: {out[-500:]}"
 
 
@@ -210,9 +230,13 @@ def m5():
     return not problems, "; ".join(problems) or "hello, gallery, todo: Mac + iPhone build, link, sign; only Apple system functions"
 
 
-TODO_STEPS = ("type:What needs doing?=Buy milk;submit:What needs doing?;type:What needs doing?=Walk the dog;tap:Add;"
-              "type:What needs doing?=Write Mojo;tap:Add;toggle:Buy milk;select:0=Active;tap:Remove@0;select:0=All")
-TODO_EXPECT = ["TOGGLE: Buy milk=on", "TOGGLE: Write Mojo=off", "DROPDOWN: All", "LABEL: 1 left · 1 done", "FIELD: "]
+# "enter:" = type and press Return with no pause (the race the review found).
+TODO_STEPS = ("enter:What needs doing?=Buy milk;type:What needs doing?=Walk the dog;tap:Add;"
+              "enter:What needs doing?=Write Mojo;enter:What needs doing?=Feed the cat;"
+              "toggle:Buy milk;toggle:Feed the cat;select:0=Active;tap:Remove@0;"
+              "select:0=Done;tap:Clear done;select:0=All")
+TODO_EXPECT = ["TOGGLE: Write Mojo=off", "DROPDOWN: All", "LABEL: 1 left · 0 done", "PROGRESS: 0", "FIELD: "]
+TODO_GONE = ["Buy milk", "Walk the dog", "Feed the cat"]
 
 
 def m6():
@@ -225,19 +249,16 @@ def m6():
     missing = [e for e in TODO_EXPECT if e not in gs]
     if missing:
         problems.append(f"GTK missing {missing}")
-    if any("Walk the dog" in l for l in gs):
-        problems.append("removed task still shown")
+    if any(t in l for l in gs for t in TODO_GONE):
+        problems.append("a removed or cleared task is still shown")
     if gs != ws:
         problems.append(f"GTK and web differ:\n  gtk={gs}\n  web={ws}")
     for plat in ("mac", "ios"):
         ok, msg = apple_ok("todo", plat)
         if not ok:
             problems.append(msg)
-    for ex in EXAMPLES:
-        src = ROOT / "examples" / ex / "app.mojo"
-        if not src.exists():
-            problems.append(f"no {src.relative_to(ROOT)}")
-            continue
+    for src in sorted((ROOT / "examples").glob("*/app.mojo")):  # every app that exists
+        ex = src.parent.name
         code = "\n".join(l.split("#")[0] for l in src.read_text().splitlines())
         bad_imports = [i for i in re.findall(r"^\s*(?:from|import)\s+([\w.]+)", code, re.M) if not i.startswith("mojoui")]
         leaks = sorted(set(PLATFORM_WORDS.findall(code)))
@@ -277,8 +298,10 @@ def m8():
             problems.append(f"{name}: {out[-200:]}")
             continue
         s = state(out)
-        if not any(l.startswith("LABEL: GPU: NVIDIA") for l in s) or not any(l.startswith("LABEL: Result:") and "✓" in l for l in s):
-            problems.append(f"{name}: no GPU result in {s}")
+        if (not any(l.startswith("LABEL: GPU: NVIDIA") for l in s)
+                or not any(l.startswith("LABEL: Result:") and "✓" in l for l in s)
+                or "IMAGE: 480x320" not in s):
+            problems.append(f"{name}: no GPU result or picture in {s}")
     return not problems, "; ".join(problems) or "GPU kernel ran on the NVIDIA GPU; result shown in GTK and web, verified against the CPU"
 
 

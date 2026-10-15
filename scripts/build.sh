@@ -87,6 +87,7 @@ case "$WHAT" in
   web) build_web ;;
   mac) build_mac ;;
   ios) build_ios ;;
-  all) build_linux; build_web; build_mac; build_ios ;;
+  all)  # every platform, or only those listed in examples/<example>/platforms
+    for p in $(cat "examples/$EX/platforms" 2>/dev/null || echo linux web mac ios); do "build_$p"; done ;;
   *) echo "usage: scripts/build.sh <example> linux|web|mac|ios|all" >&2; exit 2 ;;
 esac
