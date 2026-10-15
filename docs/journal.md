@@ -61,3 +61,10 @@ Newest last. What was tried, what happened, dead ends.
 - AppKit/UIKit: NSSegmentedControl/UISegmentedControl, NSTableView/UITableView data sources (methods added to our runtime classes), NSAlert runModal on the next run-loop turn, UIAlertController actions with a data-carrying block (tag after the block header), SF Symbols, NSDatePicker/UIDatePicker via NSDateComponents.
 - Pocket Expenses: GTK and Chromium identical over 12 steps; checker 11/11.
 - Review round 2 (goal 4): the GTK items_changed refresh was a no-op (reviewer probe); fresh model + Bump-row proof on both hosts. Web alert → overlay + inert page. LISTROW needed unbind tracking tied to the item (old row 0 unbinds after the new one binds).
+
+## Goal 5: layout as a thin layer (2026-10-15)
+- Web: settings → CSS flexbox one-to-one; every relation held on the first run (border-box sizing).
+- GTK: CSS padding classes (one provider), size requests (they include padding: border-box holds), AdwClamp for max width, halign/valign + expand for align/fill/grow, invisible expanding spacers for justify. All relations held on the first measured run (gtk_widget_compute_bounds).
+- Looking at screenshots found three mapping gaps the relation checks didn't: web grow from content width wrapped the todo row (→ flex 1 1 0); web Scroll was a row (→ column); GTK fixed width is only a minimum (→ AdwClamp at the fixed width) and wrapping labels asked for minimal width (→ natural wrap mode none).
+- A GTK test window shown for a screenshot caught the owner's real keystrokes ("td" in the field) → test windows ignore real input.
+- Apple: NSStackView edge insets / UIStackView layout margins for padding, distribution equal-spacing for BETWEEN, flexible spacers for START/CENTER/END, hugging priority for grow, constraints for sizes/fill. Builds and signs; not run.

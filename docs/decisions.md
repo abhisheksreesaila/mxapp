@@ -57,3 +57,5 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 
 ## Goal 5: layout as a thin layer
 - D-47 · layout via flexbox-named settings mapped onto native layout, no engine of our own (owner's call, ROADMAP decision 10); sizes are border-box everywhere so numbers mean the same thing on every host · yes
+- D-48 · web: grow = flex 1 1 0 (not flex-grow from content width, which wrapped rows) and Scroll lays out like a VStack (fill stretches rows to its width), found by looking at the todo screenshot · yes
+- D-49 · GTK test windows ignore real input (can-focus/can-target off) and say they close by themselves · a screenshot showed keystrokes from the owner's desktop landing in a test window (they can corrupt a check and are disruptive) · yes

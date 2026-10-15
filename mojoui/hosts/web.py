@@ -73,7 +73,7 @@ input[type=range] { width: var(--control-width, 240px); min-height: 48px; accent
 progress { width: var(--control-width, 240px); height: 8px; accent-color: var(--accent); }
 hr { width: 280px; border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 img.image { max-width: 100%; height: auto; border-radius: 12px; image-rendering: auto; }
-.scroll { overflow-y: auto; width: 100%; display: flex; justify-content: center; }
+.scroll { overflow-y: auto; width: 100%; display: flex; flex-direction: column; align-items: center; }  /* like a VStack */
 .segmented, .tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: var(--surface); }
 .segmented label, .tabs label { position: relative; }
 .segmented input, .tabs input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
@@ -154,7 +154,7 @@ def render(s, i, sid):
     if n["max_w"]:
         css.append(f"max-width:{n['max_w']}px")
     if n["grows"]:
-        css.append("flex-grow:1;min-width:0")
+        css.append("flex:1 1 0;min-width:0")  # grow from zero, so a growing field never pushes its row onto two lines
     if n["fills"]:
         css.append("align-self:stretch")
     if n["align_items"] in ALIGN_CSS:

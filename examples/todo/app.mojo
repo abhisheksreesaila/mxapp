@@ -3,7 +3,7 @@
 
 from mojoui import (
     App, Event, View, VStack, HStack, Text, Button, TextField, Toggle, Dropdown, ProgressBar, Scroll,
-    TITLE, CAPTION, PROMINENT, DESTRUCTIVE,
+    TITLE, CAPTION, PROMINENT, DESTRUCTIVE, BETWEEN,
 )
 
 comptime DRAFT = 1  # typing in the field
@@ -77,7 +77,7 @@ struct Main(App):
                 done += 1
             if self.filter == ALL or (self.filter == ACTIVE and not t.done) or (self.filter == DONE and t.done):
                 rows.append(
-                    HStack(Toggle(t.title, t.done, on_toggle=TICK + t.id), Button("Remove", on_tap=REMOVE + t.id), spacing=12)
+                    HStack(Toggle(t.title, t.done, on_toggle=TICK + t.id).grow(), Button("Remove", on_tap=REMOVE + t.id), spacing=12).fill()
                 )
         if len(rows) == 0:
             rows.append(Text("Nothing here yet", style=CAPTION))
@@ -87,13 +87,15 @@ struct Main(App):
         return VStack(
             Text("Todo", style=TITLE),
             HStack(
-                TextField(self.draft, placeholder="What needs doing?", on_change=DRAFT, on_submit=ADD),
+                TextField(self.draft, placeholder="What needs doing?", on_change=DRAFT, on_submit=ADD).grow(),
                 Button("Add", on_tap=ADD, style=PROMINENT),
-            ),
-            HStack(Text("Show"), Dropdown(filters, self.filter, on_select=FILTER)),
-            Scroll(VStack(rows, spacing=8), height=260),
-            Text(String(left) + " left · " + String(done) + " done", style=CAPTION),
-            ProgressBar(percent),
-            Button("Clear done", on_tap=CLEAR_DONE, style=DESTRUCTIVE),
+            ).fill(),
+            HStack(Text("Show"), Dropdown(filters, self.filter, on_select=FILTER)).justify(BETWEEN).fill(),
+            Scroll(VStack(rows, spacing=8).fill(), height=260).fill(),
+            HStack(
+                Text(String(left) + " left · " + String(done) + " done", style=CAPTION),
+                Button("Clear done", on_tap=CLEAR_DONE, style=DESTRUCTIVE),
+            ).justify(BETWEEN).fill(),
+            ProgressBar(percent).fill(),
             spacing=16,
-        )
+        ).padding(8).width(340)

@@ -310,10 +310,13 @@ struct GtkHost[A: App](Movable):
         var want_w = max(node.w, node.min_w)
         if want_w != 0 or node.h != 0:
             external_call["gtk_widget_set_size_request", NoneType](w, c_int(want_w if want_w != 0 else -1), c_int(node.h if node.h != 0 else -1))
-        if node.max_w != 0:  # AdwClamp: never wider than max_w (text inside wraps)
+        # GTK size requests are minimums; AdwClamp caps the width: at max_w, or exactly at a
+        # fixed width (so a fixed-width view never grows past it, as on the other hosts).
+        var cap = node.max_w if node.max_w != 0 else node.w
+        if cap != 0:
             var clamp = external_call["adw_clamp_new", Int]()
-            external_call["adw_clamp_set_maximum_size", NoneType](clamp, c_int(node.max_w))
-            external_call["adw_clamp_set_tightening_threshold", NoneType](clamp, c_int(node.max_w))
+            external_call["adw_clamp_set_maximum_size", NoneType](clamp, c_int(cap))
+            external_call["adw_clamp_set_tightening_threshold", NoneType](clamp, c_int(cap))
             external_call["adw_clamp_set_child", NoneType](clamp, w)
             return clamp
         return w
@@ -347,6 +350,7 @@ struct GtkHost[A: App](Movable):
             var t = node.text
             w = external_call["gtk_label_new", Int](t.as_c_string_span())
             external_call["gtk_label_set_wrap", NoneType](w, c_int(1))
+            external_call["gtk_label_set_natural_wrap_mode", NoneType](w, c_int(1))  # prefer one line; wrap only when squeezed
             external_call["gtk_label_set_justify", NoneType](w, c_int(2))  # centre
             if node.style == TITLE:
                 add_class(w, "title-1")
@@ -1111,6 +1115,13 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     host[].show(host_addr)
     var steps = getenv("MOJOUI_TEST")
     var shot = getenv("MOJOUI_SHOT")
+    if steps != "":
+        # Test windows ignore the real keyboard and mouse: the checks drive the widgets
+        # themselves, and someone working at the desktop mustn't type into them by accident.
+        external_call["gtk_widget_set_can_focus", NoneType](host[].window, c_int(0))
+        external_call["gtk_widget_set_can_target", NoneType](host[].window, c_int(0))
+        var title = String("mojoui test window (closes by itself)")
+        external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
     if steps == "" or shot != "":
         external_call["gtk_window_present", NoneType](host[].window)
     if steps != "":

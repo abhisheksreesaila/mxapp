@@ -86,6 +86,31 @@ On the web, the Mojo app runs on the server inside Python (FastHTML), compiled a
 
 See them in `examples/gallery/app.mojo` and `examples/kitchen/app.mojo`.
 
+## Layout
+
+Chain layout settings onto any view. They use flexbox names, and each platform's **own** layout system does the work: GtkBox (plus CSS padding) on Linux, CSS flexbox on the web, and NSStackView/UIStackView with Auto Layout on Apple. There's no layout engine in between, just a thin translation.
+
+```mojo
+HStack(
+    Text("Total").grow(),                   # takes the free space in the row
+    Text(money(total)),
+    Button("Pay", on_tap=PAY).width(120),   # fixed width
+).justify(BETWEEN).padding(12, 16).fill()   # spread out, padded, full width of its column
+```
+
+| Setting | Meaning | Flexbox equivalent |
+|---|---|---|
+| `.padding(all)`, `.padding(vertical, horizontal)` | space inside the view's edges | `padding` |
+| `.width(n)`, `.height(n)` | fixed size, including padding | `width`, `height` (border-box) |
+| `.min_width(n)`, `.max_width(n)` | size limits; text wraps within a max width | `min-width`, `max-width` |
+| `.grow()` | take the free space along the parent stack | `flex: 1` |
+| `.fill()` | stretch across the parent stack | `align-self: stretch` |
+| `.align(START\|CENTER\|END\|STRETCH)` | on a stack: line children up across it | `align-items` |
+| `.justify(START\|CENTER\|END\|BETWEEN)` | on a stack: place children along it | `justify-content` |
+| `.tag(name)` | name a view, for tests and accessibility | `data-tag` |
+
+Stacks centre their children unless you say otherwise. Every setting is proven by measuring the real widgets on GTK and in Chromium (`examples/layout/app.mojo`, checked by `scripts/check`). Layout isn't pixel-identical across platforms, because fonts and control sizes differ, but the relations are the same: offsets, fixed sizes, who takes the free space.
+
 ## Examples
 - `examples/hello/app.mojo`: the smallest app.
 - `examples/gallery/app.mojo`: every component, wired to some state.

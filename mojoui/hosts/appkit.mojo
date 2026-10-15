@@ -13,6 +13,7 @@ from std.memory.alloc import alloc, Layout
 from mojoui.view import (
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
+    START, CENTER, END, STRETCH, BETWEEN, Node,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
@@ -230,14 +231,72 @@ struct AppKitHost[A: App](Movable):
             constrain(w, "widthAnchor", Float64(320))
         else:
             w = new("NSStackView")
-            _ = msg(w, "setOrientation:", 1 if node.kind == VSTACK else 0)
-            _ = msg(w, "setAlignment:", 9 if node.kind == VSTACK else 10)  # NSLayoutAttributeCenterX / CenterY
+            var vertical = node.kind == VSTACK
+            _ = msg(w, "setOrientation:", 1 if vertical else 0)
+            # align → NSStackView alignment (NSLayoutAttribute); STRETCH = per-child constraints below
+            var align = 9 if vertical else 10  # centre X / centre Y
+            if node.align_items == START:
+                align = 5 if vertical else 3  # leading / top
+            elif node.align_items == END:
+                align = 6 if vertical else 4  # trailing / bottom
+            _ = msg(w, "setAlignment:", align)
             _ = msg(w, "setSpacing:", Float64(node.spacing))
+            if node.pad_v != 0 or node.pad_h != 0:  # padding = the stack's own edge insets
+                _ = msg(w, "setEdgeInsets:", Float64(node.pad_v), Float64(node.pad_h), Float64(node.pad_v), Float64(node.pad_h))
+            # justify → distribution (BETWEEN) or flexible spacers (START, CENTER, END), all native
+            var grows = False
             for c in node.children:
-                _ = msg(w, "addArrangedSubview:", self.build(c, self_addr))
+                grows = grows or self.rt.shown.nodes[c].grows
+            if node.justify_items == BETWEEN:
+                _ = msg(w, "setDistribution:", 3)  # NSStackViewDistributionEqualSpacing
+            elif grows or node.justify_items != 0:
+                _ = msg(w, "setDistribution:", 0)  # fill: the lowest-hugging view takes the free space
+            var lead = 0
+            if node.justify_items == CENTER or node.justify_items == END:
+                lead = flexible_spacer(vertical)
+                _ = msg(w, "addArrangedSubview:", lead)
+            for c in node.children:
+                var child = self.build(c, self_addr)
+                _ = msg(w, "addArrangedSubview:", child)
+                ref cn = self.rt.shown.nodes[c]
+                if cn.grows:  # flex-grow: lowest hugging priority along the stack
+                    _ = msg(child, "setContentHuggingPriority:forOrientation:", Float32(1), 1 if vertical else 0)
+                if cn.fills or node.align_items == STRETCH:  # stretch across: match the stack minus its insets
+                    var side = "widthAnchor" if vertical else "heightAnchor"
+                    var inset = Float64(2 * (node.pad_h if vertical else node.pad_v))
+                    var c2 = msg(msg(child, side), "constraintEqualToAnchor:constant:", msg(w, side), -inset)
+                    _ = msg(c2, "setActive:", 1)
+            if node.justify_items == CENTER:
+                var trail = flexible_spacer(vertical)
+                _ = msg(w, "addArrangedSubview:", trail)
+                var side = "heightAnchor" if vertical else "widthAnchor"
+                _ = msg(msg(msg(trail, side), "constraintEqualToAnchor:", msg(lead, side)), "setActive:", 1)
+            elif node.justify_items == START and not grows:
+                _ = msg(w, "addArrangedSubview:", flexible_spacer(vertical))
         if self.widgets[i] == 0:  # (some branches already stored an inner control)
             self.widgets[i] = w
-        return w
+        return self.apply_layout(i, w)
+
+    def apply_layout(self, i: Int, w: Int) -> Int:
+        """Maps node i's own sizes (and, for non-stacks, padding) onto Auto Layout; returns what goes in the parent."""
+        ref node = self.rt.shown.nodes[i]
+        var outer = w
+        var is_stack = node.kind == VSTACK or node.kind == HSTACK
+        if (node.pad_v != 0 or node.pad_h != 0) and not is_stack:  # wrap a leaf in a padded stack
+            outer = new("NSStackView")
+            _ = msg(outer, "setEdgeInsets:", Float64(node.pad_v), Float64(node.pad_h), Float64(node.pad_v), Float64(node.pad_h))
+            _ = msg(outer, "addArrangedSubview:", w)
+        if node.w != 0:
+            _ = msg(msg(msg(outer, "widthAnchor"), "constraintEqualToConstant:", Float64(node.w)), "setActive:", 1)
+        if node.h != 0:
+            _ = msg(msg(msg(outer, "heightAnchor"), "constraintEqualToConstant:", Float64(node.h)), "setActive:", 1)
+        if node.min_w != 0:
+            _ = msg(msg(msg(outer, "widthAnchor"), "constraintGreaterThanOrEqualToConstant:", Float64(node.min_w)), "setActive:", 1)
+        if node.max_w != 0:
+            _ = msg(msg(msg(outer, "widthAnchor"), "constraintLessThanOrEqualToConstant:", Float64(node.max_w)), "setActive:", 1)
+            if node.kind == TEXT:
+                _ = msg(w, "setPreferredMaxLayoutWidth:", Float64(node.max_w - 2 * node.pad_h))  # wrap within it
+        return outer
 
     def show(mut self, self_addr: Int):
         # Old controls are deliberately never released: that keeps a control alive
@@ -316,6 +375,13 @@ struct AppKitHost[A: App](Movable):
         self.focus = node if n.kind == FIELD else -1
         var d = self.rt.dispatch(Event(message, text, number))
         self.apply(d, self_addr)
+
+
+def flexible_spacer(vertical: Bool) -> Int:
+    """An empty view that soaks up free space along a stack (for justify)."""
+    var v = new("NSView")
+    _ = msg(v, "setContentHuggingPriority:forOrientation:", Float32(1), 1 if vertical else 0)
+    return v
 
 
 def ns_image(pixels: List[UInt32], width: Int, height: Int) -> Int:

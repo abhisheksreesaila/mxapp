@@ -14,6 +14,7 @@ from std.memory.alloc import alloc, Layout
 from mojoui.view import (
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
+    START, CENTER, END, STRETCH, BETWEEN, Node,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
@@ -245,14 +246,72 @@ struct UIKitHost[A: App](Movable):
             shown = w
         else:
             w = new("UIStackView")
-            _ = msg(w, "setAxis:", 1 if node.kind == VSTACK else 0)
-            _ = msg(w, "setAlignment:", 3)  # centre
+            var vertical = node.kind == VSTACK
+            _ = msg(w, "setAxis:", 1 if vertical else 0)
+            # align → UIStackView alignment: fill 0, leading/top 1, centre 3, trailing/bottom 4
+            var align = 3
+            if node.align_items == START:
+                align = 1
+            elif node.align_items == END:
+                align = 4
+            elif node.align_items == STRETCH:
+                align = 0
+            _ = msg(w, "setAlignment:", align)
             _ = msg(w, "setSpacing:", Float64(node.spacing))
+            if node.pad_v != 0 or node.pad_h != 0:  # padding = the stack's own layout margins
+                _ = msg(w, "setLayoutMargins:", Float64(node.pad_v), Float64(node.pad_h), Float64(node.pad_v), Float64(node.pad_h))
+                _ = msg(w, "setLayoutMarginsRelativeArrangement:", 1)
+            var grows = False
             for c in node.children:
-                _ = msg(w, "addArrangedSubview:", self.build(c, self_addr))
+                grows = grows or self.rt.shown.nodes[c].grows
+            if node.justify_items == BETWEEN:
+                _ = msg(w, "setDistribution:", 3)  # UIStackViewDistributionEqualSpacing
+            else:
+                _ = msg(w, "setDistribution:", 0)  # fill: the lowest-hugging view takes the free space
+            var lead = 0
+            if node.justify_items == CENTER or node.justify_items == END:
+                lead = flexible_spacer(vertical)
+                _ = msg(w, "addArrangedSubview:", lead)
+            for c in node.children:
+                var child = self.build(c, self_addr)
+                _ = msg(w, "addArrangedSubview:", child)
+                ref cn = self.rt.shown.nodes[c]
+                if cn.grows:  # flex-grow: lowest hugging priority along the stack
+                    _ = msg(child, "setContentHuggingPriority:forAxis:", Float32(1), 1 if vertical else 0)
+                if cn.fills and node.align_items != STRETCH:  # stretch across: match the stack's margins
+                    var side = "widthAnchor" if vertical else "heightAnchor"
+                    var guide = msg(w, "layoutMarginsGuide")
+                    _ = msg(msg(msg(child, side), "constraintEqualToAnchor:", msg(guide, side)), "setActive:", 1)
+            if node.justify_items == CENTER:
+                var trail = flexible_spacer(vertical)
+                _ = msg(w, "addArrangedSubview:", trail)
+                var side = "heightAnchor" if vertical else "widthAnchor"
+                _ = msg(msg(msg(trail, side), "constraintEqualToAnchor:", msg(lead, side)), "setActive:", 1)
+            elif node.justify_items == START and not grows:
+                _ = msg(w, "addArrangedSubview:", flexible_spacer(vertical))
             shown = w
         self.widgets[i] = w
-        return shown
+        return self.apply_layout(i, shown)
+
+    def apply_layout(self, i: Int, shown: Int) -> Int:
+        """Maps node i's own sizes (and, for non-stacks, padding) onto Auto Layout; returns what goes in the parent."""
+        ref node = self.rt.shown.nodes[i]
+        var outer = shown
+        var is_stack = node.kind == VSTACK or node.kind == HSTACK
+        if (node.pad_v != 0 or node.pad_h != 0) and not is_stack:  # wrap a leaf in a padded stack
+            outer = new("UIStackView")
+            _ = msg(outer, "setLayoutMargins:", Float64(node.pad_v), Float64(node.pad_h), Float64(node.pad_v), Float64(node.pad_h))
+            _ = msg(outer, "setLayoutMarginsRelativeArrangement:", 1)
+            _ = msg(outer, "addArrangedSubview:", shown)
+        if node.w != 0:
+            _ = msg(msg(msg(outer, "widthAnchor"), "constraintEqualToConstant:", Float64(node.w)), "setActive:", 1)
+        if node.h != 0:
+            _ = msg(msg(msg(outer, "heightAnchor"), "constraintEqualToConstant:", Float64(node.h)), "setActive:", 1)
+        if node.min_w != 0:
+            _ = msg(msg(msg(outer, "widthAnchor"), "constraintGreaterThanOrEqualToConstant:", Float64(node.min_w)), "setActive:", 1)
+        if node.max_w != 0:
+            _ = msg(msg(msg(outer, "widthAnchor"), "constraintLessThanOrEqualToConstant:", Float64(node.max_w)), "setActive:", 1)
+        return outer
 
     def show(mut self, self_addr: Int):
         # Old controls are deliberately never released: that keeps a control alive
@@ -348,6 +407,13 @@ def ui_image(pixels: List[UInt32], width: Int, height: Int) -> Int:
 def is_alert(controller: Int) -> Bool:
     """Whether a presented view controller is an alert (not, say, the date picker's calendar)."""
     return controller != 0 and msg[Int8](controller, "isKindOfClass:", cls("UIAlertController")) != 0
+
+
+def flexible_spacer(vertical: Bool) -> Int:
+    """An empty view that soaks up free space along a stack (for justify)."""
+    var v = new("UIView")
+    _ = msg(v, "setContentHuggingPriority:forAxis:", Float32(1), 1 if vertical else 0)
+    return v
 
 
 def radio_button(title: String, selected: Bool) -> Int:

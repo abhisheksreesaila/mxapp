@@ -6,7 +6,9 @@
 from mojoui import (
     App, Event, View, VStack, HStack, Text, Button, TextField, TextArea, Segmented, DatePicker, Tabs, NavBar,
     LazyList, Alert, Icon, Grid, ProgressBar, Divider, TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
+    START, BETWEEN,
 )
+comptime WIDTH = 320  # the content column (fits an iPhone SE)
 
 comptime TAB = 1
 comptime AMOUNT = 2
@@ -205,29 +207,32 @@ struct Main(App):
                 if self.confirming:
                     var buttons: List[String] = ["Cancel", "Delete"]
                     parts.append(Alert("Delete this expense?", money(e.cents) + " · " + cats[e.category], buttons, on_choose=CONFIRM))
-                return VStack(parts, spacing=16)
+                return VStack(parts, spacing=16).padding(16).width(WIDTH)
         var sections: List[String] = ["Add", "History", "Insights"]
         var body: View
         if self.tab == 0:
             body = VStack(
-                TextField(self.amount, placeholder="Amount", on_change=AMOUNT, on_submit=ADD),
-                Segmented(cats, self.category, on_select=CATEGORY),
+                TextField(self.amount, placeholder="Amount", on_change=AMOUNT, on_submit=ADD).fill(),
+                Segmented(cats, self.category, on_select=CATEGORY).fill(),
                 DatePicker(self.date, on_change=DATE_SET),
-                TextArea(self.note, placeholder="Note", on_change=NOTE, height=90),
-                Button("Add expense", on_tap=ADD, style=PROMINENT),
+                TextArea(self.note, placeholder="Note", on_change=NOTE, height=90).fill(),
+                Button("Add expense", on_tap=ADD, style=PROMINENT).fill(),
                 Text(self.status, style=CAPTION),
                 spacing=14,
-            )
+            ).width(WIDTH)
         elif self.tab == 1:
             var latest = String("No expenses yet")
             if len(self.expenses) > 0:
                 latest = "Latest: " + self.row(HISTORY, 0)
             body = VStack(
-                Text(latest, style=CAPTION),
-                LazyList(len(self.expenses), HISTORY, on_tap=OPEN, height=380),
-                Text(String(len(self.expenses)) + " expenses · tap one for details", style=CAPTION),
+                Text(latest, style=CAPTION).max_width(WIDTH),
+                LazyList(len(self.expenses), HISTORY, on_tap=OPEN, height=380).fill(),
+                HStack(
+                    Text(String(len(self.expenses)) + " expenses", style=CAPTION),
+                    Text("tap one for details", style=CAPTION),
+                ).justify(BETWEEN).fill(),
                 spacing=10,
-            )
+            ).width(WIDTH)
         else:
             var totals = List[Int](length=4, fill=0)
             var all = 0
@@ -242,13 +247,14 @@ struct Main(App):
                 cards.append(VStack(Icon(category_icon(c), size=28), Text(cats[c], style=HEADLINE), Text(money(totals[c]), style=CAPTION), spacing=6))
             var share = 0 if all == 0 else totals[biggest] * 100 // all
             body = VStack(
-                Grid(cards, 2, spacing=20),
+                Grid(cards, 2, spacing=20).fill(),
                 Divider(),
-                Text("Total: " + money(all) + " across " + String(len(self.expenses)) + " expenses", style=HEADLINE),
-                Text("Biggest: " + cats[biggest] + " (" + String(share) + "%)", style=CAPTION),
-                ProgressBar(share),
+                HStack(Text("Total", style=HEADLINE), Text(money(all), style=HEADLINE)).justify(BETWEEN).fill().padding(4, 0),
+                Text("Total: " + money(all) + " across " + String(len(self.expenses)) + " expenses", style=CAPTION),
+                HStack(Text("Biggest: " + cats[biggest], style=CAPTION), Text(String(share) + "%", style=CAPTION)).justify(BETWEEN).fill(),
+                ProgressBar(share).fill(),
                 spacing=14,
-            )
+            ).width(WIDTH)
         return VStack(
             Text("Pocket Expenses", style=TITLE),
             Tabs(sections, self.tab, on_select=TAB),
