@@ -156,7 +156,7 @@ def m6():
         background = max(set(pixels), key=pixels.count)
         painted = sum(1 for p in pixels if sum(abs(a - b) for a, b in zip(p, background)) > 30) / len(pixels)
         colours = len(set(pixels))
-        if painted < 0.25 or colours < 20:
+        if painted < 0.15 or colours < 20:  # (a blank canvas is ~0% painted; the lens ~26%)
             problems.append(f"canvas looks blank ({painted:.0%} painted, {colours} colours)")
     except Exception as e:
         problems.append(f"screenshot unreadable: {e!r}")

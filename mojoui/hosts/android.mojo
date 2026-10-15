@@ -394,8 +394,11 @@ struct AndroidHost[A: App](Movable):
         var root = self.build(0)
         var full = self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills
         if full:  # the screen fills the window
-            _ = self.jni.call(root, "android/view/View", "setFitsSystemWindows", "(Z)V", [1])  # clear of the system bars
-            _ = self.jni.call(self.activity, "android/app/Activity", "setContentView", "(Landroid/view/View;)V", [root])
+            var frame = self.view_of("android/widget/FrameLayout")  # takes the system bars' insets (as padding),
+            _ = self.jni.call(frame, "android/view/View", "setFitsSystemWindows", "(Z)V", [1])  # keeping the root's own padding
+            _ = self.jni.call(frame, "android/view/ViewGroup", "addView", "(Landroid/view/View;)V", [root])
+            _ = self.jni.call(self.activity, "android/app/Activity", "setContentView", "(Landroid/view/View;)V", [frame])
+            self.jni.drop(frame)
         else:  # centred, scrolling if taller than the screen
             # (Flexible space above and below centres it when it fits and shrinks to nothing
             # when it doesn't; centring by gravity would push its top off screen, unscrollable.)
@@ -567,6 +570,8 @@ struct AndroidHost[A: App](Movable):
             self.jni.forget(self.canvases[k].bitmap)
             var config = self.jni.static_object("android/graphics/Bitmap$Config", "ARGB_8888", "Landroid/graphics/Bitmap$Config;")
             var bm = self.jni.static_call("android/graphics/Bitmap", "createBitmap", "(IILandroid/graphics/Bitmap$Config;)Landroid/graphics/Bitmap;", [wpx, hpx, config])
+            # (Views only draw premultiplied bitmaps: translucent canvas pixels show as if
+            # premultiplied. Opaque pictures, like the lens, are exact.)
             self.canvases[k].bitmap = self.jni.keep(bm)
             _ = self.jni.call(view, "android/widget/ImageView", "setImageBitmap", "(Landroid/graphics/Bitmap;)V", [bm])
             self.jni.drop(bm)
@@ -698,5 +703,7 @@ def android_destroy[A: App](env: Int, addr: Int):
         host[].jni.forget(c.view)
         host[].jni.forget(c.bitmap)
     host[].jni.forget(host[].activity)
+    for c in host[].jni.classes:
+        host[].jni.forget(c)
     host.unsafe_deinit_pointee()
     host.unsafe_free()

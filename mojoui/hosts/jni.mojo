@@ -71,9 +71,11 @@ def from_utf16(units: List[UInt16]) -> String:
     var i = 0
     while i < len(units):
         var v = Int(units[i])
-        if 0xD800 <= v < 0xDC00 and i + 1 < len(units):
+        if 0xD800 <= v < 0xDC00 and i + 1 < len(units) and 0xDC00 <= Int(units[i + 1]) < 0xE000:
             v = 0x10000 + ((v - 0xD800) << 10) + (Int(units[i + 1]) - 0xDC00)
             i += 1
+        elif 0xD800 <= v < 0xE000:
+            v = 0xFFFD  # a lone surrogate: the replacement character
         out += String(Codepoint(unsafe_unchecked_codepoint=UInt32(v)))
         i += 1
     return out^
