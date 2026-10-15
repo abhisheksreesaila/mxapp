@@ -40,6 +40,14 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
   if (k === 'date') return 'DATE: ' + e.value;
   if (k === 'icon') return 'ICON: ' + (e.querySelector('svg') ? e.dataset.icon : '?');
   if (k === 'grid') return 'GRID: ' + e.dataset.columns + ' columns, ' + e.children.length + ' items';
+  if (k === 'canvas') { const cv = e.querySelector('canvas'), r = e.getBoundingClientRect(), st = e.mojoui;
+    let colours = 0;
+    if (cv.width > 0) { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data, seen = new Set();
+      const step = Math.max(1, Math.floor(d.length / 4 / 20000));
+      for (let i = 0; i < d.length / 4; i += step) seen.add((d[4 * i] << 16) | (d[4 * i + 1] << 8) | d[4 * i + 2]);
+      colours = seen.size; }
+    return 'CANVAS: ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' pt ' + cv.width + 'x' + cv.height + ' px scale '
+      + (window.devicePixelRatio || 1).toFixed(1) + ' colours ' + colours + ' draws ' + (st ? st.count : 0); }
   if (k === 'list') { const r0 = e.querySelector('[data-row="0"]');
     return 'LIST: ' + e.querySelector('.rows').dataset.count + ' rows' + String.fromCharCode(10) + 'LISTROWS: ' + e.querySelectorAll('.row').length
       + (r0 ? String.fromCharCode(10) + 'LISTROW: ' + r0.textContent : ''); }
@@ -59,11 +67,21 @@ def exact(text):
     return re.compile("^" + re.escape(text) + "$")
 
 
+CANVASES_DRAWN = """() => [...document.querySelectorAll('[data-kind=canvas]')].every(div => {
+  const st = div.mojoui, m = document.getElementById('n' + div.dataset.node + '-meta');
+  if (!st || !m) return false;
+  if (m.dataset.frames !== '0') return st.count > 0;  // playing: frames keep coming
+  return !st.busy && !st.sending && !st.updating && !st.again && !st.timer && st.queue.length === 0 && String(st.drawn) === m.dataset.version;
+})"""
+
+
 def settle(page):
-    """Wait for HTMX's delayed triggers to fire and its requests to finish."""
+    """Wait for HTMX's delayed triggers to fire and its requests to finish, and for every
+    canvas to show its current version."""
     page.wait_for_timeout(250)
     page.wait_for_function("() => !document.querySelector('.htmx-request')", timeout=10000)
     page.wait_for_function("() => [...document.images].every(i => i.complete)", timeout=10000)
+    page.wait_for_function(CANVASES_DRAWN, timeout=20000)
     page.wait_for_timeout(50)
 
 
@@ -110,6 +128,30 @@ def step(page, s):
     elif verb == "row":
         k, _, row = rest.partition("=")
         page.locator("[data-kind=list]").nth(int(k)).locator(f'[data-row="{int(row)}"]').click()
+    elif verb in ("drag", "zoom", "frames"):  # canvas steps: real mouse input on the canvas
+        k, _, arg = rest.partition("=")
+        canvas = page.locator("[data-kind=canvas]").nth(int(k))
+        box = canvas.bounding_box()
+        cx, cy = round(box["x"] + box["width"] / 2), round(box["y"] + box["height"] / 2)
+        if verb == "drag":
+            dx, dy = (int(v) for v in arg.split(","))
+            page.mouse.move(cx, cy)
+            page.mouse.down()
+            page.mouse.move(cx + dx / 2, cy + dy / 2)
+            page.mouse.move(cx + dx, cy + dy)
+            page.mouse.up()
+        elif verb == "zoom":
+            import math
+            page.mouse.move(cx, cy)
+            page.mouse.wheel(0, -400 * math.log2(float(arg)))  # 4 notches of 100 = 2×
+        else:
+            n = int(arg)
+            # Steady state: skip 10 warm-up frames (the first pull waits for the Play event's round trip).
+            start = canvas.evaluate("e => e.mojoui.count") + 10
+            canvas.evaluate("(e, want) => new Promise(ok => { const t = setInterval(() => { if (e.mojoui.count >= want) { clearInterval(t); ok(); } }, 20); })",
+                            start + n + 1)
+            ms = canvas.evaluate("(e, a) => e.mojoui.times[a[1]] - e.mojoui.times[a[0]]", [start, start + n])
+            return f"FRAMES: {n} in {ms:.1f} ms = {n / (ms / 1000):.1f} fps, draws {n}"
     elif verb == "slide":
         k, _, value = rest.partition("=")
         page.locator("input[data-kind=slider]").nth(int(k)).fill(value)
@@ -129,7 +171,7 @@ def web_run(module_dir, steps, shot=None):
     try:
         for _ in range(100):
             try:
-                urllib.request.urlopen(url, timeout=1)
+                urllib.request.urlopen(url + "static/htmx.min.js", timeout=1)  # cheap: "/" starts an app session
                 break
             except OSError:
                 if server.poll() is not None:
@@ -142,9 +184,12 @@ def web_run(module_dir, steps, shot=None):
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.goto(url)
             settle(page)
+            extra = ""
             for s in [s for s in steps.split(";") if s]:
-                step(page, s)
-            out = "NATIVE: Chromium " + browser.version + "\n" + page.evaluate(DUMP) + "\n"
+                line = step(page, s)
+                if line:
+                    extra += line + "\n"
+            out = "NATIVE: Chromium " + browser.version + "\n" + extra + page.evaluate(DUMP) + "\n"
             if shot:
                 page.screenshot(path=shot, full_page=True)
                 out += f"SHOT: {shot}\n"

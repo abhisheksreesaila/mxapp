@@ -5,7 +5,7 @@ from std.python import PythonObject
 from std.python.bindings import PythonModuleBuilder
 
 from app import Main
-from mojoui.hosts.web import web_new, web_title, web_view, web_event, web_image, web_rows, web_close
+from mojoui.hosts.web import web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame
 
 
 @export
@@ -19,6 +19,9 @@ def PyInit_mojoui_app() abi("C") -> PythonObject:
         m.def_function[image]("image", docstring="'address width height' of an image node's RGBA pixels.")
         m.def_function[rows]("rows", docstring="JSON list of a LazyList's row texts (node, first, count).")
         m.def_function[close]("close", docstring="End a session.")
+        m.def_function[draw]("draw", docstring="Paint a canvas (node, width, height, scale); JSON with the pixels' address and what changed.")
+        m.def_function[gesture]("gesture", docstring="A canvas gesture (node, kind, x, y, dx, dy, zoom); returns what changed as JSON.")
+        m.def_function[frame]("frame", docstring="A display frame for a canvas (node, microseconds); returns what changed as JSON.")
         return m.finalize()
     except e:
         abort(String("mojoui: couldn't create the Python module: ", e))
@@ -51,3 +54,15 @@ def image(handle: PythonObject, node: PythonObject) raises -> PythonObject:
 def close(handle: PythonObject) raises -> PythonObject:
     web_close[Main](Int(py=handle))
     return PythonObject(None)
+
+
+def draw(handle: PythonObject, node: PythonObject, width: PythonObject, height: PythonObject, scale: PythonObject) raises -> PythonObject:
+    return PythonObject(web_draw[Main](Int(py=handle), Int(py=node), Int(py=width), Int(py=height), Float64(py=scale)))
+
+
+def gesture(handle: PythonObject, node: PythonObject, kind: PythonObject, x: PythonObject, y: PythonObject, dx: PythonObject, dy: PythonObject, zoom: PythonObject) raises -> PythonObject:
+    return PythonObject(web_gesture[Main](Int(py=handle), Int(py=node), Int(py=kind), Float64(py=x), Float64(py=y), Float64(py=dx), Float64(py=dy), Float64(py=zoom)))
+
+
+def frame(handle: PythonObject, node: PythonObject, microseconds: PythonObject) raises -> PythonObject:
+    return PythonObject(web_frame[Main](Int(py=handle), Int(py=node), Int(py=microseconds)))

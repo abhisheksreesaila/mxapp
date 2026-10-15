@@ -5,14 +5,18 @@ The app itself is Mojo, compiled as a Python module (`mojoui_app`, built by
 its screen (JSON nodes) into plain HTML controls and sends browser events back.
 Every control is standard HTML (input, select, range, progress, img), so the
 browser draws its own native widgets; HTMX (vendored in static/, pinned 2.0.7)
-posts events, with no custom JavaScript.
+posts events. The one piece of JavaScript is CANVAS_JS below, a fixed adapter for
+Canvas views: it streams the frames the Mojo app paints (JPEG, pulled one at a time,
+so a slow link just gets fewer frames) and sends pointer gestures back as events.
 
 Run: pixi run python mojoui/hosts/web.py build/hello/web [port]
 """
 
 import ctypes
 import importlib
+import io
 import json
+import time
 import struct
 import sys
 import threading
@@ -22,17 +26,19 @@ from collections import OrderedDict
 from pathlib import Path
 
 from fasthtml.common import (
-    Button, Dialog, Div, FastHTML, Form, H1, H2, H3, Header, Hr, Img, Input, Label, Main, Meta, NotStr, Option, P,
-    Progress, Response, Script, Select, Span, Style, Textarea, Title,
+    Button, Canvas, Dialog, Div, FastHTML, Form, H1, H2, H3, Header, Hr, I, Img, Input, Label, Main, Meta, NotStr,
+    Option, P, Progress, Response, Script, Select, Span, Style, Textarea, Title,
 )
+from PIL import Image
 
 # Mirrors mojoui/view.mojo and mojoui/diff.mojo.
 (TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
- SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST) = range(1, 24)
+ SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS) = range(1, 25)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE = 0, 1, 2
-SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE = 1, 2, 3, 4
+SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES = 1, 2, 3, 4, 5
+JPEG_QUALITY = 85
 MAX_SESSIONS = 200  # oldest tabs are closed beyond this
 STATIC = Path(__file__).parent / "static"
 ICONS = {p.stem: p.read_text().split("-->", 1)[-1].strip() for p in (STATIC / "icons").glob("*.svg")}  # Lucide (ISC)
@@ -104,7 +110,129 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .lazylist .row { position: absolute; left: 0; right: 0; display: flex; align-items: center; padding: 0 14px; cursor: pointer;
                  border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lazylist .row:hover, .lazylist .row:focus-visible { background: var(--surface); }
+#mojoui-root.full { max-width: none; padding: 0; height: 100dvh; align-items: stretch; }
+#mojoui-root.full > div { flex: 1 1 0; min-width: 0; }
+.canvas { position: relative; min-width: 320px; min-height: 240px; overflow: hidden; background: #0a0a14; }
+.canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.canvas canvas:active { cursor: grabbing; }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
+"""
+
+
+CANVAS_JS = r"""
+// mojoui Canvas adapter (fixed, part of the web host; apps never contain JavaScript).
+// Frames: pulled one at a time from /frame (JPEG painted by the Mojo app at the canvas's
+// pixel size); pulled continuously while the canvas asks for frames, otherwise only when
+// its version or size changes. Gestures: drag = PAN, wheel/pinch = ZOOM, click = TAP,
+// sent through htmx like any other event, so the rest of the page updates as usual.
+(() => {
+  const PAN = 1, ZOOM = 2, TAP = 3;
+  const shape = () => document.getElementById('mojoui-v').value;
+  function attach(div) {
+    if (div.mojoui) return;
+    const cv = div.querySelector('canvas'), g = cv.getContext('2d');
+    const n = Number(div.dataset.node), sid = div.dataset.sid;
+    const st = div.mojoui = { want: true, busy: false, drawn: -1, count: 0, times: [], queue: [], sending: false, updating: false };
+    const meta = () => document.getElementById('n' + n + '-meta');
+    const playing = () => { const m = meta(); return !!m && m.dataset.frames !== '0'; };
+    async function pump() {
+      if (st.busy) return;
+      st.busy = true;
+      try {
+        while (div.isConnected && (st.want || playing())) {
+          const tick = playing() ? 1 : 0, m = meta();
+          if (tick) await new Promise(ok => requestAnimationFrame(ok));  // at most one frame per display refresh
+          const version = m ? m.dataset.version : '';
+          st.want = false;
+          const r = div.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+          const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+          const res = await fetch(`/frame/${sid}/${n}?w=${w}&h=${h}&scale=${dpr}&v=${shape()}&tick=${tick}`);
+          if (res.status !== 200) { if (res.status === 409) await new Promise(ok => setTimeout(ok, 50)); continue; }
+          const img = await createImageBitmap(await res.blob());
+          if (cv.width !== img.width || cv.height !== img.height) { cv.width = img.width; cv.height = img.height; }
+          g.drawImage(img, 0, 0);
+          st.drawn = version; st.count++; st.times.push(performance.now());
+          div.dataset.frame = `${st.count} ${cv.width}x${cv.height} ${r.width.toFixed(0)}x${r.height.toFixed(0)} ${dpr}`;
+          if (res.headers.get('X-Mojoui-Pending') === '1') update();
+          if (meta() && meta().dataset.version !== String(st.drawn)) st.want = true;
+        }
+      } finally { st.busy = false; }
+    }
+    // The rest of the screen (labels the app changed while drawing): fetched alongside the
+    // frames, at most ~10 times a second, and always once more after the last change.
+    function update() {
+      if (st.updating) { st.again = true; return; }
+      const wait = 100 - (performance.now() - (st.updated || 0));
+      if (wait > 0) { st.again = true; if (!st.timer) st.timer = setTimeout(() => { st.timer = 0; update(); }, wait); return; }
+      st.updating = true; st.again = false; st.updated = performance.now();
+      htmx.ajax('POST', `/pending/${sid}`, { values: { v: shape() }, swap: 'none', source: div })
+        .finally(() => { st.updating = false; if (st.again) update(); });
+    }
+    st.pump = pump;
+    function send(kind, x, y, dx, dy, zoom) {
+      const last = st.queue[st.queue.length - 1];
+      if (last && last.number === kind && kind === PAN) { last.dx += dx; last.dy += dy; last.x = x; last.y = y; }
+      else if (last && last.number === kind && kind === ZOOM) { last.zoom *= zoom; }
+      else st.queue.push({ n, number: kind, x, y, dx, dy, zoom });
+      flush();
+    }
+    async function flush() {
+      if (st.sending) return;
+      st.sending = true;
+      try {
+        while (st.queue.length) {
+          const e = st.queue.shift();
+          await htmx.ajax('POST', `/e/${sid}`, { values: { ...e, v: shape() }, swap: 'none', source: div });
+          st.want = true; pump();
+        }
+      } finally { st.sending = false; }
+    }
+    const pointers = new Map();
+    let moved = false, spread = 0;
+    const at = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    const distance = () => { const [a, b] = [...pointers.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+    cv.addEventListener('pointerdown', e => {
+      cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, at(e));
+      if (pointers.size === 1) moved = false;
+      if (pointers.size === 2) spread = distance();
+    });
+    cv.addEventListener('pointermove', e => {
+      if (!pointers.has(e.pointerId)) return;
+      const [x, y] = at(e), [px, py] = pointers.get(e.pointerId);
+      pointers.set(e.pointerId, [x, y]);
+      if (pointers.size === 1) {
+        if (Math.abs(x - px) + Math.abs(y - py) > 0) { if (Math.abs(x - px) + Math.abs(y - py) > 3) moved = true; send(PAN, x, y, x - px, y - py, 1); }
+      } else if (pointers.size === 2) {
+        const d = distance(), [a, b] = [...pointers.values()];
+        if (spread > 0 && d > 0) send(ZOOM, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0, 0, d / spread);
+        spread = d; moved = true;
+      }
+    });
+    const up = e => {
+      if (!pointers.has(e.pointerId)) return;
+      const [x, y] = at(e);
+      pointers.delete(e.pointerId);
+      if (pointers.size === 0 && !moved && e.type === 'pointerup') send(TAP, x, y, 0, 0, 1);
+    };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      const [x, y] = at(e), dy = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY;
+      send(ZOOM, x, y, 0, 0, Math.pow(2, -dy / 400));  // 4 notches of 100 = 2×
+    }, { passive: false });
+    new ResizeObserver(() => { st.want = true; pump(); }).observe(div);
+    pump();
+  }
+  const scan = () => document.querySelectorAll('[data-kind=canvas]').forEach(attach);
+  document.addEventListener('DOMContentLoaded', scan);
+  document.addEventListener('htmx:afterSettle', () => {
+    scan();
+    document.querySelectorAll('[data-kind=canvas]').forEach(div => {
+      const st = div.mojoui, m = document.getElementById('n' + div.dataset.node + '-meta');
+      if (st && m && (m.dataset.version !== String(st.drawn) || m.dataset.frames !== '0')) { st.want = true; st.pump(); }
+    });
+  });
+})();
 """
 
 
@@ -130,6 +258,8 @@ class Session:
         self.lock = threading.Lock()
         self.closed = False  # set (under lock) when the tab is evicted; its Mojo handle is gone
         self.list_top = {}  # LazyList node → last scroll position, to re-send its visible rows
+        self.pending = None  # screen changes made while drawing canvases, not yet sent (a diff)
+        self.frame_time = {}  # canvas node → time of its last frame event
 
 
 ALIGN_CSS = {1: "flex-start", 2: "center", 3: "flex-end", 4: "stretch"}  # START, CENTER, END, STRETCH
@@ -248,6 +378,8 @@ def render_node(s, i, sid):
                    hx_post=f"/rows/{sid}/{i}", hx_trigger="scroll throttle:60ms, scroll delay:150ms",
                    hx_target=f"#rows{i}", hx_swap="outerHTML", hx_sync="this:replace",
                    hx_vals="js:{top: event.target.scrollTop}", hx_include="#mojoui-v")
+    if kind == CANVAS:
+        return Div(Canvas(), canvas_meta(n, i), id=nid, cls="canvas", data_kind="canvas", data_node=str(i), data_sid=sid)
     if kind == DIVIDER:
         return Hr(id=nid)
     if kind == SPACER:
@@ -257,6 +389,12 @@ def render_node(s, i, sid):
         return Div(*kids, cls="scroll", id=nid, style=f"max-height:{n['size']}px")
     cls = "vstack" if kind == VSTACK else "hstack"
     return Div(*kids, cls=cls, id=nid, style=f"gap:{n['spacing']}px")
+
+
+def canvas_meta(n, i):
+    """What the canvas adapter needs to know (version, whether it wants frames), kept beside
+    the <canvas> so a patch can replace it without clearing the picture."""
+    return I(id=f"n{i}-meta", hidden=True, data_version=str(n["value"]), data_frames=str(n["msg2"]))
 
 
 def render_alert(s, i, sid):
@@ -304,7 +442,7 @@ def make_app(module_dir):
         # inherited their list's hx-target and silently sent nothing). Note: hx-vals is still
         # merged from ancestors even so, so elements set every key they rely on themselves.
         Meta(name="htmx-config", content='{"disableInheritance": true}'),
-        Script(src="/static/htmx.min.js"), Style(CSS)))
+        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS)))
     sessions = OrderedDict()  # sid → Session, oldest first
     sessions_lock = threading.Lock()
 
@@ -313,7 +451,8 @@ def make_app(module_dir):
         alerts = [i for i, n in enumerate(s.nodes) if n["kind"] == ALERT]
         # While an alert is up the page behind is inert (no clicks, no keyboard focus);
         # the alert lives in an overlay beside it.
-        page = Main(version, render(s, 0, sid), id="mojoui-root", inert=bool(alerts))
+        full = s.nodes[0]["grows"] or s.nodes[0]["fills"]  # the screen fills the window
+        page = Main(version, render(s, 0, sid), id="mojoui-root", cls="full" if full else None, inert=bool(alerts))
         layer = Div(*[render_alert(s, i, sid) for i in alerts], id="mojoui-overlay")
         if oob:
             page.attrs["hx-swap-oob"] = "true"
@@ -324,6 +463,10 @@ def make_app(module_dir):
     def htmx_js():
         return Response((STATIC / "htmx.min.js").read_bytes(), media_type="text/javascript",
                         headers={"Cache-Control": "public, max-age=86400"})
+
+    @app.get("/static/mojoui-canvas.js")
+    def canvas_js():
+        return Response(CANVAS_JS, media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
     @app.get("/")
     def index():
@@ -363,8 +506,60 @@ def make_app(module_dir):
             s.list_top[n] = max(top, 0)
             return rows_div(s, n, sid, s.list_top[n])
 
+    def changes(s, sid, d, n=-1, text="", number=0):
+        """What to send the page after a change: the whole screen on a rebuild, else the changed
+        controls (out-of-band swaps). Call with s.lock held, after s.nodes was refreshed."""
+        if d["rebuild"]:
+            s.shape += 1
+            s.images.clear()
+            s.list_top.clear()
+            source = s.nodes[n] if 0 <= n < len(s.nodes) else None
+            typing = (FIELD, TEXTAREA)
+            s.focus = n if source and source["kind"] in typing and s.nodes[n]["kind"] == source["kind"] else None
+            out = root(s, sid, oob=True)
+            s.focus = None
+            return out
+        changed = []
+        for p in d["patches"]:
+            i, op = p["node"], p["op"]
+            target = s.nodes[i]
+            if op == SET_IMAGE:
+                s.images[i] = s.images.get(i, 0) + 1
+            # Don't re-send the control in use if it already shows this (that would steal
+            # focus or interrupt a drag); other changes to it still go out.
+            echo = i == n and ((op == SET_TEXT and target["kind"] in (FIELD, TEXTAREA, DATE) and target["text"] == text)
+                               or (op == SET_VALUE and target["kind"] in (TOGGLE, SLIDER) + CHOICES
+                                   and target["value"] == number))
+            if (op != SET_MSG or target["kind"] == CANVAS) and not echo and i not in changed:
+                changed.append(i)
+        out = []
+        for i in changed:
+            if s.nodes[i]["kind"] == LAZYLIST:
+                continue  # refreshed below without resetting its scroll position
+            # A canvas keeps its <canvas> (and picture): only its version/frames note changes.
+            el = canvas_meta(s.nodes[i], i) if s.nodes[i]["kind"] == CANVAS else render(s, i, sid)
+            el.attrs["hx-swap-oob"] = "true"
+            out.append(el)
+        # Re-send the visible rows of every long list: row text isn't part of the view,
+        # so an edit that keeps the count wouldn't show otherwise.
+        for i, node in enumerate(s.nodes):
+            if node["kind"] == LAZYLIST:
+                el = rows_div(s, i, sid, s.list_top.get(i, 0))
+                el.attrs["hx-swap-oob"] = "true"
+                out.append(el)
+        return tuple(out) if out else ""
+
+    def merge(a, b):
+        """Two diffs one after the other, as one."""
+        if a is None:
+            return b
+        if a["rebuild"] or b["rebuild"]:
+            return {"rebuild": True}
+        return {"rebuild": False, "patches": a["patches"] + b["patches"]}
+
     @app.post("/e/{sid}")
-    def event(sid: str, n: int, v: int = -1, second: int = 0, text: str = "", number: int = 0, on: str = ""):
+    def event(sid: str, n: int, v: int = -1, second: int = 0, text: str = "", number: int = 0, on: str = "",
+              x: float = 0, y: float = 0, dx: float = 0, dy: float = 0, zoom: float = 1):
         s = sessions.get(sid)
         if s is None:
             return Main(P("This page expired: reload it.", cls="text caption"), id="mojoui-root", hx_swap_oob="true")
@@ -376,47 +571,62 @@ def make_app(module_dir):
             source = s.nodes[n]
             if source["kind"] == TOGGLE:
                 number = 1 if on else 0
-            d = json.loads(mod.event(s.handle, n, second, text, number))
+            if source["kind"] == CANVAS:
+                d = json.loads(mod.gesture(s.handle, n, number, x, y, dx, dy, zoom))
+            else:
+                d = json.loads(mod.event(s.handle, n, second, text, number))
             if d.get("ignored"):
                 return ""
             s.nodes = json.loads(mod.view(s.handle))  # the screen as Mojo now has it
-            if d["rebuild"]:
-                s.shape += 1
-                s.images.clear()
-                s.list_top.clear()
-                typing = (FIELD, TEXTAREA)
-                s.focus = n if source["kind"] in typing and n < len(s.nodes) and s.nodes[n]["kind"] == source["kind"] else None
-                out = root(s, sid, oob=True)
-                s.focus = None
-                return out
-            changed = []
-            for p in d["patches"]:
-                i, op = p["node"], p["op"]
-                target = s.nodes[i]
-                if op == SET_IMAGE:
-                    s.images[i] = s.images.get(i, 0) + 1
-                # Don't re-send the control in use if it already shows this (that would steal
-                # focus or interrupt a drag); other changes to it still go out.
-                echo = i == n and ((op == SET_TEXT and target["kind"] in (FIELD, TEXTAREA, DATE) and target["text"] == text)
-                                   or (op == SET_VALUE and target["kind"] in (TOGGLE, SLIDER) + CHOICES
-                                       and target["value"] == number))
-                if op != SET_MSG and not echo and i not in changed:
-                    changed.append(i)
-            out = []
-            for i in changed:
-                if s.nodes[i]["kind"] == LAZYLIST:
-                    continue  # refreshed below without resetting its scroll position
-                el = render(s, i, sid)
-                el.attrs["hx-swap-oob"] = "true"
-                out.append(el)
-            # Re-send the visible rows of every long list: row text isn't part of the view,
-            # so an edit that keeps the count wouldn't show otherwise.
-            for i, node in enumerate(s.nodes):
-                if node["kind"] == LAZYLIST:
-                    el = rows_div(s, i, sid, s.list_top.get(i, 0))
-                    el.attrs["hx-swap-oob"] = "true"
-                    out.append(el)
-            return tuple(out) if out else ""
+            return changes(s, sid, d, n, text, number)
+
+    @app.get("/frame/{sid}/{n}")
+    def frame(sid: str, n: int, w: int = 0, h: int = 0, scale: float = 1, v: int = -1, tick: int = 0):
+        """One canvas frame as a JPEG, painted by the app at w × h pixels. With tick=1 (the
+        canvas asked for frames), a frame event goes to the app first. Changes to the rest of
+        the screen wait in the session until the page asks for /pending."""
+        sess = sessions.get(sid)
+        if sess is None:
+            return Response(status_code=404)
+        with sess.lock:
+            if sess.closed:
+                return Response(status_code=404)
+            if v != sess.shape or not 0 <= n < len(sess.nodes) or sess.nodes[n]["kind"] != CANVAS:
+                return Response(status_code=409)  # the screen changed under it: the page will catch up
+            now = time.perf_counter()
+            if tick and sess.nodes[n]["msg2"]:
+                last = sess.frame_time.get(n)
+                us = int((now - last) * 1e6) if last else 16667
+                sess.frame_time[n] = now
+                sess.pending = merge(sess.pending, json.loads(mod.frame(sess.handle, n, us)))
+                sess.nodes = json.loads(mod.view(sess.handle))
+                if sess.pending.get("rebuild") or sess.nodes[n]["kind"] != CANVAS:
+                    return Response(status_code=409, headers={"X-Mojoui-Pending": "1"})
+            else:
+                sess.frame_time.pop(n, None)
+            r = json.loads(mod.draw(sess.handle, n, w, h, scale))
+            sess.pending = merge(sess.pending, r["diff"])
+            sess.nodes = json.loads(mod.view(sess.handle))
+            rgba = ctypes.string_at(r["address"], r["width"] * r["height"] * 4)
+            pending = bool(sess.pending and (sess.pending.get("rebuild") or sess.pending.get("patches")))
+        out = io.BytesIO()
+        Image.frombuffer("RGBA", (r["width"], r["height"]), rgba, "raw", "RGBA", 0, 1).convert("RGB").save(
+            out, "JPEG", quality=JPEG_QUALITY)
+        return Response(out.getvalue(), media_type="image/jpeg",
+                        headers={"Cache-Control": "no-store", "X-Mojoui-Pending": "1" if pending else "0",
+                                 "X-Mojoui-Draw-Ms": f"{(time.perf_counter() - now) * 1000:.2f}"})
+
+    @app.post("/pending/{sid}")
+    def pending(sid: str, v: int = -1):
+        """Screen changes made while drawing canvases (e.g. a frame-time label)."""
+        s = sessions.get(sid)
+        if s is None:
+            return ""
+        with s.lock:
+            if s.closed or s.pending is None:
+                return ""
+            d, s.pending = s.pending, None
+            return changes(s, sid, d)
 
     return app
 

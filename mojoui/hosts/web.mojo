@@ -9,6 +9,7 @@ from std.memory.alloc import alloc, Layout
 from mojoui.view import View, DROPDOWN, IMAGE, SEGMENTED, RADIO, TABS, ALERT, LAZYLIST
 from mojoui.diff import Diff
 from mojoui.app import App, Event, Runtime
+from mojoui.canvas import Surface
 
 
 def json_str(s: String) -> String:
@@ -71,15 +72,30 @@ def diff_to_json(d: Diff, shown: View) -> String:
     return out + "]}"
 
 
+struct WebSession[A: App](Movable):
+    """One browser tab: the app, plus the pixels of the canvas frame last drawn."""
+
+    var rt: Runtime[Self.A]
+    var pixels: List[UInt32]
+
+    def __init__(out self):
+        self.rt = Runtime(Self.A())
+        self.pixels = List[UInt32]()
+
+
+def tab_at[A: App](handle: Int) -> Pointer[WebSession[A], MutUntrackedOrigin]:
+    return Pointer[WebSession[A], MutUntrackedOrigin](unsafe_from_address=handle)
+
+
 def session_at[A: App](handle: Int) -> Pointer[Runtime[A], MutUntrackedOrigin]:
-    return Pointer[Runtime[A], MutUntrackedOrigin](unsafe_from_address=handle)
+    return Pointer(to=tab_at[A](handle)[].rt).unsafe_origin_cast[MutUntrackedOrigin]()
 
 
 def web_new[A: App]() -> Int:
     """Starts one app session (one browser tab) and returns its handle."""
-    var rt = alloc(Layout[Runtime[A]].single()).unsafe_leak()
-    rt.unsafe_write(Runtime(A()))
-    return Int(rt)
+    var tab = alloc(Layout[WebSession[A]].single()).unsafe_leak()
+    tab.unsafe_write(WebSession[A]())
+    return Int(tab)
 
 
 def web_title[A: App](handle: Int) -> String:
@@ -88,6 +104,33 @@ def web_title[A: App](handle: Int) -> String:
 
 def web_view[A: App](handle: Int) -> String:
     return view_to_json(session_at[A](handle)[].shown)
+
+
+def web_draw[A: App](handle: Int, node: Int, width: Int, height: Int, scale: Float64) -> String:
+    """Paints canvas node `node` at width × height pixels. Returns
+    {"address", "width", "height", "diff"}: where the RGBA pixels are (valid until the next
+    call for this tab) and what else changed on screen."""
+    var tab = tab_at[A](handle)
+    var w = min(max(width, 1), 4096)
+    var h = min(max(height, 1), 4096)
+    if len(tab[].pixels) != w * h:
+        tab[].pixels = List[UInt32](length=w * h, fill=0)
+    var surface = Surface(Int(tab[].pixels.unsafe_ptr()), w, h, scale if scale > 0 else 1.0)
+    var d = tab[].rt.draw(node, surface)
+    return ('{"address":' + String(Int(tab[].pixels.unsafe_ptr())) + ',"width":' + String(w) + ',"height":' + String(h)
+            + ',"diff":' + diff_to_json(d, tab[].rt.shown) + "}")
+
+
+def web_gesture[A: App](handle: Int, node: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64) -> String:
+    var rt = session_at[A](handle)
+    var d = rt[].gesture(node, kind, x, y, dx, dy, zoom)
+    return diff_to_json(d, rt[].shown)
+
+
+def web_frame[A: App](handle: Int, node: Int, microseconds: Int) -> String:
+    var rt = session_at[A](handle)
+    var d = rt[].frame(node, microseconds)
+    return diff_to_json(d, rt[].shown)
 
 
 def web_event[A: App](handle: Int, node: Int, second: Bool, text: String, number: Int) -> String:
@@ -134,6 +177,6 @@ def web_image[A: App](handle: Int, node: Int) -> String:
 
 
 def web_close[A: App](handle: Int):
-    var rt = session_at[A](handle)
-    rt.unsafe_deinit_pointee()
-    rt.unsafe_free()
+    var tab = tab_at[A](handle)
+    tab.unsafe_deinit_pointee()
+    tab.unsafe_free()

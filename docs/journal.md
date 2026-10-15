@@ -78,3 +78,6 @@ Newest last. What was tried, what happened, dead ends.
 - GTK canvas: GtkPicture (can-shrink, content-fit fill) + GdkMemoryTexture per draw, tick callback per canvas; the first draw happened before Hyprland tiled the window, so "drawn" now also means "at the current size".
 - Empty MOJOUI_TEST with a screenshot didn't report (empty = unset) → test mode is "MOJOUI_TEST is set".
 - GTK playing: 180 frames in 3048 ms = 59.0 fps, every frame redrawn (60 Hz display, 1123×1402 px canvas).
+- Web: the driver's readiness probe fetched "/", and every retry started a 20M-point session (3.3 s, ~640 MB each) → the server drowned. The probe now fetches a static file.
+- `pkill -f <pattern>` inside a Bash tool command kills the tool's own shell (the pattern is in its command line): use `ps | grep "[w]eb.py"` instead.
+- Web frames: 6.6 ms server-side at 1280×800 (draw + JPEG). First measurement 18.8 fps: the loop awaited the side-panel refresh. Measured properly (per-frame intervals): one 371 ms gap as Play starts (click → event → first pull), then 7–10 ms per frame; unpaced, the browser pulled 145 fps, more than any screen shows. Now: side-panel refreshes go alongside (≤ 10/s, always a last one), frames are paced by requestAnimationFrame, the driver skips 10 warm-up frames → 59.9 fps steady.
