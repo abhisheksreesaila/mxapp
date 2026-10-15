@@ -172,6 +172,7 @@ struct PointCloud(Movable):
     var counts: Optional[DeviceBuffer[DType.uint32]]  # w*h counts + matched + shown
     var image: Optional[DeviceBuffer[DType.uint32]]
     var host_counts: List[UInt32]
+    var capacity: Int  # pixels the GPU buffers can hold
     var w: Int
     var h: Int
     var matched: Int  # points that matched in the last bin()
@@ -192,6 +193,7 @@ struct PointCloud(Movable):
         self.counts = None
         self.image = None
         self.host_counts = List[UInt32]()
+        self.capacity = 0
         self.w = 0
         self.h = 0
         self.matched = 0
@@ -213,6 +215,14 @@ struct PointCloud(Movable):
     def on_gpu(self) -> Bool:
         return Bool(self.device)
 
+    def give_up_gpu(mut self, why: String):
+        """A GPU call failed: say so once, and use the CPU from now on (device_name() says CPU)."""
+        print("mojoui.gpu: GPU failed (" + why + "); using the CPU from now on")
+        self.device = None
+        self.counts = None
+        self.image = None
+        self.capacity = 0
+
     def device_name(self) -> String:
         return self.gpu.name if self.on_gpu() else String("CPU")
 
@@ -225,13 +235,16 @@ struct PointCloud(Movable):
             if self.on_gpu():
                 try:
                     ref ctx = self.gpu.ctx.value()
-                    if not self.counts or len(self.counts.value()) != w * h + 2:
-                        self.counts = ctx.enqueue_create_buffer[DType.uint32](w * h + 2)
-                        self.image = ctx.enqueue_create_buffer[DType.uint32](w * h)
-                    ref counts = self.counts.value()
+                    if self.capacity < w * h:  # grow both buffers together; smaller pictures reuse them
+                        var counts = ctx.enqueue_create_buffer[DType.uint32](w * h + 2)
+                        var image = ctx.enqueue_create_buffer[DType.uint32](w * h)
+                        self.counts = counts^
+                        self.image = image^
+                        self.capacity = w * h
+                    var counts = self.counts.value().create_sub_buffer[DType.uint32](0, w * h + 2)
                     ctx.enqueue_memset(counts, 0)
                     var threads = 256
-                    var blocks = min(ceildiv(self.count, threads), 82 * 16)
+                    var blocks = min(ceildiv(self.count, threads), 4096)  # grid-stride: each thread takes many points
                     ctx.enqueue_function[_bin_kernel[f]](
                         self.device.value().unsafe_ptr(), Int32(self.count), counts.unsafe_ptr(), Int32(w), Int32(h), k,
                         grid_dim=blocks, block_dim=threads,
@@ -243,8 +256,8 @@ struct PointCloud(Movable):
                     self.shown = Int(totals[1])
                     self.milliseconds = Float64(perf_counter_ns() - t0) / 1e6
                     return self.matched
-                except:
-                    pass  # fall back to the CPU below
+                except e:
+                    self.give_up_gpu(String(e))  # the CPU from now on (below)
         if len(self.host_counts) != w * h:
             self.host_counts = List[UInt32](length=w * h, fill=0)
         else:
@@ -274,10 +287,10 @@ struct PointCloud(Movable):
             surface.fill(0)
             return
         comptime if CompilationTarget.is_linux():
-            if self.on_gpu() and self.counts and self.image:
+            if self.on_gpu() and self.capacity >= total:
                 try:
                     ref ctx = self.gpu.ctx.value()
-                    ref image = self.image.value()
+                    var image = self.image.value().create_sub_buffer[DType.uint32](0, total)
                     ctx.enqueue_function[_shade_kernel[g]](
                         self.counts.value().unsafe_ptr(), image.unsafe_ptr(), Int32(total), k,
                         grid_dim=ceildiv(total, 256), block_dim=256,
@@ -287,8 +300,10 @@ struct PointCloud(Movable):
                     ctx.synchronize()
                     self.milliseconds += Float64(perf_counter_ns() - t0) / 1e6
                     return
-                except:
-                    pass
+                except e:
+                    self.give_up_gpu(String(e))
+                    surface.fill(0)  # this frame's counts were on the GPU; the next frame bins on the CPU
+                    return
         var p = surface.pixels()
         for i in range(total):
             p.unsafe_offset(i)[] = g(self.host_counts[i] if i < len(self.host_counts) else 0, k)

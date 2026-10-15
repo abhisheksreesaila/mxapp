@@ -166,7 +166,11 @@ struct UIKitHost[A: App](Movable):
                 prefer(w, "heightAnchor", Float64(240))
             for kind in [("UIPanGestureRecognizer", "canvasPan:"), ("UIPinchGestureRecognizer", "canvasPinch:"), ("UITapGestureRecognizer", "canvasTap:")]:
                 var r = msg(msg(cls(kind[0]), "alloc"), "initWithTarget:action:", w, sel(kind[1]))
+                if kind[0] == "UIPanGestureRecognizer":
+                    _ = msg(r, "setMaximumNumberOfTouches:", 1)  # two fingers are a pinch, not a pan
                 _ = msg(w, "addGestureRecognizer:", r)
+            # Rotation (a new size) wakes the display link.
+            _ = msg(msg(cls("NSNotificationCenter"), "defaultCenter"), "addObserver:selector:name:object:", w, sel("canvasResized:"), ns_string("UIDeviceOrientationDidChangeNotification"), 0)
             self.canvases.append(AppleCanvas(i, w))
             shown = w
         elif node.kind == IMAGE:
@@ -439,6 +443,7 @@ struct UIKitHost[A: App](Movable):
         for k in range(len(self.rt.shown.nodes)):
             if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
                 _ = msg(self.widgets[k], "reloadData")
+        self.wake()
 
     # ---------- canvases ----------
 
@@ -448,7 +453,7 @@ struct UIKitHost[A: App](Movable):
 
     def tick(mut self, seconds: Float64, self_addr: Int):
         """Every display frame: frame events for canvases that asked, then redraws."""
-        var micro = Int((seconds - self.last_frame) * 1e6) if self.last_frame > 0 else 16667
+        var micro = Int((seconds - self.last_frame) * 1e6) if self.last_frame > 0 and seconds - self.last_frame < 0.25 else 16667
         self.last_frame = seconds
         var k = 0
         while k < len(self.canvases):
@@ -460,6 +465,19 @@ struct UIKitHost[A: App](Movable):
                     return
             self.draw_canvas(k, self_addr)
             k += 1
+        if self.link != 0 and self.idle():  # nothing to animate or redraw: stop waking up
+            _ = msg(self.link, "setPaused:", 1)
+
+    def idle(self) -> Bool:
+        for ref c in self.canvases:
+            if self.rt.shown.nodes[c.node].msg2 != 0 or c.drawn != self.rt.shown.nodes[c.node].value or c.wpx == 0:
+                return False
+        return True
+
+    def wake(self):
+        """Something may need drawing (a new version, frames, a new size): tick again."""
+        if self.link != 0:
+            _ = msg(self.link, "setPaused:", 0)
 
     def draw_canvas(mut self, k: Int, self_addr: Int):
         """Asks the app to paint canvas k at its real pixel size (if its size or version changed)."""
@@ -611,6 +629,11 @@ def host_at[A: App](addr: Int) -> Pointer[UIKitHost[A], MutUntrackedOrigin]:
 def on_canvas_frame[A: App](view: Int, cmd: Int, link: Int) abi("C"):
     var t = from_tag(view)
     host_at[A](t[0])[].tick(msg[Float64](link, "timestamp"), t[0])
+
+
+def on_canvas_resized[A: App](view: Int, cmd: Int, notification: Int) abi("C"):
+    var t = from_tag(view)
+    host_at[A](t[0])[].wake()
 
 
 def on_canvas_pan[A: App](view: Int, cmd: Int, recognizer: Int) abi("C"):
@@ -819,6 +842,7 @@ def run[A: App](argc: c_int, argv: Int) -> c_int:
     register_class(scene_delegate)
     var canvas = new_class("MojoCanvasView", "UIImageView")
     add_method(canvas, "canvasFrame:", on_canvas_frame[A], "v@:@")
+    add_method(canvas, "canvasResized:", on_canvas_resized[A], "v@:@")
     add_method(canvas, "canvasPan:", on_canvas_pan[A], "v@:@")
     add_method(canvas, "canvasPinch:", on_canvas_pinch[A], "v@:@")
     add_method(canvas, "canvasTap:", on_canvas_tap[A], "v@:@")

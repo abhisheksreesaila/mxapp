@@ -2,7 +2,7 @@
 # value, C calls looked up at run time, and turning pixels into a CGImage.
 #
 # On arm64, a struct of two (or four) doubles comes back from objc_msgSend in d0–d1
-# (d0–d3), the same as Apple's CGPoint/CGRect: checked in the disassembly (EXPERIMENTS).
+# (d0–d3), the same as Apple's CGPoint/CGRect: checked in the disassembly (docs/journal.md).
 
 from std.ffi import external_call
 from std.memory import Pointer
@@ -44,7 +44,7 @@ def cg_image(pixels: List[UInt32], width: Int, height: Int) -> Int:
     var provider = cfunc("CGDataProviderCreateWithCFData", data)
     var space = cfunc("CGColorSpaceCreateDeviceRGB")
     var image = cfunc(
-        "CGImageCreate", width, height, 8, 32, width * 4, space, PREMULTIPLIED_LAST, provider, 0, 0, Int32(0)
+        "CGImageCreate", width, height, 8, 32, width * 4, space, PREMULTIPLIED_LAST, provider, 0, UInt8(0), Int32(0)
     )
     cfunc[NoneType]("CGColorSpaceRelease", space)
     cfunc[NoneType]("CGDataProviderRelease", provider)

@@ -152,6 +152,8 @@ def step(page, s):
                             start + n + 1)
             ms = canvas.evaluate("(e, a) => e.mojoui.times[a[1]] - e.mojoui.times[a[0]]", [start, start + n])
             return f"FRAMES: {n} in {ms:.1f} ms = {n / (ms / 1000):.1f} fps, draws {n}"
+    elif verb == "wait":  # until a button with this title appears (e.g. after frames change the screen)
+        page.locator("[data-kind=button]").filter(has_text=exact(rest)).first.wait_for(timeout=15000)
     elif verb == "slide":
         k, _, value = rest.partition("=")
         page.locator("input[data-kind=slider]").nth(int(k)).fill(value)

@@ -131,7 +131,7 @@ def test_events_default_their_pointer_fields() raises:
     assert_equal(e.zoom, 1.0)
 
 
-def test_apps_without_a_canvas_keep_defaults() raises:
+def test_window_size_defaults() raises:
     var rt = Runtime(Painter())
     assert_equal(rt.app.window_size()[0], 480)
 
@@ -143,5 +143,5 @@ def main() raises:
     test_gestures_carry_position_and_change_version_as_a_patch()
     test_frames_only_while_asked_for_and_starting_them_is_a_patch()
     test_events_default_their_pointer_fields()
-    test_apps_without_a_canvas_keep_defaults()
+    test_window_size_defaults()
     print("CANVAS TESTS PASSED")

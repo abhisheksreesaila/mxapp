@@ -309,6 +309,7 @@ struct GtkCanvas(Copyable, Movable):
     var ptr_y: Float64
     var pinch: Float64  # the pinch's scale so far
     var moved: Bool  # the current press became a drag (so it's not a tap)
+    var armed: Bool  # a tick callback is running (only while frames, a redraw or a resize may be due)
 
     def __init__(out self, node: Int, widget: Int):
         self.node = node
@@ -330,6 +331,7 @@ struct GtkCanvas(Copyable, Movable):
         self.ptr_y = -1
         self.pinch = 1
         self.moved = False
+        self.armed = False
 
 
 struct GtkHost[A: App](Movable):
@@ -513,7 +515,7 @@ struct GtkHost[A: App](Movable):
             c.drag = drag
             c.scroll = scroll
             self.canvases.append(c^)
-            _ = external_call["gtk_widget_add_tick_callback", c_uint](w, on_tick[Self.A], self_addr, 0)
+            self.arm(ci, self_addr)
         elif node.kind == SEGMENTED or node.kind == TABS:
             w = external_call["adw_toggle_group_new", Int]()  # GNOME's own segmented control
             for j in range(len(node.options)):
@@ -752,9 +754,29 @@ struct GtkHost[A: App](Movable):
         for k in range(len(self.rt.shown.nodes)):
             if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
                 refresh_rows(self.widgets[k], self.rt.shown.nodes[k].value)
+        self.arm_all(self_addr)  # a new version, frames starting, or a layout change: canvases look again
         set_busy(False)
 
     # ---------- canvases ----------
+
+    def arm(mut self, ci: Int, self_addr: Int):
+        """Ticks canvas ci on every display frame until it's idle again (no frames asked for,
+        current version drawn at the current size): idle canvases don't wake the CPU."""
+        if 0 <= ci < len(self.canvases) and not self.canvases[ci].armed:
+            self.canvases[ci].armed = True
+            _ = external_call["gtk_widget_add_tick_callback", c_uint](self.canvases[ci].widget, on_tick[Self.A], self_addr, 0)
+
+    def arm_all(mut self, self_addr: Int):
+        for k in range(len(self.canvases)):
+            self.arm(k, self_addr)
+
+    def idle(self, ci: Int) -> Bool:
+        ref c = self.canvases[ci]
+        if self.rt.shown.nodes[c.node].msg2 != 0:
+            return False
+        var w = Int(external_call["gtk_widget_get_width", c_int](c.widget))
+        var h = Int(external_call["gtk_widget_get_height", c_int](c.widget))
+        return w > 0 and c.drawn == self.rt.shown.nodes[c.node].value and c.wpx == Int(Float64(w) * c.scale + 0.5) and c.hpx == Int(Float64(h) * c.scale + 0.5)
 
     def canvas_send(mut self, ci: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64, self_addr: Int):
         if ci < 0 or ci >= len(self.canvases):
@@ -770,10 +792,11 @@ struct GtkHost[A: App](Movable):
         return (Float64(Int(external_call["gtk_widget_get_width", c_int](c.widget))) / 2,
                 Float64(Int(external_call["gtk_widget_get_height", c_int](c.widget))) / 2)
 
-    def tick(mut self, ci: Int, clock: Int, self_addr: Int):
-        """Every display frame: send a frame event if the canvas asked for them, then redraw if needed."""
+    def tick(mut self, ci: Int, clock: Int, self_addr: Int) -> Bool:
+        """Every display frame: send a frame event if the canvas asked for them, then redraw if
+        needed. Returns whether to keep ticking."""
         if ci < 0 or ci >= len(self.canvases):
-            return
+            return False
         var node = self.canvases[ci].node
         var now = Int(external_call["gdk_frame_clock_get_frame_time", Int64](clock))
         if self.rt.shown.nodes[node].msg2 != 0:
@@ -785,10 +808,14 @@ struct GtkHost[A: App](Movable):
             var d = self.rt.frame(node, now - last if last > 0 else 16667)
             self.apply(d, self_addr)
             if d.rebuild:
-                return
+                return False  # the new widgets get their own ticks
         else:
             self.canvases[ci].last_us = 0
         self.draw_canvas(ci, self_addr)
+        if ci < len(self.canvases) and self.idle(ci):
+            self.canvases[ci].armed = False
+            return False
+        return True
 
     def draw_canvas(mut self, ci: Int, self_addr: Int):
         """Asks the app to paint canvas ci at its real pixel size (if its size or version changed)."""
@@ -856,9 +883,13 @@ def settle():
         _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
 
 def on_tick[A: App](widget: Int, clock: Int, host_addr: Int) abi("C") -> c_int:
-    if not busy():
-        host_at[A](host_addr)[].tick(get_index(widget), clock, host_addr)
-    return 1  # G_SOURCE_CONTINUE: every frame
+    if busy():
+        return 1  # G_SOURCE_CONTINUE: try again next frame
+    return 1 if host_at[A](host_addr)[].tick(get_index(widget), clock, host_addr) else 0  # 0: G_SOURCE_REMOVE
+
+
+def on_window_resized[A: App](window: Int, pspec: Int, host_addr: Int) abi("C"):
+    host_at[A](host_addr)[].arm_all(host_addr)  # canvases redraw at their new size
 
 
 def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi("C"):
@@ -897,7 +928,9 @@ def on_scroll[A: App](scroll: Int, dx: Float64, dy: Float64, host_addr: Int) abi
     if ci < 0 or ci >= len(host[].canvases) or dy == 0:
         return 1
     var at = host[].pointer(ci)
-    host[].canvas_send(ci, ZOOM, at[0], at[1], 0, 0, 2.0 ** (-dy / 4.0), host_addr)
+    # A mouse wheel scrolls in notches; touchpads in surface pixels (100 px = 4 notches = 2×).
+    var notches = dy / 25.0 if external_call["gtk_event_controller_scroll_get_unit", c_int](scroll) == 1 else dy
+    host[].canvas_send(ci, ZOOM, at[0], at[1], 0, 0, 2.0 ** (-notches / 4.0), host_addr)
     return 1
 
 
@@ -1452,6 +1485,8 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
     var size = host[].rt.app.window_size()
     external_call["gtk_window_set_default_size", NoneType](host[].window, c_int(size[0]), c_int(size[1]))
+    for prop in ["notify::default-width", "notify::default-height", "notify::maximized", "notify::fullscreened"]:
+        connect3(host[].window, prop, on_window_resized[A], host_addr)
     host[].show(host_addr)
     var steps = getenv("MOJOUI_TEST")
     var testing = is_set("MOJOUI_TEST")  # set, even to "": report the widgets' state

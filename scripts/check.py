@@ -159,8 +159,8 @@ def m5():
     problems = []
     src = (ROOT / "examples/lens/app.mojo").read_text()
     imports = set(re.findall(r"^\s*(?:from|import)\s+([\w.]+)", src, re.M))
-    if any(not (i == "mojoui" or i.startswith("mojoui.") or i.startswith("std.")) for i in imports):
-        problems.append(f"lens imports more than mojoui/std: {sorted(imports)}")
+    if any(not (i == "mojoui" or i.startswith("mojoui.")) for i in imports):
+        problems.append(f"lens imports more than mojoui: {sorted(imports)}")
     if g5.PLATFORM_WORDS.search(src):
         problems.append(f"lens mentions a platform API: {g5.PLATFORM_WORDS.search(src)[0]}")
     b, out = bench()
@@ -217,6 +217,13 @@ def m6():
         problems.append(f"web and GTK differ:\n  web {ws}\n  gtk {gs}")
     if not view_line(wout) or view_line(wout)[2] != 2.0:
         problems.append(f"real wheel/drag didn't reach the app on the web: {view_line(wout)}")
+    # A frame that changes the screen's shape (playback ends, a button appears) must reach the page.
+    b = run(["pixi", "run", "mojo", "build", "-I", "tests/frame_rebuild", "-I", ".", "hosts/web_main.mojo", "--emit", "shared-lib",
+             "-o", str(BUILD / "frame_rebuild" / "web" / "mojoui_app.so")], timeout=900)
+    import drive
+    rr, rout = drive.web_run(BUILD / "frame_rebuild" / "web", "toggle:Play;wait:Replay;tap:Replay") if b.returncode == 0 else (None, b.stderr[-300:])
+    if rr is None or rr.returncode != 0 or "LABEL: Frames: 0" not in rout or "TOGGLE: Play=off" not in rout:
+        problems.append(f"a frame-driven rebuild didn't reach the page: {rout[-300:]}")
     rp, pout = web("lens", "toggle:Play;frames:0=60")
     f = frames(pout or "")
     if rp is None or not f:

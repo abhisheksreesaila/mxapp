@@ -146,7 +146,7 @@ def update(mut self, event: Event):
 **Web:** the Mojo app runs in the server. The page pulls one JPEG frame at a time from it, at most once per display refresh, and sends gestures back as ordinary events. The JavaScript is a small fixed adapter in `mojoui/hosts/web.py`; apps never contain any.
 
 ## Examples
-- `examples/lens/app.mojo`: **Data Lens**, the GPU showcase. 20 million trips in a made-up city, drawn live as a density map: pick a kind (taxi, rideshare, bike), slide through the hours or press Play to watch a day go by, drag, scroll or pinch to explore. Every frame re-counts all 20 million trips: **about 1.5 ms per 1080p frame on an RTX 3090** (130 ms on the CPU, same pixels), 59–60 fps on GTK and streamed to the browser.
+- `examples/lens/app.mojo`: **Data Lens**, the GPU showcase. 20 million trips in a made-up city, drawn live as a density map: pick a kind (taxi, rideshare, bike), slide through the hours or press Play to watch a day go by, drag, scroll or pinch to explore. Every frame re-counts all 20 million trips: **about 1.5 ms per 1080p frame on an RTX 3090** (130 ms on the CPU, same pixels). 59 fps on GTK on a 60 Hz display; streamed to the browser at 60 fps (measured in headless Chromium on the same machine, after 10 warm-up frames; a real network adds latency and bandwidth). Built for desktop: on a phone the 340-point sidebar leaves little room for the map (a phone layout is still to do).
 - `examples/hello/app.mojo`: the smallest app.
 - `examples/gallery/app.mojo`: every component, wired to some state.
 - `examples/kitchen/app.mojo`: every component added in goal 4 (tabs, a details screen, alert, date, icons, grid, a 10,000-row list).
@@ -180,9 +180,9 @@ The app file imports only `mojoui`; it never touches GTK, HTML, AppKit or UIKit 
 
 ## Status and limits
 - **Runs here:** Linux and the web, including the GPU fractal and the Data Lens (20M points, GPU). `scripts/check` drives the real widgets: GTK through its signals, the browser through Playwright. It reads them back and requires GTK and the web to end in identical states.
-- **Mac and iPhone:** they compile, link and sign here. A reviewer checked the compiled code for every native call that passes or returns floating-point values or rectangles, plus the selectors and constants. **They haven't been run on real hardware yet.**
+- **Mac and iPhone:** they compile, link and sign here. For goals up to 5, a reviewer checked the compiled code for every native call that passes or returns floating-point values or rectangles; the Canvas calls (goal 6) were reviewed in source, and only the CGPoint return was checked in the compiled code. **They haven't been run on real hardware yet.**
 - **Android:** a real arm64 library builds. Drawing with Android views and receiving taps needs a decision and Google's SDK licence: `docs/android.md`.
 - **Not yet:** controls inside lazy-list rows (rows are text plus one tap), a bottom tab bar on iPhone (tabs are a segmented switcher at the top), accessibility labels beyond the platforms' defaults, and JS "islands" on the web.
-- **Limits:** up to 65,535 nodes per screen; Mac/iPhone keep replaced controls in memory (fine for small apps). Canvas frames reach the screen as one copy per frame (GPU → memory → the platform's texture); each web tab builds its own dataset (3 s and ~640 MB for the lens).
+- **Limits:** up to 65,535 nodes per screen; Mac/iPhone keep replaced controls in memory (fine for small apps). Canvas frames take two CPU copies on their way to the screen (GPU → the app's pixels → the platform's image or texture); each web tab builds its own dataset (3 s and ~640 MB for the lens).
 
 History: `EXPERIMENTS.md` (what was tried), `docs/decisions.md`, `docs/journal.md`, `docs/goals/` (earlier goals, reports and checkers).

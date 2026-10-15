@@ -112,7 +112,7 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .lazylist .row:hover, .lazylist .row:focus-visible { background: var(--surface); }
 #mojoui-root.full { max-width: none; padding: 0; height: 100dvh; align-items: stretch; }
 #mojoui-root.full > div { flex: 1 1 0; min-width: 0; }
-.canvas { position: relative; min-width: 320px; min-height: 240px; overflow: hidden; background: #0a0a14; }
+.canvas { position: relative; min-width: 240px; min-height: 240px; overflow: hidden; background: var(--surface); }
 .canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .canvas canvas:active { cursor: grabbing; }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
@@ -147,11 +147,17 @@ CANVAS_JS = r"""
           const r = div.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
           const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
           const res = await fetch(`/frame/${sid}/${n}?w=${w}&h=${h}&scale=${dpr}&v=${shape()}&tick=${tick}`);
-          if (res.status !== 200) { if (res.status === 409) await new Promise(ok => setTimeout(ok, 50)); continue; }
+          if (res.status !== 200) {
+            if (res.headers.get('X-Mojoui-Pending') === '1') update();  // e.g. a frame changed the screen's shape
+            if (res.status === 409) await new Promise(ok => setTimeout(ok, 50));
+            if (res.status === 404) return;
+            continue;
+          }
           const img = await createImageBitmap(await res.blob());
           if (cv.width !== img.width || cv.height !== img.height) { cv.width = img.width; cv.height = img.height; }
           g.drawImage(img, 0, 0);
           st.drawn = version; st.count++; st.times.push(performance.now());
+          if (st.times.length > 1200) st.times.splice(0, 600);  // (frame times, for tests; bounded)
           div.dataset.frame = `${st.count} ${cv.width}x${cv.height} ${r.width.toFixed(0)}x${r.height.toFixed(0)} ${dpr}`;
           if (res.headers.get('X-Mojoui-Pending') === '1') update();
           if (meta() && meta().dataset.version !== String(st.drawn)) st.want = true;
@@ -510,6 +516,7 @@ def make_app(module_dir):
         """What to send the page after a change: the whole screen on a rebuild, else the changed
         controls (out-of-band swaps). Call with s.lock held, after s.nodes was refreshed."""
         if d["rebuild"]:
+            s.pending = None  # the whole screen goes out: older pending patches name old nodes
             s.shape += 1
             s.images.clear()
             s.list_top.clear()
@@ -594,6 +601,8 @@ def make_app(module_dir):
             if v != sess.shape or not 0 <= n < len(sess.nodes) or sess.nodes[n]["kind"] != CANVAS:
                 return Response(status_code=409)  # the screen changed under it: the page will catch up
             now = time.perf_counter()
+            if sess.pending and sess.pending.get("rebuild"):  # the page must catch up first; don't run the app on
+                return Response(status_code=409, headers={"X-Mojoui-Pending": "1"})
             if tick and sess.nodes[n]["msg2"]:
                 last = sess.frame_time.get(n)
                 us = int((now - last) * 1e6) if last else 16667
