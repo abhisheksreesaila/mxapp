@@ -1,5 +1,7 @@
 # Test app (scripts/check M6): a frame event that changes the screen's shape.
 # Playing counts frames; after 30 a Replay button appears (a rebuild) while frames keep coming.
+# Nothing else on screen changes while playing (fixed canvas version, no live label), so the
+# rebuild can only reach the page through the frame response itself.
 from mojoui import App, Event, View, Surface, VStack, Text, Button, Toggle, Canvas, rgba, NO_MSG
 
 comptime FRAME = 1
@@ -34,12 +36,13 @@ struct Main(App):
 
     def view(self) -> View:
         var items = List[View]()
-        items.append(Text("Frames: " + String(self.frames)))
+        if not self.playing:
+            items.append(Text("Frames: " + String(self.frames)))
         items.append(Toggle("Play", self.playing, on_toggle=PLAY))
         if self.done:
             items.append(Button("Replay", on_tap=REPLAY))
-        items.append(Canvas(0, self.frames, on_frame=FRAME if self.playing else NO_MSG).width(200).height(120))
+        items.append(Canvas(0, 0, on_frame=FRAME if self.playing else NO_MSG).width(200).height(120))
         return VStack(items)
 
     def draw(mut self, canvas: Int, mut surface: Surface):
-        surface.fill(rgba(self.frames * 8, 40, 120))
+        surface.fill(rgba(40, 40, 120))

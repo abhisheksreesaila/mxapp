@@ -209,7 +209,8 @@ struct PointCloud(Movable):
                     ctx.synchronize()
                     self.device = buf^
                     self.uploads += 1
-                except:
+                except e:
+                    print("mojoui.gpu: couldn't upload the points (" + String(e) + "); using the CPU")
                     self.device = None
 
     def on_gpu(self) -> Bool:

@@ -896,6 +896,7 @@ def on_tick[A: App](widget: Int, clock: Int, host_addr: Int) abi("C") -> c_int:
     return 1 if host_at[A](host_addr)[].tick(get_index(widget), clock, host_addr) else 0  # 0: G_SOURCE_REMOVE
 
 
+# (These two only set flags and add tick callbacks, so they're safe even while the host is busy.)
 def on_window_resized[A: App](window: Int, pspec: Int, host_addr: Int) abi("C"):
     host_at[A](host_addr)[].arm_all(host_addr)  # canvases redraw at their new size
 
@@ -908,6 +909,7 @@ def on_window_realize[A: App](window: Int, host_addr: Int) abi("C"):
     var surface = external_call["gtk_native_get_surface", Int](window)
     if surface != 0:
         connect_any(surface, "layout", on_surface_layout[A], host_addr)
+        connect3(surface, "notify::scale", on_window_resized[A], host_addr)  # moved to a screen with another scale
 
 
 def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi("C"):

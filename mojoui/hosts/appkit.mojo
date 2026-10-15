@@ -159,6 +159,7 @@ struct AppKitHost[A: App](Movable):
             # A new size (window resized) wakes the display link.
             _ = msg(w, "setPostsFrameChangedNotifications:", 1)
             _ = msg(msg(cls("NSNotificationCenter"), "defaultCenter"), "addObserver:selector:name:object:", w, sel("canvasResized:"), ns_string("NSViewFrameDidChangeNotification"), w)
+            _ = msg(msg(cls("NSNotificationCenter"), "defaultCenter"), "addObserver:selector:name:object:", w, sel("canvasResized:"), ns_string("NSWindowDidChangeBackingPropertiesNotification"), 0)  # another screen scale
             self.canvases.append(AppleCanvas(i, w))
         elif node.kind == IMAGE:
             w = msg(cls("NSImageView"), "imageViewWithImage:", ns_image(node.pixels, node.spacing, node.size))

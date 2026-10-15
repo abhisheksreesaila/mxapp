@@ -573,6 +573,8 @@ def make_app(module_dir):
         with s.lock:
             if s.closed:
                 return Main(P("This page expired: reload it.", cls="text caption"), id="mojoui-root", hx_swap_oob="true")
+            if s.pending and s.pending.get("rebuild"):  # a frame changed the screen; this event names old nodes
+                return changes(s, sid, s.pending)  # send the new screen instead of acting on the wrong control
             if v != s.shape or not 0 <= n < len(s.nodes):
                 return ""  # from an older screen (e.g. a double click on a row that's gone): ignore
             source = s.nodes[n]

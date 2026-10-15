@@ -169,8 +169,6 @@ struct UIKitHost[A: App](Movable):
                 if kind[0] == "UIPanGestureRecognizer":
                     _ = msg(r, "setMaximumNumberOfTouches:", 1)  # two fingers are a pinch, not a pan
                 _ = msg(w, "addGestureRecognizer:", r)
-            # Rotation (a new size) wakes the display link.
-            _ = msg(msg(cls("NSNotificationCenter"), "defaultCenter"), "addObserver:selector:name:object:", w, sel("canvasResized:"), ns_string("UIDeviceOrientationDidChangeNotification"), 0)
             self.canvases.append(AppleCanvas(i, w))
             shown = w
         elif node.kind == IMAGE:
@@ -631,9 +629,16 @@ def on_canvas_frame[A: App](view: Int, cmd: Int, link: Int) abi("C"):
     host_at[A](t[0])[].tick(msg[Float64](link, "timestamp"), t[0])
 
 
-def on_canvas_resized[A: App](view: Int, cmd: Int, notification: Int) abi("C"):
+def on_canvas_layout[A: App](view: Int, cmd: Int) abi("C"):
+    """layoutSubviews: UIImageView's own, then wake the display link (the size may have changed)."""
+    var parent = List[Int](length=2, fill=0)  # struct objc_super { receiver, super_class }
+    parent[0] = view
+    parent[1] = cls("UIImageView")
+    _ = cfunc("objc_msgSendSuper", Int(parent.unsafe_ptr()), sel("layoutSubviews"))
+    _ = len(parent)
     var t = from_tag(view)
-    host_at[A](t[0])[].wake()
+    if t[0] != 0:
+        host_at[A](t[0])[].wake()
 
 
 def on_canvas_pan[A: App](view: Int, cmd: Int, recognizer: Int) abi("C"):
@@ -842,7 +847,7 @@ def run[A: App](argc: c_int, argv: Int) -> c_int:
     register_class(scene_delegate)
     var canvas = new_class("MojoCanvasView", "UIImageView")
     add_method(canvas, "canvasFrame:", on_canvas_frame[A], "v@:@")
-    add_method(canvas, "canvasResized:", on_canvas_resized[A], "v@:@")
+    add_method(canvas, "layoutSubviews", on_canvas_layout[A], "v@:")
     add_method(canvas, "canvasPan:", on_canvas_pan[A], "v@:@")
     add_method(canvas, "canvasPinch:", on_canvas_pinch[A], "v@:@")
     add_method(canvas, "canvasTap:", on_canvas_tap[A], "v@:@")
