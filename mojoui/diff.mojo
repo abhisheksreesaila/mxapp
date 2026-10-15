@@ -1,11 +1,12 @@
 # Compare the screen before and after an update, so hosts change only what changed.
 
-from mojoui.view import View, NAVBAR, ALERT
+from mojoui.view import View, NAVBAR, ALERT, CANVAS
 
 comptime SET_TEXT = 1  # label text, button title, field contents, toggle label
 comptime SET_MSG = 2
 comptime SET_VALUE = 3  # toggle, dropdown index, slider, progress
 comptime SET_IMAGE = 4  # new pixels (same size); hosts read them from the shown view
+comptime SET_FRAMES = 5  # a canvas's on_frame message changed (number = new message, 0 = stop)
 
 
 @fieldwise_init
@@ -42,7 +43,7 @@ def same_shape(a: View, b: View) -> Bool:
             or x.children != y.children
             or x.options != y.options
             or x.hint != y.hint
-            or x.msg2 != y.msg2
+            or (x.msg2 != y.msg2 and x.kind != CANVAS)  # a canvas starting or stopping frames is a patch
             or x.size != y.size
         ):
             return False
@@ -69,6 +70,8 @@ def diff(old: View, new: View) -> Diff:
             patches.append(Patch(SET_MSG, i, "", b.msg))
         if a.value != b.value:
             patches.append(Patch(SET_VALUE, i, "", b.value))
+        if b.kind == CANVAS and a.msg2 != b.msg2:
+            patches.append(Patch(SET_FRAMES, i, "", b.msg2))
         if a.pixels != b.pixels:
             patches.append(Patch(SET_IMAGE, i, "", 0))
     return Diff(False, patches^)

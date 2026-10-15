@@ -1,21 +1,42 @@
 # What an app provides, and the platform-independent loop every host runs.
 
-from mojoui.view import View
+from mojoui.view import View, CANVAS
 from mojoui.diff import Diff, diff
+from mojoui.canvas import Surface
 
 
-@fieldwise_init
 struct Event(Copyable, Movable):
     """What happened: which message, plus any value it carries.
 
     Buttons: just `message`. TextField: `text` = the field's contents.
     Toggle: `number` = 1 or 0. Dropdown: `number` = index, `text` = option.
     Slider: `number` = 0–100.
+    Canvas gestures: `number` = PAN, ZOOM or TAP; `x`, `y` = pointer position in the canvas
+    (points from its top-left); PAN: `dx`, `dy` = movement in points; ZOOM: `zoom` = scale factor.
+    Canvas frames: `number` = microseconds since the previous frame.
     """
 
     var message: Int
     var text: String
     var number: Int
+    var x: Float64
+    var y: Float64
+    var dx: Float64
+    var dy: Float64
+    var zoom: Float64
+
+    def __init__(
+        out self, message: Int, text: String, number: Int,
+        x: Float64 = 0, y: Float64 = 0, dx: Float64 = 0, dy: Float64 = 0, zoom: Float64 = 1,
+    ):
+        self.message = message
+        self.text = text
+        self.number = number
+        self.x = x
+        self.y = y
+        self.dx = dx
+        self.dy = dy
+        self.zoom = zoom
 
 
 trait App(Movable, Deinitable):
@@ -39,6 +60,15 @@ trait App(Movable, Deinitable):
         """The text of one row of a LazyList (hosts ask only for rows on screen)."""
         return ""
 
+    def draw(mut self, canvas: Int, mut surface: Surface):
+        """Paints Canvas `canvas` into `surface` (its real pixel size). May update state
+        shown elsewhere on screen (e.g. how long drawing took); hosts refresh it afterwards."""
+        surface.fill(0)
+
+    def window_size(self) -> Tuple[Int, Int]:
+        """The window's starting size in points, on desktops."""
+        return (480, 560)
+
 
 struct Runtime[A: App](Movable):
     """Holds the app and the screen last shown. Hosts call dispatch() on every event."""
@@ -60,3 +90,29 @@ struct Runtime[A: App](Movable):
     def dispatch(mut self, message: Int) -> Diff:
         """A plain message with no value (a button tap)."""
         return self.dispatch(Event(message, "", 0))
+
+    def refresh(mut self) -> Diff:
+        """The screen again after state changed outside update() (e.g. in draw())."""
+        var next = self.app.view()
+        var d = diff(self.shown, next)
+        self.shown = next^
+        return d^
+
+    def draw(mut self, node: Int, mut surface: Surface) -> Diff:
+        """Paints canvas node `node`, then returns what else changed on screen."""
+        if node < 0 or node >= len(self.shown.nodes) or self.shown.nodes[node].kind != CANVAS:
+            return Diff(False, [])
+        self.app.draw(self.shown.nodes[node].style, surface)
+        return self.refresh()
+
+    def gesture(mut self, node: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64) -> Diff:
+        """A gesture on canvas node `node` (PAN, ZOOM or TAP)."""
+        if node < 0 or node >= len(self.shown.nodes) or self.shown.nodes[node].kind != CANVAS or self.shown.nodes[node].msg == 0:
+            return Diff(False, [])
+        return self.dispatch(Event(self.shown.nodes[node].msg, "", kind, x, y, dx, dy, zoom))
+
+    def frame(mut self, node: Int, microseconds: Int) -> Diff:
+        """One display frame for canvas node `node` (only if it asked for frames)."""
+        if node < 0 or node >= len(self.shown.nodes) or self.shown.nodes[node].kind != CANVAS or self.shown.nodes[node].msg2 == 0:
+            return Diff(False, [])
+        return self.dispatch(Event(self.shown.nodes[node].msg2, "", microseconds))

@@ -1,0 +1,47 @@
+# The pixels a Canvas is painted into. Hosts own the memory; the app's draw() fills it.
+
+from std.memory import Pointer
+
+
+struct Surface(Movable):
+    """RGBA pixels, row by row with no gaps (each UInt32 holds R, G, B, A from the low byte up).
+    `width` × `height` are pixels; `scale` is pixels per point (2 on a Retina screen)."""
+
+    var address: Int
+    var width: Int
+    var height: Int
+    var scale: Float64
+
+    def __init__(out self, address: Int, width: Int, height: Int, scale: Float64):
+        self.address = address
+        self.width = width
+        self.height = height
+        self.scale = scale
+
+    def pixels(self) -> Pointer[UInt32, MutUntrackedOrigin]:
+        return Pointer[UInt32, MutUntrackedOrigin](unsafe_from_address=self.address)
+
+    def set(self, x: Int, y: Int, rgba: UInt32):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.pixels().unsafe_offset(y * self.width + x)[] = rgba
+
+    def get(self, x: Int, y: Int) -> UInt32:
+        if 0 <= x < self.width and 0 <= y < self.height:
+            return self.pixels().unsafe_offset(y * self.width + x)[]
+        return 0
+
+    def fill(self, rgba: UInt32):
+        var p = self.pixels()
+        for i in range(self.width * self.height):
+            p.unsafe_offset(i)[] = rgba
+
+    def points_width(self) -> Float64:
+        return Float64(self.width) / self.scale
+
+    def points_height(self) -> Float64:
+        return Float64(self.height) / self.scale
+
+
+def rgba(r: Int, g: Int, b: Int, a: Int = 255) -> UInt32:
+    """A colour for Surface.set/fill from 0–255 channels."""
+    return UInt32(r & 255) | (UInt32(g & 255) << 8) | (UInt32(b & 255) << 16) | (UInt32(a & 255) << 24)

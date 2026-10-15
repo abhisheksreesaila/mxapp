@@ -68,3 +68,13 @@ Newest last. What was tried, what happened, dead ends.
 - Looking at screenshots found three mapping gaps the relation checks didn't: web grow from content width wrapped the todo row (→ flex 1 1 0); web Scroll was a row (→ column); GTK fixed width is only a minimum (→ AdwClamp at the fixed width) and wrapping labels asked for minimal width (→ natural wrap mode none).
 - A GTK test window shown for a screenshot caught the owner's real keystrokes ("td" in the field) → test windows ignore real input.
 - Apple: NSStackView edge insets / UIStackView layout margins for padding, distribution equal-spacing for BETWEEN, flexible spacers for START/CENTER/END, hugging priority for grow, constraints for sizes/fill. Builds and signs; not run.
+
+## Goal 6: GPU Data Lens (2026-10-15)
+- Probe: Mojo 1.1 has no wasm target ("No available targets are compatible with triple wasm32-*"); a trivial export's LLVM IR retargets with system `llc -mtriple=wasm32` after stripping target attributes. Parked for a later goal.
+- Probe: `from std.atomic import Atomic, Ordering` (not std.os.atomic). 20M points binned into 1920×1080 with relaxed atomics: 2.4 ms on the RTX 3090.
+- Probe: `max.gpu` imports compile for arm64-apple-macosx/ios; guarding the GPU calls with `comptime if CompilationTarget.is_linux()` removes every AsyncRT symbol from the iOS object (is_macos() alone left them in iOS).
+- `comptime` List tables can't be indexed at run time ("cannot materialize… not ImplicitlyCopyable") → `materialize[HUBS]()` once, passed in.
+- PointCloud: grid-stride bin kernel (one thread many points, totals added once per thread) + per-pixel shade + one copy into the host surface: 1.48 ms per 1080p frame for 20M points, pixel-identical to the CPU path (130 ms).
+- GTK canvas: GtkPicture (can-shrink, content-fit fill) + GdkMemoryTexture per draw, tick callback per canvas; the first draw happened before Hyprland tiled the window, so "drawn" now also means "at the current size".
+- Empty MOJOUI_TEST with a screenshot didn't report (empty = unset) → test mode is "MOJOUI_TEST is set".
+- GTK playing: 180 frames in 3048 ms = 59.0 fps, every frame redrawn (60 Hz display, 1123×1402 px canvas).

@@ -30,6 +30,12 @@ comptime DATE = 20  # text = "YYYY-MM-DD"
 comptime ICON = 21  # text = icon name (see ICON_NAMES); size = points
 comptime GRID = 22  # children in rows of `value` columns; spacing = gap
 comptime LAZYLIST = 23  # value = row count, msg2 = list id, size = height, spacing = row height
+comptime CANVAS = 24  # drawn by the app's draw(): style = canvas id, value = version, msg = on_gesture, msg2 = on_frame
+
+# Canvas gestures (event.number)
+comptime PAN = 1  # event.dx, dy: movement in points; event.x, y: where the pointer is
+comptime ZOOM = 2  # event.zoom: scale factor (2 = twice as big) around event.x, y
+comptime TAP = 3  # event.x, y
 
 # Icon names every host understands (each maps them to its platform's own icons).
 comptime ICON_NAMES: List[String] = [
@@ -332,6 +338,15 @@ def LazyList(count: Int, list_id: Int, on_tap: Int = NO_MSG, height: Int = 320, 
     for their text. Tapping a row sends `on_tap` (event.number = row index).
     Hosts ask for the visible rows again after every update, so edited rows refresh."""
     return _one(Node(LAZYLIST, "", on_tap, value=count, msg2=list_id, size=height, spacing=row_height))
+
+
+def Canvas(id: Int, version: Int, on_gesture: Int = NO_MSG, on_frame: Int = NO_MSG) -> View:
+    """A surface the app paints itself: hosts call the app's `draw(id, surface)` at the canvas's
+    real pixel size, and again whenever `version` changes or the canvas is resized.
+    Drags, pinches, wheel zooms and taps send `on_gesture` (event.number = PAN, ZOOM or TAP).
+    With `on_frame`, it sends one event per display frame (event.number = microseconds since the last).
+    Size it with layout settings, e.g. `Canvas(0, v).grow().fill()`."""
+    return _one(Node(CANVAS, "", on_gesture, style=id, value=version, msg2=on_frame))
 
 
 def Divider() -> View:

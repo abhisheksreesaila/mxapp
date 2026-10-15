@@ -12,12 +12,15 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
-    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
+    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
 from mojoui.app import App, Event, Runtime
+from mojoui.canvas import Surface
+from std.math import log2
+from std.time import perf_counter_ns
 
 comptime G_APPLICATION_NON_UNIQUE = 32
 comptime HORIZONTAL = 0
@@ -41,6 +44,12 @@ def getenv(name: String) -> String:
     return c_str(external_call["getenv", Int](n.as_c_string_span()))
 
 
+def is_set(name: String) -> Bool:
+    """Whether an environment variable is set at all (even to "")."""
+    var n = name
+    return external_call["getenv", Int](n.as_c_string_span()) != 0
+
+
 def ccall[T: RegisterPassable = Int, *A: AnyType](name: String, *args: *A) -> T:
     """Calls a C function found at run time, with this call's argument types.
     (For functions we need with several signatures, e.g. g_signal_connect_data.)"""
@@ -57,6 +66,12 @@ def connect(obj: Int, signal: String, callback: def(Int, Int) thin abi("C"), dat
 
 
 def connect3(obj: Int, signal: String, callback: def(Int, Int, Int) thin abi("C"), data: Int):
+    var s = signal
+    _ = ccall("g_signal_connect_data", obj, s.as_c_string_span(), callback, data, 0, 0)
+
+
+def connect_any[F: AnyType](obj: Int, signal: String, callback: F, data: Int):
+    """g_signal_connect for a callback of any C signature (doubles, return values…)."""
     var s = signal
     _ = ccall("g_signal_connect_data", obj, s.as_c_string_span(), callback, data, 0, 0)
 
@@ -272,8 +287,54 @@ def escape_newlines(text: String) -> String:
 
 # ---------- the host ----------
 
+struct GtkCanvas(Copyable, Movable):
+    """One Canvas on screen: its GtkPicture, gesture controllers and the pixels last drawn."""
+
+    var node: Int
+    var widget: Int  # GtkPicture showing the pixels as a texture
+    var drag: Int  # GtkGestureDrag
+    var scroll: Int  # GtkEventControllerScroll
+    var pixels: List[UInt32]
+    var wpx: Int
+    var hpx: Int
+    var scale: Float64
+    var drawn: Int  # the version last drawn (-1: none yet)
+    var draws: Int
+    var frames: Int  # frame events sent
+    var first_us: Int  # frame-clock time of the first and last frame event (for FRAMES)
+    var last_us: Int
+    var drag_x: Float64  # the drag's offset so far
+    var drag_y: Float64
+    var ptr_x: Float64  # where the pointer is (-1: unknown)
+    var ptr_y: Float64
+    var pinch: Float64  # the pinch's scale so far
+    var moved: Bool  # the current press became a drag (so it's not a tap)
+
+    def __init__(out self, node: Int, widget: Int):
+        self.node = node
+        self.widget = widget
+        self.drag = 0
+        self.scroll = 0
+        self.pixels = List[UInt32]()
+        self.wpx = 0
+        self.hpx = 0
+        self.scale = 1
+        self.drawn = -1
+        self.draws = 0
+        self.frames = 0
+        self.first_us = 0
+        self.last_us = 0
+        self.drag_x = 0
+        self.drag_y = 0
+        self.ptr_x = -1
+        self.ptr_y = -1
+        self.pinch = 1
+        self.moved = False
+
+
 struct GtkHost[A: App](Movable):
     var rt: Runtime[Self.A]
+    var canvases: List[GtkCanvas]
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
     var dialog: Int  # the open alert dialog, if any
@@ -283,6 +344,7 @@ struct GtkHost[A: App](Movable):
 
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
+        self.canvases = List[GtkCanvas]()
         self.window = 0
         self.widgets = List[Int]()
         self.dialog = 0
@@ -418,6 +480,40 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_widget_set_halign", NoneType](w, c_int(ALIGN_CENTER))
             external_call["gtk_widget_set_valign", NoneType](w, c_int(ALIGN_CENTER))
             external_call["gtk_widget_set_size_request", NoneType](w, c_int(node.spacing), c_int(node.size))
+        elif node.kind == CANVAS:
+            w = external_call["gtk_picture_new", Int]()
+            external_call["gtk_picture_set_can_shrink", NoneType](w, c_int(1))  # its size comes from the layout
+            external_call["gtk_picture_set_content_fit", NoneType](w, c_int(0))  # fill: the pixels match its size
+            external_call["gtk_widget_set_size_request", NoneType](w, c_int(-1 if sized else 320), c_int(-1 if node.sized_height() else 240))
+            var ci = len(self.canvases)
+            var c = GtkCanvas(i, w)
+            set_index(w, ci)
+            var drag = external_call["gtk_gesture_drag_new", Int]()
+            set_index(drag, ci)
+            connect_any(drag, "drag-begin", on_drag_begin[Self.A], self_addr)
+            connect_any(drag, "drag-update", on_drag_update[Self.A], self_addr)
+            external_call["gtk_widget_add_controller", NoneType](w, drag)
+            var scroll = external_call["gtk_event_controller_scroll_new", Int](c_int(1))  # vertical
+            set_index(scroll, ci)
+            connect_any(scroll, "scroll", on_scroll[Self.A], self_addr)
+            external_call["gtk_widget_add_controller", NoneType](w, scroll)
+            var motion = external_call["gtk_event_controller_motion_new", Int]()
+            set_index(motion, ci)
+            connect_any(motion, "motion", on_motion[Self.A], self_addr)
+            external_call["gtk_widget_add_controller", NoneType](w, motion)
+            var pinch = external_call["gtk_gesture_zoom_new", Int]()
+            set_index(pinch, ci)
+            connect3(pinch, "begin", on_pinch_begin[Self.A], self_addr)
+            connect_any(pinch, "scale-changed", on_pinch[Self.A], self_addr)
+            external_call["gtk_widget_add_controller", NoneType](w, pinch)
+            var click = external_call["gtk_gesture_click_new", Int]()
+            set_index(click, ci)
+            connect_any(click, "released", on_click_released[Self.A], self_addr)
+            external_call["gtk_widget_add_controller", NoneType](w, click)
+            c.drag = drag
+            c.scroll = scroll
+            self.canvases.append(c^)
+            _ = external_call["gtk_widget_add_tick_callback", c_uint](w, on_tick[Self.A], self_addr, 0)
         elif node.kind == SEGMENTED or node.kind == TABS:
             w = external_call["adw_toggle_group_new", Int]()  # GNOME's own segmented control
             for j in range(len(node.options)):
@@ -573,12 +669,17 @@ struct GtkHost[A: App](Movable):
             external_call["g_object_unref", NoneType](self.dialog)
             self.dialog = 0
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
+        self.canvases = List[GtkCanvas]()
         var root = self.build(0, self_addr)
-        external_call["gtk_widget_set_valign", NoneType](root, c_int(ALIGN_CENTER))
-        external_call["gtk_widget_set_margin_top", NoneType](root, c_int(32))
-        external_call["gtk_widget_set_margin_bottom", NoneType](root, c_int(32))
-        external_call["gtk_widget_set_margin_start", NoneType](root, c_int(32))
-        external_call["gtk_widget_set_margin_end", NoneType](root, c_int(32))
+        if self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills:  # the screen fills the window
+            external_call["gtk_widget_set_valign", NoneType](root, c_int(0))
+            external_call["gtk_widget_set_halign", NoneType](root, c_int(0))
+        else:
+            external_call["gtk_widget_set_valign", NoneType](root, c_int(ALIGN_CENTER))
+            external_call["gtk_widget_set_margin_top", NoneType](root, c_int(32))
+            external_call["gtk_widget_set_margin_bottom", NoneType](root, c_int(32))
+            external_call["gtk_widget_set_margin_start", NoneType](root, c_int(32))
+            external_call["gtk_widget_set_margin_end", NoneType](root, c_int(32))
         external_call["gtk_window_set_child", NoneType](self.window, root)
         if self.dialog != 0 and (getenv("MOJOUI_TEST") == "" or getenv("MOJOUI_SHOT") != ""):  # plain tests drive it unseen
             external_call["adw_dialog_present", NoneType](self.dialog, self.window)
@@ -653,6 +754,80 @@ struct GtkHost[A: App](Movable):
                 refresh_rows(self.widgets[k], self.rt.shown.nodes[k].value)
         set_busy(False)
 
+    # ---------- canvases ----------
+
+    def canvas_send(mut self, ci: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64, self_addr: Int):
+        if ci < 0 or ci >= len(self.canvases):
+            return
+        var d = self.rt.gesture(self.canvases[ci].node, kind, x, y, dx, dy, zoom)
+        self.apply(d, self_addr)
+
+    def pointer(self, ci: Int) -> Tuple[Float64, Float64]:
+        """Where the pointer is over canvas ci (its centre if it hasn't been seen)."""
+        ref c = self.canvases[ci]
+        if c.ptr_x >= 0:
+            return (c.ptr_x, c.ptr_y)
+        return (Float64(Int(external_call["gtk_widget_get_width", c_int](c.widget))) / 2,
+                Float64(Int(external_call["gtk_widget_get_height", c_int](c.widget))) / 2)
+
+    def tick(mut self, ci: Int, clock: Int, self_addr: Int):
+        """Every display frame: send a frame event if the canvas asked for them, then redraw if needed."""
+        if ci < 0 or ci >= len(self.canvases):
+            return
+        var node = self.canvases[ci].node
+        var now = Int(external_call["gdk_frame_clock_get_frame_time", Int64](clock))
+        if self.rt.shown.nodes[node].msg2 != 0:
+            var last = self.canvases[ci].last_us
+            self.canvases[ci].last_us = now
+            if self.canvases[ci].frames == 0:
+                self.canvases[ci].first_us = now
+            self.canvases[ci].frames += 1
+            var d = self.rt.frame(node, now - last if last > 0 else 16667)
+            self.apply(d, self_addr)
+            if d.rebuild:
+                return
+        else:
+            self.canvases[ci].last_us = 0
+        self.draw_canvas(ci, self_addr)
+
+    def draw_canvas(mut self, ci: Int, self_addr: Int):
+        """Asks the app to paint canvas ci at its real pixel size (if its size or version changed)."""
+        var widget = self.canvases[ci].widget
+        var node = self.canvases[ci].node
+        var w = Int(external_call["gtk_widget_get_width", c_int](widget))
+        var h = Int(external_call["gtk_widget_get_height", c_int](widget))
+        var native = external_call["gtk_widget_get_native", Int](widget)
+        if w <= 0 or h <= 0 or native == 0:
+            return
+        var scale = external_call["gdk_surface_get_scale", Float64](external_call["gtk_native_get_surface", Int](native))
+        var wpx = Int(Float64(w) * scale + 0.5)
+        var hpx = Int(Float64(h) * scale + 0.5)
+        var version = self.rt.shown.nodes[node].value
+        if wpx == self.canvases[ci].wpx and hpx == self.canvases[ci].hpx and version == self.canvases[ci].drawn:
+            return
+        if len(self.canvases[ci].pixels) != wpx * hpx:
+            self.canvases[ci].pixels = List[UInt32](length=wpx * hpx, fill=0)
+        var surface = Surface(Int(self.canvases[ci].pixels.unsafe_ptr()), wpx, hpx, scale)
+        var d = self.rt.draw(node, surface)
+        var tex = texture(self.canvases[ci].pixels, wpx, hpx)
+        external_call["gtk_picture_set_paintable", NoneType](widget, tex)
+        external_call["g_object_unref", NoneType](tex)
+        self.canvases[ci].wpx = wpx
+        self.canvases[ci].hpx = hpx
+        self.canvases[ci].scale = scale
+        self.canvases[ci].drawn = version
+        self.canvases[ci].draws += 1
+        self.apply(d, self_addr)
+
+    def canvases_drawn(self) -> Bool:
+        """Whether every canvas shows its current version at its current size."""
+        for ref c in self.canvases:
+            var w = Int(external_call["gtk_widget_get_width", c_int](c.widget))
+            var h = Int(external_call["gtk_widget_get_height", c_int](c.widget))
+            if c.drawn != self.rt.shown.nodes[c.node].value or c.wpx == 0 or c.wpx != Int(Float64(w) * c.scale + 0.5) or c.hpx != Int(Float64(h) * c.scale + 0.5):
+                return False
+        return True
+
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
         """A widget changed: build the event, run update(), patch the widgets."""
         ref n = self.rt.shown.nodes[node]
@@ -679,6 +854,95 @@ def settle():
     """Runs pending GTK work (such as a deferred rebuild) before the next test step."""
     while external_call["g_main_context_pending", c_int](0) != 0:
         _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
+
+def on_tick[A: App](widget: Int, clock: Int, host_addr: Int) abi("C") -> c_int:
+    if not busy():
+        host_at[A](host_addr)[].tick(get_index(widget), clock, host_addr)
+    return 1  # G_SOURCE_CONTINUE: every frame
+
+
+def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi("C"):
+    var host = host_at[A](host_addr)
+    var ci = get_index(drag)
+    if ci < 0 or ci >= len(host[].canvases):
+        return
+    host[].canvases[ci].drag_x = 0
+    host[].canvases[ci].drag_y = 0
+    host[].canvases[ci].moved = False
+
+
+def on_drag_update[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr: Int) abi("C"):
+    if busy():
+        return
+    var host = host_at[A](host_addr)
+    var ci = get_index(drag)
+    if ci < 0 or ci >= len(host[].canvases):
+        return
+    var dx = off_x - host[].canvases[ci].drag_x
+    var dy = off_y - host[].canvases[ci].drag_y
+    host[].canvases[ci].drag_x = off_x
+    host[].canvases[ci].drag_y = off_y
+    if abs(off_x) + abs(off_y) > 3:
+        host[].canvases[ci].moved = True
+    var at = host[].pointer(ci)
+    host[].canvas_send(ci, PAN, at[0], at[1], dx, dy, 1, host_addr)
+
+
+def on_scroll[A: App](scroll: Int, dx: Float64, dy: Float64, host_addr: Int) abi("C") -> c_int:
+    """Mouse wheel / touchpad scroll: zoom around the pointer (4 notches = 2×)."""
+    if busy():
+        return 1
+    var host = host_at[A](host_addr)
+    var ci = get_index(scroll)
+    if ci < 0 or ci >= len(host[].canvases) or dy == 0:
+        return 1
+    var at = host[].pointer(ci)
+    host[].canvas_send(ci, ZOOM, at[0], at[1], 0, 0, 2.0 ** (-dy / 4.0), host_addr)
+    return 1
+
+
+def on_motion[A: App](motion: Int, x: Float64, y: Float64, host_addr: Int) abi("C"):
+    var host = host_at[A](host_addr)
+    var ci = get_index(motion)
+    if 0 <= ci < len(host[].canvases):
+        host[].canvases[ci].ptr_x = x
+        host[].canvases[ci].ptr_y = y
+
+
+def on_pinch_begin[A: App](pinch: Int, sequence: Int, host_addr: Int) abi("C"):
+    var host = host_at[A](host_addr)
+    var ci = get_index(pinch)
+    if 0 <= ci < len(host[].canvases):
+        host[].canvases[ci].pinch = 1
+
+
+def on_pinch[A: App](pinch: Int, scale: Float64, host_addr: Int) abi("C"):
+    if busy() or scale <= 0:
+        return
+    var host = host_at[A](host_addr)
+    var ci = get_index(pinch)
+    if ci < 0 or ci >= len(host[].canvases):
+        return
+    var factor = scale / host[].canvases[ci].pinch
+    host[].canvases[ci].pinch = scale
+    var xy = List[Float64](length=2, fill=0)
+    if external_call["gtk_gesture_get_bounding_box_center", c_int](pinch, Int(xy.unsafe_ptr()), Int(xy.unsafe_ptr()) + 8) == 0:
+        var at = host[].pointer(ci)
+        xy[0] = at[0]
+        xy[1] = at[1]
+    host[].canvas_send(ci, ZOOM, xy[0], xy[1], 0, 0, factor, host_addr)
+    _ = len(xy)
+
+
+def on_click_released[A: App](click: Int, presses: c_int, x: Float64, y: Float64, host_addr: Int) abi("C"):
+    if busy():
+        return
+    var host = host_at[A](host_addr)
+    var ci = get_index(click)
+    if ci < 0 or ci >= len(host[].canvases) or host[].canvases[ci].moved:
+        return
+    host[].canvas_send(ci, TAP, x, y, 0, 0, 1, host_addr)
+
 
 def on_clicked[A: App](button: Int, host_addr: Int) abi("C"):
     if busy():
@@ -995,6 +1259,51 @@ def run_step[A: App](host_addr: Int, step: String):
         else:
             var s = String("activate")
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span(), c_uint(position))
+    elif verb == "drag" or verb == "zoom" or verb == "frames":
+        var kv = split_at(rest, "=")
+        var node = find(host[], CANVAS, "", to_int(kv[0]))
+        var ci = -1
+        for k in range(len(host[].canvases)):
+            if host[].canvases[k].node == node:
+                ci = k
+        if ci < 0:
+            print("TEST: no canvas", kv[0])
+            return
+        if verb == "drag":  # the drag gesture's own signals, as a real drag sends them
+            var xy = split_at(kv[1], ",")
+            var dx = Float64(to_int(xy[0]))
+            var dy = Float64(to_int(xy[1]))
+            var begin = String("drag-begin")
+            var update = String("drag-update")
+            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].drag, begin.as_c_string_span(), Float64(10), Float64(10))
+            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].drag, update.as_c_string_span(), dx / 2, dy / 2)
+            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].drag, update.as_c_string_span(), dx, dy)
+        elif verb == "zoom":  # the scroll controller's signal: 4 notches up = 2×
+            var factor = Float64(to_int(kv[1]))
+            var handled = List[c_int](length=1, fill=0)
+            var signal = String("scroll")
+            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].scroll, signal.as_c_string_span(), Float64(0), -4.0 * log2(factor), Int(handled.unsafe_ptr()))
+            _ = len(handled)
+        else:  # frames: let the display run n frames, then report the rate
+            var n = to_int(kv[1])
+            var start = host[].canvases[ci].frames
+            var draws = host[].canvases[ci].draws
+            var first = 0
+            var deadline = perf_counter_ns() + 20_000_000_000
+            while perf_counter_ns() < deadline:
+                _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+                if ci >= len(host[].canvases):
+                    break
+                var done = host[].canvases[ci].frames - start
+                if done == 1 and first == 0:
+                    first = host[].canvases[ci].last_us
+                    draws = host[].canvases[ci].draws
+                if done > n:
+                    break
+            var ms = Float64(host[].canvases[ci].last_us - first) / 1000.0
+            var got = host[].canvases[ci].frames - start - 1
+            var fps = Float64(got) / (ms / 1000.0) if ms > 0 else 0.0
+            print("FRAMES: " + String(got) + " in " + one_decimal(Float32(ms)) + " ms = " + one_decimal(Float32(fps)) + " fps, draws " + String(host[].canvases[ci].draws - draws))
     else:
         print("TEST: unknown step", step)
 
@@ -1086,9 +1395,29 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
             var row0 = external_call["g_object_get_data", Int](app, key.as_c_string_span())
             if row0 != 0:  # only while row 0 is on screen (as on the web)
                 print("LISTROW: " + c_str(row0))
+        elif n.kind == CANVAS:
+            for ref c in host[].canvases:
+                if c.node == i and c.wpx > 0:
+                    print("CANVAS: " + String(Int(external_call["gtk_widget_get_width", c_int](w))) + "x" + String(Int(external_call["gtk_widget_get_height", c_int](w)))
+                          + " pt " + String(c.wpx) + "x" + String(c.hpx) + " px scale " + one_decimal(Float32(c.scale)) + " colours "
+                          + String(colours(c.pixels)) + " draws " + String(c.draws))
         elif n.kind == IMAGE:
             var paintable = external_call["gtk_picture_get_paintable", Int](w)
             print("IMAGE: " + String(external_call["gdk_texture_get_width", c_int](paintable)) + "x" + String(external_call["gdk_texture_get_height", c_int](paintable)))
+
+
+def colours(pixels: List[UInt32]) -> Int:
+    """How many different colours a sample of the pixels has (to tell a picture from a blank)."""
+    var sample = List[UInt32]()
+    var step = max(len(pixels) // 20000, 1)
+    for i in range(0, len(pixels), step):
+        sample.append(pixels[i])
+    sort(sample)
+    var n = 0
+    for i in range(len(sample)):
+        if i == 0 or sample[i] != sample[i - 1]:
+            n += 1
+    return n
 
 
 def save_png(window: Int, path: String):
@@ -1121,27 +1450,35 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     host[].window = external_call["gtk_application_window_new", Int](gapp)
     var title = host[].rt.app.title()
     external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
-    external_call["gtk_window_set_default_size", NoneType](host[].window, c_int(480), c_int(560))
+    var size = host[].rt.app.window_size()
+    external_call["gtk_window_set_default_size", NoneType](host[].window, c_int(size[0]), c_int(size[1]))
     host[].show(host_addr)
     var steps = getenv("MOJOUI_TEST")
+    var testing = is_set("MOJOUI_TEST")  # set, even to "": report the widgets' state
     var shot = getenv("MOJOUI_SHOT")
-    if steps != "":
+    if testing:
         # Test windows ignore the real keyboard and mouse: the checks drive the widgets
         # themselves, and someone working at the desktop mustn't type into them by accident.
         external_call["gtk_widget_set_can_focus", NoneType](host[].window, c_int(0))
         external_call["gtk_widget_set_can_target", NoneType](host[].window, c_int(0))
         var title = String("mojoui test window (closes by itself)")
         external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
-    if steps == "" or shot != "":
+    if not testing or shot != "":
         external_call["gtk_window_present", NoneType](host[].window)
-    if steps != "":
+    if testing:
         for step in steps.split(";"):
-            run_step[A](host_addr, String(step))
+            if String(step) != "":
+                run_step[A](host_addr, String(step))
+            settle()
+        if shot != "" and len(host[].canvases) > 0:  # on screen: let canvases draw what they show now
+            var deadline = perf_counter_ns() + 5_000_000_000
+            while not host[].canvases_drawn() and perf_counter_ns() < deadline:
+                _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
             settle()
         report[A](host_addr)
     if shot != "":
         save_png(host[].window, shot)
-    if steps != "" or shot != "":
+    if testing or shot != "":
         external_call["g_application_quit", NoneType](gapp)
 
 
