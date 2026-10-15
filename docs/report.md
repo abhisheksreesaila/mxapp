@@ -21,8 +21,8 @@ PASS  M5  padding, fixed/min/max sizes, fill, grow, justify and align hold on An
 PASS  M6  lens on Android (CPU, 2M trips) draws the map; a real swipe pans it as on GTK: LABEL: View: centre (0.3667, 0.4333), zoom 1.00×
 PASS  M7  goal 6's checks (and goals 3–5's inside them) still pass
 PASS  M8  README and docs/android.md describe what runs on Android, with screenshots
-(M5 from a re-run after measuring at 300 dpi; the rest from the full run)
 ```
+(One full run on the final code, after two review rounds; the reviewer's verdict: PASS.)
 
 ## Try it
 ```bash
