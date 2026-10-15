@@ -5,7 +5,7 @@
 from mojoui import (
     App, Event, View, VStack, HStack, Text, Button, Slider, Dropdown, Image, TITLE, CAPTION, PROMINENT,
 )
-from mojoui.gpu import Params, gpu_name, render_on_gpu, render_on_cpu
+from mojoui.gpu import Gpu, Params, render_on_cpu
 
 comptime WIDTH = 480
 comptime HEIGHT = 320
@@ -43,18 +43,19 @@ def two_decimals(x: Float64) -> String:
 
 
 struct Main(App):
-    var gpu: String
+    var gpu: Gpu
     var zoom: Int  # 0–100
     var detail: Int  # index into DETAILS
     var pixels: List[UInt32]
     var result: String
 
     def __init__(out self):
-        self.gpu = gpu_name()
+        self.gpu = Gpu()
         self.zoom = 0
         self.detail = 1
         self.pixels = List[UInt32]()
-        self.result = "Drag the zoom, or press Run on GPU."
+        self.result = "Drag the zoom, or press Run on GPU." if self.gpu.available() else "This machine has no supported GPU (NVIDIA or AMD)."
+        self.pixels = List[UInt32](length=WIDTH * HEIGHT, fill=UInt32(0xFF202020))  # grey until rendered
         self.render(False)
 
     def params(self) -> Params:
@@ -64,8 +65,10 @@ struct Main(App):
         return Params(scale, Float32(-0.7436439), Float32(0.1318259), Float32(details[self.detail]))
 
     def render(mut self, check: Bool):
+        if not self.gpu.available():
+            return
         try:
-            var gpu = render_on_gpu[mandelbrot](WIDTH, HEIGHT, self.params())
+            var gpu = self.gpu.render[mandelbrot](WIDTH, HEIGHT, self.params())
             self.pixels = gpu.pixels.copy()
             if check:
                 var cpu = render_on_cpu[mandelbrot](WIDTH, HEIGHT, self.params())
@@ -98,7 +101,7 @@ struct Main(App):
         var details: List[String] = ["Fast", "Detailed", "Very detailed"]
         return VStack(
             Text("GPU fractal", style=TITLE),
-            Text("GPU: " + self.gpu, style=CAPTION),
+            Text("GPU: " + self.gpu.name, style=CAPTION),
             Image(self.pixels, WIDTH, HEIGHT),
             HStack(Text("Zoom"), Slider(self.zoom, on_change=ZOOM), spacing=12),
             HStack(Text("Detail"), Dropdown(details, self.detail, on_select=DETAIL), spacing=12),

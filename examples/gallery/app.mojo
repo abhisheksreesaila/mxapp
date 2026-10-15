@@ -1,7 +1,7 @@
 # Gallery: every mojoui component, wired to a little state. Same file on every platform.
 
 from mojoui import (
-    App, Event, View, VStack, HStack, Text, Button, TextField, Toggle, Dropdown, Slider, ProgressBar, Divider,
+    App, Event, View, VStack, HStack, Text, Button, TextField, Toggle, Dropdown, Slider, ProgressBar, Divider, Image,
     TITLE, HEADLINE, CAPTION, PROMINENT,
 )
 
@@ -11,6 +11,18 @@ comptime NOTIFY = 3
 comptime SIZE = 4
 comptime VOLUME = 5
 comptime GREET = 6
+
+
+def swatch(volume: Int) -> List[UInt32]:
+    """A 120×40 gradient whose colour follows the volume (pixels made in plain Mojo)."""
+    var pixels = List[UInt32](capacity=120 * 40)
+    for y in range(40):
+        for x in range(120):
+            var r = UInt32(volume * 255 // 100)
+            var g = UInt32(x * 255 // 119)
+            var b = UInt32(255 - y * 4)
+            pixels.append(r | (g << 8) | (b << 16) | (UInt32(255) << 24))
+    return pixels^
 
 
 struct Main(App):
@@ -62,6 +74,7 @@ struct Main(App):
             Text("Volume " + String(self.volume), style=CAPTION),
             Slider(self.volume, on_change=VOLUME),
             ProgressBar(self.volume),
+            Image(swatch(self.volume), 120, 40),
             Button("Say hello (" + String(self.greeted) + ")", on_tap=GREET, style=PROMINENT),
             spacing=14,
         )

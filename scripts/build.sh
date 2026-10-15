@@ -56,7 +56,7 @@ build_android() {  # exploration: a real arm64 libmojoui.so, no APK yet (docs/an
   # Empty stand-ins that only carry the system libraries' names (like apple/sdk/*.tbd);
   # the device's real libc/liblog provide the functions at run time.
   echo "" | llvm-mc -triple=aarch64-linux-android -filetype=obj -o "$out/stubs/empty.o"
-  for lib in libc libdl liblog libandroid; do
+  for lib in libc liblog; do  # only what the library uses
     pixi run ld.lld -shared -soname "$lib.so" -o "$out/stubs/$lib.so" "$out/stubs/empty.o"
   done
   pixi run ld.lld -shared -soname libmojoui.so -z noexecstack --gc-sections -o "$out/lib/arm64-v8a/libmojoui.so" \

@@ -104,12 +104,13 @@ def web_event[A: App](handle: Int, node: Int, second: Bool, text: String, number
 
 
 def web_image[A: App](handle: Int, node: Int) -> String:
-    """Where an image's RGBA pixels are: "address width height" (valid until the next event)."""
+    """Where an image's RGBA pixels are: "address width height bytes" (valid until the next event)."""
     var rt = session_at[A](handle)
     if node < 0 or node >= len(rt[].shown.nodes) or rt[].shown.nodes[node].kind != IMAGE:
-        return "0 0 0"
+        return "0 0 0 0"
     ref n = rt[].shown.nodes[node]
-    return String(Int(n.pixels.unsafe_ptr())) + " " + String(n.spacing) + " " + String(n.size)
+    var nbytes = len(n.pixels) * 4
+    return String(Int(n.pixels.unsafe_ptr())) + " " + String(n.spacing) + " " + String(n.size) + " " + String(nbytes)
 
 
 def web_close[A: App](handle: Int):

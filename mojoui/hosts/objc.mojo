@@ -100,6 +100,11 @@ def from_ns(ns: Int) -> String:
     return String(unsafe_from_utf8_ptr=Pointer[Int8, MutUntrackedOrigin](unsafe_from_address=utf8))
 
 
+def ns_data(bytes: List[UInt8]) -> Int:
+    """An NSData copy of some bytes."""
+    return msg(cls("NSData"), "dataWithBytes:length:", Int(bytes.unsafe_ptr()), len(bytes))
+
+
 def constrain(view: Int, anchor: String, points: Float64):
     """Auto Layout: fix a view's width or height (anchor = "widthAnchor"/"heightAnchor")."""
     var c = msg(msg(view, anchor), "constraintEqualToConstant:", points)

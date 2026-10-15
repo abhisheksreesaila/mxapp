@@ -183,14 +183,16 @@ def m2():
     view = (ROOT / "mojoui/view.mojo").read_text()
     tests = (ROOT / "tests/test_mojoui.mojo").read_text()
     missing = [c for c in needed if f"def {c}(" not in view or f"{c}(" not in tests]
-    ok = r.returncode == 0 and "ALL TESTS PASSED" in out and not missing
-    return ok, "core tests pass; every component built and tested" if ok else f"missing {missing}; {out[-300:]}"
+    png = run(["pixi", "run", "mojo", "run", "-I", ".", "tests/test_png.mojo"])  # the encoder Mac/iPhone images use
+    ok = r.returncode == 0 and "ALL TESTS PASSED" in out and not missing and "PNG TESTS PASSED" in png.stdout
+    return ok, "core + PNG tests pass; every component built and tested" if ok else f"missing {missing}; {out[-300:]}{png.stdout[-200:]}"
 
 
 GALLERY_STEPS = ("type:Your name=Grace;toggle:Notifications;select:0=Large;slide:0=70;tap:Reset@0;"
                  "type:Your name=Ada;submit:Your name")
 GALLERY_EXPECT = ["LABEL: Hello, Ada", "FIELD: Ada", "TOGGLE: Notifications=on", "LABEL: Notifications are on",
-                  "DROPDOWN: Large", "LABEL: Volume 70", "SLIDER: 70", "PROGRESS: 70", "BUTTON: Say hello (1)"]
+                  "DROPDOWN: Large", "LABEL: Volume 70", "SLIDER: 70", "PROGRESS: 70", "IMAGE: 120x40",
+                  "BUTTON: Say hello (1)"]
 
 
 def gallery_ok(out):
@@ -247,6 +249,8 @@ def m6():
     if r1 is None or r2 is None:
         return False, (gout if r1 is None else wout)[-400:]
     gs, ws = state(gout), state(wout)
+    if "NATIVE: GTK" not in gout or "NATIVE: Chromium" not in wout:
+        problems.append("a run didn't report its native toolkit")
     missing = [e for e in TODO_EXPECT if e not in gs]
     if missing:
         problems.append(f"GTK missing {missing}")
@@ -303,7 +307,12 @@ def m8():
                 or not any(l.startswith("LABEL: Result:") and "✓" in l for l in s)
                 or "IMAGE: 480x320" not in s):
             problems.append(f"{name}: no GPU result or picture in {s}")
-    return not problems, "; ".join(problems) or "GPU kernel ran on the NVIDIA GPU; result shown in GTK and web, verified against the CPU"
+    # Without a GPU the app must explain itself, not crash.
+    exe = BUILD / "gpu" / "linux" / "gpu"
+    r = run([str(exe)], env={"MOJOUI_TEST": "tap:Run on GPU", "CUDA_VISIBLE_DEVICES": ""}, timeout=120)
+    if r.returncode != 0 or "LABEL: GPU: no GPU found" not in r.stdout or "CRITICAL" in r.stdout + r.stderr:
+        problems.append(f"no-GPU run failed (exit {r.returncode}): {(r.stdout + r.stderr)[-300:]}")
+    return not problems, "; ".join(problems) or "GPU kernel ran on the NVIDIA GPU; result shown in GTK and web, verified against the CPU; no-GPU run degrades gracefully"
 
 
 def m9():

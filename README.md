@@ -11,8 +11,9 @@ struct Main(App):
     def update(mut self, event: Event):
         if event.message == DRAFT:
             self.draft = event.text
-        elif event.message == ADD:
-            self.tasks.append(Task(self.next_id, self.draft, False))
+        elif event.message == ADD:  # Return carries the field's text; the Add button uses the draft
+            var title = event.text if event.text != "" else self.draft
+            self.tasks.append(Task(self.next_id, title, False))
         ...
 
     def view(self) -> View:
@@ -101,7 +102,7 @@ The app file imports only `mojoui`; it never touches GTK, HTML, AppKit or UIKit 
 
 ## Status and limits
 - **Runs here:** Linux and the web, including the GPU example. `scripts/check` drives the real widgets: GTK through its signals, the browser through Playwright. It reads them back and requires GTK and the web to end in identical states.
-- **Mac and iPhone:** they compile, link and sign here, and a reviewer checked every native call's calling convention in the compiled code. **They haven't been run on real hardware yet.**
+- **Mac and iPhone:** they compile, link and sign here. A reviewer checked the compiled code for every native call that passes or returns floating-point values or rectangles, plus the selectors and constants. **They haven't been run on real hardware yet.**
 - **Android:** a real arm64 library builds. Drawing with Android views and receiving taps needs a decision and Google's SDK licence: `docs/android.md`.
 - **Not yet:** images on Mac/iPhone, lists of thousands of rows (no virtualisation), navigation between screens, accessibility labels beyond the platforms' defaults, and JS "islands" on the web.
 - **Limits:** up to 65,535 nodes per screen; Mac/iPhone keep replaced controls in memory (fine for small apps).

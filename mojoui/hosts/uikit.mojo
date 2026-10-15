@@ -15,10 +15,11 @@ from mojoui.view import (
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
-from mojoui.diff import Diff, SET_TEXT, SET_VALUE
+from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
+from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
 from mojoui.hosts.objc import (
-    cls, sel, msg, new, ns_string, from_ns, constrain, global_block, new_class, add_method, add_protocol,
+    cls, sel, msg, new, ns_string, ns_data, from_ns, constrain, global_block, new_class, add_method, add_protocol,
     register_class, pool_push,
 )
 
@@ -131,8 +132,11 @@ struct UIKitHost[A: App](Movable):
             constrain(w, "widthAnchor", Float64(280))
             constrain(w, "heightAnchor", Float64(1))
             shown = w
-        elif node.kind == IMAGE:  # not built yet on Apple platforms: a placeholder
-            w = label("(image: coming to iPhone)", CAPTION)
+        elif node.kind == IMAGE:
+            w = msg(msg(cls("UIImageView"), "alloc"), "initWithImage:", ui_image(node.pixels, node.spacing, node.size))
+            _ = msg(w, "setContentMode:", 1)  # scale aspect fit, if the screen is narrower than the picture
+            constrain(w, "widthAnchor", Float64(node.spacing))
+            constrain(w, "heightAnchor", Float64(node.size))
             shown = w
         elif node.kind == SPACER:
             w = new("UIView")
@@ -175,7 +179,9 @@ struct UIKitHost[A: App](Movable):
         _ = msg(self.view, "addSubview:", self.root)
         pin_center(self.root, self.view)
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
-            _ = msg(self.widgets[self.focus], "becomeFirstResponder")  # keep the keyboard up
+            # Keep the keyboard up on the new field, on the next run-loop turn (after
+            # UIKit has finished with the old field).
+            _ = msg(self.widgets[self.focus], "performSelector:withObject:afterDelay:", sel("becomeFirstResponder"), 0, Float64(0))
         self.focus = -1
 
     def apply(mut self, d: Diff, self_addr: Int):
@@ -206,6 +212,8 @@ struct UIKitHost[A: App](Movable):
                     _ = msg(w, "setValue:animated:", Float32(p.number), 1)
                 elif node.kind == PROGRESS:
                     _ = msg(w, "setProgress:animated:", Float32(p.number) / 100.0, 1)
+            elif p.op == SET_IMAGE:
+                _ = msg(w, "setImage:", ui_image(node.pixels, node.spacing, node.size))
             # SET_MSG needs nothing: events look the message up in rt.shown.
 
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
@@ -217,6 +225,11 @@ struct UIKitHost[A: App](Movable):
         self.focus = node if n.kind == FIELD else -1
         var d = self.rt.dispatch(Event(message, text, number))
         self.apply(d, self_addr)
+
+
+def ui_image(pixels: List[UInt32], width: Int, height: Int) -> Int:
+    """A UIImage from RGBA pixels, via PNG bytes made in Mojo (mojoui/png.mojo)."""
+    return msg(cls("UIImage"), "imageWithData:", ns_data(encode_png(pixels, width, height)))
 
 
 def label(text: String, style: Int) -> Int:

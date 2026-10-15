@@ -14,10 +14,11 @@ from mojoui.view import (
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
-from mojoui.diff import Diff, SET_TEXT, SET_VALUE
+from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
+from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
 from mojoui.hosts.objc import (
-    cls, sel, msg, new, ns_string, from_ns, constrain, new_class, add_method, register_class, pool_push,
+    cls, sel, msg, new, ns_string, ns_data, from_ns, constrain, new_class, add_method, register_class, pool_push,
 )
 
 comptime NODE_BITS = 16
@@ -122,8 +123,10 @@ struct AppKitHost[A: App](Movable):
             _ = msg(w, "setBoxType:", 2)  # NSBoxSeparator
             constrain(w, "widthAnchor", Float64(280))
             constrain(w, "heightAnchor", Float64(1))
-        elif node.kind == IMAGE:  # not built yet on Apple platforms: a placeholder
-            w = msg(cls("NSTextField"), "labelWithString:", ns_string("(image: coming to Mac)"))
+        elif node.kind == IMAGE:
+            w = msg(cls("NSImageView"), "imageViewWithImage:", ns_image(node.pixels, node.spacing, node.size))
+            constrain(w, "widthAnchor", Float64(node.spacing))
+            constrain(w, "heightAnchor", Float64(node.size))
         elif node.kind == SPACER:
             w = new("NSView")
         elif node.kind == SCROLL:
@@ -165,7 +168,9 @@ struct AppKitHost[A: App](Movable):
         _ = msg(holder, "addArrangedSubview:", root)
         _ = msg(self.window, "setContentView:", holder)
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
-            _ = msg(self.window, "makeFirstResponder:", self.widgets[self.focus])  # keep typing
+            # Keep typing in the new field, on the next run-loop turn (after AppKit has
+            # finished ending the old field's edit), with the cursor at the end.
+            _ = msg(self.target, "performSelector:withObject:afterDelay:", sel("focusField:"), self.widgets[self.focus], Float64(0))
         self.focus = -1
 
     def apply(mut self, d: Diff, self_addr: Int):
@@ -190,6 +195,9 @@ struct AppKitHost[A: App](Movable):
                     _ = msg(w, "selectItemAtIndex:", p.number)
                 elif kind == SLIDER or kind == PROGRESS:
                     _ = msg(w, "setDoubleValue:", Float64(p.number))
+            elif p.op == SET_IMAGE:
+                ref img = self.rt.shown.nodes[p.node]
+                _ = msg(w, "setImage:", ns_image(img.pixels, img.spacing, img.size))
             # SET_MSG needs nothing: events look the message up in rt.shown.
 
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
@@ -201,6 +209,24 @@ struct AppKitHost[A: App](Movable):
         self.focus = node if n.kind == FIELD else -1
         var d = self.rt.dispatch(Event(message, text, number))
         self.apply(d, self_addr)
+
+
+def ns_image(pixels: List[UInt32], width: Int, height: Int) -> Int:
+    """An NSImage from RGBA pixels, via PNG bytes made in Mojo (mojoui/png.mojo)."""
+    var data = ns_data(encode_png(pixels, width, height))
+    return msg(msg(msg(cls("NSImage"), "alloc"), "initWithData:", data), "autorelease")
+
+
+def on_focus_field(target: Int, cmd: Int, field: Int) abi("C"):
+    """Focuses a text field and puts the cursor at the end (not select-all)."""
+    var window = msg(field, "window")
+    if window == 0:
+        return
+    _ = msg(window, "makeFirstResponder:", field)
+    var editor = msg(field, "currentEditor")
+    if editor != 0:
+        var length = msg(msg(field, "stringValue"), "length")
+        _ = msg(editor, "setSelectedRange:", length, 0)  # NSRange {location, length} in two registers
 
 
 def from_tag(control: Int) -> Tuple[Int, Int]:
@@ -293,6 +319,7 @@ def run[A: App]() -> c_int:
     add_method(c, "select:", on_select[A], "v@:@")
     add_method(c, "slide:", on_slide[A], "v@:@")
     add_method(c, "controlTextDidChange:", on_text_change[A], "v@:@")
+    add_method(c, "focusField:", on_focus_field, "v@:@")
     add_method(c, "applicationShouldTerminateAfterLastWindowClosed:", quit_when_closed, "B@:@")
     register_class(c)
     host[].target = msg(c, "new")

@@ -204,6 +204,10 @@ def test_image_holds_pixels_and_patches_when_they_change() raises:
     assert_equal(len(d.patches), 1)
     assert_equal(d.patches[0], Patch(SET_IMAGE, 1, "", 0))
     assert_true(diff(v, VStack(Image(a, 4, 1))).rebuild)  # new size: rebuild
+    var short: List[UInt32] = [1, 2]
+    var safe = Image(short, 2, 2)  # wrong pixel count: a blank picture of the stated size
+    assert_equal(len(safe.nodes[0].pixels), 4)
+    assert_equal(safe.nodes[0].pixels[3], 0)
 
 
 def test_hint_submit_and_scroll_size_changes_rebuild() raises:

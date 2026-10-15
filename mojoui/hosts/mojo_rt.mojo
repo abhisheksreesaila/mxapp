@@ -35,8 +35,9 @@ def runtime_fprintf(stream: Int, fmt: Int) abi("C") -> c_int:
     Writes the raw format string to stderr; %-codes aren't expanded, so on a
     device you see "At: %s:%llu:%llu: Assert Error: %s" without the details:
     reproduce on Linux (full Mojo runtime) to read the real message. (C declares
-    this variadic; on Apple arm64 the extra arguments go on the stack, so taking
-    just the first two is safe.)
+    this variadic; on Apple arm64 the extra arguments go on the stack and on
+    other arm64/x86-64 targets in later registers, so taking just the first two
+    is safe everywhere.)
     """
     var n = external_call["strlen", Int](fmt)
     _ = external_call["write", Int](2, fmt, n)

@@ -3,8 +3,8 @@
 Status: blocked (needs your decision and Google's SDK licence; see "What needs you")
 
 ## Works today (checked on Linux)
-- **Mojo targets Android.** `mojo build --target-triple aarch64-linux-android29 --emit object` compiles any mojoui app as is.
-- **A real Android library.** `scripts/build.sh todo android` builds `build/todo/android/lib/arm64-v8a/libmojoui.so`, 37 KB: the todo app plus the mojoui core, with the `ANativeActivity_onCreate` entry Android calls on the UI thread. It needs only Android's own `libc`, `libdl`, `liblog` and `libandroid`. There's no Mojo runtime library (the runtime functions are Mojo, `mojoui/hosts/mojo_rt.mojo`) and no Java.
+- **Mojo targets Android.** `mojo build --target-triple aarch64-linux-android29 --emit object` compiles mojoui apps as they are (all but the GPU example, which needs NVIDIA/AMD).
+- **A real Android library.** `scripts/build.sh todo android` builds `build/todo/android/lib/arm64-v8a/libmojoui.so`, 37 KB: the todo app plus the mojoui core, with the `ANativeActivity_onCreate` entry Android calls on the UI thread. It needs only Android's own `libc` and `liblog`. There's no Mojo runtime library (the runtime functions are Mojo, `mojoui/hosts/mojo_rt.mojo`) and no Java.
 - It's linked on Linux by `ld.lld` against empty libraries that carry only the system libraries' names, the same trick as `apple/sdk/`.
 
 `hosts/android_main.mojo` creates the app and logs its first screen ("TodoMojo: first screen has N nodes…"). It doesn't draw anything yet.
@@ -32,7 +32,7 @@ $ scripts/build.sh todo android
 $ file build/todo/android/lib/arm64-v8a/libmojoui.so
 ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
 $ llvm-readelf -d …/libmojoui.so | grep NEEDED
-libandroid.so  libc.so  libdl.so  liblog.so
+libc.so  liblog.so
 $ llvm-nm -D --undefined-only …/libmojoui.so
 __android_log_write dup fclose fdopen fflush free memcpy posix_memalign strlen write
 ```

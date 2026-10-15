@@ -228,7 +228,7 @@ struct GtkHost[A: App](Movable):
         external_call["gtk_widget_set_margin_end", NoneType](root, c_int(32))
         external_call["gtk_window_set_child", NoneType](self.window, root)
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
-            _ = external_call["gtk_widget_grab_focus", c_int](self.widgets[self.focus])  # keep typing
+            _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
         self.focus = -1
         set_busy(False)
 

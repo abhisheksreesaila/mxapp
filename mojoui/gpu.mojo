@@ -1,7 +1,8 @@
 # Run a plain Mojo function once per pixel, on the GPU (NVIDIA or AMD, via MAX).
 #
 #   def shade(x: Int, y: Int, width: Int, height: Int, p: Params) -> UInt32: ...
-#   var pixels = render_on_gpu[shade](480, 320, p)
+#   var gpu = Gpu()                                  # once; gpu.available() if there is one
+#   var pixels = gpu.render[shade](480, 320, p).pixels
 #
 # The app writes only ordinary Mojo maths; this module compiles it into a GPU
 # kernel and launches one GPU thread per pixel. Needs the `max` package.
@@ -25,37 +26,55 @@ def _pixels_kernel[f: PixelFn](dst: UnsafePointer[UInt32, MutAnyOrigin], w32: In
         dst.unsafe_offset(y * w + x)[] = f(x, y, w, h, p)
 
 
-def gpu_name() -> String:
-    """The GPU's name, or "no GPU" if there isn't a supported one."""
-    try:
-        return DeviceContext().name()
-    except:
-        return "no GPU"
-
-
 @fieldwise_init
 struct Rendered(Copyable, Movable):
     var pixels: List[UInt32]
-    var milliseconds: Float64  # time the GPU took (kernel launch to results ready)
+    var milliseconds: Float64  # time taken (GPU: kernel launch to results ready)
 
 
-def render_on_gpu[f: PixelFn](width: Int, height: Int, p: Params) raises -> Rendered:
-    """Runs f for every pixel on the GPU; returns the pixels and how long it took."""
-    var ctx = DeviceContext()
-    var buf = ctx.enqueue_create_buffer[DType.uint32](width * height)
-    ctx.synchronize()
-    var t0 = perf_counter_ns()
-    ctx.enqueue_function[_pixels_kernel[f]](
-        buf.unsafe_ptr(), Int32(width), Int32(height), p,
-        grid_dim=(ceildiv(width, 16), ceildiv(height, 16)), block_dim=(16, 16),
-    )
-    ctx.synchronize()
-    var ms = Float64(perf_counter_ns() - t0) / 1e6
-    var out = List[UInt32](capacity=width * height)
-    with buf.map_to_host() as host:
-        for i in range(width * height):
-            out.append(host[i])
-    return Rendered(out^, ms)
+struct Gpu(Movable):
+    """The machine's first GPU, if it has a supported one. Keep one and reuse it.
+
+    Checks the device count first: creating a device context with no GPU present
+    crashes rather than raising, so `available` must be checked (render() does).
+    """
+
+    var ctx: Optional[DeviceContext]
+    var name: String
+
+    def __init__(out self):
+        self.ctx = None
+        self.name = "no GPU found"
+        try:
+            if DeviceContext.number_of_devices() > 0:
+                var ctx = DeviceContext()
+                self.name = ctx.name()
+                self.ctx = ctx^
+        except:
+            self.ctx = None
+
+    def available(self) -> Bool:
+        return Bool(self.ctx)
+
+    def render[f: PixelFn](self, width: Int, height: Int, p: Params) raises -> Rendered:
+        """Runs f for every pixel on the GPU; returns the pixels and how long it took."""
+        if not self.ctx:
+            raise Error("no GPU found")
+        ref ctx = self.ctx.value()
+        var buf = ctx.enqueue_create_buffer[DType.uint32](width * height)
+        ctx.synchronize()
+        var t0 = perf_counter_ns()
+        ctx.enqueue_function[_pixels_kernel[f]](
+            buf.unsafe_ptr(), Int32(width), Int32(height), p,
+            grid_dim=(ceildiv(width, 16), ceildiv(height, 16)), block_dim=(16, 16),
+        )
+        ctx.synchronize()
+        var ms = Float64(perf_counter_ns() - t0) / 1e6
+        var out = List[UInt32](capacity=width * height)
+        with buf.map_to_host() as host:
+            for i in range(width * height):
+                out.append(host[i])
+        return Rendered(out^, ms)
 
 
 def render_on_cpu[f: PixelFn](width: Int, height: Int, p: Params) -> Rendered:

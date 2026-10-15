@@ -93,6 +93,7 @@ class Session:
         self.images = {}  # node → version, for cache-busting image URLs
         self.focus = None  # field to focus after the next rebuild
         self.lock = threading.Lock()
+        self.closed = False  # set (under lock) when the tab is evicted; its Mojo handle is gone
 
 
 def render(s, i, sid):
@@ -174,6 +175,7 @@ def make_app(module_dir):
             while len(sessions) > MAX_SESSIONS:
                 _, old = sessions.popitem(last=False)
                 with old.lock:
+                    old.closed = True
                     mod.close(old.handle)
         return Title(mod.title(s.handle)), root(s, sid)
 
@@ -183,10 +185,12 @@ def make_app(module_dir):
         if s is None:
             return Response(status_code=404)
         with s.lock:  # the pixels belong to the current screen: read them before any other event
-            addr, w, h = map(int, mod.image(s.handle, n).split())
-            if not addr:
+            if s.closed:
                 return Response(status_code=404)
-            data = png(ctypes.string_at(addr, w * h * 4), w, h)
+            addr, w, h, nbytes = map(int, mod.image(s.handle, n).split())
+            if not addr or nbytes != w * h * 4:
+                return Response(status_code=404)
+            data = png(ctypes.string_at(addr, nbytes), w, h)
         return Response(data, media_type="image/png", headers={"Cache-Control": "no-store"})
 
     @app.post("/e/{sid}")
@@ -195,6 +199,8 @@ def make_app(module_dir):
         if s is None:
             return Main(P("This page expired: reload it.", cls="text caption"), id="mojoui-root", hx_swap_oob="true")
         with s.lock:
+            if s.closed:
+                return Main(P("This page expired: reload it.", cls="text caption"), id="mojoui-root", hx_swap_oob="true")
             if v != s.shape or not 0 <= n < len(s.nodes):
                 return ""  # from an older screen (e.g. a double click on a row that's gone): ignore
             source = s.nodes[n]
