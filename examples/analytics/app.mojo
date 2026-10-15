@@ -2,7 +2,8 @@
 #
 # Every time a filter changes, all 20 million rows are added up again on the GPU (by month, by
 # category, by region, by product, by order size, by year), exactly, to the cent. The charts are
-# drawn by this file on canvases (the same on every platform); the controls around them are each
+# Flint specs (Microsoft's chart language for AI agents) drawn by mojoui on canvases (the same on every
+# platform); the controls around them are each
 # platform's own, styled in Fluent 2. Tap a month, a category or a region to filter everything else.
 #
 # The data is made up (a seeded generator below): three years of order lines with growth,
@@ -10,12 +11,13 @@
 
 from mojoui.maths import sqrt, log, sin, cos
 from mojoui import (
-    App, Event, View, Surface, rgba, VStack, HStack, Text, Button, Segmented, Dropdown, Divider, Canvas, Card, LazyList, Spacer,
+    App, Event, View, Surface, rgba, VStack, HStack, Text, Button, Segmented, Dropdown, Divider, Canvas, Card, Spacer,
     TITLE, HEADLINE, CAPTION, PROMINENT, START, CENTER, BETWEEN, TAP, FLUENT, NO_MSG,
 )
 from mojoui.gpu import Table, Row, Filter, gpu_present
 from mojoui.text import Font
-from mojoui.charts import KpiTile, BarChart, LineChart, ColumnChart, money, compact, grouped, fixed
+from mojoui.charts import money, compact, grouped, fixed
+from mojoui.flint import FlintChart
 
 comptime YEAR = 1
 comptime CHANNEL = 2
@@ -34,6 +36,7 @@ comptime CHART_MONTH = 4
 comptime CHART_CATEGORY = 5
 comptime CHART_REGION = 6
 comptime CHART_SIZE = 7
+comptime CHART_PRODUCTS = 8
 
 comptime DAYS = 1096  # 2023-01-01 … 2025-12-31
 comptime MONTHS = 36
@@ -270,7 +273,7 @@ struct Main(App):
         self.cat_order = List[Int]()
         self.milliseconds = 0
         self.passes = 0
-        self.sizes = List[Tuple[Float64, Float64]](length=8, fill=(0.0, 0.0))
+        self.sizes = List[Tuple[Float64, Float64]](length=9, fill=(0.0, 0.0))
         self.compute()
 
     def title(self) -> String:
@@ -365,108 +368,129 @@ struct Main(App):
             self.month = -1
             self.compute()
         elif event.message == TAP_CATEGORY and event.number == TAP:
-            var chart = self.category_chart()
-            var row = chart.hit(self.sizes[CHART_CATEGORY][1], event.y)
+            var row = self.category_chart().hit(self.sizes[CHART_CATEGORY][0], self.sizes[CHART_CATEGORY][1], self.font, event.x, event.y)
             if row >= 0:
                 var c = self.cat_order[row]
                 self.category = -1 if self.category == c else c
                 self.compute()
         elif event.message == TAP_REGION and event.number == TAP:
-            var col = self.region_chart().hit(self.sizes[CHART_REGION][0], event.x)
+            var col = self.region_chart().hit(self.sizes[CHART_REGION][0], self.sizes[CHART_REGION][1], self.font, event.x, event.y)
             if col >= 0:
                 self.region = -1 if self.region == col else col
                 self.compute()
         elif event.message == TAP_MONTH and event.number == TAP:
-            var w = self.sizes[CHART_MONTH][0]
-            var h = self.sizes[CHART_MONTH][1]
-            var k = 2.0  # (hit-testing in points; the scale only sets label widths)
-            var i = self.month_chart().hit(w * k, h * k, k, self.font, event.x)
+            var i = self.month_chart().hit(self.sizes[CHART_MONTH][0], self.sizes[CHART_MONTH][1], self.font, event.x, event.y)
             var first = 0 if self.year == 0 else (self.year - 1) * 12
             if i >= 0:
                 var m = first + i
                 self.month = -1 if self.month == m else m
                 self.compute()
 
-    # ---------- charts ----------
+    # ---------- charts, as Flint specs ----------
 
-    def month_chart(self) -> LineChart:
+    def month_chart(self) -> FlintChart:
         var labels = List[String]()
         var values = List[Float64]()
         var first = 0 if self.year == 0 else (self.year - 1) * 12
-        var count = MONTHS if self.year == 0 else 12
         var names = materialize[MONTH_NAMES]()
-        for i in range(count):
+        for i in range(MONTHS if self.year == 0 else 12):
             var m = first + i
-            if self.year == 0:
-                labels.append(names[m % 12] + " " + String(23 + m // 12) if m % 6 == 0 else "")
-            else:
-                labels.append(names[m % 12] if i % 2 == 0 else "")
+            labels.append(names[m % 12] + (" " + String(23 + m // 12) if self.year == 0 else ""))
             values.append(Float64(self.month_rev[m]))
-        return LineChart(labels^, values^, self.month - first if self.month >= 0 else -1)
+        return (FlintChart("Area Chart", "Revenue by month").text("month", labels).number("revenue", values)
+                .semantic("month", "Month").semantic("revenue", "Price").encode("x", "month").encode("y", "revenue")
+                .size(720, 260))
 
-    def category_chart(self) -> BarChart:
+    def category_chart(self) -> FlintChart:
         var cats = materialize[CATEGORIES]()
         var names = List[String]()
         var values = List[Float64]()
-        var labels = List[String]()
-        var selected = -1
         for k in range(8):
-            var c = self.cat_order[k]
-            names.append(cats[c])
-            values.append(Float64(self.cat_rev[c]))
-            labels.append(money(self.cat_rev[c]))
-            if c == self.category:
-                selected = k
-        return BarChart(names^, values^, labels^, selected)
+            names.append(cats[self.cat_order[k]])
+            values.append(Float64(self.cat_rev[self.cat_order[k]]))
+        return (FlintChart("Bar Chart", "Revenue by category").text("category", names).number("revenue", values)
+                .semantic("category", "Category").semantic("revenue", "Price").encode("x", "revenue").encode("y", "category")
+                .property("cornerRadius", "3").size(400, 260))
 
-    def region_chart(self) -> ColumnChart:
-        var names = materialize[REGIONS_SHORT]()
+    def region_chart(self) -> FlintChart:
         var values = List[Float64]()
-        var tops = List[String]()
         for r in range(5):
             values.append(Float64(self.region_rev[r]))
-            tops.append(money(self.region_rev[r]))
-        return ColumnChart(names^, values^, tops^, self.region)
+        return (FlintChart("Bar Chart", "Revenue by region").text("region", materialize[REGIONS_SHORT]()).number("revenue", values)
+                .semantic("region", "Region").semantic("revenue", "Price").encode("x", "region").encode("y", "revenue")
+                .property("cornerRadius", "3").property("showValueLabels", "true").size(380, 300))
 
-    def size_chart(self) -> ColumnChart:
+    def size_chart(self) -> FlintChart:
         var labels = List[String]()
         var values = List[Float64]()
-        var tops = List[String]()
         for b in range(BINS):
-            labels.append(("$" + String(b * 50) if b * 50 < 1000 else "$" + fixed(Float64(b * 50) / 1000.0, 1) + "K") if b % 4 == 0 else "")
+            labels.append("$" + String(b * 50) if b * 50 < 1000 else "$" + fixed(Float64(b * 50) / 1000.0, 1) + "K")
             values.append(Float64(self.size_orders[b]))
-            tops.append("")
-        return ColumnChart(labels^, values^, tops^, -1, 0.14, rgba(42, 160, 164))  # Fluent teal
+        return (FlintChart("Bar Chart", "Orders by size").text("order value", labels).number("orders", values)
+                .semantic("order value", "Price").semantic("orders", "Count").encode("x", "order value").encode("y", "orders")
+                .size(420, 300))
+
+    def products_chart(self) -> FlintChart:
+        var names = materialize[PRODUCTS]()
+        var products = List[String]()
+        var values = List[Float64]()
+        for k in range(8):
+            products.append(names[self.top[k]])
+            values.append(Float64(self.product_rev[self.top[k]]))
+        return (FlintChart("Bar Table", "Top products").text("product", products).number("revenue", values)
+                .semantic("product", "Name").semantic("revenue", "Price").encode("y", "product").encode("x", "revenue")
+                .property("maxRows", "8").size(320, 300))
+
+    def kpi(self, metric: String, value: Int, trend: List[Float64]) -> FlintChart:
+        var chart = FlintChart("KPI Card", metric).text("metric", [metric]).number("value", [Float64(value)])
+        chart = chart^.encode("metric", "metric").encode("value", "value").size(240, 118)
+        if metric == "Revenue":
+            chart = chart^.semantic("value", "Price")
+        return chart^
+
+    def charts(self) -> List[FlintChart]:
+        """Every chart on the dashboard, as Flint specs (in canvas order)."""
+        var revenue = self.total(self.year_rev)
+        var orders = self.total(self.year_orders)
+        var out = List[FlintChart]()
+        out.append(self.kpi("Revenue", revenue, self.spark(self.month_rev)))
+        out.append(self.kpi("Orders", orders, List[Float64]()))
+        out.append(self.kpi("Average order", revenue // max(orders, 1), List[Float64]()).semantic("value", "Price"))
+        out.append(self.kpi("Units sold", self.total(self.year_units), List[Float64]()))
+        out.append(self.month_chart())
+        out.append(self.category_chart())
+        out.append(self.region_chart())
+        out.append(self.size_chart())
+        out.append(self.products_chart())
+        return out^
 
     def draw(mut self, canvas: Int, mut surface: Surface):
         self.sizes[canvas] = (surface.points_width(), surface.points_height())
-        var revenue = self.total(self.year_rev)
-        var orders = self.total(self.year_orders)
-        var unit_count = self.total(self.year_units)
         if canvas == KPI_REVENUE:
-            KpiTile("Revenue", money(revenue), self.change(self.year_rev), self.spark(self.month_rev), accent=True).draw(surface, self.font)
+            var c = self.kpi("Revenue", self.total(self.year_rev), self.spark(self.month_rev)).number("trend", self.spark(self.month_rev))
+            c.draw(surface, self.font, -1, True, self.change(self.year_rev))
         elif canvas == KPI_ORDERS:
-            KpiTile("Orders", compact(Float64(orders)), self.change(self.year_orders), List[Float64]()).draw(surface, self.font)
+            self.kpi("Orders", self.total(self.year_orders), List[Float64]()).draw(surface, self.font, -1, False, self.change(self.year_orders))
         elif canvas == KPI_AOV:
-            var aov = revenue // max(orders, 1)
-            KpiTile("Average order", "$" + fixed(Float64(aov) / 100.0, 2), "per order line", List[Float64]()).draw(surface, self.font)
+            var aov = self.total(self.year_rev) // max(self.total(self.year_orders), 1)
+            self.kpi("Average order", aov, List[Float64]()).semantic("value", "Price").draw(surface, self.font, -1, False, "per order line")
         elif canvas == KPI_UNITS:
-            KpiTile("Units sold", compact(Float64(unit_count)), self.change(self.year_units), List[Float64]()).draw(surface, self.font)
+            self.kpi("Units sold", self.total(self.year_units), List[Float64]()).draw(surface, self.font, -1, False, self.change(self.year_units))
         elif canvas == CHART_MONTH:
-            self.month_chart().draw(surface, self.font)
+            var first = 0 if self.year == 0 else (self.year - 1) * 12
+            self.month_chart().draw(surface, self.font, self.month - first if self.month >= 0 else -1)
         elif canvas == CHART_CATEGORY:
-            self.category_chart().draw(surface, self.font)
+            var selected = -1
+            for k in range(8):
+                if self.cat_order[k] == self.category:
+                    selected = k
+            self.category_chart().draw(surface, self.font, selected)
         elif canvas == CHART_REGION:
-            self.region_chart().draw(surface, self.font)
+            self.region_chart().draw(surface, self.font, self.region)
         elif canvas == CHART_SIZE:
             self.size_chart().draw(surface, self.font)
-
-    def row(self, list_id: Int, index: Int) -> String:
-        if index >= len(self.top):
-            return ""
-        var p = self.top[index]
-        var names = materialize[PRODUCTS]()
-        return String(index + 1) + ".  " + names[p] + "   " + money(self.product_rev[p])
+        elif canvas == CHART_PRODUCTS:
+            self.products_chart().draw(surface, self.font)
 
     # ---------- the screen ----------
 
@@ -543,7 +567,7 @@ struct Main(App):
             ).grow().fill().tag("card_size"),
             Card(
                 Text("Top products", style=HEADLINE),
-                LazyList(10, 0, height=120, row_height=32).grow().fill(),
+                Canvas(CHART_PRODUCTS, self.version).grow().fill(),
                 spacing=8,
             ).width(300).fill().tag("card_products"),
             spacing=16,
