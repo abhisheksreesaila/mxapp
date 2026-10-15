@@ -419,13 +419,14 @@ struct Table(Movable):
     def device_name(self) -> String:
         return self.gpu.name if self.on_gpu() else String("CPU")
 
-    def group_sum[g: GroupFn, a: AmountFn](mut self, groups: Int, f: Filter) -> GroupSums:
-        """For each row, g() picks a group (or -1) and a() what it adds: per-group sums and row counts."""
+    def group_sum[g: GroupFn, a: AmountFn](mut self, groups: Int, f: Filter, use_gpu: Bool = True) -> GroupSums:
+        """For each row, g() picks a group (or -1) and a() what it adds: per-group sums and row counts.
+        use_gpu=False runs it on the CPU even when the table is on a GPU (to compare)."""
         var t0 = now_ns()
         var sums = List[Int](length=groups, fill=0)
         var counts = List[Int](length=groups, fill=0)
         comptime if GPU_BUILD:
-            if self.on_gpu():
+            if self.on_gpu() and use_gpu:
                 try:
                     ref ctx = self.gpu.ctx.value()
                     if self.acc_groups < groups:

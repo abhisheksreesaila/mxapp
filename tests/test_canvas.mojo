@@ -142,6 +142,7 @@ def test_card_is_a_padded_vstack_with_the_card_style() raises:
     assert_equal(v.nodes[0].style, CARD)
     assert_equal(v.nodes[0].spacing, 6)
     assert_equal(v.nodes[0].pad_v, 16)
+    assert_equal(v.nodes[0].align_items, START)
     assert_equal(v.nodes[0].children, [1, 2])
     var rt = Runtime(Painter())
     assert_equal(rt.app.design(), NATIVE)  # the default

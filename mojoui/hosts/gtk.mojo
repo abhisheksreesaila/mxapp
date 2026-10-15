@@ -310,7 +310,7 @@ struct GtkCanvas(Copyable, Movable):
     var pinch: Float64  # the pinch's scale so far
     var moved: Bool  # the current press became a drag (so it's not a tap)
     var armed: Bool  # a tick callback is running (only while frames, a redraw or a resize may be due)
-    var quiet: Int  # idle ticks in a row (layout runs after ticks, so wait a few before stopping)
+    var quiet: Int  # idle ticks in a row (layout can change after ticks, so wait before stopping)
 
     def __init__(out self, node: Int, widget: Int):
         self.node = node
@@ -379,6 +379,10 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_widget_set_size_request", NoneType](w, c_int(want_w if want_w != 0 else -1), c_int(node.h if node.h != 0 else -1))
         # GTK size requests are minimums; AdwClamp caps the width: at max_w, or exactly at a
         # fixed width (so a fixed-width view never grows past it, as on the other hosts).
+        if node.w != 0:  # a fixed width never takes spare room (GTK passes children's expand up)
+            external_call["gtk_widget_set_hexpand", NoneType](w, c_int(0))
+        if node.h != 0:
+            external_call["gtk_widget_set_vexpand", NoneType](w, c_int(0))
         var cap = node.max_w if node.max_w != 0 else node.w
         if cap != 0:
             var clamp = external_call["adw_clamp_new", Int]()
@@ -518,6 +522,15 @@ struct GtkHost[A: App](Movable):
             c.scroll = scroll
             self.canvases.append(c^)
             self.arm(ci, self_addr)
+            # A picture asks for its texture's size in pixels, which would grow the canvas each
+            # redraw on a scaled screen: a scrolled window that never scrolls takes no size from it.
+            self.widgets[i] = w
+            var holder = external_call["gtk_scrolled_window_new", Int]()
+            external_call["gtk_scrolled_window_set_policy", NoneType](holder, c_int(3), c_int(3))  # GTK_POLICY_EXTERNAL
+            external_call["gtk_scrolled_window_set_child", NoneType](holder, w)
+            external_call["gtk_widget_set_size_request", NoneType](holder, c_int(-1 if sized else 320), c_int(-1 if node.sized_height() else 240))
+            external_call["gtk_widget_set_size_request", NoneType](w, c_int(-1), c_int(-1))
+            w = holder
         elif node.kind == SEGMENTED or node.kind == TABS:
             w = external_call["adw_toggle_group_new", Int]()  # GNOME's own segmented control
             for j in range(len(node.options)):
@@ -660,6 +673,9 @@ struct GtkHost[A: App](Movable):
                     external_call["gtk_box_append", NoneType](w, spacer(orientation))
                 var child = self.build(c, self_addr)
                 self.place_child(node, self.rt.shown.nodes[c], child)
+                if orientation == VERTICAL and self.rt.shown.nodes[c].kind == TEXT and node.align_items == START:
+                    external_call["gtk_label_set_justify", NoneType](self.widgets[c], c_int(0))  # left-aligned lines too
+                    external_call["gtk_label_set_xalign", NoneType](self.widgets[c], Float32(0))
                 external_call["gtk_box_append", NoneType](w, child)
             if j == CENTER:
                 external_call["gtk_box_append", NoneType](w, spacer(orientation))
@@ -821,7 +837,7 @@ struct GtkHost[A: App](Movable):
         self.draw_canvas(ci, self_addr)
         if ci < len(self.canvases) and self.idle(ci):
             self.canvases[ci].quiet += 1
-            if self.canvases[ci].quiet >= 3:
+            if self.canvases[ci].quiet >= 30:  # (~0.5 s: lets late relayouts, e.g. lists filling in, settle)
                 self.canvases[ci].armed = False
                 return False
         elif ci < len(self.canvases):
@@ -1521,7 +1537,9 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     host[].window = external_call["gtk_application_window_new", Int](gapp)
     var title = host[].rt.app.title()
     external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
-    if host[].rt.app.design() == FLUENT:  # Fluent 2 tokens on top of libadwaita
+    if host[].rt.app.design() == FLUENT:  # Fluent 2 tokens on top of libadwaita (a light design)
+        var manager = external_call["adw_style_manager_get_default", Int]()
+        external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(1))  # ADW_COLOR_SCHEME_FORCE_LIGHT
         var provider = external_call["gtk_css_provider_new", Int]()
         var rules = String(FLUENT_CSS)
         external_call["gtk_css_provider_load_from_string", NoneType](provider, rules.as_c_string_span())

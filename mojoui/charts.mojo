@@ -96,6 +96,18 @@ def grouped(n: Int) -> String:
     return ("-" if n < 0 else "") + out
 
 
+def nice_step(x: Float64) -> Float64:
+    """A round gridline step for values up to x (about 4 steps): 1, 2, 2.5 or 5 × 10^k."""
+    if x <= 0:
+        return 1
+    var raw = x / 4.0
+    var p = 10.0 ** floor(log10(raw))
+    for m in [1.0, 2.0, 2.5, 5.0, 10.0]:
+        if m * p >= raw * 0.999:
+            return m * p
+    return 10 * p
+
+
 def nice_max(x: Float64) -> Float64:
     """A round number ≥ x for an axis top (1, 2, 2.5, 5 × 10^k)."""
     if x <= 0:
@@ -232,7 +244,8 @@ struct LineChart(Movable):
 
     def plot_box(self, w: Float64, h: Float64, k: Float64, font: Font) -> SIMD[DType.float64, 4]:
         """(left, top, right, bottom) of the plotting area, in pixels."""
-        var top_value = nice_max(self.max_value())
+        var step = nice_step(self.max_value())
+        var top_value = step * Float64(max(Int(self.max_value() / step + 0.999), 1))
         var axis_w = font.measure(axis_money(Int(top_value)), 12 * k) + 10 * k
         return SIMD[DType.float64, 4](axis_w, 10 * k, w - 8 * k, h - 26 * k)
 
@@ -253,16 +266,18 @@ struct LineChart(Movable):
         var top = box[1]
         var right = box[2]
         var bottom = box[3]
-        var top_value = nice_max(self.max_value())
-        for g in range(5):  # gridlines and y labels
-            var y = bottom - (bottom - top) * Float64(g) / 4.0
+        var step = nice_step(self.max_value())
+        var lines = max(Int(self.max_value() / step + 0.999), 1)
+        var top_value = step * Float64(lines)
+        for g in range(lines + 1):  # gridlines and y labels at round steps
+            var y = bottom - (bottom - top) * Float64(g) / Float64(lines)
             hline(s, left, right, y, GRID if g > 0 else STROKE)
-            font.draw(s, axis_money(Int(top_value * Float64(g) / 4.0)), left - 8 * k, y + 4 * k, 12 * k, INK2, REGULAR, RIGHT)
+            font.draw(s, axis_money(Int(step * Float64(g))), left - 8 * k, y + 4 * k, 12 * k, INK2, REGULAR, RIGHT)
         var xs = List[Float64]()
         var ys = List[Float64]()
         for i in range(n):
             xs.append(left + (right - left) * Float64(i) / Float64(n - 1))
-            ys.append(bottom - (bottom - top) * self.values[i] / top_value)
+            ys.append(bottom - (bottom - top) * self.values[i] / (nice_step(self.max_value()) * Float64(max(Int(self.max_value() / nice_step(self.max_value()) + 0.999), 1))))
         for i in range(n):  # x labels
             if self.labels[i] != "":
                 font.draw(s, self.labels[i], xs[i], bottom + 18 * k, 12 * k, INK2, REGULAR, CENTRE)

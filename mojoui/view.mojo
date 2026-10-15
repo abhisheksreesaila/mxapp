@@ -398,13 +398,13 @@ def VStack(items: List[View], spacing: Int = 16) -> View:
 
 
 def Card(*items: View, spacing: Int = 12) -> View:
-    """A raised panel holding its children top to bottom (padded 16). Hosts draw their own card look;
+    """A raised panel holding its children top to bottom, left-aligned (padded 16). Hosts draw their own card look;
     hosts that don't know cards show it as a plain VStack."""
     var list = List[View]()
     for item in items:
         list.append(item.copy())
     var v = _container(Node(VSTACK, spacing=spacing, style=CARD), list)
-    return v^.padding(16)
+    return v^.padding(16).align(START)
 
 
 def HStack(*items: View, spacing: Int = 8) -> View:
