@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mojo-ui showcase · one Mojo file, every platform</title>
+<meta name="description" content="Apps written once in Mojo, drawn with each platform's own controls, with the GPU in the same language.">
+<style>
+  :root { --ink: #1b1f24; --ink2: #57606a; --line: #e4e7eb; --page: #f6f7f9; --brand: #0f6cbd; --brand-wash: #ebf3fc;
+          --native: #0b7a3e; --native-wash: #e7f6ec; --web: #8a3ffc; --web-wash: #f3ecff; --both: #b35c00; --both-wash: #fff3e3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.55 "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif;
+         color: var(--ink); background: var(--page); }
+  a { color: var(--brand); text-decoration: none; } a:hover { text-decoration: underline; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+  header.hero { background: #0b1220; color: #fff; padding: 64px 0 48px; }
+  .hero h1 { font-size: 46px; line-height: 1.1; margin: 0 0 14px; letter-spacing: -0.02em; }
+  .hero h1 em { font-style: normal; color: #7cc4ff; }
+  .hero p.lead { font-size: 19px; color: #c9d4e3; max-width: 760px; margin: 0 0 26px; }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 6px 0 0; }
+  .flow .file { background: #fff; color: #0b1220; font-weight: 700; border-radius: 8px; padding: 10px 16px; font-family: ui-monospace, monospace; }
+  .flow .arrow { color: #7cc4ff; font-weight: 700; }
+  .flow .plat { border: 1px solid #2b3a55; border-radius: 999px; padding: 6px 14px; color: #dfe8f5; font-size: 14px; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 36px; }
+  .fact { background: #121b2e; border: 1px solid #22314d; border-radius: 12px; padding: 16px 18px; }
+  .fact b { display: block; font-size: 26px; color: #fff; }
+  .fact span { color: #9fb0c8; font-size: 14px; }
+  nav.filters { position: sticky; top: 0; z-index: 5; background: rgba(246,247,249,.94); backdrop-filter: saturate(1.2);
+                border-bottom: 1px solid var(--line); }
+  nav.filters .wrap { display: flex; gap: 8px; align-items: center; padding-top: 12px; padding-bottom: 12px; flex-wrap: wrap; }
+  nav.filters button { font: inherit; font-size: 14px; font-weight: 600; border: 1px solid var(--line); background: #fff; color: var(--ink2);
+                       border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+  nav.filters button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  nav.filters .hint { margin-left: auto; color: var(--ink2); font-size: 14px; }
+  section.show { padding: 36px 0 8px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin-bottom: 28px;
+          box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+  .card.focal { border-color: #b9d6f2; box-shadow: 0 12px 32px rgba(15,108,189,.12); }
+  .card .head { padding: 22px 26px 6px; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+  .card h2 { margin: 0; font-size: 26px; letter-spacing: -0.01em; }
+  .tag { font-size: 13px; font-weight: 700; border-radius: 999px; padding: 3px 11px; }
+  .tag.native { background: var(--native-wash); color: var(--native); }
+  .tag.web { background: var(--web-wash); color: var(--web); }
+  .tag.both { background: var(--both-wash); color: var(--both); }
+  .tag.next { background: #eef0f3; color: var(--ink2); }
+  .card .body { display: grid; grid-template-columns: 1.55fr 1fr; gap: 26px; padding: 12px 26px 26px; }
+  .card .body.single { grid-template-columns: 1fr; }
+  .shots { display: grid; gap: 12px; }
+  .shots.two { grid-template-columns: 1fr 1fr; }
+  .shots.three { grid-template-columns: repeat(3, 1fr); }
+  figure { margin: 0; }
+  figure img { width: 100%; display: block; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+  figcaption { font-size: 13px; color: var(--ink2); margin-top: 6px; }
+  .why h3 { margin: 4px 0 8px; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink2); }
+  .why ul { margin: 0 0 16px; padding-left: 18px; }
+  .why li { margin: 4px 0; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 16px; }
+  .split div { border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+  .split .n { background: var(--native-wash); } .split .w { background: var(--web-wash); }
+  .split b { display: block; margin-bottom: 4px; }
+  .nums { display: flex; gap: 22px; flex-wrap: wrap; margin: 4px 0 16px; }
+  .nums div b { display: block; font-size: 24px; color: var(--brand); }
+  .nums div span { font-size: 13px; color: var(--ink2); }
+  .src { font-family: ui-monospace, monospace; font-size: 14px; background: #f3f5f8; border-radius: 8px; padding: 8px 12px; display: inline-block; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  pre.spec { margin: 0 0 16px; background: #0b1220; color: #d7e3f4; border-radius: 10px; padding: 14px 16px; font-size: 13px; overflow: auto; }
+  .hidden { display: none; }
+  footer { padding: 36px 0 56px; color: var(--ink2); font-size: 14px; border-top: 1px solid var(--line); margin-top: 20px; }
+  @media (max-width: 860px) {
+    .hero h1 { font-size: 34px; } .facts { grid-template-columns: 1fr 1fr; }
+    .card .body, .compare, .shots.two, .shots.three, .split { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: no-preference) { .card { transition: opacity .15s; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <h1>One Mojo file.<br><em>Every platform.</em> The GPU included.</h1>
+    <p class="lead">mojo-ui is an experiment: write an app once in Mojo, a language that reads like Python and compiles like C++,
+      and get a Linux app, a web app, a Mac app, an iPhone app and an Android app, each drawn with the platform's own controls.
+      When there's a GPU, the same file uses it.</p>
+    <div class="flow">
+      <span class="file">app.mojo</span><span class="arrow">→</span>
+      <span class="plat">Linux · GTK</span><span class="plat">Web · FastHTML</span><span class="plat">Mac · AppKit</span>
+      <span class="plat">iPhone · UIKit</span><span class="plat">Android · views</span><span class="plat">GPU kernels</span>
+    </div>
+    <div class="facts">
+      <div class="fact"><b>20M rows</b><span>re-aggregated every click, in ~6 ms on the GPU</span></div>
+      <div class="fact"><b>60 fps</b><span>GPU canvases on Linux and streamed to the browser</span></div>
+      <div class="fact"><b>5 platforms</b><span>from one file; Linux, web and Android tested with real input</span></div>
+      <div class="fact"><b>0 lines</b><span>of Swift, Kotlin, app JavaScript or shader language</span></div>
+    </div>
+  </div>
+</header>
+
+<nav class="filters" aria-label="Filter showcases">
+  <div class="wrap">
+    <button data-filter="all" aria-pressed="true">All</button>
+    <button data-filter="both" aria-pressed="false">Both shine</button>
+    <button data-filter="native" aria-pressed="false">Native shines</button>
+    <button data-filter="web" aria-pressed="false">Web shines</button>
+    <span class="hint">Each showcase is one Mojo file. Where a platform has a natural edge, we say so.</span>
+  </div>
+</nav>
+
+<main class="wrap">
+<section class="show">
+
+  <article class="card focal" data-kind="both">
+    <div class="head"><h2>Contoso Retail · analytics</h2><span class="tag both">Both shine</span>
+      <span class="src"><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/examples/analytics/app.mojo">examples/analytics/app.mojo</a></span></div>
+    <div class="body">
+      <div class="shots">
+        <figure><img src="img/analytics-linux.png" alt="The analytics dashboard in a native Linux window" loading="lazy">
+          <figcaption>Linux: GTK controls in a Fluent 2 style; every chart drawn by Mojo from a Flint spec.</figcaption></figure>
+        <div class="shots two">
+          <figure><img src="img/analytics-web.png" alt="The same dashboard in a browser" loading="lazy"><figcaption>The same file in the browser.</figcaption></figure>
+          <figure><img src="img/analytics-crossfilter.png" alt="Tapping a category, a region and a month filters everything else" loading="lazy"><figcaption>Tap a bar, a column or a month: every other chart filters (crossfiltering).</figcaption></figure>
+        </div>
+      </div>
+      <div class="why">
+        <div class="nums">
+          <div><b>5.9 ms</b><span>7 group-bys over 20M rows (GPU)</span></div>
+          <div><b>114 ms</b><span>the same through MX frame (CPU)</span></div>
+          <div><b>exact</b><span>to the cent, every engine</span></div>
+        </div>
+        <h3>Where each side shines</h3>
+        <div class="split">
+          <div class="n"><b>Native</b>Your data, your GPU: private, offline, instant. No server.</div>
+          <div class="w"><b>Web</b>The server's GPU does the work; viewers need nothing installed. Like Power BI Service.</div>
+        </div>
+        <h3>What makes it work</h3>
+        <ul>
+          <li>Every chart is a <a href="https://microsoft.github.io/flint-chart/">Flint</a> spec: the chart language AI agents write.</li>
+          <li>mojoui renders Flint natively (the same pixels everywhere); the specs also run through Flint's own Vega-Lite backend.</li>
+          <li>Three engines behind one switch: Mojo GPU kernels, Mojo on the CPU, and <b>MX frame</b>, a Mojo dataframe engine.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" data-kind="both">
+    <div class="head"><h2>Same Flint spec, two renderers</h2><span class="tag both">Both shine</span></div>
+    <div class="body single">
+      <pre class="spec">{ "chart_spec": { "chartType": "Bar Chart", "title": "Revenue by category",
+                 "encodings": { "x": { "field": "revenue" }, "y": { "field": "category" } } },
+  "semantic_types": { "category": "Category", "revenue": "Price" },
+  "data": { "values": [ { "category": "Electronics", "revenue": 161… }, … ] } }</pre>
+      <div class="compare">
+        <figure><img src="img/flint-category-mojoui.png" alt="The chart drawn natively by mojoui" loading="lazy">
+          <figcaption>Drawn by mojoui in Mojo: Linux, web, Mac, iPhone, Android.</figcaption></figure>
+        <figure><img src="img/flint-category-vega.svg" alt="The same spec compiled by Flint to Vega-Lite and rendered by Vega" loading="lazy">
+          <figcaption>The same spec through Flint → Vega-Lite → Vega (JavaScript).</figcaption></figure>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" data-kind="both">
+    <div class="head"><h2>Data Lens · 20 million points</h2><span class="tag both">Both shine</span>
+      <span class="src"><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/examples/lens/app.mojo">examples/lens/app.mojo</a></span></div>
+    <div class="body">
+      <div class="shots two">
+        <figure><img src="img/lens-linux.jpg" alt="The Data Lens on Linux" loading="lazy"><figcaption>Linux: 59 fps while playing through the day.</figcaption></figure>
+        <figure><img src="img/lens-web.jpg" alt="The Data Lens in a browser" loading="lazy"><figcaption>Web: the server's GPU paints, frames stream at 60 fps.</figcaption></figure>
+      </div>
+      <div class="why">
+        <div class="nums"><div><b>1.5 ms</b><span>20M points per 1080p frame</span></div><div><b>130 ms</b><span>the same on the CPU</span></div></div>
+        <h3>Why it matters</h3>
+        <ul>
+          <li>The pixel function and the button handler are the same language, in the same file.</li>
+          <li>A canvas the app paints itself, around native controls: how map and photo apps are built.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" data-kind="native">
+    <div class="head"><h2>Real controls on every platform</h2><span class="tag native">Native shines</span>
+      <span class="src"><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/examples/todo/app.mojo">examples/todo/app.mojo</a></span></div>
+    <div class="body">
+      <div class="shots three">
+        <figure><img src="img/android-todo.png" alt="Todo on Android" loading="lazy"><figcaption>Android: TextView, EditText, Switch, Spinner.</figcaption></figure>
+        <figure><img src="img/android-gallery.png" alt="Component gallery on Android" loading="lazy"><figcaption>The component gallery.</figcaption></figure>
+        <figure><img src="img/android-lens.jpg" alt="The Data Lens on Android" loading="lazy"><figcaption>The Data Lens on Android (CPU).</figcaption></figure>
+      </div>
+      <div class="why">
+        <h3>Why native wins here</h3>
+        <ul>
+          <li>Native widgets bring the platform's own look, keyboard, text input and screen-reader support.</li>
+          <li>Mojo calls GTK through C, AppKit and UIKit through the Objective-C runtime, Android through JNI: no Swift, no Kotlin.</li>
+          <li>On Android the same steps as on Linux, done with real taps, end in exactly the same state.</li>
+        </ul>
+        <p style="color:var(--ink2);font-size:14px">Mac and iPhone builds compile and sign; they haven't run on hardware yet. Android runs on the emulator.</p>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" data-kind="web">
+    <div class="head"><h2>Notebook · an infinite-canvas editor</h2><span class="tag web">Web shines</span><span class="tag next">Next</span></div>
+    <div class="body single">
+      <div class="why">
+        <ul>
+          <li>The web already has superb editors (Excalidraw, tldraw, fabric.js); no platform has one built in.</li>
+          <li>Plan: mount a JS editor as an "island" on the web, and the same editor in a native web view on desktop and phone. The page logic (add a page when you cross the edge, drop it when you go back) stays in Mojo.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" data-kind="both">
+    <div class="head"><h2>Ask your data</h2><span class="tag both">Both shine</span><span class="tag next">Next</span></div>
+    <div class="body single">
+      <div class="why">
+        <ul>
+          <li>Type a question; an AI model writes a Flint chart and the query; MX frame runs it on the GPU; mojoui draws it.</li>
+          <li>Native: your model on your GPU, private. Web: one server GPU for every viewer. One Mojo file either way.</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    Source and docs: <a href="https://github.com/abhisheksreesaila/mxapp">github.com/abhisheksreesaila/mxapp</a> ·
+    <a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/architecture.md">How it works</a> ·
+    <a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/decisions.md">Decisions</a>.
+    An experiment, built in the open; numbers measured on an RTX 3090 and a Linux desktop.
+  </div>
+</footer>
+
+<script>
+  // Showcase filter: All / Both / Native / Web.
+  const buttons = document.querySelectorAll('nav.filters button');
+  buttons.forEach(b => b.addEventListener('click', () => {
+    buttons.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    const want = b.dataset.filter;
+    document.querySelectorAll('article.card').forEach(card => {
+      card.classList.toggle('hidden', want !== 'all' && card.dataset.kind !== want);
+    });
+  }));
+</script>
+</body>
+</html>

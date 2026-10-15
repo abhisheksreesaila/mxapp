@@ -476,7 +476,7 @@ struct Main(App):
             labels.append("$" + String(b * 50) if b * 50 < 1000 else "$" + fixed(Float64(b * 50) / 1000.0, 1) + "K")
             values.append(Float64(self.size_orders[b]))
         return (FlintChart("Bar Chart", "Orders by size").text("order value", labels).number("orders", values)
-                .semantic("order value", "Price").semantic("orders", "Count").encode("x", "order value").encode("y", "orders")
+                .semantic("order value", "Range").semantic("orders", "Count").encode("x", "order value").encode("y", "orders")
                 .size(420, 300))
 
     def products_chart(self) -> FlintChart:

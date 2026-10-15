@@ -4,6 +4,18 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-15 · Experiment 9: the analytics showcase (autopilot)
+
+**Goal (owner's words):** "the analytics part… the poster child… really polished"; Flint as the common chart language; MX frame; a gallery on GitHub. Contract `GOAL.md`, report `docs/report.md`.
+
+**What worked:** Contoso Retail (`examples/analytics`): 20M rows re-aggregated per click (GPU 5.9 ms, MX frame 114 ms, CPU loops 746 ms; equal to the cent); charts declared as Flint specs, drawn natively by mojoui and also valid through Flint → Vega-Lite → SVG; crossfiltering by tapping charts, identical on GTK and the web; Fluent 2 controls; fits 1440×900 and 1280×800. New in mojoui: canvas text (baked Noto Sans), drawing + charts, Flint specs, exact GPU group-by, an MX frame engine. Gallery page; MX frame Mojo API spec.
+
+**What broke and how it was fixed:** misread Flint as Fluent (corrected, D-76); GPU atomics contention (shared-memory totals); GTK picture natural size; dark-theme cards; hinted glyph advances; cents in Flint's chart. See `docs/journal.md`.
+
+**Next:** Flint island on the web; Mac after the MX frame Mojo API; notebook editor; Ask your data.
+
+---
+
 ## 2026-10-15 · Experiment 8: Android (autopilot)
 
 **Goal (owner's words):** "one code compile and you get for everything"; the Java listener approved; SDK installed and licences accepted by the owner. Contract `GOAL.md`, report `docs/report.md`.

@@ -106,3 +106,12 @@ Newest last. What was tried, what happened, dead ends.
 - Review round 2 suggestion setPremultiplied(false) crashed: "Canvas: trying to use a non-premultiplied bitmap" (views only draw premultiplied bitmaps) → reverted; translucent canvas pixels on Android are a noted limit.
 - Final full check: 8/8 in one run. Review round 2: PASS.
 - GPU group-by: global atomics only: 22 ms for 20M rows into 5 groups (contention on 10 addresses). Per-block totals in shared memory (stack_allocation + barrier, std Atomic works on shared pointers), flushed once per block: 1.1 ms, still exact.
+
+## Goal 8: analytics showcase (2026-10-15)
+- Probes: 64-bit atomic adds on the GPU are exact (20M rows, 64 groups, 1.9 ms). MX frame 0.6.0 from PyPI runs in this env; its native executor needs libKGENCompilerRTShared.so on the loader path (a Mojo app/module has already loaded it, so inside our apps it's found).
+- Text: hinted 26 px advances drifted 4.3 px over a heading → advances from the unhinted 1000-unit font: 0.04 px.
+- GPU group-by: global atomics 22 ms for 5 groups → per-block shared-memory totals (stack_allocation SHARED + barrier) 1.1 ms.
+- GTK: GtkPicture reports its texture's pixel size as its natural size → fixed-height canvases stretched on a 1.6× screen and drew blurry → canvas pictures sit in a GTK_POLICY_EXTERNAL scrolled window (takes no size from the child). Fixed-width views now refuse hexpand passed up from children (the sidebar drifted). Dark desktop theme made card text white on white → FLUENT forces the light scheme.
+- "Flint" first read as Fluent (D-73); the owner sent https://microsoft.github.io/flint-chart/ → Flint is the chart language (D-76). The npm release (0.5.1) has no validateChart export yet → the check compiles each spec through assembleVegaLite, then Vega-Lite → Vega → SVG.
+- The gallery's side-by-side showed Flint's chart in cents → Flint JSON now carries dollars for money fields.
+- Engines on 20M rows, 7 aggregations: GPU 5.9 ms, MX frame (Python + native CPU executor) 114 ms, Mojo loops 746 ms; equal to the cent.

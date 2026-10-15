@@ -2,7 +2,9 @@
 
 **Write an app once in Mojo. Compile it. Get a native Linux app, a web app, a Mac app, an iPhone app and an Android app. When the machine has a GPU, the same file lights it up.**
 
-![The Data Lens: native controls on the left, 20 million points drawn on the GPU on the right](docs/img/lens-gtk.png)
+![Contoso Retail: a sales dashboard over 20 million rows, in one Mojo file](docs/img/analytics-linux.png)
+
+**[See the showcase gallery →](https://abhisheksreesaila.github.io/mxapp/gallery/)**
 
 > An experiment, built in the open. Linux and the web run and are tested by `scripts/check`; Mac and iPhone build and sign but haven't run on real hardware yet. See [Status](#status-honestly).
 
@@ -69,6 +71,21 @@ scripts/build.sh hello android      # → Android app (.apk)
 That's the whole model, the same one as Elm, SwiftUI and React: **state → `view()` → screen**, and **tap → `update()` → new state**. You never touch GTK, HTML, AppKit or UIKit; `scripts/check` enforces it. (This is a trimmed `examples/hello/app.mojo`.)
 
 On Linux the Greet button is a GTK button and on the web an HTML `<button>`; the Mac and iPhone builds make an `NSButton` and a `UIButton` (Liquid Glass on iOS 26), though those haven't run on real hardware yet. Native widgets bring their platform's own look, keyboard handling, text input and screen-reader support, instead of an imitation.
+
+## Showcase: analytics on the GPU
+
+`examples/analytics/app.mojo` is a Power BI-style dashboard in one Mojo file: **20 million order lines re-aggregated every time you click**, with KPIs, revenue by month, category and region, order sizes and top products. Tap a bar, a column or a month and every other chart filters (crossfiltering).
+
+- **Every chart is a [Flint](https://microsoft.github.io/flint-chart/) spec**, the chart language Microsoft built for AI agents. mojoui draws Flint specs natively (the same pixels on every platform), and the same specs run through Flint's own Vega-Lite backend: all nine are checked that way.
+- **Three engines behind one switch:** Mojo GPU kernels (**5.9 ms** for all seven aggregations over 20M rows), the same functions on one CPU core (746 ms), and **MX frame**, a Mojo dataframe engine (114 ms on the CPU). All three agree to the cent.
+- **Controls in Fluent 2** on Linux and the web, from one design setting (`design() -> FLUENT`).
+
+```bash
+scripts/build.sh analytics linux && build/analytics/linux/analytics           # native window (Linux)
+scripts/build.sh analytics web && pixi run python mojoui/hosts/web.py build/analytics/web   # → http://127.0.0.1:5001
+```
+
+Linux and the web for now. The Mac version is waiting on a Python-free MX frame API (`docs/mxframe-mojo-api.md`).
 
 ## The hybrid: native controls plus a GPU canvas
 
@@ -269,6 +286,7 @@ def update(mut self, event: Event):
 **Web:** the Mojo app runs in the server. The page pulls one JPEG frame at a time from it, at most once per display refresh, and sends gestures back as ordinary events. The JavaScript is a small fixed adapter in `mojoui/hosts/web.py`; apps never contain any.
 
 ## Examples
+- `examples/analytics/app.mojo`: **Contoso Retail**, the analytics showcase (above).
 - `examples/lens/app.mojo`: **Data Lens**, the GPU showcase. 20 million trips in a made-up city, drawn live as a density map: pick a kind (taxi, rideshare, bike), slide through the hours or press Play to watch a day go by, drag, scroll or pinch to explore. Every frame re-counts all 20 million trips: **1.5–1.6 ms per 1080p frame on an RTX 3090** (130–140 ms on the CPU, same pixels; across runs). 59 fps on GTK on a 60 Hz display; streamed to the browser at 60 fps (measured in headless Chromium on the same machine, after 10 warm-up frames; a real network adds latency and bandwidth). Built for desktop: on a phone the 340-point sidebar leaves little room for the map (a phone layout is still to do).
 - `examples/hello/app.mojo`: the smallest app.
 - `examples/gallery/app.mojo`: every component, wired to some state.

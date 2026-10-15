@@ -9,6 +9,7 @@
 #   chart.to_json()                         # valid Flint input
 #
 # Supported here: KPI Card, Area Chart, Line Chart, Bar Chart (horizontal or vertical), Bar Table.
+# Money (semantic type Price, Revenue, Amount or Cost) is kept in exact cents; the JSON has dollars.
 
 from mojoui.canvas import Surface
 from mojoui.text import Font
@@ -148,7 +149,10 @@ struct FlintChart(Movable):
             out += ("," if r > 0 else "") + "{"
             for c in range(len(self.names)):
                 out += ("," if c > 0 else "") + json_string(self.names[c]) + ": "
-                out += json_string(self.texts[c][r]) if self.is_text[c] else json_number(self.numbers[c][r])
+                if self.is_text[c]:
+                    out += json_string(self.texts[c][r])
+                else:  # money is kept in exact cents here; Flint gets dollars
+                    out += json_number(self.numbers[c][r] / 100.0 if self.is_money(self.names[c]) else self.numbers[c][r])
             out += "}"
         out += ']}, "semantic_types": {'
         for k in range(len(self.semantic_fields)):
@@ -171,14 +175,16 @@ struct FlintChart(Movable):
 
     # ---------- drawing (mojoui's native Flint backend) ----------
 
-    def money_axis(self, channel: String) -> Bool:
-        """Whether a channel's field is money (semantic type Price/Revenue/Amount), shown as $1.2M."""
-        var f = self.field_of(channel)
+    def is_money(self, field: String) -> Bool:
+        """Money fields (semantic type Price/Revenue/Amount/Cost) hold exact cents in mojoui."""
         for k in range(len(self.semantic_fields)):
-            if self.semantic_fields[k] == f:
+            if self.semantic_fields[k] == field:
                 var t = self.semantic_types[k]
                 return t == "Price" or t == "Revenue" or t == "Amount" or t == "Cost"
         return False
+
+    def money_axis(self, channel: String) -> Bool:
+        return self.is_money(self.field_of(channel))
 
     def label(self, channel: String, v: Float64) -> String:
         return money(Int(v)) if self.money_axis(channel) else compact(v)

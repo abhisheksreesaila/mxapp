@@ -14,7 +14,8 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 3. `EXPERIMENTS.md`: what has actually been tried and what happened. **Trust this over the spec when they disagree.**
 
 ## Where things stand
-- **Newest (Experiment 8, 2026-10-15):** Android: Mojo drives Android views through JNI (`mojoui/hosts/android.mojo`, one framework Java file); runs on the emulator with real input, same results as GTK. Emulator: `ANDROID_AVD_HOME=~/.config/.android/avd`, AVD `mojoui`. See `docs/report.md`, `docs/android.md`.
+- **Newest (Experiment 9, 2026-10-15):** the analytics showcase (`examples/analytics`): Flint charts drawn by mojoui, GPU group-by, MX frame engine, Fluent 2 controls; gallery at docs/gallery (GitHub Pages). See `docs/report.md`.
+- **Experiment 8 (2026-10-15):** Android: Mojo drives Android views through JNI (`mojoui/hosts/android.mojo`, one framework Java file); runs on the emulator with real input, same results as GTK. Emulator: `ANDROID_AVD_HOME=~/.config/.android/avd`, AVD `mojoui`. See `docs/goals/07-report.md`, `docs/android.md`.
 - **Experiment 7 (2026-10-15):** Canvas view + GPU PointCloud + Data Lens (`examples/lens`): 20M points, 1.5 ms/frame on the GPU, ~60 fps on GTK and streamed to the web; Mac/iPhone CPU path (builds, not run). See `docs/goals/06-report.md`.
 - **Experiment 6 (2026-10-15):** layout settings (padding, sizes, grow, fill, align, justify) on every host; no layout engine (ROADMAP decision 10).
 - **Experiment 5 (2026-10-15):** segmented, radio, text area, alert, tabs, navbar, date, icon, grid, lazy list; Pocket Expenses (`examples/expenses`).
