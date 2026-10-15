@@ -119,7 +119,9 @@ def gpu_present() -> Bool:
 # run on the CPU. The data stays on the GPU between frames.
 
 from std.atomic import Atomic, Ordering
-from max.gpu import grid_dim, block_dim
+from max.gpu import grid_dim, block_dim, thread_idx, barrier
+from max.gpu.memory import AddressSpace
+from std.memory import stack_allocation
 from max.gpu.host import DeviceBuffer
 from mojoui.canvas import Surface
 
@@ -314,3 +316,142 @@ struct PointCloud(Movable):
         for i in range(total):
             p.unsafe_offset(i)[] = g(self.host_counts[i] if i < len(self.host_counts) else 0, k)
         self.milliseconds += Float64(now_ns() - t0) / 1e6
+
+
+# ---------- tables: millions of rows → exact group totals ----------
+#
+#   def by_region(r: Row, f: Filter) -> Int: ...     # the group a row adds to, or -1 (filtered out)
+#   def revenue(r: Row, f: Filter) -> Int: ...       # what it adds (whole numbers, e.g. cents)
+#   var t = Table(columns)                            # up to 8 int32 columns; uploaded to the GPU once
+#   var totals = t.group_sum[by_region, revenue](5, filter)   # totals.sums[g], totals.counts[g]
+#
+# Sums are 64-bit integers, so GPU and CPU agree exactly (to the cent).
+
+comptime Row = SIMD[DType.int32, 8]  # one row's columns
+comptime Filter = SIMD[DType.int32, 16]  # sixteen numbers the app's functions can use
+comptime GroupFn = def(Row, Filter) thin -> Int
+comptime AmountFn = def(Row, Filter) thin -> Int
+
+
+@fieldwise_init
+struct GroupSums(Copyable, Movable):
+    var sums: List[Int]
+    var counts: List[Int]
+    var milliseconds: Float64
+
+
+comptime SHARED_GROUPS = 128  # up to this many groups are added up per block in shared memory first
+
+
+def _group_kernel[g: GroupFn, a: AmountFn](
+    rows: UnsafePointer[Int32, MutAnyOrigin], n: Int32, acc: UnsafePointer[UInt64, MutAnyOrigin], groups: Int32, f: Filter,
+):
+    # Each block adds into its own totals in shared memory (fast, little contention), then adds
+    # those into the global totals once: few groups no longer means millions of atomics on one address.
+    var local = stack_allocation[2 * SHARED_GROUPS, UInt64, address_space=AddressSpace.SHARED]()
+    var shared = Int(groups) <= SHARED_GROUPS
+    var t = Int(thread_idx.x)
+    var k = t
+    while k < 2 * SHARED_GROUPS:
+        local[k] = 0
+        k += Int(block_dim.x)
+    barrier()
+    var stride = Int(grid_dim.x) * Int(block_dim.x)
+    var i = Int(global_idx.x)
+    while i < Int(n):
+        var r = rows.unsafe_offset(8 * i).unsafe_load[width=8]()
+        var grp = g(r, f)
+        if grp >= 0 and grp < Int(groups):
+            if shared:
+                _ = Atomic.fetch_add[ordering=Ordering.RELAXED](local + 2 * grp, UInt64(a(r, f)))
+                _ = Atomic.fetch_add[ordering=Ordering.RELAXED](local + (2 * grp + 1), UInt64(1))
+            else:
+                _ = Atomic.fetch_add[ordering=Ordering.RELAXED](acc.unsafe_offset(2 * grp), UInt64(a(r, f)))
+                _ = Atomic.fetch_add[ordering=Ordering.RELAXED](acc.unsafe_offset(2 * grp + 1), UInt64(1))
+        i += stride
+    barrier()
+    if shared:
+        k = t
+        while k < 2 * Int(groups):
+            if local[k] != 0:
+                _ = Atomic.fetch_add[ordering=Ordering.RELAXED](acc.unsafe_offset(k), local[k])
+            k += Int(block_dim.x)
+
+
+struct Table(Movable):
+    """Rows of up to eight int32 columns, kept on the GPU (uploaded once) when there is one."""
+
+    var gpu: Gpu
+    var count: Int
+    var host: List[Int32]  # eight per row
+    var device: Optional[DeviceBuffer[DType.int32]]
+    var acc: Optional[DeviceBuffer[DType.uint64]]
+    var acc_groups: Int
+    var uploads: Int
+
+    def __init__(out self, columns: List[List[Int32]], use_gpu: Bool = True):
+        self.gpu = Gpu(use_gpu)
+        self.count = len(columns[0]) if len(columns) > 0 else 0
+        self.host = List[Int32](length=8 * self.count, fill=0)
+        for c in range(min(len(columns), 8)):
+            for i in range(self.count):
+                self.host[8 * i + c] = columns[c][i]
+        self.device = None
+        self.acc = None
+        self.acc_groups = 0
+        self.uploads = 0
+        comptime if GPU_BUILD:
+            if self.gpu.available() and self.count > 0:
+                try:
+                    ref ctx = self.gpu.ctx.value()
+                    var buf = ctx.enqueue_create_buffer[DType.int32](8 * self.count)
+                    ctx.enqueue_copy(dst_buf=buf, src_ptr=self.host.unsafe_ptr())
+                    ctx.synchronize()
+                    self.device = buf^
+                    self.uploads += 1
+                except e:
+                    print("mojoui.gpu: couldn't upload the table (" + String(e) + "); using the CPU")
+                    self.device = None
+
+    def on_gpu(self) -> Bool:
+        return Bool(self.device)
+
+    def device_name(self) -> String:
+        return self.gpu.name if self.on_gpu() else String("CPU")
+
+    def group_sum[g: GroupFn, a: AmountFn](mut self, groups: Int, f: Filter) -> GroupSums:
+        """For each row, g() picks a group (or -1) and a() what it adds: per-group sums and row counts."""
+        var t0 = now_ns()
+        var sums = List[Int](length=groups, fill=0)
+        var counts = List[Int](length=groups, fill=0)
+        comptime if GPU_BUILD:
+            if self.on_gpu():
+                try:
+                    ref ctx = self.gpu.ctx.value()
+                    if self.acc_groups < groups:
+                        self.acc = ctx.enqueue_create_buffer[DType.uint64](2 * groups)
+                        self.acc_groups = groups
+                    var acc = self.acc.value().create_sub_buffer[DType.uint64](0, 2 * groups)
+                    ctx.enqueue_memset(acc, 0)
+                    ctx.enqueue_function[_group_kernel[g, a]](
+                        self.device.value().unsafe_ptr(), Int32(self.count), acc.unsafe_ptr(), Int32(groups), f,
+                        grid_dim=min(ceildiv(self.count, 256), 4096), block_dim=256,
+                    )
+                    var out = List[UInt64](length=2 * groups, fill=0)
+                    ctx.enqueue_copy(dst_ptr=out.unsafe_ptr(), src_buf=acc)
+                    ctx.synchronize()
+                    for k in range(groups):
+                        sums[k] = Int(out[2 * k])
+                        counts[k] = Int(out[2 * k + 1])
+                    return GroupSums(sums^, counts^, Float64(now_ns() - t0) / 1e6)
+                except e:
+                    print("mojoui.gpu: group_sum failed (" + String(e) + "); using the CPU")
+                    self.device = None
+        var p = self.host.unsafe_ptr()
+        for i in range(self.count):
+            var r = p.unsafe_offset(8 * i).unsafe_load[width=8]()
+            var grp = g(r, f)
+            if grp >= 0 and grp < groups:
+                sums[grp] += a(r, f)
+                counts[grp] += 1
+        return GroupSums(sums^, counts^, Float64(now_ns() - t0) / 1e6)

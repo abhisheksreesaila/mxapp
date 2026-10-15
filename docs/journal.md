@@ -105,3 +105,4 @@ Newest last. What was tried, what happened, dead ends.
 - M5 after the edge-to-edge fix: the layout example no longer fits one screen and uiautomator reports only on-screen views → M5 measures at 300 dpi (more dp on screen); the rules are in dp, so unchanged.
 - Review round 2 suggestion setPremultiplied(false) crashed: "Canvas: trying to use a non-premultiplied bitmap" (views only draw premultiplied bitmaps) → reverted; translucent canvas pixels on Android are a noted limit.
 - Final full check: 8/8 in one run. Review round 2: PASS.
+- GPU group-by: global atomics only: 22 ms for 20M rows into 5 groups (contention on 10 addresses). Per-block totals in shared memory (stack_allocation + barrier, std Atomic works on shared pointers), flushed once per block: 1.1 ms, still exact.
