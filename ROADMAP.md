@@ -40,6 +40,8 @@ So the strongest case for Mojo is speed and zero-copy for data-heavy apps, not d
 
 9. **Apple UI straight from Mojo (decided 2026-10-14, Experiment 2).** Supersedes the SwiftUI skin in decision 8 for Apple platforms: Mojo calls AppKit/UIKit through the Objective-C runtime, so the Mac and iPhone apps contain no Swift or C. xtool is still used, but only to sign and install the finished `.ipa`. Cons: every Objective-C call is untyped (mistakes show up at run time), Apple Silicon only, and the hand-written Mojo runtime functions are unofficial.
 
+10. **Layout = the platforms' own layout systems, driven by flexbox-style settings (decided 2026-10-15).** Apps say `padding`, `gap`, `grow`, `align`, `justify`, widths and heights; each host maps them onto GtkBox, CSS flexbox, NSStackView and UIStackView. No layout engine of our own for now: the translation layer stays thin. A Mojo flexbox engine (Yoga-like) is a possible separate project later, needed only for a self-drawn (GPU) renderer; the flexbox names keep app code unchanged if that ever happens.
+
 ## Tracks
 | Track | Steps |
 |---|---|
