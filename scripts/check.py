@@ -1,200 +1,261 @@
-"""Milestone checker for GOAL.md (goal 7: Android; goal 6's checks run as M7, earlier goals' inside them).
+"""Milestone checker for GOAL.md (goal 8: the analytics showcase; goal 7's checks run as M9, earlier goals' inside them).
 Rebuilds from scratch, prints PASS/FAIL per milestone.
 
 Run: scripts/check   (earlier goals' checkers: docs/goals/0N-check.py)
-
-Android runs use the emulator (AVD "mojoui", started headless if needed) and real input
-from adb (scripts/android_drive.py), with the same step language as GTK and the web.
 """
 
 import importlib.util
 import re
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-_spec = importlib.util.spec_from_file_location("goal6", ROOT / "docs/goals/06-check.py")
-g6 = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(g6)
-g5 = g6.g5
-run, gtk, state, BUILD = g6.run, g6.gtk, g6.state, g6.BUILD
+_spec = importlib.util.spec_from_file_location("goal7", ROOT / "docs/goals/07-check.py")
+g7 = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(g7)
+g5 = g7.g5
+run, BUILD = g7.run, g7.BUILD
 
-import android_drive  # noqa: E402
+import drive  # noqa: E402
 
-EXAMPLES = g6.EXAMPLES
-SDK = android_drive.SDK
-ANDROID_LIBS = {"libc.so", "liblog.so", "libm.so", "libdl.so"}
-# What a libmojoui.so may ask Android's system libraries for (bionic libc, libm, liblog).
-ANDROID_SYMBOLS = {"__android_log_write", "clock_gettime", "cos", "sin", "dup", "fclose", "fdopen", "fflush", "free",
-                   "memcpy", "memmove", "memset", "posix_memalign", "strlen", "write"}
-SHOWN = r"^(LABEL|BUTTON|FIELD|TOGGLE|DROPDOWN|SLIDER|PROGRESS|IMAGE|SEGMENTED|TABS|RADIO): "
+EXAMPLES = g7.EXAMPLES + ["analytics"]
+CLICKS = "segment:0=2024;select:0=Online;tapat:5=500,320;tapat:6=300,700;tapat:4=600,500"
+SHOWN = r"^(LABEL|SEGMENTED|DROPDOWN|BUTTON): "
+TIMING = ("LABEL: Recomputed",)
+PAGES_URL = "https://abhisheksreesaila.github.io/mxapp/gallery/"
 
 
-def shown_state(out):
-    return [l for l in out.splitlines() if re.match(SHOWN, l)]
+def shown(out):
+    return [l for l in out.splitlines() if re.match(SHOWN, l) and not l.startswith(TIMING)]
 
 
-def droid(example, steps, shot=None, **kw):
-    try:
-        r, out = android_drive.android_run(example, steps, shot=shot, **kw)
-    except Exception as e:  # a crashing run is a failing run
-        return None, f"android run crashed: {e!r}"
-    if r.returncode != 0:
-        return None, out[-600:]
+def analytics_gtk(steps, size=None, shot=None):
+    env = {"MOJOUI_TEST": steps, "MOJOUI_SHOT": shot or str(BUILD / "analytics" / "gtk.png")}
+    if size:
+        env["MOJOUI_WINDOW"] = f"{size[0]}x{size[1]}"
+    r = run([str(BUILD / "analytics" / "linux" / "analytics")], env=env, timeout=300)
+    out = r.stdout + r.stderr
+    if r.returncode != 0 or "CRITICAL" in out or "TEST: " in out:
+        return None, f"GTK run failed (exit {r.returncode}):\n{out[-600:]}"
     return r, out
 
 
-def build_tools():
-    return sorted((SDK / "build-tools").iterdir())[-1]
+def analytics_web(steps, size=(1440, 900), shot=None):
+    try:
+        r, out = drive.web_run(BUILD / "analytics" / "web", steps, shot=shot, viewport=size)
+    except Exception as e:
+        return None, f"web run crashed: {e!r}"
+    return (r, out) if r.returncode == 0 else (None, out[-600:])
+
+
+def test_passes(file, marker):
+    t = run(["pixi", "run", "mojo", "run", "-I", ".", file], timeout=900)
+    return marker in t.stdout, (t.stdout + t.stderr)[-400:]
 
 
 # ---------- milestones ----------
 
 def m1():
     problems = []
-    apk = next((BUILD / "hello" / "android").glob("*.apk"), None)
-    if apk is None:
-        return False, "no hello APK"
-    v = subprocess.run([str(build_tools() / "apksigner"), "verify", str(apk)], capture_output=True, text=True)
-    if v.returncode != 0:
-        problems.append(f"apksigner: {v.stderr.strip()[-200:]}")
-    names = subprocess.run(["unzip", "-Z1", str(apk)], capture_output=True, text=True).stdout.split()
-    for want in ("classes.dex", "AndroidManifest.xml", "lib/arm64-v8a/libmojoui.so", "lib/x86_64/libmojoui.so"):
-        if want not in names:
-            problems.append(f"APK lacks {want}")
-    javas = [p for d in ("mojoui", "hosts", "examples", "apple") for p in (ROOT / d).rglob("*.java")]
-    if [str(p.relative_to(ROOT)) for p in javas] != ["mojoui/hosts/android/MojoActivity.java"]:
-        problems.append(f"Java files should be just the framework's one: {javas}")
-    elif len(javas[0].read_text().splitlines()) > 80:
-        problems.append(f"MojoActivity.java is {len(javas[0].read_text().splitlines())} lines (> 80)")
-    for ex in ("hello", "gallery", "todo", "layout", "lens"):
-        for abi in ("arm64-v8a", "x86_64"):
-            so = BUILD / ex / "android" / "lib" / abi / "libmojoui.so"
-            if not so.exists():
-                problems.append(f"{ex}: no {abi} library")
-                continue
-            needed = set(re.findall(r"\(NEEDED\).*\[(.+?)\]", run(["llvm-readelf", "-d", str(so)]).stdout))
-            undefined = set(run(["llvm-nm", "-D", "--undefined-only", "-j", str(so)]).stdout.split())
-            if not needed <= ANDROID_LIBS:
-                problems.append(f"{ex}/{abi} needs {sorted(needed - ANDROID_LIBS)}")
-            if not undefined <= ANDROID_SYMBOLS:
-                problems.append(f"{ex}/{abi} uses {sorted(undefined - ANDROID_SYMBOLS)}")
-    return not problems, "; ".join(problems) or (
-        "signed APKs (arm64-v8a + x86_64), one framework Java file (≤ 80 lines), libraries need only Android's libc/libm/liblog")
+    ok, out = test_passes("tests/test_canvas.mojo", "CANVAS TESTS PASSED")
+    if not ok:
+        problems.append(f"canvas tests: {out}")
+    r, gout = analytics_gtk("")
+    if r is None or "DESIGN: fluent" not in gout:
+        problems.append(f"GTK doesn't apply the Fluent design: {(gout or '')[-200:]}")
+    web = (ROOT / "mojoui/hosts/web.py").read_text()
+    if "FLUENT_CSS" not in web or "classList.add('fluent')" not in web or "vstack card" not in web:
+        problems.append("the web host has no Fluent stylesheet or cards")
+    if '"mui-card"' not in (ROOT / "mojoui/hosts/gtk.mojo").read_text():
+        problems.append("GTK draws no cards")
+    return not problems, "; ".join(problems) or "Fluent 2 on GTK and web; Card on every host (a VStack where cards aren't known); tests pass"
 
 
 def m2():
-    r, out = droid("hello", "tap:Greet;tap:Greet;tap:Greet", shot=str(BUILD / "hello" / "android.png"))
-    if r is None:
-        return False, out
-    if "LABEL: Hello, Ada! (click 3)" not in out or "BUTTON: Greet" not in out:
-        return False, f"after 3 real taps: {shown_state(out)}"
-    return True, "hello APK runs on Android 16 (emulator); 3 real taps → 'Hello, Ada! (click 3)' in a real TextView"
-
-
-def same_as_gtk(example, steps, name):
-    r, out = droid(example, steps)
-    if r is None:
-        return False, out
-    rg, gout = gtk(example, steps)
-    if rg is None:
-        return False, gout
-    a, g = shown_state(out), [l for l in state(gout) if re.match(SHOWN, l)]
-    if a != g:
-        return False, f"{name}: Android and GTK differ:\n  android {a}\n  gtk     {g}"
-    return True, f"{name}: {len(a)} views identical to GTK after real input"
+    t = run(["pixi", "run", "mojo", "run", "-I", ".", "tests/test_text.mojo"], timeout=600)
+    if "TEXT TESTS PASSED" not in t.stdout:
+        return False, f"text tests: {(t.stdout + t.stderr)[-300:]}"
+    from PIL import ImageFont
+    font = ImageFont.truetype("/usr/share/fonts/noto/NotoSans-Regular.ttf", 1000)
+    worst = 0.0
+    for line in t.stdout.splitlines():
+        if line.startswith("WIDTH: "):
+            text, size, width = line[7:].split("|")
+            worst = max(worst, abs(font.getlength(text) * float(size) / 1000 - float(width)))
+    if worst > 2:
+        return False, f"text widths differ from the font's by up to {worst:.2f} px"
+    return True, f"Noto Sans atlas text on canvases; widths within {worst:.2f} px of the font's metrics"
 
 
 def m3():
-    return same_as_gtk("gallery", g5.GALLERY_STEPS, "gallery (typing, Return, switch, dropdown, slider, reset)")
+    problems = []
+    ok, out = test_passes("tests/test_charts.mojo", "CHARTS TESTS PASSED")
+    if not ok:
+        problems.append(f"chart tests: {out}")
+    if "FlintChart(" not in (ROOT / "examples/analytics/app.mojo").read_text():
+        problems.append("the dashboard's charts aren't Flint specs")
+    b = run(["pixi", "run", "mojo", "build", "-I", "examples/analytics", "-I", ".", "tests/flint_specs.mojo",
+             "-o", str(BUILD / "flint_specs")], timeout=900)
+    if b.returncode != 0:
+        return False, f"spec export didn't build: {(b.stdout + b.stderr)[-300:]}"
+    specs = run([str(BUILD / "flint_specs")], timeout=300).stdout
+    flint = BUILD / "flint"
+    flint.mkdir(exist_ok=True)
+    if not (flint / "node_modules" / "flint-chart").exists():
+        run(["bash", "-c", f"cd {flint} && (test -f package.json || npm init -y >/dev/null) && npm install flint-chart vega vega-lite --silent"],
+            timeout=900)
+    (flint / "flint_validate.mjs").write_text((ROOT / "scripts/flint_validate.mjs").read_text())
+    v = subprocess.run(["node", "flint_validate.mjs"], cwd=flint, input=specs, capture_output=True, text=True, timeout=300)
+    m = re.search(r"VALID (\d+)/(\d+)", v.stdout)
+    if not m or m[1] != m[2] or int(m[2]) < 9:
+        problems.append(f"Flint rejected specs: {v.stdout[-400:]}{v.stderr[-200:]}")
+        return False, "; ".join(problems)
+    return not problems, "; ".join(problems) or (
+        f"charts drawn natively from Flint specs; all {m[2]} dashboard specs compile through Flint → Vega-Lite → SVG")
 
 
 def m4():
-    return same_as_gtk("todo", g5.TODO_STEPS, "todo (goal 3's steps)")
+    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tests/bench_groupby.mojo", "-o", str(BUILD / "bench_groupby")], timeout=900)
+    if b.returncode != 0:
+        return False, f"bench build: {(b.stdout + b.stderr)[-300:]}"
+    r = run([str(BUILD / "bench_groupby")], timeout=600)
+    m = re.search(r"^GROUPBY: (.*)$", r.stdout, re.M)
+    if not m:
+        return False, f"bench: {(r.stdout + r.stderr)[-300:]}"
+    f = dict(kv.split("=", 1) for kv in m[1].split())
+    problems = []
+    if f["exact"] != "1":
+        problems.append("GPU and CPU totals differ")
+    if int(f["rows"]) < 20_000_000:
+        problems.append(f"only {f['rows']} rows")
+    for k in ("gpu_ms_5_groups", "gpu_ms_36_groups"):
+        if float(f[k]) > 5:
+            problems.append(f"{k} = {f[k]} > 5")
+    return not problems, "; ".join(problems) or (
+        f"20M rows: {float(f['gpu_ms_5_groups']):.2f} ms (5 groups), {float(f['gpu_ms_36_groups']):.2f} ms (36) on the GPU, "
+        f"{float(f['cpu_ms']):.0f} ms on the CPU, exact")
+
+
+def fits(name, out, size):
+    b = g5.boxes(out)
+    cards = [t for t in b if t.startswith(("kpi_", "card_", "summary"))]
+    if len(cards) < 10:
+        return f"{name}: only {len(cards)} tagged cards: {sorted(cards)}"
+    bad = [t for t in cards if b[t][0] + b[t][2] > size[0] + 1 or b[t][1] + b[t][3] > size[1] + 1]
+    return f"{name} at {size[0]}×{size[1]}: {bad} spill outside" if bad else ""
 
 
 def m5():
-    # At 300 dpi the whole example fits on screen (uiautomator reports only views on screen);
-    # the rules are in dp, so the density doesn't change them.
-    r, out = droid("layout", "tab:0=Boxes", dpi=300)
-    if r is None:
-        return False, out
-    rt, tout = droid("layout", "tab:0=About;tab:0=Boxes;tab:0=About")  # switching tabs really switches (real taps)
-    if rt is None or "TABS: About" not in tout:
-        return False, f"tapping another tab didn't switch: {shown_state(tout or '')[:3]}"
-    saved = dict(g5._layout_cache)
-    g5._layout_cache.clear()
-    g5._layout_cache["android"] = (True, g5.boxes(out))
     problems = []
-    try:
-        for name in ("m2", "m3", "m4", "m5", "m6", "m7"):  # goal 5's relations, measured on Android
-            ok, msg = getattr(g5, name)()
-            if not ok:
-                problems.append(f"goal 5 {name.upper()}: {msg}")
-    finally:
-        g5._layout_cache.clear()
-        g5._layout_cache.update(saved)
-    return not problems, "; ".join(problems) or "padding, fixed/min/max sizes, fill, grow, justify and align hold on Android (real view bounds, dp)"
+    rg, gout = analytics_gtk(CLICKS, shot=str(BUILD / "analytics" / "gtk-clicked.png"))
+    rw, wout = analytics_web(CLICKS, shot=str(BUILD / "analytics" / "web-clicked.png"))
+    if rg is None or rw is None:
+        return False, (gout if rg is None else wout)[-400:]
+    if shown(gout) != shown(wout):
+        problems.append(f"GTK and web differ after the clicks:\n  gtk {shown(gout)}\n  web {shown(wout)}")
+    if not any("Home · Europe · Jul 2024" in l for l in shown(gout)):
+        problems.append(f"chart taps didn't select: {[l for l in shown(gout) if '·' in l][:3]}")
+    for size in ((1440, 900), (1280, 800)):
+        r1, o1 = analytics_gtk("", size=size)
+        r2, o2 = analytics_web("", size=size)
+        if r1 is None or r2 is None:
+            problems.append(f"run at {size} failed: {(o1 if r1 is None else o2)[-200:]}")
+            continue
+        for name, out in (("GTK", o1), ("web", o2)):
+            p = fits(name, out, size)
+            if p:
+                problems.append(p)
+    from PIL import Image
+    colours = len(set(Image.open(BUILD / "analytics" / "gtk.png").convert("RGB").getdata()))
+    if colours < 1500:
+        problems.append(f"screenshot has only {colours} colours")
+    return not problems, "; ".join(problems) or (
+        "dashboard over 20M rows; GTK and web identical after year/channel/bar/column/line taps; fits 1440×900 and 1280×800 on both")
 
 
 def m6():
     problems = []
-    shot = BUILD / "lens" / "android.png"
-    r, out = droid("lens", "", shot=str(shot), landscape=True, dpi=200)
-    if r is None:
-        return False, out
-    try:
-        from PIL import Image
-        img = Image.open(shot).convert("RGB")
-        w, h = img.size
-        # The canvas side: mostly painted (not the empty background) with a real gradient. (2M points on the
-        # CPU path give a few dozen density levels, so a colour count alone isn't the measure; D-70.)
-        pixels = list(img.crop((w // 3, h // 6, w * 9 // 10, h * 5 // 6)).getdata())
-        background = max(set(pixels), key=pixels.count)
-        painted = sum(1 for p in pixels if sum(abs(a - b) for a, b in zip(p, background)) > 30) / len(pixels)
-        colours = len(set(pixels))
-        if painted < 0.15 or colours < 20:  # (a blank canvas is ~0% painted; the lens ~26%)
-            problems.append(f"canvas looks blank ({painted:.0%} painted, {colours} colours)")
-    except Exception as e:
-        problems.append(f"screenshot unreadable: {e!r}")
-    view = lambda o: next((l for l in o.splitlines() if l.startswith("LABEL: View:")), None)
-    r2, moved = droid("lens", "drag:0=96,48", landscape=True, dpi=200)
-    rg, gmoved = gtk("lens", "drag:0=96,48")
-    if r2 is None or rg is None:
-        return False, (moved if r2 is None else gmoved)[-300:]
-    if not view(moved) or view(moved) != view(gout := gmoved) or view(moved) == view(out):
-        problems.append(f"a real swipe should pan like GTK's drag: android {view(moved)} vs gtk {view(gout)} (start {view(out)})")
-    return not problems, "; ".join(problems) or f"lens on Android (CPU, 2M trips) draws the map; a real swipe pans it as on GTK: {view(moved)}"
+    lines = {}
+    for engine in ("GPU", "MX frame"):
+        for host in ("gtk", "web"):
+            steps = f"segment:1={engine};segment:0=2024;select:0=Online;tapat:5=500,320"
+            r, out = analytics_gtk(steps) if host == "gtk" else analytics_web(steps)
+            if r is None:
+                return False, f"{engine} on {host}: {out[-300:]}"
+            lines[(engine, host)] = [l for l in shown(out) if not l.startswith("SEGMENTED: ") or "2024" in l]
+            if engine == "MX frame" and not any("MX frame (CPU)" in l for l in out.splitlines()):
+                problems.append(f"MX frame didn't run on {host}: {[l for l in out.splitlines() if 'Recomputed' in l]}")
+    base = lines[("GPU", "gtk")]
+    for key, value in lines.items():
+        if value != base:
+            problems.append(f"{key} differs from the GPU on GTK: {sorted(set(value) ^ set(base))[:4]}")
+    return not problems, "; ".join(problems) or "MX frame (CPU) and the GPU kernels give identical dashboards on GTK and web"
 
 
 def m7():
     problems = []
-    for name in ("m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8"):
-        ok, msg = getattr(g6, name)()
-        if not ok:
-            problems.append(f"goal 6 {name.upper()}: {msg[:200]}")
-    return not problems, "; ".join(problems) or "goal 6's checks (and goals 3–5's inside them) still pass"
+    page = ROOT / "docs/gallery/index.html"
+    if not page.exists():
+        return False, "no docs/gallery/index.html"
+    html = page.read_text()
+    for ref in re.findall(r'(?:src|href)="([^"#:?]+)"', html):
+        if not (page.parent / ref).resolve().exists():
+            problems.append(f"missing {ref}")
+    for word in ("native", "web", "both", "Flint", "examples/analytics/app.mojo"):
+        if word.lower() not in html.lower():
+            problems.append(f"gallery doesn't mention {word}")
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as p:
+        browser = p.chromium.launch(executable_path=drive.CHROMIUM, headless=True)
+        tab = browser.new_page(viewport={"width": 1440, "height": 900})
+        errors = []
+        tab.on("pageerror", lambda e: errors.append(str(e)))
+        tab.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+        tab.goto(page.as_uri())
+        tab.wait_for_timeout(800)
+        broken = tab.evaluate("() => [...document.images].filter(i => !i.complete || i.naturalWidth === 0).map(i => i.src)")
+        browser.close()
+    if errors:
+        problems.append(f"console errors: {errors[:3]}")
+    if broken:
+        problems.append(f"broken images: {broken[:3]}")
+    try:
+        live = urllib.request.urlopen(PAGES_URL, timeout=20).status == 200
+    except Exception:
+        live = False
+    if not live:
+        problems.append(f"not live at {PAGES_URL}")
+    return not problems, "; ".join(problems) or f"gallery renders cleanly, every image and link resolves, live at {PAGES_URL}"
 
 
 def m8():
+    doc = ROOT / "docs/mxframe-mojo-api.md"
+    if not doc.exists():
+        return False, "no docs/mxframe-mojo-api.md"
+    text = doc.read_text()
+    missing = [w for w in ("group_sum", "MxFrame", "memory", "GPU", "Arrow", "examples/analytics/app.mojo", "mojoui/mxframe.mojo")
+               if w not in text]
+    return not missing, f"spec lacks {missing}" if missing else "the Mojo-level MX frame API spec, from the app's call sites"
+
+
+def m9():
     problems = []
+    for name in ("m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8"):
+        ok, msg = getattr(g7, name)()
+        if not ok:
+            problems.append(f"goal 7 {name.upper()}: {msg[:200]}")
+    return not problems, "; ".join(problems) or "goal 7's checks (and goals 3–6's inside them) still pass"
+
+
+def m10():
     readme = (ROOT / "README.md").read_text()
-    android = (ROOT / "docs/android.md").read_text()
-    if not re.search(r"\*\*Android\*\*[^\n]*runs", readme):
-        problems.append("README status doesn't say Android runs")
-    for word in ("MojoActivity.java", "JNI", "emulator", "scripts/android_drive.py"):
-        if word not in android:
-            problems.append(f"docs/android.md doesn't mention {word}")
-    imgs = re.findall(r"\]\((img/android[^)]*\.png)\)", android)
-    if not imgs or any(not (ROOT / "docs" / i).exists() for i in imgs):
-        problems.append(f"docs/android.md screenshots missing: {imgs}")
-    ok, msg = g6.m9()
-    if not ok:
-        problems.append(msg)
-    return not problems, "; ".join(problems) or "README and docs/android.md describe what runs on Android, with screenshots"
+    missing = [w for w in ("examples/analytics/app.mojo", "Flint", "MX frame", "gallery", "scripts/build.sh analytics")
+               if w not in readme]
+    return not missing, f"README lacks {missing}" if missing else "README shows the analytics showcase, how to run it, the gallery"
 
 
 def main():
@@ -207,12 +268,13 @@ def main():
         b = run(["scripts/build.sh", ex, "all"], timeout=3600)
         if b.returncode != 0:
             print(f"build {ex} failed:\n" + (b.stdout + b.stderr)[-1500:])
-        if ex in ("hello", "gallery", "layout", "lens"):  # ("all" means their platforms file, or Linux/web/Apple)
+        if ex in ("hello", "gallery", "layout", "lens"):
             a = run(["scripts/build.sh", ex, "android"], timeout=3600)
             if a.returncode != 0:
                 print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7), ("M8", m8)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7), ("M8", m8),
+                     ("M9", m9), ("M10", m10)]:
         try:
             ok, msg = fn()
         except Exception as e:  # a crashing check is a failing check

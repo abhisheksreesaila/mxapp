@@ -18,6 +18,7 @@ from mojoui.gpu import Table, Row, Filter, gpu_present
 from mojoui.text import Font
 from mojoui.charts import money, compact, grouped, fixed
 from mojoui.flint import FlintChart
+from mojoui.mxframe import MxFrame, GroupSums
 
 comptime YEAR = 1
 comptime CHANNEL = 2
@@ -234,7 +235,8 @@ struct Main(App):
     var category: Int  # -1 = all
     var region: Int
     var month: Int
-    var gpu: Bool  # the engine: GPU (or CPU, to compare)
+    var engine: Int  # 0 = this file's GPU kernels, 1 = the same on the CPU, 2 = MX frame
+    var mx: List[MxFrame]  # MX frame over the same rows (made the first time it's picked)
     var version: Int
     # results
     var month_rev: List[Int]
@@ -260,7 +262,8 @@ struct Main(App):
         self.category = -1
         self.region = -1
         self.month = -1
-        self.gpu = self.table.on_gpu()
+        self.engine = 0 if self.table.on_gpu() else 1
+        self.mx = List[MxFrame]()
         self.version = 0
         self.month_rev = List[Int]()
         self.month_orders = List[Int]()
@@ -299,10 +302,42 @@ struct Main(App):
         return Filter(Int32(first), Int32(last), Int32(self.channel - 1), Int32(self.category), Int32(self.region), Int32(self.month),
                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
-    def compute(mut self):
-        """Adds up all the rows again for every chart (on the GPU, or the CPU to compare)."""
+    def mx_sum(self, by: String, value: String, groups: Int, skip: String) -> GroupSums:
+        """One group-by through MX frame, with every filter except `skip` (crossfiltering)."""
         var f = self.filter()
-        var on = self.gpu
+        var ranges = List[Tuple[String, Int, Int]]()
+        var equals = List[Tuple[String, Int]]()
+        if skip != "year":
+            ranges.append(("day", Int(f[0]), Int(f[1])))
+        if self.channel > 0:
+            equals.append(("channel", self.channel - 1))
+        if self.category >= 0 and skip != "category":
+            equals.append(("category", self.category))
+        if self.region >= 0 and skip != "region":
+            equals.append(("region", self.region))
+        if self.month >= 0 and skip != "month":
+            equals.append(("month", self.month))
+        return self.mx[0].group_sum(by, value, groups, ranges, equals)
+
+    def compute(mut self):
+        """Adds up all the rows again for every chart (GPU kernels, the same on the CPU, or MX frame)."""
+        if self.engine == 2:
+            if len(self.mx) == 0:
+                self.mx.append(MxFrame(self.table, ["day", "category", "region", "channel", "product", "quantity", "cents", "month"],
+                                       [("bin", "cents", 5000, BINS - 1), ("year", "month", 12, 2)]))
+            if self.mx[0].ready:
+                var m = self.mx_sum("month", "cents", MONTHS, "month")
+                var c = self.mx_sum("category", "cents", 8, "category")
+                var r = self.mx_sum("region", "cents", 5, "region")
+                var p = self.mx_sum("product", "cents", 64, "")
+                var sz = self.mx_sum("bin", "cents", BINS, "")
+                var y = self.mx_sum("year", "cents", 3, "year")
+                var yu = self.mx_sum("year", "quantity", 3, "year")
+                self.store(m, c, r, p, sz, y, yu)
+                return
+            self.engine = 1  # MX frame couldn't start: back to the CPU
+        var f = self.filter()
+        var on = self.engine == 0
         var m = self.table.group_sum[by_month, cents](MONTHS, f, on)
         var c = self.table.group_sum[by_category, cents](8, f, on)
         var r = self.table.group_sum[by_region, cents](5, f, on)
@@ -310,6 +345,9 @@ struct Main(App):
         var s = self.table.group_sum[by_size, cents](BINS, f, on)
         var y = self.table.group_sum[by_year, cents](3, f, on)
         var yu = self.table.group_sum[by_year, units](3, f, on)
+        self.store(m, c, r, p, s, y, yu)
+
+    def store(mut self, m: GroupSums, c: GroupSums, r: GroupSums, p: GroupSums, s: GroupSums, y: GroupSums, yu: GroupSums):
         self.milliseconds = m.milliseconds + c.milliseconds + r.milliseconds + p.milliseconds + s.milliseconds + y.milliseconds + yu.milliseconds
         self.passes = 7
         self.month_rev = m.sums.copy()
@@ -371,7 +409,7 @@ struct Main(App):
             self.channel = event.number
             self.compute()
         elif event.message == ENGINE:
-            self.gpu = event.number == 0 and self.table.on_gpu()
+            self.engine = event.number if (event.number != 0 or self.table.on_gpu()) else 1
             self.compute()
         elif event.message == CLEAR:
             self.category = -1
@@ -524,7 +562,9 @@ struct Main(App):
         var revenue = self.total(self.year_rev)
         var orders = self.total(self.year_orders)
         var period = "2023–2025" if self.year == 0 else materialize[YEARS]()[self.year]
-        var engine = self.table.device_name() if self.gpu else String("CPU")
+        var engine = self.table.device_name() if self.engine == 0 else (String("the CPU (Mojo loops)") if self.engine == 1 else String("MX frame (CPU)"))
+        if self.engine == 2 and len(self.mx) > 0 and not self.mx[0].ready:
+            engine = "the CPU: MX frame unavailable (" + self.mx[0].problem + ")"
         var sidebar = VStack(
             Text("Contoso Retail", style=HEADLINE),
             Text("Sales analytics", style=CAPTION),
@@ -538,7 +578,7 @@ struct Main(App):
             Button("Clear selection", on_tap=CLEAR),
             Divider().fill(),
             Text("Engine", style=CAPTION),
-            Segmented(["GPU", "CPU"], 0 if self.gpu else 1, on_select=ENGINE).fill(),
+            Segmented(["GPU", "CPU", "MX frame"], self.engine, on_select=ENGINE).fill(),
             Text(grouped(self.table.count) + " rows, " + String(self.passes) + " passes", style=CAPTION),
             Text("Recomputed in " + fixed(self.milliseconds, 1) + " ms on " + engine, style=CAPTION).max_width(244),
             Spacer(),
