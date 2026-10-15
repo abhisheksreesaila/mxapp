@@ -1,5 +1,10 @@
 # CLAUDE.md — briefing for Claude Code
 
+Mode: experiment
+Ship: direct
+
+Current experiment: `GOAL.md` (Mojo all the way on Mac, then iPhone). Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 
 ## Read first, in this order
