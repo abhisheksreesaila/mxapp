@@ -206,6 +206,11 @@ SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
 
 banner "Android SDK for mojo-ui (only the steps that need you)"
 
+if ! command -v java >/dev/null 2>&1; then
+  warn "sdkmanager needs Java 17 or newer, and none was found. Install one (e.g. 'pixi global install openjdk'), then re-run."
+  exit 1
+fi
+
 stage "Download Google's command-line tools"
 say "Google's SDK comes with its own licence, so you download it and accept it, not me."
 say "Everything goes into $SDK (no Android Studio needed)."
@@ -236,14 +241,18 @@ pause "Press Enter to start"
 
 stage "Install the build tools mojo-ui needs"
 say "platform-tools (adb), the newest build-tools (aapt2, d8, apksigner) and the matching Android platform."
-BUILD=$("$SDKMANAGER" --sdk_root="$SDK" --list 2>/dev/null | grep -oE 'build-tools;[0-9]+\.[0-9]+\.[0-9]+ ' | sort -V | tail -n1 | tr -d ' ')
-API=$("$SDKMANAGER" --sdk_root="$SDK" --list 2>/dev/null | grep -oE 'platforms;android-[0-9]+ ' | sort -V | tail -n1 | tr -d ' ')
+LIST=$("$SDKMANAGER" --sdk_root="$SDK" --list 2>/dev/null || true)
+BUILD=$(grep -oE 'build-tools;[0-9]+\.[0-9]+\.[0-9]+ ' <<< "$LIST" | sort -V | tail -n1 | tr -d ' ' || true)
+API=$(grep -oE 'platforms;android-[0-9]+ ' <<< "$LIST" | sort -V | tail -n1 | tr -d ' ' || true)
 say "Installing: platform-tools ${BUILD:-?} ${API:-?}"
 if [[ -z "$BUILD" || -z "$API" ]]; then
   warn "couldn't read the package list; run: $SDKMANAGER --list"
   SKIPPED+=("install platform-tools, build-tools and a platform with sdkmanager")
 else
-  "$SDKMANAGER" --sdk_root="$SDK" "platform-tools" "$BUILD" "$API"
+  "$SDKMANAGER" --sdk_root="$SDK" "platform-tools" "$BUILD" "$API" || {
+    warn "the install failed; re-run this wizard to try again"
+    SKIPPED+=("install platform-tools, $BUILD and $API with sdkmanager")
+  }
 fi
 
 stage "Connect your Android phone"
@@ -252,8 +261,10 @@ step "Settings → About phone → tap 'Build number' 7 times (developer options
 step "Settings → System → Developer options → turn on 'USB debugging'."
 step "Plug the phone in by USB and tap 'Allow' on the phone when it asks."
 pause "Press Enter when it's plugged in"
-"$SDK/platform-tools/adb" devices
-if "$SDK/platform-tools/adb" devices | grep -qE '\sdevice$'; then
+if [[ ! -x "$SDK/platform-tools/adb" ]]; then
+  warn "adb isn't installed yet (the previous stage didn't finish); re-run this wizard"
+  SKIPPED+=("connect a phone with USB debugging (adb devices shows 'device')")
+elif "$SDK/platform-tools/adb" devices | tee /dev/stderr | grep -qE '\sdevice$'; then
   note "Phone found."
 else
   warn "No phone listed as 'device'. Check the cable and the 'Allow' prompt, then re-run this stage's command:"
@@ -261,12 +272,11 @@ else
   SKIPPED+=("connect a phone with USB debugging (adb devices shows 'device')")
 fi
 
-stage "Tell mojo-ui where the SDK is"
-say "The Android build reads ANDROID_HOME (default: ~/Android/Sdk, which is where this wizard put it)."
+stage "Done: tell Claude"
+say "The SDK is in $SDK."
 if [[ "$SDK" != "$HOME/Android/Sdk" ]]; then
-  write_env ANDROID_HOME "$SDK"
-else
-  note "Default location: nothing to write."
+  say "It's not in the default place, so add this to your shell profile (~/.bashrc):"
+  note "  export ANDROID_HOME=\"$SDK\""
 fi
 say "Then tell Claude: \"SDK is ready, do Android\"."
 

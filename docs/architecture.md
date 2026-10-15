@@ -32,12 +32,12 @@ flowchart TB
     AK --> AP["AppKit<br/>(Objective-C runtime)"]
     UK --> IP["UIKit<br/>(Objective-C runtime)"]
     AN -.-> JN["Android views<br/>(JNI)"]
-    GPU --> MAX["MAX → NVIDIA / AMD GPU"]
+    GPU --> MAX["MAX → NVIDIA GPU<br/>(AMD supported by MAX, untested)"]
 ```
 
 Three layers, and only the bottom one knows any platform:
 
-1. **Your app** describes the screen as data and changes its state in `update()`. It imports only `mojoui` (the build rejects anything else).
+1. **Your app** describes the screen as data and changes its state in `update()`. It imports only `mojoui` (`scripts/check` rejects anything else).
 2. **The core** turns "the screen before" and "the screen after" into a short list of changes. It's plain Mojo with no platform code, so it's unit-tested on its own (`tests/test_mojoui.mojo`, `tests/test_canvas.mojo`).
 3. **A host per platform** creates real native widgets for the screen, wires their events back to the app, and applies the changes. Hosts are also Mojo.
 
@@ -81,7 +81,7 @@ Everything below the core rests on one fact: **Mojo can call C functions, and C 
 - **Calling in:** a Mojo function marked `abi("C")` is an ordinary C function pointer. GTK signal handlers, Objective-C methods and GPU kernels are all plain Mojo functions passed by address.
 - **The platform owns the loop** (ROADMAP decision 2): GTK's main loop, `NSApplication run`, `UIApplicationMain` and the web server call into Mojo, never the other way round. iPhone requires this, and it works the same everywhere.
 
-There's no JSON and no message bus between the app and the screen. The app's state and the widgets live in one process and one memory.
+On Linux, Mac and iPhone there's no JSON and no message bus between the app and the screen: the app's state and the widgets live in one process and one memory. (The web host passes the screen to Python as JSON, inside one process.)
 
 ## Linux: GTK through C
 
@@ -149,7 +149,7 @@ flowchart LR
 `mojoui/gpu.mojo` uses MAX (Modular's GPU runtime). The app writes **ordinary Mojo functions** and passes them as compile-time parameters; Mojo compiles them into GPU kernels:
 
 - **Per-pixel:** `gpu.render[shade](w, h, params)` runs `shade(x, y, …) -> colour` once per pixel (the fractal example).
-- **Point clouds:** `PointCloud(x, y, a, b)` uploads four float32 columns once. Each frame, `bin[place]` runs `place(point) -> pixel` for every point and counts the hits per pixel with atomic adds; `shade[colour]` turns each count into a colour; one copy brings the pixels back. That's 1.6 ms for 20 million points at 1080p on an RTX 3090.
+- **Point clouds:** `PointCloud(x, y, a, b)` uploads four float32 columns once. Each frame, `bin[place]` runs `place(point) -> pixel` for every point and counts the hits per pixel with atomic adds; `shade[colour]` turns each count into a colour; one copy brings the pixels back. That's 1.5–1.6 ms for 20 million points at 1080p on an RTX 3090 (across runs).
 - **Same functions on the CPU:** without a GPU, `bin` and `shade` call the same `place` and `colour` on the CPU, so results are identical, just slower (checked pixel for pixel).
 - **Apple:** the GPU path is compiled out of Mac and iPhone builds (`comptime if CompilationTarget.is_linux()`, D-56). MAX's Apple GPU runtime can't go into these runtime-free builds yet, so they use the CPU path.
 

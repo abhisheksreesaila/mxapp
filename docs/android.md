@@ -1,6 +1,6 @@
 # Android: what works, what's blocked, and the plan
 
-Status: blocked (needs your decision and Google's SDK licence; see "What needs you")
+Status: approach approved (2026-10-15: the ~40-line Java listener, option b); waiting for the Android SDK (`scripts/android_setup.sh`) and a phone
 
 ## Works today (checked on Linux)
 - **Mojo targets Android.** `mojo build --target-triple aarch64-linux-android29 --emit object` compiles mojoui apps as they are (all but the GPU example, which needs NVIDIA/AMD).
@@ -25,7 +25,7 @@ Same idea as Apple: Mojo drives the platform's own UI toolkit directly.
 Run `scripts/android_setup.sh`: a step-by-step wizard for the parts only the owner can do (download Google's command-line tools, accept the licences, connect a phone). It then installs platform-tools, build-tools and a platform.
 
 ## What needs you
-- **A decision:** is a ~40-line Java listener shim (option b) acceptable, or should Android stay Mojo-only (option a, polling)?
+- ~~A decision on the Java listener~~: approved on 2026-10-15 (option b).
 - **The Android SDK licence:** aapt2, apksigner, d8 and the emulator come from Google's SDK, which needs you to accept Google's licence (`sdkmanager --licenses`). I didn't accept it for you.
 - **A device or emulator to test on:** there's none here. With an Android phone in developer mode, `adb install` is enough. Arch's `android-tools` package provides `adb` without the SDK.
 
