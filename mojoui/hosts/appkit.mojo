@@ -12,13 +12,15 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
-    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
+    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, Node,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
 from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
+from mojoui.canvas import Surface
+from mojoui.hosts.apple_canvas import CGPoint, CGRect, cfunc, cg_image, AppleCanvas
 from mojoui.hosts.objc import (
     cls, sel, msg, new, ns_string, ns_data, ns_array, ns_number, ns_date, date_text, sf_symbol, from_ns, constrain, prefer,
     new_class, add_method, add_protocol, register_class, pool_push,
@@ -37,6 +39,9 @@ struct AppKitHost[A: App](Movable):
     var target: Int  # MojoTarget object that receives every event
     var widgets: List[Int]
     var focus: Int  # text field to keep focused across the next rebuild (-1: none)
+    var canvases: List[AppleCanvas]
+    var link: Int  # CADisplayLink: one tick per display frame, for every canvas
+    var last_frame: Float64  # the link's last timestamp (seconds)
 
     def __init__(out self):
         self.rt = Runtime(Self.A())
@@ -44,6 +49,9 @@ struct AppKitHost[A: App](Movable):
         self.target = 0
         self.widgets = List[Int]()
         self.focus = -1
+        self.canvases = List[AppleCanvas]()
+        self.link = 0
+        self.last_frame = 0
 
     def submit_field_shown(self) -> Bool:
         """Whether a text field handles Return itself (then no button may also claim it)."""
@@ -132,6 +140,23 @@ struct AppKitHost[A: App](Movable):
                 prefer(w, "widthAnchor", Float64(280))
             if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(1))
+        elif node.kind == CANVAS:
+            # A MojoCanvas (an NSImageView whose scrollWheel: is Mojo) showing the app's pixels;
+            # pan, pinch and click recognisers call back into it.
+            w = msg(msg(cls("MojoCanvas"), "alloc"), "initWithFrame:", Float64(0), Float64(0), Float64(320), Float64(240))
+            _ = msg(w, "setImageScaling:", 1)  # NSImageScaleAxesIndependently: the pixels fill the view
+            _ = msg(w, "setTag:", tag_for(self_addr, i))
+            for orientation in range(2):  # its size comes from the layout, never from its picture
+                _ = msg(w, "setContentHuggingPriority:forOrientation:", Float32(1), orientation)
+                _ = msg(w, "setContentCompressionResistancePriority:forOrientation:", Float32(1), orientation)
+            if not sized:
+                prefer(w, "widthAnchor", Float64(320))
+            if not node.sized_height():
+                prefer(w, "heightAnchor", Float64(240))
+            for kind in [("NSPanGestureRecognizer", "canvasPan:"), ("NSMagnificationGestureRecognizer", "canvasPinch:"), ("NSClickGestureRecognizer", "canvasTap:")]:
+                var r = msg(msg(cls(kind[0]), "alloc"), "initWithTarget:action:", w, sel(kind[1]))
+                _ = msg(w, "addGestureRecognizer:", r)
+            self.canvases.append(AppleCanvas(i, w))
         elif node.kind == IMAGE:
             w = msg(cls("NSImageView"), "imageViewWithImage:", ns_image(node.pixels, node.spacing, node.size))
             if not sized:  # (the app sized it: its settings decide)
@@ -319,17 +344,27 @@ struct AppKitHost[A: App](Movable):
         # while its window content is replaced in the middle of its own action.
         # (Adding `release` later means delaying it until the handler returns.)
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)  # 0 = nil: patches become no-ops
+        self.canvases = List[AppleCanvas]()
+        if self.link != 0:
+            _ = msg(self.link, "invalidate")
+            self.link = 0
         if len(self.rt.shown.nodes) >= (1 << NODE_BITS):
             var note = msg(cls("NSTextField"), "labelWithString:", ns_string("Too many items to show (limit 65,535)."))
             _ = msg(self.window, "setContentView:", note)  # no stale controls left to use
             return
         var root = self.build(0, self_addr)
-        var holder = new("NSStackView")  # centres the app's root in the window
-        _ = msg(holder, "setOrientation:", 1)
-        _ = msg(holder, "setAlignment:", 9)
-        _ = msg(holder, "setEdgeInsets:", Float64(32), Float64(32), Float64(32), Float64(32))
-        _ = msg(holder, "addArrangedSubview:", root)
-        _ = msg(self.window, "setContentView:", holder)
+        if self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills:  # the screen fills the window
+            _ = msg(self.window, "setContentView:", root)
+        else:
+            var holder = new("NSStackView")  # centres the app's root in the window
+            _ = msg(holder, "setOrientation:", 1)
+            _ = msg(holder, "setAlignment:", 9)
+            _ = msg(holder, "setEdgeInsets:", Float64(32), Float64(32), Float64(32), Float64(32))
+            _ = msg(holder, "addArrangedSubview:", root)
+            _ = msg(self.window, "setContentView:", holder)
+        if len(self.canvases) > 0:  # one display link (macOS 14+) ticks every canvas
+            self.link = msg(self.canvases[0].view, "displayLinkWithTarget:selector:", self.canvases[0].view, sel("canvasFrame:"))
+            _ = msg(self.link, "addToRunLoop:forMode:", msg(cls("NSRunLoop"), "mainRunLoop"), ns_string("kCFRunLoopCommonModes"))
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             # Keep typing in the new field, on the next run-loop turn (after AppKit has
             # finished ending the old field's edit), with the cursor at the end.
@@ -382,6 +417,58 @@ struct AppKitHost[A: App](Movable):
             if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
                 _ = msg(self.widgets[k], "reloadData")
 
+    # ---------- canvases ----------
+
+    def canvas_at(self, node: Int) -> Int:
+        for k in range(len(self.canvases)):
+            if self.canvases[k].node == node:
+                return k
+        return -1
+
+    def canvas_send(mut self, node: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64, self_addr: Int):
+        var d = self.rt.gesture(node, kind, x, y, dx, dy, zoom)
+        self.apply(d, self_addr)
+
+    def tick(mut self, seconds: Float64, self_addr: Int):
+        """Every display frame: frame events for canvases that asked, then redraws."""
+        var micro = Int((seconds - self.last_frame) * 1e6) if self.last_frame > 0 else 16667
+        self.last_frame = seconds
+        var k = 0
+        while k < len(self.canvases):
+            var node = self.canvases[k].node
+            if self.rt.shown.nodes[node].msg2 != 0:
+                var d = self.rt.frame(node, micro)
+                self.apply(d, self_addr)
+                if d.rebuild:
+                    return
+            self.draw_canvas(k, self_addr)
+            k += 1
+
+    def draw_canvas(mut self, k: Int, self_addr: Int):
+        """Asks the app to paint canvas k at its real pixel size (if its size or version changed)."""
+        var view = self.canvases[k].view
+        var node = self.canvases[k].node
+        var bounds = msg[CGRect](view, "bounds")
+        var scale = msg[Float64](self.window, "backingScaleFactor") if self.window != 0 else 2.0
+        var wpx = Int(bounds.width * scale + 0.5)
+        var hpx = Int(bounds.height * scale + 0.5)
+        var version = self.rt.shown.nodes[node].value
+        if wpx <= 0 or hpx <= 0 or (wpx == self.canvases[k].wpx and hpx == self.canvases[k].hpx and version == self.canvases[k].drawn):
+            return
+        if len(self.canvases[k].pixels) != wpx * hpx:
+            self.canvases[k].pixels = List[UInt32](length=wpx * hpx, fill=0)
+        var surface = Surface(Int(self.canvases[k].pixels.unsafe_ptr()), wpx, hpx, scale)
+        var d = self.rt.draw(node, surface)
+        var image = cg_image(self.canvases[k].pixels, wpx, hpx)
+        var picture = msg(msg(cls("NSImage"), "alloc"), "initWithCGImage:size:", image, bounds.width, bounds.height)
+        _ = msg(view, "setImage:", picture)
+        _ = msg(picture, "release")
+        cfunc[NoneType]("CGImageRelease", image)
+        self.canvases[k].wpx = wpx
+        self.canvases[k].hpx = hpx
+        self.canvases[k].drawn = version
+        self.apply(d, self_addr)
+
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
         """A control changed: build the event, run update(), patch the controls."""
         ref n = self.rt.shown.nodes[node]
@@ -428,6 +515,58 @@ def host_at[A: App](addr: Int) -> Pointer[AppKitHost[A], MutUntrackedOrigin]:
 
 
 # ---------- MojoTarget methods (AppKit calls these) ----------
+
+# ---------- MojoCanvas methods (self is the canvas view; its tag says host + node) ----------
+
+def in_view(view: Int, p: CGPoint) -> CGPoint:
+    """AppKit's y runs upwards; canvases count from the top-left."""
+    return CGPoint(p.x, msg[CGRect](view, "bounds").height - p.y)
+
+
+def on_canvas_frame[A: App](view: Int, cmd: Int, link: Int) abi("C"):
+    var t = from_tag(view)
+    host_at[A](t[0])[].tick(msg[Float64](link, "timestamp"), t[0])
+
+
+def on_canvas_pan[A: App](view: Int, cmd: Int, recognizer: Int) abi("C"):
+    var t = from_tag(view)
+    var moved = msg[CGPoint](recognizer, "translationInView:", view)
+    _ = msg(recognizer, "setTranslation:inView:", Float64(0), Float64(0), view)  # deltas from here on
+    var at = in_view(view, msg[CGPoint](recognizer, "locationInView:", view))
+    host_at[A](t[0])[].canvas_send(t[1], PAN, at.x, at.y, moved.x, -moved.y, 1, t[0])
+
+
+def on_canvas_pinch[A: App](view: Int, cmd: Int, recognizer: Int) abi("C"):
+    var t = from_tag(view)
+    var host = host_at[A](t[0])
+    var k = host[].canvas_at(t[1])
+    if k < 0:
+        return
+    var m = msg[Float64](recognizer, "magnification")  # 0 at the start of each pinch
+    if msg(recognizer, "state") == 1:  # began
+        host[].canvases[k].pinch = 0
+    var factor = (1 + m) / (1 + host[].canvases[k].pinch)
+    host[].canvases[k].pinch = m
+    var at = in_view(view, msg[CGPoint](recognizer, "locationInView:", view))
+    host[].canvas_send(t[1], ZOOM, at.x, at.y, 0, 0, factor, t[0])
+
+
+def on_canvas_tap[A: App](view: Int, cmd: Int, recognizer: Int) abi("C"):
+    var t = from_tag(view)
+    var at = in_view(view, msg[CGPoint](recognizer, "locationInView:", view))
+    host_at[A](t[0])[].canvas_send(t[1], TAP, at.x, at.y, 0, 0, 1, t[0])
+
+
+def on_canvas_scroll[A: App](view: Int, cmd: Int, event: Int) abi("C"):
+    """Mouse wheel (4 notches = 2×) or trackpad scroll (pixels): zoom around the pointer."""
+    var t = from_tag(view)
+    var dy = msg[Float64](event, "scrollingDeltaY")
+    var precise = (msg(event, "hasPreciseScrollingDeltas") & 0xFF) != 0
+    var window_point = msg[CGPoint](event, "locationInWindow")
+    var at = in_view(view, msg[CGPoint](view, "convertPoint:fromView:", window_point.x, window_point.y, 0))
+    var notches = dy / 100.0 * 4.0 if precise else dy
+    host_at[A](t[0])[].canvas_send(t[1], ZOOM, at.x, at.y, 0, 0, 2.0 ** (notches / 4.0), t[0])
+
 
 def on_tap[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
     var t = from_tag(sender)
@@ -591,13 +730,20 @@ def run[A: App]() -> c_int:
     add_protocol(c, "NSTableViewDataSource")
     add_method(c, "applicationShouldTerminateAfterLastWindowClosed:", quit_when_closed, "B@:@")
     register_class(c)
+    var canvas = new_class("MojoCanvas", "NSImageView")
+    add_method(canvas, "canvasFrame:", on_canvas_frame[A], "v@:@")
+    add_method(canvas, "canvasPan:", on_canvas_pan[A], "v@:@")
+    add_method(canvas, "canvasPinch:", on_canvas_pinch[A], "v@:@")
+    add_method(canvas, "canvasTap:", on_canvas_tap[A], "v@:@")
+    add_method(canvas, "scrollWheel:", on_canvas_scroll[A], "v@:@")
+    register_class(canvas)
     host[].target = msg(c, "new")
     _ = msg(app, "setDelegate:", host[].target)
 
     host[].window = msg(
         msg(cls("NSWindow"), "alloc"),
         "initWithContentRect:styleMask:backing:defer:",
-        Float64(0), Float64(0), Float64(480), Float64(560),  # rect as 4 floats (arm64)
+        Float64(0), Float64(0), Float64(host[].rt.app.window_size()[0]), Float64(host[].rt.app.window_size()[1]),  # rect as 4 floats (arm64)
         1 | 2 | 4 | 8,  # titled, closable, miniaturizable, resizable
         2,  # NSBackingStoreBuffered
         0,  # defer: NO

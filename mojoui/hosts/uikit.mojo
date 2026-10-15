@@ -13,13 +13,15 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
-    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
+    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, Node,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
 from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
+from mojoui.canvas import Surface
+from mojoui.hosts.apple_canvas import CGPoint, CGRect, cfunc, cg_image, AppleCanvas
 from mojoui.hosts.objc import (
     cls, sel, msg, new, ns_string, ns_data, ns_array, ns_number, ns_date, date_text, sf_symbol, from_ns, constrain, prefer,
     global_block, data_block, block_data, new_class, add_method, add_protocol,
@@ -47,9 +49,15 @@ struct UIKitHost[A: App](Movable):
     var widgets: List[Int]  # the control for each node
     var extras: List[Int]  # a second view for some nodes (a toggle's label)
     var focus: Int  # text field to keep focused across the next rebuild (-1: none)
+    var canvases: List[AppleCanvas]
+    var link: Int  # CADisplayLink: one tick per display frame, for every canvas
+    var last_frame: Float64
 
     def __init__(out self):
         self.rt = Runtime(Self.A())
+        self.canvases = List[AppleCanvas]()
+        self.link = 0
+        self.last_frame = 0
         self.window = 0
         self.view = 0
         self.root = 0
@@ -141,6 +149,25 @@ struct UIKitHost[A: App](Movable):
                 prefer(w, "widthAnchor", Float64(280))
             if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(1))
+            shown = w
+        elif node.kind == CANVAS:
+            # A MojoCanvasView (a UIImageView) showing the app's pixels, with UIKit's own
+            # pan, pinch and tap recognisers calling back into it.
+            w = new("MojoCanvasView")
+            _ = msg(w, "setContentMode:", 0)  # scale to fill: the pixels match its size
+            _ = msg(w, "setUserInteractionEnabled:", 1)  # image views ignore touches by default
+            _ = msg(w, "setTag:", tag_for(self_addr, i))
+            for axis in range(2):  # its size comes from the layout, never from its picture
+                _ = msg(w, "setContentHuggingPriority:forAxis:", Float32(1), axis)
+                _ = msg(w, "setContentCompressionResistancePriority:forAxis:", Float32(1), axis)
+            if not sized:
+                prefer(w, "widthAnchor", Float64(320))
+            if not node.sized_height():
+                prefer(w, "heightAnchor", Float64(240))
+            for kind in [("UIPanGestureRecognizer", "canvasPan:"), ("UIPinchGestureRecognizer", "canvasPinch:"), ("UITapGestureRecognizer", "canvasTap:")]:
+                var r = msg(msg(cls(kind[0]), "alloc"), "initWithTarget:action:", w, sel(kind[1]))
+                _ = msg(w, "addGestureRecognizer:", r)
+            self.canvases.append(AppleCanvas(i, w))
             shown = w
         elif node.kind == IMAGE:
             w = msg(msg(cls("UIImageView"), "alloc"), "initWithImage:", ui_image(node.pixels, node.spacing, node.size))
@@ -342,12 +369,22 @@ struct UIKitHost[A: App](Movable):
             _ = msg(root_vc, "dismissViewControllerAnimated:completion:", 1, 0)  # our alert left the view
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)  # 0 = nil: patches become no-ops
         self.extras = List[Int](length=len(self.rt.shown.nodes), fill=0)
+        self.canvases = List[AppleCanvas]()
+        if self.link != 0:
+            _ = msg(self.link, "invalidate")
+            self.link = 0
         if len(self.rt.shown.nodes) >= (1 << NODE_BITS):
             self.root = label("Too many items to show (limit 65,535).", 0)  # no stale controls left to use
         else:
             self.root = self.build(0, self_addr)
         _ = msg(self.view, "addSubview:", self.root)
-        pin_center(self.root, self.view)
+        if self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills:  # the screen fills the safe area
+            pin_edges(self.root, self.view)
+        else:
+            pin_center(self.root, self.view)
+        if len(self.canvases) > 0:  # one display link ticks every canvas
+            self.link = msg(cls("CADisplayLink"), "displayLinkWithTarget:selector:", self.canvases[0].view, sel("canvasFrame:"))
+            _ = msg(self.link, "addToRunLoop:forMode:", msg(cls("NSRunLoop"), "mainRunLoop"), ns_string("kCFRunLoopCommonModes"))
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             # Keep the keyboard up on the new field, on the next run-loop turn (after
             # UIKit has finished with the old field).
@@ -402,6 +439,52 @@ struct UIKitHost[A: App](Movable):
         for k in range(len(self.rt.shown.nodes)):
             if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
                 _ = msg(self.widgets[k], "reloadData")
+
+    # ---------- canvases ----------
+
+    def canvas_send(mut self, node: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64, self_addr: Int):
+        var d = self.rt.gesture(node, kind, x, y, dx, dy, zoom)
+        self.apply(d, self_addr)
+
+    def tick(mut self, seconds: Float64, self_addr: Int):
+        """Every display frame: frame events for canvases that asked, then redraws."""
+        var micro = Int((seconds - self.last_frame) * 1e6) if self.last_frame > 0 else 16667
+        self.last_frame = seconds
+        var k = 0
+        while k < len(self.canvases):
+            var node = self.canvases[k].node
+            if self.rt.shown.nodes[node].msg2 != 0:
+                var d = self.rt.frame(node, micro)
+                self.apply(d, self_addr)
+                if d.rebuild:
+                    return
+            self.draw_canvas(k, self_addr)
+            k += 1
+
+    def draw_canvas(mut self, k: Int, self_addr: Int):
+        """Asks the app to paint canvas k at its real pixel size (if its size or version changed)."""
+        var view = self.canvases[k].view
+        var node = self.canvases[k].node
+        var bounds = msg[CGRect](view, "bounds")
+        var scale = msg[Float64](msg(view, "traitCollection"), "displayScale")
+        if scale < 1:
+            scale = 3.0
+        var wpx = Int(bounds.width * scale + 0.5)
+        var hpx = Int(bounds.height * scale + 0.5)
+        var version = self.rt.shown.nodes[node].value
+        if wpx <= 0 or hpx <= 0 or (wpx == self.canvases[k].wpx and hpx == self.canvases[k].hpx and version == self.canvases[k].drawn):
+            return
+        if len(self.canvases[k].pixels) != wpx * hpx:
+            self.canvases[k].pixels = List[UInt32](length=wpx * hpx, fill=0)
+        var surface = Surface(Int(self.canvases[k].pixels.unsafe_ptr()), wpx, hpx, scale)
+        var d = self.rt.draw(node, surface)
+        var image = cg_image(self.canvases[k].pixels, wpx, hpx)
+        _ = msg(view, "setImage:", msg(cls("UIImage"), "imageWithCGImage:scale:orientation:", image, scale, 0))
+        cfunc[NoneType]("CGImageRelease", image)
+        self.canvases[k].wpx = wpx
+        self.canvases[k].hpx = hpx
+        self.canvases[k].drawn = version
+        self.apply(d, self_addr)
 
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
         """A control changed: build the event, run update(), patch the controls."""
@@ -504,6 +587,14 @@ def pin_center(view: Int, inside: Int):
     _ = msg(h, "setActive:", 1)
 
 
+def pin_edges(view: Int, inside: Int):
+    """Auto Layout: fill the safe area (a screen that fills the window)."""
+    var guide = msg(inside, "safeAreaLayoutGuide")
+    _ = msg(view, "setTranslatesAutoresizingMaskIntoConstraints:", 0)
+    for anchor in ["leadingAnchor", "trailingAnchor", "topAnchor", "bottomAnchor"]:
+        _ = msg(msg(msg(view, anchor), "constraintEqualToAnchor:", msg(guide, anchor)), "setActive:", 1)
+
+
 def from_tag(control: Int) -> Tuple[Int, Int]:
     var tag = msg(control, "tag")
     return (tag >> NODE_BITS, tag & ((1 << NODE_BITS) - 1))
@@ -514,6 +605,35 @@ def host_at[A: App](addr: Int) -> Pointer[UIKitHost[A], MutUntrackedOrigin]:
 
 
 # ---------- scene delegate methods and the dropdown block (UIKit calls these) ----------
+
+# ---------- MojoCanvasView methods (self is the canvas view; its tag says host + node) ----------
+
+def on_canvas_frame[A: App](view: Int, cmd: Int, link: Int) abi("C"):
+    var t = from_tag(view)
+    host_at[A](t[0])[].tick(msg[Float64](link, "timestamp"), t[0])
+
+
+def on_canvas_pan[A: App](view: Int, cmd: Int, recognizer: Int) abi("C"):
+    var t = from_tag(view)
+    var moved = msg[CGPoint](recognizer, "translationInView:", view)
+    _ = msg(recognizer, "setTranslation:inView:", Float64(0), Float64(0), view)  # deltas from here on
+    var at = msg[CGPoint](recognizer, "locationInView:", view)
+    host_at[A](t[0])[].canvas_send(t[1], PAN, at.x, at.y, moved.x, moved.y, 1, t[0])
+
+
+def on_canvas_pinch[A: App](view: Int, cmd: Int, recognizer: Int) abi("C"):
+    var t = from_tag(view)
+    var factor = msg[Float64](recognizer, "scale")
+    _ = msg(recognizer, "setScale:", Float64(1))  # factors from here on
+    var at = msg[CGPoint](recognizer, "locationInView:", view)
+    host_at[A](t[0])[].canvas_send(t[1], ZOOM, at.x, at.y, 0, 0, factor, t[0])
+
+
+def on_canvas_tap[A: App](view: Int, cmd: Int, recognizer: Int) abi("C"):
+    var t = from_tag(view)
+    var at = msg[CGPoint](recognizer, "locationInView:", view)
+    host_at[A](t[0])[].canvas_send(t[1], TAP, at.x, at.y, 0, 0, 1, t[0])
+
 
 def on_tap[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
     var t = from_tag(sender)
@@ -697,4 +817,10 @@ def run[A: App](argc: c_int, argv: Int) -> c_int:
     add_protocol(scene_delegate, "UITableViewDataSource")
     add_protocol(scene_delegate, "UITableViewDelegate")
     register_class(scene_delegate)
+    var canvas = new_class("MojoCanvasView", "UIImageView")
+    add_method(canvas, "canvasFrame:", on_canvas_frame[A], "v@:@")
+    add_method(canvas, "canvasPan:", on_canvas_pan[A], "v@:@")
+    add_method(canvas, "canvasPinch:", on_canvas_pinch[A], "v@:@")
+    add_method(canvas, "canvasTap:", on_canvas_tap[A], "v@:@")
+    register_class(canvas)
     return external_call["UIApplicationMain", c_int](argc, argv, 0, ns_string("MojoAppDelegate"))

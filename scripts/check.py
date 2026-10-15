@@ -24,6 +24,8 @@ g5 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(g5)
 g5.ROOT, g5.BUILD = ROOT, ROOT / "build"
 run, gtk, web, apple_ok, state, BUILD = g5.run, g5.gtk, g5.web, g5.apple_ok, g5.state, g5.BUILD
+# libSystem's maths and clock (D-61): the lens's trip generator uses sin/cos, PointCloud times frames.
+g5.ALLOWED |= {"_sin", "_cos", "___sincos_stret", "_clock_gettime_nsec_np"}
 
 EXAMPLES = g5.EXAMPLES + ["lens"]
 TOTAL = 20_000_000
