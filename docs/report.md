@@ -6,7 +6,7 @@
 
 - **1.48 ms per 1920×1080 frame** on the RTX 3090 (count + colour + copy to the screen's memory), against 132 ms on the CPU. The GPU and CPU pictures are identical pixel for pixel.
 - **59.2 fps on Linux** (GTK, 60 Hz display): every one of 180 frames redrawn while playing through the day.
-- **59.9 fps in the browser**: the server's GPU paints each frame and streams it to a `<canvas>`, paced to the display.
+- **60 fps in the browser** (headless Chromium on this machine): the server's GPU paints each frame and streams it to a `<canvas>`, paced to the display.
 - **Mac and iPhone** builds of the same file link and sign (CPU path; not run, there's no Apple hardware here).
 
 ![Data Lens on Linux](img/lens-gtk.png)
@@ -19,16 +19,16 @@
 ```
 $ scripts/check
 PASS  M1  Canvas node, gesture/frame events, draw(), Surface, version → redraw patch; core tests pass
-PASS  M2  canvas 702x876 pt drawn at 1123x1402 px (scale 1.6), 220 colours; drag + zoom reach update()
+PASS  M2  canvas 940x800 pt drawn at 1504x1280 px (scale 1.6), 207 colours; drag + zoom reach update()
 PASS  M3  GTK, playing, 20,000,000 points: 180 frames in 3041 ms = 59.2 fps, 180 redraws
-PASS  M4  20,000,000 points at 1920x1080: GPU 1.484144 ms/frame (bin + shade + copy), CPU 131.810539 ms; matched 2551975 on both; 100.000% identical pixels; uploaded once
+PASS  M4  20,000,000 points at 1920x1080: GPU 1.614963 ms/frame (bin + shade + copy), CPU 141.184716 ms; matched 2551975 on both; 100.000% identical pixels; uploaded once
 PASS  M5  imports only mojoui; kinds split 20,000,000 trips; hour filter matches an independent count (867,399); rich screenshot
-PASS  M6  web canvas 560x900 px, real drag + wheel reach the app, state identical to GTK; playing 59.9 fps
+PASS  M6  web canvas 560x900 px, real drag + wheel reach the app, state identical to GTK; playing 60.0 fps
 PASS  M7  lens builds, links and signs for Mac + iPhone (CPU path, Apple system functions only); Canvas mapped to image view + display link + pan/pinch
 PASS  M8  goal 5's checks (and goals 3–4's inside them) still pass
 PASS  M9  README documents Canvas, gestures, frames, draw(), mojoui.gpu; report has numbers + screenshots
 ```
-(M1–M7 from the full run; M8 and M9 passed after the two fixes below. The final full run's output is in the experiment log.)
+(The final full run, after three review rounds; the reviewer's verdict: PASS.)
 
 ## Try it (30 seconds)
 ```
@@ -45,6 +45,9 @@ Drag to pan, scroll or pinch to zoom, tap to centre, pick a kind, slide the hour
   - Apple: an NSImageView or UIImageView, with a CADisplayLink and pan, pinch and tap recognisers.
 - **`mojoui.gpu.PointCloud`**: four float32 columns (what a dataframe hands over), uploaded to the GPU once. The app writes two plain Mojo functions, `place(trip) → pixel` and `colour(count) → RGBA`, and the framework runs them as GPU kernels: one thread for many trips, atomic counts, then one thread per pixel. Without a GPU the same functions run on the CPU.
 - **Apple:** the GPU path compiles out (`comptime if CompilationTarget.is_linux()`), so the Apple builds use only Apple system functions, as before.
+
+## Review
+Three rounds with the reviewer subagent, now **PASS**. It caught a web canvas that could freeze when a frame changes the screen (fixed; a test now fails without the fix), stale patches after a rebuild, too-fast touchpad zoom, idle canvases waking the CPU every frame (they now stop ticking), iPhone pinch losing to pan, and README overclaims. The Apple changes are reviewed in source only: not run on hardware.
 
 ## Decisions worth your second look
 1. **D-53/D-54, the hybrid:** native controls plus a canvas the app paints, with pixels coming from `draw()` rather than through the view tree. This is the architecture for every GPU showcase from here on (galaxy, fractal zoom, MX frame).
