@@ -24,8 +24,10 @@ public final class MojoActivity extends Activity implements View.OnClickListener
     static native void touch(long host, int view, int action, float x, float y, float x2, float y2, int pointers);
     static native void frame(long host, long nanos);
     static native String row(long host, int view, int index);
+    static native void destroy(long host);
 
     @Override protected void onCreate(Bundle state) { super.onCreate(state); host = create(this); }
+    @Override protected void onDestroy() { destroy(host); host = 0; super.onDestroy(); }
 
     // kind: 0 tap, 1 on/off, 2 choice, 3 slider, 4 row tap, 5 Return, 6 typing
     public void onClick(View v) { if (!quiet) event(host, v.getId(), 0, null, 0); }
@@ -43,7 +45,8 @@ public final class MojoActivity extends Activity implements View.OnClickListener
         if (!quiet && (e == null || e.getAction() == KeyEvent.ACTION_DOWN)) event(host, v.getId(), 5, v.getText().toString(), 0);
         return true;
     }
-    public boolean onTouch(View v, MotionEvent e) {
+    public boolean onTouch(View v, MotionEvent e) {  // a canvas owns its gestures (no scrolling parent steals them)
+        if (e.getActionMasked() == MotionEvent.ACTION_DOWN) v.getParent().requestDisallowInterceptTouchEvent(true);
         boolean two = e.getPointerCount() > 1;
         touch(host, v.getId(), e.getActionMasked(), e.getX(0), e.getY(0), two ? e.getX(1) : 0, two ? e.getY(1) : 0, e.getPointerCount());
         return true;

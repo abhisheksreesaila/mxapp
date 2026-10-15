@@ -23,7 +23,7 @@ flowchart TB
         WEB["web.mojo + web.py"]
         AK["appkit.mojo"]
         UK["uikit.mojo"]
-        AN["android (planned)"]
+        AN["android.mojo"]
     end
     app --> core
     core --> hosts
@@ -31,7 +31,7 @@ flowchart TB
     WEB --> P["FastHTML (Python)<br/>→ browser: HTML + HTMX"]
     AK --> AP["AppKit<br/>(Objective-C runtime)"]
     UK --> IP["UIKit<br/>(Objective-C runtime)"]
-    AN -.-> JN["Android views<br/>(JNI)"]
+    AN --> JN["Android views<br/>(JNI)"]
     GPU --> MAX["MAX → NVIDIA GPU<br/>(AMD supported by MAX, untested)"]
 ```
 
@@ -137,12 +137,13 @@ flowchart LR
 
 **Why the server, for now:** it works today, the browser stays tiny, and the server's GPU and Python libraries are right there. The costs are a round trip per interaction, bandwidth for canvas frames, and memory per tab (the Data Lens builds its 20M-point dataset per tab, D-60). When Mojo gains a WebAssembly target, the same app file can run in the browser instead.
 
-## Android (next)
+## Android: JNI, from Mojo
 
-`scripts/build.sh todo android` already builds a real arm64 `libmojoui.so` that needs only Android's libc and liblog (`docs/android.md`). The plan mirrors Apple:
+Android's views are Java objects, and JNI (Java's C interface) gives native code a table of functions to create and call them. `mojoui/hosts/jni.mojo` calls those functions by their slot in the table, cast to each call's C signature: the same role `objc_msgSend` plays on Apple (D-67). `mojoui/hosts/android.mojo` maps the view tree onto `LinearLayout`, `TextView`, `Button`, `EditText`, `Switch`, `Spinner`, `SeekBar`, `RadioGroup`, `ListView` and `ImageView`, with layout settings as `LayoutParams`, weights and gravity.
 
-- **Drawing:** JNI gives native code a table of functions to create and call Java objects. That's the same role `objc_msgSend` plays on Apple, so Mojo drives Android's own views (`TextView`, `Button`, `EditText`…).
-- **Events:** Android only delivers a tap to a Java object implementing a listener interface. A ~40-line Java class forwards every event to one Mojo function. It's the one non-Mojo file, part of the framework and never the app's; the owner approved this approach.
+- **The one Java file:** Android only calls a *Java object* back (a click listener, a text watcher, a list adapter, a frame callback). `mojoui/hosts/android/MojoActivity.java` (75 lines, framework only) is the Activity: it loads the Mojo library and forwards every callback to it (D-66).
+- **Canvas:** an `ImageView` showing a bitmap of the app's pixels, `Choreographer` for frames, touch events turned into PAN/ZOOM/TAP. Android builds use the CPU path.
+- **Proven on the emulator** with real input from `adb` (`scripts/android_drive.py`): the same steps as GTK and the web end in the same state. Not yet on a physical phone. Details: `docs/android.md`.
 
 ## The GPU
 

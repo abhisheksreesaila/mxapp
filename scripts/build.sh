@@ -60,13 +60,14 @@ build_android() {  # a signed APK: the app + mojoui as libmojoui.so (arm64 phone
     mkdir -p "$out/lib/$dir" "$out/stubs-$dir"
     mojo_build hosts/android_main.mojo -D MOJOUI_ANDROID --target-triple "$cpu-linux-android29" --emit object -o "$out/app-$dir.o"
     mojo_build mojoui/hosts/mojo_rt.mojo --target-triple "$cpu-linux-android29" --emit object -o "$out/rt-$dir.o"
+    mojo_build mojoui/hosts/no_gpu_rt.mojo --target-triple "$cpu-linux-android29" --emit object -o "$out/nogpu-$dir.o"
     # Empty stand-ins carrying only the system libraries' names (like apple/sdk/*.tbd).
     echo "" | llvm-mc -triple="$cpu-linux-android" -filetype=obj -o "$out/stubs-$dir/empty.o"
     for lib in libc liblog libm libdl; do
       pixi run ld.lld -shared -soname "$lib.so" -o "$out/stubs-$dir/$lib.so" "$out/stubs-$dir/empty.o"
     done
     pixi run ld.lld -shared -soname libmojoui.so -z noexecstack --gc-sections -o "$out/lib/$dir/libmojoui.so" \
-      "$out/app-$dir.o" "$out/rt-$dir.o" "$out"/stubs-"$dir"/*.so
+      "$out/app-$dir.o" "$out/rt-$dir.o" "$out/nogpu-$dir.o" "$out"/stubs-"$dir"/*.so
   done
   # The framework's one Java file → dex
   mkdir -p "$out/classes" "$out/dex"

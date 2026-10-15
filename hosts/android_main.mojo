@@ -2,7 +2,7 @@
 # MojoActivity.java (the framework's one Java file) loads it and calls these native methods;
 # JNI finds them by name (Java_<package>_<class>_<method>).
 from app import Main
-from mojoui.hosts.android import android_create, android_event, android_touch, android_frame, android_row
+from mojoui.hosts.android import android_create, android_event, android_touch, android_frame, android_row, android_destroy
 
 
 @export("Java_dev_mojoui_MojoActivity_create")
@@ -30,6 +30,11 @@ def jni_frame(env: Int, cls: Int, host: Int, nanos: Int) abi("C"):
 @export("Java_dev_mojoui_MojoActivity_row")
 def jni_row(env: Int, cls: Int, host: Int, view: Int32, index: Int32) abi("C") -> Int:
     return android_row[Main](env, host, Int(view), Int(index))
+
+
+@export("Java_dev_mojoui_MojoActivity_destroy")
+def jni_destroy(env: Int, cls: Int, host: Int) abi("C"):
+    android_destroy[Main](env, host)
 
 
 @export("JNI_OnLoad")

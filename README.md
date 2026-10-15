@@ -1,6 +1,6 @@
 # mojo-ui
 
-**Write an app once in Mojo. Compile it. Get a native Linux app, a web app, a Mac app and an iPhone app, with Android on the way. When the machine has a GPU, the same file lights it up.**
+**Write an app once in Mojo. Compile it. Get a native Linux app, a web app, a Mac app, an iPhone app and an Android app. When the machine has a GPU, the same file lights it up.**
 
 ![The Data Lens: native controls on the left, 20 million points drawn on the GPU on the right](docs/img/lens-gtk.png)
 
@@ -18,7 +18,7 @@ Cross-platform frameworks fix the "several times" part, but each asks you to giv
 
 And in none of them is the **GPU code** normally written in the same language as the buttons (Rust has experimental options such as rust-gpu). Charts over millions of rows, image filters and on-device AI all end up in a separate shader or CUDA language, behind a boundary that copies data.
 
-**mojo-ui's bet:** one language, Mojo, that is as easy to read as Python, compiles to native code like C++ or Rust, and can run the same functions on the GPU. You describe the screen; each platform draws it with **its own native controls**; the heavy lifting runs on the GPU when there is one. No Swift, no Kotlin, no app JavaScript, no shader language.
+**mojo-ui's bet:** one language, Mojo, that is as easy to read as Python, compiles to native code like C++ or Rust, and can run the same functions on the GPU. You describe the screen; each platform draws it with **its own native controls**; the heavy lifting runs on the GPU when there is one. No Swift, no Kotlin, no app JavaScript, no shader language. (The framework itself has one 75-line Java file, because Android only calls Java objects back.)
 
 ## One file, every platform
 
@@ -29,7 +29,7 @@ flowchart LR
     B --> W["Web<br/>FastHTML server + browser"]
     B --> M["Mac<br/>AppKit .app"]
     B --> I["iPhone<br/>UIKit .ipa"]
-    B -.-> D["Android<br/>Android views (next)"]
+    B --> D["Android<br/>Android views (.apk)"]
     A -. "same functions" .-> G["GPU kernels<br/>(NVIDIA today)"]
 ```
 
@@ -62,7 +62,8 @@ struct Main(App):
 ```
 
 ```bash
-scripts/build.sh hello all      # → Linux app, web module, Mac app, iPhone app
+scripts/build.sh hello all          # → Linux app, web module, Mac app, iPhone app
+scripts/build.sh hello android      # → Android app (.apk)
 ```
 
 That's the whole model, the same one as Elm, SwiftUI and React: **state → `view()` → screen**, and **tap → `update()` → new state**. You never touch GTK, HTML, AppKit or UIKit; `scripts/check` enforces it. (This is a trimmed `examples/hello/app.mojo`.)
@@ -121,7 +122,7 @@ This is how many serious apps are built anyway: map and photo apps put native co
 | **Tauri** (Rust) | Rust + HTML/JS | the system's web view | web look | via Rust crates (wgpu, separate shaders) | desktop, iOS, Android |
 | **Dioxus** (Rust) | Rust | web view, WebAssembly, server-streamed, or its own renderer | web look | via Rust crates | web, desktop, mobile |
 | **Slint / Iced / egui** (Rust) | Rust (Slint also C++, JS, Python) | their own renderer draws every pixel | imitated | via wgpu (separate shaders) | desktop, embedded, web (WebAssembly), some mobile |
-| **mojo-ui** | **Mojo** | **native widgets, plus GPU canvases** | **yes** | **same language, same file** | Linux, web, Mac, iPhone (Android next) |
+| **mojo-ui** | **Mojo** | **native widgets, plus GPU canvases** | **yes** | **same language, same file** | Linux, web, Mac, iPhone, Android |
 
 **Rust, the poster child.** Rust proved that a compiled, safe language can run everywhere, and its UI kits are impressive. But a Rust app with a GPU-heavy view usually means three languages: Rust for logic, WGSL or another shader language for the GPU, and HTML/CSS/JS when it uses a web view. Rust is also a hard language for app developers coming from Python or JavaScript. Mojo's pitch is Rust-class speed with Python-class readability, and the GPU in the same language.
 
@@ -134,7 +135,7 @@ This is how many serious apps are built anyway: map and photo apps put native co
 | The web app runs in the server (Mojo inside FastHTML); the browser gets plain HTML and streamed canvas frames | Mojo compiled to WebAssembly, running in the browser (Mojo 1.1 has no WebAssembly target yet; a first probe converted Mojo's LLVM output) |
 | GPU on Linux (NVIDIA tested) | Apple GPUs on Mac and iPhone (Mac/iPhone use the CPU path today) |
 | Canvas frames copied GPU → memory → screen | Zero-copy: the GPU writes straight into the screen's texture |
-| Android: a real arm64 library builds | Android app with native views (a ~40-line Java file forwards taps) |
+| Android runs on the emulator (CPU path for canvases) | Tested on real phones; the GPU on phones |
 | Synthetic data | MX frame (a Mojo dataframe) feeding billions of rows straight into the GPU |
 
 ## Status (honestly)
@@ -145,7 +146,7 @@ This is how many serious apps are built anyway: map and photo apps put native co
 | **Web** | HTML controls + HTMX, served by FastHTML; Canvas frames streamed | runs; checked in Chromium, same results as Linux |
 | **Mac** (Apple Silicon) | AppKit | builds and signs; **not yet run on a Mac** |
 | **iPhone** | UIKit | builds and signs; **not yet run on an iPhone** |
-| **Android** | Android views via JNI (planned) | the arm64 library builds; `docs/android.md` |
+| **Android** | Android views via JNI | runs on the Android 16 emulator, same results as Linux through real input; **not yet run on a phone** (`docs/android.md`) |
 | **Windows** | the web version | no Mojo for Windows yet |
 
 Every Linux and web result above is checked by `scripts/check`, which rebuilds everything and drives each app on GTK and in a headless browser. The comparison and the Apple rows are not checked by it. Each experiment's contract, results and decisions are kept in the repo.
@@ -173,7 +174,7 @@ scripts/check                                     # rebuild everything and prove
 | Web | `scripts/build.sh todo web && pixi run python mojoui/hosts/web.py build/todo/web` |
 | Mac | `scripts/build.sh todo mac`, copy the zip to an Apple Silicon Mac (`apple/README.md`) |
 | iPhone | `apple/install_iphone.sh todo` (free Apple ID) |
-| Android | `scripts/build.sh todo android` (library only for now) |
+| Android | `scripts/build.sh todo android && adb install -r build/todo/android/TodoMojo.apk` (SDK: `scripts/android_setup.sh`) |
 
 ---
 

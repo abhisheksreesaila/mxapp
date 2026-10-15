@@ -1,41 +1,43 @@
-# Android: what works, what's blocked, and the plan
+# Android
 
-Status: approach approved (2026-10-15: the ~40-line Java listener, option b); waiting for the Android SDK (`scripts/android_setup.sh`) and a phone
+Status: **runs on the Android 16 emulator** (goal 7, 2026-10-15). The same `app.mojo` files become Android apps drawn with Android's own views. Not yet run on a physical phone: the APKs carry the arm64 library a phone needs, but no phone was connected.
 
-## Works today (checked on Linux)
-- **Mojo targets Android.** `mojo build --target-triple aarch64-linux-android29 --emit object` compiles mojoui apps as they are (all but the GPU example, which needs an NVIDIA GPU; AMD untested).
-- **A real Android library.** `scripts/build.sh todo android` builds `build/todo/android/lib/arm64-v8a/libmojoui.so`, 37 KB: the todo app plus the mojoui core, with the `ANativeActivity_onCreate` entry Android calls on the UI thread. It needs only Android's own `libc` and `liblog`. There's no Mojo runtime library (the runtime functions are Mojo, `mojoui/hosts/mojo_rt.mojo`) and no Java.
-- It's linked on Linux by `ld.lld` against empty libraries that carry only the system libraries' names, the same trick as `apple/sdk/`.
+| Hello | Gallery | Todo |
+|---|---|---|
+| ![Hello on Android](img/android-hello.png) | ![Gallery on Android](img/android-gallery.png) | ![Todo on Android](img/android-todo.png) |
 
-`hosts/android_main.mojo` creates the app and logs its first screen ("TodoMojo: first screen has N nodes…"). It doesn't draw anything yet.
+![The Data Lens on Android (landscape, CPU path)](img/android-lens.png)
 
-## The plan for native Android widgets
-Same idea as Apple: Mojo drives the platform's own UI toolkit directly.
+## What runs
+- **hello, gallery, todo:** every goal-3 component (text, button, text field, switch, dropdown, slider, progress bar, image, divider, spacer, scroll). The gallery's and todo's test steps, done with real input (taps, typed keys, Return), end in exactly the same state as on GTK.
+- **layout:** every layout setting (padding, fixed/min/max sizes, fill, grow, justify, align), measured from the real views' bounds with goal 5's rules. Tabs, segmented controls and radio buttons are `RadioGroup`s; long lists are `ListView`s that ask Mojo only for the rows on screen.
+- **Data Lens:** the canvas is an `ImageView` showing a bitmap the app paints, with touch drags and pinches as PAN/ZOOM events and Android's frame clock (`Choreographer`) for animation. It uses the CPU path, so 2 million trips instead of 20 (about 15 ms a frame on the emulator). A real swipe pans it exactly as a drag does on GTK.
+- **Not yet:** alerts, the date picker, icons and the nav bar are placeholders (goal-4 components come next), and the GPU path is compiled out.
 
-1. **Drawing:** Android's views are Java objects, and JNI gives native code a table of functions to create and call them (`FindClass`, `NewObjectA`, `CallVoidMethodA`…). That's the same role `objc_msgSend` plays on Apple, so `mojoui/hosts/android.mojo` would map the view tree onto `LinearLayout`, `TextView`, `Button`, `EditText`, `CheckBox`, `Spinner`, `SeekBar`, `ProgressBar` and `ImageView`. The non-variadic `…A` JNI calls take arguments as an array, which Mojo can build easily.
-2. **Getting the screen:** NativeActivity claims the window for native drawing. `getWindow().takeSurface(null)` gives it back, so `setContentView` can show normal views.
-3. **Events** are the real blocker: Android only delivers a tap to a *Java object implementing a listener interface* (`View.OnClickListener` …), and native code can't create such a class without Java bytecode. The options, most "Mojo all the way" first:
-   - **a) Polling, no Java at all:** a timer on the UI thread's looper (`ALooper_addFd` with a `timerfd`) checks widget state every frame. Text, checkboxes, spinners and sliders all keep their state, so changes can be read. For taps, use `ToggleButton`s styled as buttons (each tap flips them). It's hacky but pure Mojo, and it costs a little battery.
-   - **b) A tiny listener class, ~40 lines of Java**, that forwards every event to one Mojo function (`RegisterNatives`). This is the standard way, the most robust, and needs `d8` to compile it.
-   - **c) A hand-built dex** (Java bytecode file) embedded in the Mojo library and loaded at run time (`InMemoryDexClassLoader`). This is option b without Java source, but generating dex by hand is a project of its own.
-   - **Recommendation:** (b). It's one small, boring file, and the rest stays Mojo.
-4. **Packaging an APK:** the APK needs a binary `AndroidManifest.xml` (aapt2, or a small encoder we write), the library, the dex for (b), and an APK v2 signature (apksigner).
+## How it works
+Android's views are Java objects, so the host talks to them through **JNI**, Java's C interface. Every native call gets a `JNIEnv`: a table of functions (`FindClass`, `NewObjectA`, `CallVoidMethodA`…). `mojoui/hosts/jni.mojo` calls them by their slot in that table, cast to each call's C signature. It's the same trick `objc.mojo` uses for `objc_msgSend` on Apple, with no binding generator and no C.
 
-## Setting up the SDK
-Run `scripts/android_setup.sh`: a step-by-step wizard for the parts only the owner can do (download Google's command-line tools, accept the licences, connect a phone). It then installs platform-tools, build-tools and a platform.
+`mojoui/hosts/android.mojo` builds the views: `LinearLayout` for stacks (layout settings become `LayoutParams`, weights, gravity and padding), `TextView`, `Button`, `EditText`, `Switch`, `Spinner`, `SeekBar`, `ProgressBar`, `ImageView`, `RadioGroup`, `ListView`, `ScrollView`. Each view's id is its node index + 1, so a callback names its node.
 
-## What needs you
-- ~~A decision on the Java listener~~: approved on 2026-10-15 (option b).
-- **The Android SDK licence:** aapt2, apksigner, d8 and the emulator come from Google's SDK, which needs you to accept Google's licence (`sdkmanager --licenses`). I didn't accept it for you.
-- **A device or emulator to test on:** there's none here. With an Android phone in developer mode, `adb install` is enough. Arch's `android-tools` package provides `adb` without the SDK.
+**The one Java file** is `mojoui/hosts/android/MojoActivity.java` (75 lines), part of the framework and never of an app. Android only calls Java objects back: click listeners, text watchers, adapters, frame callbacks. So this Activity loads `libmojoui.so`, calls Mojo's `create()`, and forwards every callback to Mojo (`event`, `touch`, `frame`, `row`). It's an Activity rather than a ~40-line listener used with NativeActivity (D-66). NativeActivity claims the window for native drawing and can't easily find app classes from its thread.
 
-## Evidence
+While Mojo changes views itself, a Java field (`quiet`) silences their listeners. The flag lives in Java because callbacks arrive re-entrantly (D-69, the same lesson as GTK).
+
+## Building and running
+```bash
+scripts/android_setup.sh                       # once: SDK, licences (yours to accept), a phone
+scripts/build.sh todo android                  # → build/todo/android/TodoMojo.apk (signed with a local debug key)
+adb install -r build/todo/android/TodoMojo.apk # on a phone with USB debugging, or the emulator
 ```
-$ scripts/build.sh todo android
-$ file build/todo/android/lib/arm64-v8a/libmojoui.so
-ELF 64-bit LSB shared object, ARM aarch64, version 1 (SYSV), dynamically linked
-$ llvm-readelf -d …/libmojoui.so | grep NEEDED
-libc.so  liblog.so
-$ llvm-nm -D --undefined-only …/libmojoui.so
-__android_log_write dup fclose fdopen fflush free memcpy posix_memalign strlen write
-```
+
+The build cross-compiles the app and mojoui for `aarch64-linux-android29` (phones) and `x86_64-linux-android29` (emulators). It links each with `ld.lld` against empty libraries that only name Android's `libc`, `libm`, `liblog` and `libdl` (the same trick as `apple/sdk/`). Then it compiles the Java file with `javac` and `d8`, packs the manifest with `aapt2`, aligns the APK with `zipalign` and signs it with `apksigner`. The libraries contain no Mojo runtime library: the few runtime functions are Mojo (`mojoui/hosts/mojo_rt.mojo`).
+
+**Built with `-D MOJOUI_ANDROID`:** this compiles out the GPU path, and uses `clock_gettime`, because Mojo's `perf_counter_ns()` calls Apple's `clock_gettime_nsec_np` even on Android (`mojoui/clock.mojo`).
+
+## How it's checked
+`scripts/check` boots the emulator (AVD `mojoui`, Android 16, x86_64) headless and installs each APK. `scripts/android_drive.py` then drives it with **real input** from `adb shell input`: taps, typed text, Return, swipes, and taps on the slider until it reads the value. It reads the state back from the real views with `uiautomator dump`, using the same step language and state lines as the GTK test mode and the web driver. It also checks the APK's signature and contents, and that the libraries ask Android only for libc/libm/liblog functions.
+
+## Limits
+- Not yet run on a physical phone.
+- The Data Lens's sidebar is laid out for desktops; on a phone in portrait it leaves little room for the map. The checks run it in landscape at a lower screen density.
+- One Java file (75 lines) remains, by design: Android only calls Java objects back.

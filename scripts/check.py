@@ -120,6 +120,9 @@ def m5():
     r, out = droid("layout", "tab:0=Boxes")
     if r is None:
         return False, out
+    rt, tout = droid("layout", "tab:0=About;tab:0=Boxes;tab:0=About")  # switching tabs really switches (real taps)
+    if rt is None or "TABS: About" not in tout:
+        return False, f"tapping another tab didn't switch: {shown_state(tout or '')[:3]}"
     saved = dict(g5._layout_cache)
     g5._layout_cache.clear()
     g5._layout_cache["android"] = (True, g5.boxes(out))
@@ -145,9 +148,14 @@ def m6():
         from PIL import Image
         img = Image.open(shot).convert("RGB")
         w, h = img.size
-        colours = len(set(img.crop((w // 3, h // 6, w * 9 // 10, h * 5 // 6)).getdata()))  # the canvas side
-        if colours < 500:
-            problems.append(f"canvas looks blank ({colours} colours)")
+        # The canvas side: mostly painted (not the empty background) with a real gradient. (2M points on the
+        # CPU path give a few dozen density levels, so a colour count alone isn't the measure; D-70.)
+        pixels = list(img.crop((w // 3, h // 6, w * 9 // 10, h * 5 // 6)).getdata())
+        background = max(set(pixels), key=pixels.count)
+        painted = sum(1 for p in pixels if sum(abs(a - b) for a, b in zip(p, background)) > 30) / len(pixels)
+        colours = len(set(pixels))
+        if painted < 0.25 or colours < 20:
+            problems.append(f"canvas looks blank ({painted:.0%} painted, {colours} colours)")
     except Exception as e:
         problems.append(f"screenshot unreadable: {e!r}")
     view = lambda o: next((l for l in o.splitlines() if l.startswith("LABEL: View:")), None)

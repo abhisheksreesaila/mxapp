@@ -31,6 +31,8 @@ comptime CALL_STATIC_OBJECT_METHOD_A = 116
 comptime GET_STATIC_FIELD_ID = 144
 comptime GET_STATIC_OBJECT_FIELD = 145
 comptime GET_STATIC_INT_FIELD = 150
+comptime NEW_STRING = 163
+comptime GET_STRING_LENGTH = 164
 comptime NEW_STRING_UTF = 167
 comptime GET_STRING_UTF_CHARS = 169
 comptime RELEASE_STRING_UTF_CHARS = 170
@@ -38,7 +40,9 @@ comptime NEW_OBJECT_ARRAY = 172
 comptime SET_OBJECT_ARRAY_ELEMENT = 174
 comptime NEW_INT_ARRAY = 179
 comptime SET_INT_ARRAY_REGION = 211
+comptime GET_STRING_REGION = 220
 comptime EXCEPTION_CHECK = 228
+comptime NEW_DIRECT_BYTE_BUFFER = 229
 
 
 def log(text: String):
@@ -46,6 +50,38 @@ def log(text: String):
     var tag = String("mojoui")
     var t = text
     _ = external_call["__android_log_write", c_int](c_int(4), tag.as_c_string_span(), t.as_c_string_span())  # INFO
+
+
+def utf16(text: String) -> List[UInt16]:
+    """Java's characters (UTF-16 code units) for a Mojo string."""
+    var out = List[UInt16]()
+    for c in text.codepoints():
+        var v = Int(c.to_u32())
+        if v >= 0x10000:  # a surrogate pair
+            v -= 0x10000
+            out.append(UInt16(0xD800 + (v >> 10)))
+            out.append(UInt16(0xDC00 + (v & 0x3FF)))
+        else:
+            out.append(UInt16(v))
+    return out^
+
+
+def from_utf16(units: List[UInt16]) -> String:
+    var out = String("")
+    var i = 0
+    while i < len(units):
+        var v = Int(units[i])
+        if 0xD800 <= v < 0xDC00 and i + 1 < len(units):
+            v = 0x10000 + ((v - 0xD800) << 10) + (Int(units[i + 1]) - 0xDC00)
+            i += 1
+        out += String(Codepoint(unsafe_unchecked_codepoint=UInt32(v)))
+        i += 1
+    return out^
+
+
+def utf16_length(text: String) -> Int:
+    """How many Java characters a string is (for cursor positions)."""
+    return len(utf16(text))
 
 
 def fbits(x: Float64) -> Int:
@@ -81,6 +117,7 @@ struct Jni(Movable):
     def check(self) -> Bool:
         """True if the last call threw; the exception goes to the log and is cleared."""
         if jcall[UInt8](self.env, EXCEPTION_CHECK) != 0:
+            log("JNI exception (details under the System.err tag)")  # so test runs see it
             jcall[NoneType](self.env, EXCEPTION_DESCRIBE)
             jcall[NoneType](self.env, EXCEPTION_CLEAR)
             return True
@@ -188,17 +225,26 @@ struct Jni(Movable):
         jcall[NoneType](self.env, SET_BOOLEAN_FIELD, obj, f, UInt8(1 if value else 0))
 
     def string(self, text: String) -> Int:
-        """A java.lang.String (local reference). JNI wants modified UTF-8; plain text is the same."""
-        var t = text
-        return jcall(self.env, NEW_STRING_UTF, t.as_c_string_span())
+        """A java.lang.String (local reference), made from UTF-16 (JNI's "UTF" calls use a
+        modified UTF-8 that differs from real UTF-8 for emoji)."""
+        var units = utf16(text)
+        var s = jcall(self.env, NEW_STRING, Int(units.unsafe_ptr()), Int32(len(units)))
+        _ = len(units)
+        return s
 
     def text(self, jstring: Int) -> String:
         if jstring == 0:
             return ""
-        var chars = jcall(self.env, GET_STRING_UTF_CHARS, jstring, 0)
-        var out = String(unsafe_from_utf8_ptr=Pointer[Int8, MutUntrackedOrigin](unsafe_from_address=chars))
-        jcall[NoneType](self.env, RELEASE_STRING_UTF_CHARS, jstring, chars)
+        var n = Int(jcall[Int32](self.env, GET_STRING_LENGTH, jstring))
+        var units = List[UInt16](length=n, fill=0)
+        jcall[NoneType](self.env, GET_STRING_REGION, jstring, Int32(0), Int32(n), Int(units.unsafe_ptr()))
+        var out = from_utf16(units)
+        _ = len(units)
         return out
+
+    def direct_buffer(self, address: Int, nbytes: Int) -> Int:
+        """A java.nio.ByteBuffer over our own memory (local reference; no copy)."""
+        return jcall(self.env, NEW_DIRECT_BYTE_BUFFER, address, Int64(nbytes))
 
     def strings(mut self, items: List[String]) -> Int:
         """A String[] (local reference)."""

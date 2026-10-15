@@ -19,7 +19,7 @@ from mojoui.view import (
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_FRAMES
 from mojoui.app import App, Event, Runtime
 from mojoui.canvas import Surface
-from mojoui.hosts.jni import Jni, fbits, log
+from mojoui.hosts.jni import Jni, fbits, log, utf16_length
 
 comptime ACTIVITY = "dev/mojoui/MojoActivity"
 comptime CONTEXT = "(Landroid/content/Context;)V"
@@ -34,6 +34,7 @@ comptime BOTTOM = 80
 comptime CENTER_H = 1
 comptime CENTER_V = 16
 comptime CENTERED = 17
+comptime OPTION_IDS = 1_000_000  # option j of a radio group has id OPTION_IDS + j (never a node's id)
 
 
 struct DroidCanvas(Copyable, Movable):
@@ -51,6 +52,7 @@ struct DroidCanvas(Copyable, Movable):
     var moved: Bool
     var spread: Float64  # distance between two fingers (0: not pinching)
     var last_ns: Int
+    var bitmap: Int  # global reference to a mutable Bitmap the size of the canvas, reused every frame
 
     def __init__(out self, node: Int, view: Int):
         self.node = node
@@ -65,6 +67,7 @@ struct DroidCanvas(Copyable, Movable):
         self.moved = False
         self.spread = 0
         self.last_ns = 0
+        self.bitmap = 0
 
 
 struct AndroidHost[A: App](Movable):
@@ -236,10 +239,10 @@ struct AndroidHost[A: App](Movable):
                     self.jni.drop(fill)
                     self.jni.drop(checked)
                     self.jni.drop(states)
-                _ = self.jni.call(b, "android/view/View", "setId", "(I)V", [j + 1])
+                _ = self.jni.call(b, "android/view/View", "setId", "(I)V", [OPTION_IDS + j])
                 _ = self.jni.call(v, "android/view/ViewGroup", "addView", "(Landroid/view/View;)V", [b])
                 self.jni.drop(b)
-            _ = self.jni.call(v, "android/widget/RadioGroup", "check", "(I)V", [node.value + 1])
+            _ = self.jni.call(v, "android/widget/RadioGroup", "check", "(I)V", [OPTION_IDS + node.value])
             self.listen(v, "android/widget/RadioGroup", "setOnCheckedChangeListener", "android/widget/RadioGroup$OnCheckedChangeListener")
             self.describe(v, "segmented" if node.kind == SEGMENTED else ("tabs" if node.kind == TABS else "radio"))
         elif node.kind == LAZYLIST:
@@ -371,6 +374,13 @@ struct AndroidHost[A: App](Movable):
             _ = self.jni.call(p, "android/view/ViewGroup$MarginLayoutParams", "setMargins", "(IIII)V", [0 if vertical else gap, gap if vertical else 0, 0, 0])
         return p
 
+    def add_flexible_space(mut self, parent: Int):
+        var gap = self.view_of("android/view/View")
+        var gp = self.jni.new("android/widget/LinearLayout$LayoutParams", "(IIF)V", [0, 0, fbits(1)])
+        _ = self.jni.call(parent, "android/view/ViewGroup", "addView", "(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V", [gap, gp])
+        self.jni.drop(gp)
+        self.jni.drop(gap)
+
     def show(mut self):
         """(Re)builds the whole screen from rt.shown."""
         self.quiet(True)
@@ -378,23 +388,30 @@ struct AndroidHost[A: App](Movable):
             self.jni.forget(w)
         for ref c in self.canvases:
             self.jni.forget(c.view)
+            self.jni.forget(c.bitmap)
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
         self.canvases = List[DroidCanvas]()
         var root = self.build(0)
         var full = self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills
         if full:  # the screen fills the window
+            _ = self.jni.call(root, "android/view/View", "setFitsSystemWindows", "(Z)V", [1])  # clear of the system bars
             _ = self.jni.call(self.activity, "android/app/Activity", "setContentView", "(Landroid/view/View;)V", [root])
         else:  # centred, scrolling if taller than the screen
+            # (Flexible space above and below centres it when it fits and shrinks to nothing
+            # when it doesn't; centring by gravity would push its top off screen, unscrollable.)
             var holder = self.view_of("android/widget/LinearLayout")
             _ = self.jni.call(holder, "android/widget/LinearLayout", "setOrientation", "(I)V", [1])
-            _ = self.jni.call(holder, "android/widget/LinearLayout", "setGravity", "(I)V", [CENTERED])
+            _ = self.jni.call(holder, "android/widget/LinearLayout", "setGravity", "(I)V", [CENTER_H])
+            self.add_flexible_space(holder)
             var pad = self.dp(24)
             _ = self.jni.call(holder, "android/view/View", "setPadding", "(IIII)V", [pad, pad, pad, pad])
             ref top = self.rt.shown.nodes[0]  # the screen's own size settings
             var p = self.jni.new("android/widget/LinearLayout$LayoutParams", "(II)V", [self.dp(top.w) if top.w != 0 else WRAP, self.dp(top.h) if top.h != 0 else WRAP])
             _ = self.jni.call(holder, "android/view/ViewGroup", "addView", "(Landroid/view/View;Landroid/view/ViewGroup$LayoutParams;)V", [root, p])
+            self.add_flexible_space(holder)
             var scroll = self.view_of("android/widget/ScrollView")
             _ = self.jni.call(scroll, "android/widget/ScrollView", "setFillViewport", "(Z)V", [1])
+            _ = self.jni.call(scroll, "android/view/View", "setFitsSystemWindows", "(Z)V", [1])  # Android 15+ draws edge to edge
             _ = self.jni.call(scroll, "android/view/ViewGroup", "addView", "(Landroid/view/View;)V", [holder])
             _ = self.jni.call(self.activity, "android/app/Activity", "setContentView", "(Landroid/view/View;)V", [scroll])
             self.jni.drop(p)
@@ -404,7 +421,7 @@ struct AndroidHost[A: App](Movable):
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             var f = self.widgets[self.focus]  # keep typing in the new field, cursor at the end
             _ = self.jni.call_bool(f, "android/view/View", "requestFocus", "()Z")
-            _ = self.jni.call(f, "android/widget/EditText", "setSelection", "(I)V", [self.rt.shown.nodes[self.focus].text.byte_length()])
+            _ = self.jni.call(f, "android/widget/EditText", "setSelection", "(I)V", [utf16_length(self.rt.shown.nodes[self.focus].text)])
         self.focus = -1
         self.quiet(False)
         self.tick_soon()
@@ -426,7 +443,7 @@ struct AndroidHost[A: App](Movable):
                 var s = self.jni.call(current, "java/lang/Object", "toString", "()Ljava/lang/String;")
                 if self.jni.text(s) != p.text:  # don't fight the typist
                     self.set_text(v, p.text)
-                    _ = self.jni.call(v, "android/widget/EditText", "setSelection", "(I)V", [p.text.byte_length()])
+                    _ = self.jni.call(v, "android/widget/EditText", "setSelection", "(I)V", [utf16_length(p.text)])
                 self.jni.drop(s)
                 self.jni.drop(current)
             elif p.op == SET_VALUE and kind == TOGGLE:
@@ -437,7 +454,7 @@ struct AndroidHost[A: App](Movable):
                 _ = self.jni.call(v, "android/widget/ProgressBar", "setProgress", "(I)V", [p.number])
                 self.describe(v, String(p.number))
             elif p.op == SET_VALUE and (kind == SEGMENTED or kind == TABS or kind == RADIO):
-                _ = self.jni.call(v, "android/widget/RadioGroup", "check", "(I)V", [p.number + 1])
+                _ = self.jni.call(v, "android/widget/RadioGroup", "check", "(I)V", [OPTION_IDS + p.number])
             elif p.op == SET_VALUE and kind == LAZYLIST:
                 var adapter = self.jni.call(self.activity, ACTIVITY, "rows", "(II)Landroid/widget/BaseAdapter;", [p.node + 1, p.number])
                 _ = self.jni.call(v, "android/widget/ListView", "setAdapter", "(Landroid/widget/ListAdapter;)V", [adapter])
@@ -546,8 +563,19 @@ struct AndroidHost[A: App](Movable):
             self.canvases[k].pixels = List[UInt32](length=wpx * hpx, fill=0)
         var surface = Surface(Int(self.canvases[k].pixels.unsafe_ptr()), wpx, hpx, self.density)
         var d = self.rt.draw(node, surface)
-        var pixels = self.canvases[k].pixels.copy()  # (a copy: show_pixels also uses self)
-        self.show_pixels(view, pixels, wpx, hpx)
+        if self.canvases[k].bitmap == 0 or wpx != self.canvases[k].wpx or hpx != self.canvases[k].hpx:
+            self.jni.forget(self.canvases[k].bitmap)
+            var config = self.jni.static_object("android/graphics/Bitmap$Config", "ARGB_8888", "Landroid/graphics/Bitmap$Config;")
+            var bm = self.jni.static_call("android/graphics/Bitmap", "createBitmap", "(IILandroid/graphics/Bitmap$Config;)Landroid/graphics/Bitmap;", [wpx, hpx, config])
+            self.canvases[k].bitmap = self.jni.keep(bm)
+            _ = self.jni.call(view, "android/widget/ImageView", "setImageBitmap", "(Landroid/graphics/Bitmap;)V", [bm])
+            self.jni.drop(bm)
+            self.jni.drop(config)
+        # ARGB_8888 bitmaps hold R, G, B, A bytes in memory: our pixels' layout, copied as they are.
+        var buffer = self.jni.direct_buffer(Int(self.canvases[k].pixels.unsafe_ptr()), wpx * hpx * 4)
+        _ = self.jni.call(self.canvases[k].bitmap, "android/graphics/Bitmap", "copyPixelsFromBuffer", "(Ljava/nio/Buffer;)V", [buffer])
+        self.jni.drop(buffer)
+        _ = self.jni.call(view, "android/view/View", "invalidate", "()V")
         self.canvases[k].wpx = wpx
         self.canvases[k].hpx = hpx
         self.canvases[k].drawn = version
@@ -569,7 +597,7 @@ struct AndroidHost[A: App](Movable):
         elif action == 5 and pointers >= 2:  # a second finger
             self.canvases[k].spread = sqrt((x2 - x) * (x2 - x) + (y2 - y) * (y2 - y))
             self.canvases[k].moved = True
-        elif action == 6:  # a finger lifted (of several): measure drags afresh
+        elif action == 6 or action == 3:  # a finger lifted (of several), or cancelled: measure drags afresh
             self.canvases[k].spread = 0
             self.canvases[k].fresh = True
         elif action == 2 and pointers >= 2 and self.canvases[k].spread > 0:  # pinch
@@ -591,13 +619,13 @@ struct AndroidHost[A: App](Movable):
                     self.apply(d)
             self.canvases[k].last_x = px
             self.canvases[k].last_y = py
-        elif action == 1:  # up: the rest of a drag, or a tap if it never moved
+        elif action == 1 and not self.canvases[k].fresh:  # up: the rest of a drag, or a tap if it never moved
             var dx = px - self.canvases[k].last_x
             var dy = py - self.canvases[k].last_y
             if not self.canvases[k].moved and abs(dx) + abs(dy) <= 3:
                 var d = self.rt.gesture(node, TAP, px, py, 0, 0, 1)
                 self.apply(d)
-            elif not self.canvases[k].fresh and abs(dx) + abs(dy) > 0:
+            elif abs(dx) + abs(dy) > 0:
                 var d = self.rt.gesture(node, PAN, px, py, dx, dy, 1)
                 self.apply(d)
 
@@ -622,6 +650,8 @@ def android_create[A: App](env: Int, activity: Int) -> Int:
 
 def android_event[A: App](env: Int, addr: Int, view: Int, kind: Int, text: Int, number: Int):
     """kind: 0 tap, 1 on/off, 2 choice, 3 slider, 4 row tap, 5 Return, 6 typing (MojoActivity.java)."""
+    if addr == 0:
+        return
     var host = host_at[A](addr)
     host[].jni.env = env
     var t = host[].jni.text(text)
@@ -629,18 +659,24 @@ def android_event[A: App](env: Int, addr: Int, view: Int, kind: Int, text: Int, 
 
 
 def android_touch[A: App](env: Int, addr: Int, view: Int, action: Int, x: Float64, y: Float64, x2: Float64, y2: Float64, pointers: Int):
+    if addr == 0:
+        return
     var host = host_at[A](addr)
     host[].jni.env = env
     host[].touch(view - 1, action, x, y, x2, y2, pointers)
 
 
 def android_frame[A: App](env: Int, addr: Int, nanos: Int):
+    if addr == 0:
+        return
     var host = host_at[A](addr)
     host[].jni.env = env
     host[].frame(nanos)
 
 
 def android_row[A: App](env: Int, addr: Int, view: Int, index: Int) -> Int:
+    if addr == 0:
+        return 0
     var host = host_at[A](addr)
     host[].jni.env = env
     var node = view - 1
@@ -648,3 +684,19 @@ def android_row[A: App](env: Int, addr: Int, view: Int, index: Int) -> Int:
     if 0 <= node < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[node].kind == LAZYLIST:
         text = host[].rt.app.row(host[].rt.shown.nodes[node].msg2, index)
     return host[].jni.string(text)
+
+
+def android_destroy[A: App](env: Int, addr: Int):
+    """The activity is gone: release its views and the app."""
+    if addr == 0:
+        return
+    var host = host_at[A](addr)
+    host[].jni.env = env
+    for w in host[].widgets:
+        host[].jni.forget(w)
+    for ref c in host[].canvases:
+        host[].jni.forget(c.view)
+        host[].jni.forget(c.bitmap)
+    host[].jni.forget(host[].activity)
+    host.unsafe_deinit_pointee()
+    host.unsafe_free()

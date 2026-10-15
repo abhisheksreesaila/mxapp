@@ -222,11 +222,12 @@ struct PointCloud(Movable):
 
     def give_up_gpu(mut self, why: String):
         """A GPU call failed: say so once, and use the CPU from now on (device_name() says CPU)."""
-        print("mojoui.gpu: GPU failed (" + why + "); using the CPU from now on")
-        self.device = None
-        self.counts = None
-        self.image = None
-        self.capacity = 0
+        comptime if GPU_BUILD:  # (other builds never had GPU buffers to drop)
+            print("mojoui.gpu: GPU failed (" + why + "); using the CPU from now on")
+            self.device = None
+            self.counts = None
+            self.image = None
+            self.capacity = 0
 
     def device_name(self) -> String:
         return self.gpu.name if self.on_gpu() else String("CPU")
