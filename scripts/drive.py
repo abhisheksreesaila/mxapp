@@ -54,7 +54,8 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
 }).filter(Boolean).concat([...document.querySelectorAll('[data-tag]')].map(e => {
   const r = e.getBoundingClientRect();
   return 'BOX: ' + e.dataset.tag + ' ' + [r.x, r.y, r.width, r.height].map(v => v.toFixed(1)).join(' ');
-})).join(String.fromCharCode(10))"""
+})).concat(['PAGE: ' + document.documentElement.scrollWidth + 'x' + document.documentElement.scrollHeight
+  + ' in ' + innerWidth + 'x' + innerHeight]).join(String.fromCharCode(10))"""
 
 
 def free_port():

@@ -73,14 +73,16 @@ def compact(x: Float64) -> String:
 
 
 def fixed(x: Float64, places: Int) -> String:
+    """x with `places` decimals and thousands commas (-5.3 → "-5.3")."""
     var scale = 10**places
-    var n = Int(x * Float64(scale) + 0.5)
+    var n = Int(abs(x) * Float64(scale) + 0.5)
+    var sign = String("-") if x < 0 and n != 0 else String("")
     if places == 0:
-        return grouped(n)
+        return sign + grouped(n)
     var frac = String(n % scale)
     while frac.byte_length() < places:
         frac = "0" + frac
-    return grouped(n // scale) + "." + frac
+    return sign + grouped(n // scale) + "." + frac
 
 
 def grouped(n: Int) -> String:
@@ -294,7 +296,7 @@ struct LineChart(Movable):
         var bottom = box[3]
         var step = nice_step(self.max_value())
         var lines = max(Int(self.max_value() / step + 0.999), 1)
-        var top_value = step * Float64(lines)
+        var axis_top = step * Float64(lines)
         for g in range(lines + 1):  # gridlines and y labels at round steps
             var y = bottom - (bottom - top) * Float64(g) / Float64(lines)
             hline(s, left, right, y, GRID if g > 0 else STROKE)
@@ -303,7 +305,7 @@ struct LineChart(Movable):
         var ys = List[Float64]()
         for i in range(n):
             xs.append(left + (right - left) * Float64(i) / Float64(n - 1))
-            ys.append(bottom - (bottom - top) * self.values[i] / (nice_step(self.max_value()) * Float64(max(Int(self.max_value() / nice_step(self.max_value()) + 0.999), 1))))
+            ys.append(bottom - (bottom - top) * self.values[i] / axis_top)
         for i in range(n):  # x labels
             if self.labels[i] != "":
                 font.draw(s, self.labels[i], xs[i], bottom + 18 * k, 12 * k, INK2, REGULAR, CENTRE)
@@ -386,7 +388,7 @@ struct ColumnChart(Movable):
                 font.draw(s, self.top_labels[i], x + bw / 2, bottom - bh - 7 * k, 12 * k, INK if on else INK3, MEDIUM, CENTRE)
             if self.labels[i] != "":
                 var lw = font.measure(self.labels[i], 12 * k)
-                if x + bw / 2 - lw / 2 >= last_label_end + 6 * k and x + bw / 2 + lw / 2 <= Float64(s.width):  # only labels that fit
+                if x + bw / 2 - lw / 2 >= last_label_end + 6 * k and x + bw / 2 + lw / 2 <= Float64(s.width) - 4 * k:  # only labels that fit
                     font.draw(s, self.labels[i], x + bw / 2, bottom + 17 * k, 12 * k, INK2 if on else INK3,
                               MEDIUM if self.selected == i else REGULAR, CENTRE)
                     last_label_end = x + bw / 2 + lw / 2

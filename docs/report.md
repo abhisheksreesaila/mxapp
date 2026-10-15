@@ -5,11 +5,11 @@
 **Result:** Contoso Retail, a Power BI-style sales dashboard in one Mojo file (`examples/analytics/app.mojo`), running on Linux and the web.
 
 - **20 million order lines** (made up, with growth, seasons and a shift to online) are re-aggregated **every time you click**:
-  - **5.9 ms** for all seven aggregations on the RTX 3090;
-  - **114 ms** through **MX frame** on the CPU;
-  - 746 ms with plain Mojo loops on one core.
+  - **6–9 ms** for all seven aggregations on the RTX 3090, depending on the filters;
+  - about **115 ms** through **MX frame** on the CPU;
+  - about 750 ms with plain Mojo loops on one core.
 
-  All three engines agree **to the cent**.
+  A test compares every result of all three engines (910 numbers under 5 filter settings): they agree **to the cent**.
 - **Every chart is a [Flint](https://microsoft.github.io/flint-chart/) spec**, Microsoft's chart language for AI agents. mojoui draws the specs natively (a Mojo backend for Flint, the same pixels on every platform), and all nine also compile through Flint's own Vega-Lite pipeline to SVG.
 - **Crossfiltering:** tap a category, a region or a month and everything else filters. GTK and the browser end in the same state after the same real clicks.
 - **Fluent 2** styles the native controls on Linux and the web. The dashboard fits 1440×900 and 1280×800 with no scrolling.

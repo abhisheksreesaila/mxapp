@@ -142,10 +142,13 @@ def m4():
 
 def fits(name, out, size):
     b = g5.boxes(out)
-    cards = [t for t in b if t.startswith(("kpi_", "card_", "summary"))]
-    if len(cards) < 10:
+    cards = [t for t in b if t.startswith(("kpi_", "card_", "summary", "sidebar", "main"))]
+    if len(cards) < 12:
         return f"{name}: only {len(cards)} tagged cards: {sorted(cards)}"
     bad = [t for t in cards if b[t][0] + b[t][2] > size[0] + 1 or b[t][1] + b[t][3] > size[1] + 1]
+    page = re.search(r"^PAGE: (\d+)x(\d+) in (\d+)x(\d+)$", out, re.M)  # (the web: the page itself doesn't scroll)
+    if page and (int(page[1]) > int(page[3]) or int(page[2]) > int(page[4])):
+        bad.append(f"the page scrolls ({page[1]}x{page[2]} in {page[3]}x{page[4]})")
     return f"{name} at {size[0]}×{size[1]}: {bad} spill outside" if bad else ""
 
 
@@ -179,6 +182,12 @@ def m5():
 
 def m6():
     problems = []
+    b = run(["pixi", "run", "mojo", "build", "-I", "examples/analytics", "-I", ".", "tests/test_analytics.mojo",
+             "-o", str(BUILD / "test_analytics")], timeout=900)
+    t = run(["pixi", "run", str(BUILD / "test_analytics")], timeout=900) if b.returncode == 0 else b
+    engines = re.search(r"^ENGINES: identical on (\d+) numbers", t.stdout, re.M)
+    if "ANALYTICS TESTS PASSED" not in t.stdout or not engines:
+        return False, f"engine/app tests: {(t.stdout + t.stderr)[-400:]}"
     lines = {}
     for engine in ("GPU", "MX frame"):
         for host in ("gtk", "web"):
@@ -193,7 +202,8 @@ def m6():
     for key, value in lines.items():
         if value != base:
             problems.append(f"{key} differs from the GPU on GTK: {sorted(set(value) ^ set(base))[:4]}")
-    return not problems, "; ".join(problems) or "MX frame (CPU) and the GPU kernels give identical dashboards on GTK and web"
+    return not problems, "; ".join(problems) or (
+        f"GPU kernels, CPU and MX frame agree on all {engines[1]} results under 5 filter settings; identical dashboards on GTK and web")
 
 
 def m7():
@@ -216,6 +226,9 @@ def m7():
         tab.on("pageerror", lambda e: errors.append(str(e)))
         tab.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
         tab.goto(page.as_uri())
+        for y in range(0, 6000, 400):  # scroll through, so lazy images load
+            tab.evaluate(f"window.scrollTo(0, {y})")
+            tab.wait_for_timeout(80)
         tab.wait_for_timeout(800)
         broken = tab.evaluate("() => [...document.images].filter(i => !i.complete || i.naturalWidth === 0).map(i => i.src)")
         browser.close()

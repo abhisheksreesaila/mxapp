@@ -81,7 +81,10 @@ def keep(r: Row, f: Filter, own: Int) -> Bool:
 
 
 def by_month(r: Row, f: Filter) -> Int:
-    return Int(r[7]) if keep(r, f, 3) else -1
+    """Every month of every year (the year filter ignored): the chart shows the selected year's
+    twelve, and a month can be compared with the same month a year before."""
+    var g = Filter(0, DAYS - 1, f[2], f[3], f[4], f[5], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    return Int(r[7]) if keep(r, g, 3) else -1
 
 
 def by_category(r: Row, f: Filter) -> Int:
@@ -302,12 +305,12 @@ struct Main(App):
         return Filter(Int32(first), Int32(last), Int32(self.channel - 1), Int32(self.category), Int32(self.region), Int32(self.month),
                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
-    def mx_sum(self, by: String, value: String, groups: Int, skip: String) -> GroupSums:
+    def mx_sum(mut self, by: String, value: String, groups: Int, skip: String, all_years: Bool = False) -> GroupSums:
         """One group-by through MX frame, with every filter except `skip` (crossfiltering)."""
         var f = self.filter()
         var ranges = List[Tuple[String, Int, Int]]()
         var equals = List[Tuple[String, Int]]()
-        if skip != "year":
+        if skip != "year" and not all_years:
             ranges.append(("day", Int(f[0]), Int(f[1])))
         if self.channel > 0:
             equals.append(("channel", self.channel - 1))
@@ -326,18 +329,18 @@ struct Main(App):
                 self.mx.append(MxFrame(self.table, ["day", "category", "region", "channel", "product", "quantity", "cents", "month"],
                                        [("bin", "cents", 5000, BINS - 1), ("year", "month", 12, 2)]))
             if self.mx[0].ready:
-                var m = self.mx_sum("month", "cents", MONTHS, "month")
+                var m = self.mx_sum("month", "cents", MONTHS, "month", all_years=True)
                 var c = self.mx_sum("category", "cents", 8, "category")
                 var r = self.mx_sum("region", "cents", 5, "region")
                 var p = self.mx_sum("product", "cents", 64, "")
                 var sz = self.mx_sum("bin", "cents", BINS, "")
                 var y = self.mx_sum("year", "cents", 3, "year")
                 var yu = self.mx_sum("year", "quantity", 3, "year")
-                self.store(m, c, r, p, sz, y, yu)
-                return
-            self.engine = 1  # MX frame couldn't start: back to the CPU
+                if self.mx[0].ready:  # (a query can fail; then the CPU answers, and the sidebar says why)
+                    self.store(m, c, r, p, sz, y, yu)
+                    return
         var f = self.filter()
-        var on = self.engine == 0
+        var on = self.engine == 0  # (MX frame unavailable: the CPU)
         var m = self.table.group_sum[by_month, cents](MONTHS, f, on)
         var c = self.table.group_sum[by_category, cents](8, f, on)
         var r = self.table.group_sum[by_region, cents](5, f, on)
@@ -393,9 +396,11 @@ struct Main(App):
         return ("+" if pct >= 0 else "") + fixed(pct, 1) + "% vs " + String(2022 + y)
 
     def spark(self, values: List[Int]) -> List[Float64]:
+        """The selected period's months."""
         var out = List[Float64]()
-        for v in values:
-            out.append(Float64(v))
+        var first = 0 if self.year == 0 else (self.year - 1) * 12
+        for m in range(first, first + (MONTHS if self.year == 0 else 12)):
+            out.append(Float64(values[m]))
         return out^
 
     # ---------- events ----------
@@ -472,8 +477,8 @@ struct Main(App):
     def size_chart(self) -> FlintChart:
         var labels = List[String]()
         var values = List[Float64]()
-        for b in range(BINS):
-            labels.append("$" + String(b * 50) if b * 50 < 1000 else "$" + fixed(Float64(b * 50) / 1000.0, 1) + "K")
+        for b in range(BINS):  # each bin's start; the last one is open-ended
+            labels.append("$" + grouped(b * 50) + ("+" if b == BINS - 1 else ""))
             values.append(Float64(self.size_orders[b]))
         return (FlintChart("Bar Chart", "Orders by size").text("order value", labels).number("orders", values)
                 .semantic("order value", "Range").semantic("orders", "Count").encode("x", "order value").encode("y", "orders")
@@ -490,7 +495,7 @@ struct Main(App):
                 .semantic("product", "Name").semantic("revenue", "Price").encode("y", "product").encode("x", "revenue")
                 .property("maxRows", "8").size(320, 300))
 
-    def kpi(self, metric: String, value: Int, trend: List[Float64]) -> FlintChart:
+    def kpi(self, metric: String, value: Int) -> FlintChart:
         var chart = FlintChart("KPI Card", metric).text("metric", [metric]).number("value", [Float64(value)])
         chart = chart^.encode("metric", "metric").encode("value", "value").size(240, 118)
         if metric == "Revenue":
@@ -502,10 +507,10 @@ struct Main(App):
         var revenue = self.total(self.year_rev)
         var orders = self.total(self.year_orders)
         var out = List[FlintChart]()
-        out.append(self.kpi("Revenue", revenue, self.spark(self.month_rev)))
-        out.append(self.kpi("Orders", orders, List[Float64]()))
-        out.append(self.kpi("Average order", revenue // max(orders, 1), List[Float64]()).semantic("value", "Price"))
-        out.append(self.kpi("Units sold", self.total(self.year_units), List[Float64]()))
+        out.append(self.kpi("Revenue", revenue))
+        out.append(self.kpi("Order lines", orders))
+        out.append(self.kpi("Average line", revenue // max(orders, 1)).semantic("value", "Price"))
+        out.append(self.kpi("Units sold", self.total(self.year_units)))
         out.append(self.month_chart())
         out.append(self.category_chart())
         out.append(self.region_chart())
@@ -516,15 +521,15 @@ struct Main(App):
     def draw(mut self, canvas: Int, mut surface: Surface):
         self.sizes[canvas] = (surface.points_width(), surface.points_height())
         if canvas == KPI_REVENUE:
-            var c = self.kpi("Revenue", self.total(self.year_rev), self.spark(self.month_rev)).number("trend", self.spark(self.month_rev))
+            var c = self.kpi("Revenue", self.total(self.year_rev)).number("trend", self.spark(self.month_rev))
             c.draw(surface, self.font, -1, True, self.change(self.year_rev, self.month_rev))
         elif canvas == KPI_ORDERS:
-            self.kpi("Orders", self.total(self.year_orders), List[Float64]()).draw(surface, self.font, -1, False, self.change(self.year_orders, self.month_orders))
+            self.kpi("Order lines", self.total(self.year_orders)).draw(surface, self.font, -1, False, self.change(self.year_orders, self.month_orders))
         elif canvas == KPI_AOV:
             var aov = self.total(self.year_rev) // max(self.total(self.year_orders), 1)
-            self.kpi("Average order", aov, List[Float64]()).semantic("value", "Price").draw(surface, self.font, -1, False, "per order line")
+            self.kpi("Average line", aov).semantic("value", "Price").draw(surface, self.font, -1, False, "revenue per order line")
         elif canvas == KPI_UNITS:
-            self.kpi("Units sold", self.total(self.year_units), List[Float64]()).draw(surface, self.font, -1, False, self.change(self.year_units, List[Int]()))
+            self.kpi("Units sold", self.total(self.year_units)).draw(surface, self.font, -1, False, self.change(self.year_units, List[Int]()))
         elif canvas == CHART_MONTH:
             var first = 0 if self.year == 0 else (self.year - 1) * 12
             self.month_chart().draw(surface, self.font, self.month - first if self.month >= 0 else -1)
@@ -584,7 +589,7 @@ struct Main(App):
             Spacer(),
             Text("One Mojo file · mojo-ui", style=CAPTION),
             spacing=10,
-        ).width(284).padding(20, 20).align(START).fill()
+        ).width(284).padding(20, 20).align(START).fill().tag("sidebar")
         var kpis = HStack(
             Canvas(KPI_REVENUE, self.version).grow().height(118).tag("kpi_revenue"),
             Canvas(KPI_ORDERS, self.version).grow().height(118).tag("kpi_orders"),
@@ -633,7 +638,7 @@ struct Main(App):
             row1,
             row2,
             spacing=16,
-        ).grow().fill().padding(20, 24)
+        ).grow().fill().padding(20, 24).tag("main")
         return HStack(sidebar, main, spacing=0).grow().fill()
 
 

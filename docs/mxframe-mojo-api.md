@@ -1,7 +1,7 @@
 # MX frame: the Mojo-level API mojo-ui needs
 
 **For:** the MX frame project (the owner's). **From:** the analytics showcase (`examples/analytics/app.mojo`, goal 8).
-**Why:** today the dashboard reaches MX frame through Python (`mojoui/mxframe.mojo` → `mojoui/mxframe_bridge.py` → `mxframe` → `libmxexec_cpu.so`). That works on Linux and the web, but the Mac, iPhone and Android builds can't embed Python. A Mojo-level API removes Python from the path, so the same dashboard runs natively on every platform, and lets MX frame share GPU memory with the app.
+**Why:** today the dashboard reaches MX frame through Python (`mojoui/mxframe.mojo`, with a small Python bridge inside it → `mxframe` → `libmxexec_cpu.so`). That works on Linux and the web, but the Mac, iPhone and Android builds can't embed Python. A Mojo-level API removes Python from the path, so the same dashboard runs natively on every platform, and lets MX frame share GPU memory with the app.
 
 ## What the app does today (the real call sites)
 

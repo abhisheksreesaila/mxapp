@@ -77,7 +77,7 @@ On Linux the Greet button is a GTK button and on the web an HTML `<button>`; the
 `examples/analytics/app.mojo` is a Power BI-style dashboard in one Mojo file: **20 million order lines re-aggregated every time you click**, with KPIs, revenue by month, category and region, order sizes and top products. Tap a bar, a column or a month and every other chart filters (crossfiltering).
 
 - **Every chart is a [Flint](https://microsoft.github.io/flint-chart/) spec**, the chart language Microsoft built for AI agents. mojoui draws Flint specs natively (the same pixels on every platform), and the same specs run through Flint's own Vega-Lite backend: all nine are checked that way.
-- **Three engines behind one switch:** Mojo GPU kernels (**5.9 ms** for all seven aggregations over 20M rows), the same functions on one CPU core (746 ms), and **MX frame**, a Mojo dataframe engine (114 ms on the CPU). All three agree to the cent.
+- **Three engines behind one switch:** Mojo GPU kernels (**6–9 ms** for all seven aggregations over 20M rows, depending on the filters), the same functions on one CPU core (about 750 ms), and **MX frame**, a Mojo dataframe engine (about 115 ms on the CPU). A test compares every one of the seven results across all three engines: they agree to the cent.
 - **Controls in Fluent 2** on Linux and the web, from one design setting (`design() -> FLUENT`).
 
 ```bash
@@ -85,7 +85,7 @@ scripts/build.sh analytics linux && build/analytics/linux/analytics           # 
 scripts/build.sh analytics web && pixi run python mojoui/hosts/web.py build/analytics/web   # → http://127.0.0.1:5001
 ```
 
-Linux and the web for now. The Mac version is waiting on a Python-free MX frame API (`docs/mxframe-mojo-api.md`).
+Linux and the web for now. The Mac version is waiting on a Python-free MX frame API (`docs/mxframe-mojo-api.md`). On the web, each browser tab builds its own 20M rows (about 3 s, roughly 640 MB in memory and 640 MB on the GPU), so it's a demo for a few viewers, not a shared service yet.
 
 ## The hybrid: native controls plus a GPU canvas
 

@@ -14,6 +14,11 @@ def month(r: Row, f: Filter) -> Int:
     return Int(r[0]) // 31 if r[0] >= 0 else -1
 
 
+def product(r: Row, f: Filter) -> Int:
+    """200 groups: more than fit in shared memory (the global-memory path)."""
+    return (Int(r[0]) * 7 + Int(r[2])) % 200
+
+
 def cents(r: Row, f: Filter) -> Int:
     return Int(r[6])
 
@@ -51,7 +56,12 @@ def main() raises:
     var m1 = gpu.group_sum[month, cents](36, f)
     var m2 = cpu.group_sum[month, cents](36, f)
     for k in range(36):
-        if m1.sums[k] != m2.sums[k]:
+        if m1.sums[k] != m2.sums[k] or m1.counts[k] != m2.counts[k]:
+            exact = False
+    var p1 = gpu.group_sum[product, cents](200, f2)
+    var p2 = cpu.group_sum[product, cents](200, f2)
+    for k in range(200):
+        if p1.sums[k] != p2.sums[k] or p1.counts[k] != p2.counts[k]:
             exact = False
     print("GROUPBY: rows=" + String(N) + " gpu_ms_5_groups=" + String(best) + " gpu_ms_36_groups=" + String(best36)
           + " cpu_ms=" + String(m2.milliseconds) + " exact=" + ("1" if exact else "0") + " uploads=" + String(gpu.uploads)

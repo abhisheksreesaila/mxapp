@@ -86,7 +86,7 @@
       <span class="plat">iPhone · UIKit</span><span class="plat">Android · views</span><span class="plat">GPU kernels</span>
     </div>
     <div class="facts">
-      <div class="fact"><b>20M rows</b><span>re-aggregated every click, in ~6 ms on the GPU</span></div>
+      <div class="fact"><b>20M rows</b><span>re-aggregated every click, in 6–9 ms on the GPU</span></div>
       <div class="fact"><b>60 fps</b><span>GPU canvases on Linux and streamed to the browser</span></div>
       <div class="fact"><b>5 platforms</b><span>from one file; Linux, web and Android tested with real input</span></div>
       <div class="fact"><b>0 lines</b><span>of Swift, Kotlin, app JavaScript or shader language</span></div>
@@ -121,8 +121,8 @@
       </div>
       <div class="why">
         <div class="nums">
-          <div><b>5.9 ms</b><span>7 group-bys over 20M rows (GPU)</span></div>
-          <div><b>114 ms</b><span>the same through MX frame (CPU)</span></div>
+          <div><b>6–9 ms</b><span>7 group-bys over 20M rows (GPU)</span></div>
+          <div><b>~115 ms</b><span>the same through MX frame (CPU)</span></div>
           <div><b>exact</b><span>to the cent, every engine</span></div>
         </div>
         <h3>Where each side shines</h3>
@@ -133,7 +133,7 @@
         <h3>What makes it work</h3>
         <ul>
           <li>Every chart is a <a href="https://microsoft.github.io/flint-chart/">Flint</a> spec: the chart language AI agents write.</li>
-          <li>mojoui renders Flint natively (the same pixels everywhere); the specs also run through Flint's own Vega-Lite backend.</li>
+          <li>mojoui renders Flint natively (the same pixels on every platform it runs on); the specs also run through Flint's own Vega-Lite backend.</li>
           <li>Three engines behind one switch: Mojo GPU kernels, Mojo on the CPU, and <b>MX frame</b>, a Mojo dataframe engine.</li>
         </ul>
       </div>
@@ -149,7 +149,7 @@
   "data": { "values": [ { "category": "Electronics", "revenue": 161… }, … ] } }</pre>
       <div class="compare">
         <figure><img src="img/flint-category-mojoui.png" alt="The chart drawn natively by mojoui" loading="lazy">
-          <figcaption>Drawn by mojoui in Mojo: Linux, web, Mac, iPhone, Android.</figcaption></figure>
+          <figcaption>Drawn by mojoui in Mojo (running on Linux and the web; the renderer also builds for Mac, iPhone and Android, unverified there).</figcaption></figure>
         <figure><img src="img/flint-category-vega.svg" alt="The same spec compiled by Flint to Vega-Lite and rendered by Vega" loading="lazy">
           <figcaption>The same spec through Flint → Vega-Lite → Vega (JavaScript).</figcaption></figure>
       </div>
