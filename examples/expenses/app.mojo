@@ -212,27 +212,27 @@ struct Main(App):
         var body: View
         if self.tab == 0:
             body = VStack(
-                TextField(self.amount, placeholder="Amount", on_change=AMOUNT, on_submit=ADD).fill(),
+                TextField(self.amount, placeholder="Amount", on_change=AMOUNT, on_submit=ADD).fill().tag("amount"),
                 Segmented(cats, self.category, on_select=CATEGORY).fill(),
                 DatePicker(self.date, on_change=DATE_SET),
                 TextArea(self.note, placeholder="Note", on_change=NOTE, height=90).fill(),
                 Button("Add expense", on_tap=ADD, style=PROMINENT).fill(),
                 Text(self.status, style=CAPTION),
                 spacing=14,
-            ).width(WIDTH)
+            ).width(WIDTH).tag("add_column")
         elif self.tab == 1:
             var latest = String("No expenses yet")
             if len(self.expenses) > 0:
                 latest = "Latest: " + self.row(HISTORY, 0)
             body = VStack(
                 Text(latest, style=CAPTION).max_width(WIDTH),
-                LazyList(len(self.expenses), HISTORY, on_tap=OPEN, height=380).fill(),
+                LazyList(len(self.expenses), HISTORY, on_tap=OPEN, height=380).fill().tag("history"),
                 HStack(
                     Text(String(len(self.expenses)) + " expenses", style=CAPTION),
                     Text("tap one for details", style=CAPTION),
                 ).justify(BETWEEN).fill(),
                 spacing=10,
-            ).width(WIDTH)
+            ).width(WIDTH).tag("history_column")
         else:
             var totals = List[Int](length=4, fill=0)
             var all = 0

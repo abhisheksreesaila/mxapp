@@ -98,4 +98,4 @@ struct Main(App):
             ).justify(BETWEEN).fill(),
             ProgressBar(percent).fill(),
             spacing=16,
-        ).padding(8).width(340)
+        ).padding(8).width(320)

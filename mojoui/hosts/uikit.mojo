@@ -21,7 +21,7 @@ from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
 from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
 from mojoui.hosts.objc import (
-    cls, sel, msg, new, ns_string, ns_data, ns_array, ns_number, ns_date, date_text, sf_symbol, from_ns, constrain,
+    cls, sel, msg, new, ns_string, ns_data, ns_array, ns_number, ns_date, date_text, sf_symbol, from_ns, constrain, prefer,
     global_block, data_block, block_data, new_class, add_method, add_protocol,
     register_class, pool_push,
 )
@@ -93,7 +93,7 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setReturnKeyType:", 9)  # Done
             self.wire(w, i, self_addr, "changed:", EDITING_CHANGED)
             _ = msg(w, "addTarget:action:forControlEvents:", self.target, sel("submit:"), EDITING_DID_END_ON_EXIT)
-            constrain(w, "widthAnchor", Float64(200))  # leaves room for a button beside it on an iPhone SE
+            prefer(w, "widthAnchor", Float64(200))  # leaves room for a button beside it on an iPhone SE
             constrain(w, "heightAnchor", Float64(44))
             shown = w
         elif node.kind == TOGGLE:
@@ -122,17 +122,17 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setMaximumValue:", Float32(100))
             _ = msg(w, "setValue:animated:", Float32(node.value), 0)
             self.wire(w, i, self_addr, "slide:", VALUE_CHANGED)
-            constrain(w, "widthAnchor", Float64(260))
+            prefer(w, "widthAnchor", Float64(260))
             shown = w
         elif node.kind == PROGRESS:
             w = msg(msg(cls("UIProgressView"), "alloc"), "initWithProgressViewStyle:", 0)
             _ = msg(w, "setProgress:animated:", Float32(node.value) / 100.0, 0)
-            constrain(w, "widthAnchor", Float64(260))
+            prefer(w, "widthAnchor", Float64(260))
             shown = w
         elif node.kind == DIVIDER:
             w = new("UIView")
             _ = msg(w, "setBackgroundColor:", msg(cls("UIColor"), "separatorColor"))
-            constrain(w, "widthAnchor", Float64(280))
+            prefer(w, "widthAnchor", Float64(280))
             constrain(w, "heightAnchor", Float64(1))
             shown = w
         elif node.kind == IMAGE:
@@ -172,7 +172,7 @@ struct UIKitHost[A: App](Movable):
             _ = msg(msg(w, "layer"), "setCornerRadius:", Float64(12))
             _ = msg(w, "setTag:", tag_for(self_addr, i))
             _ = msg(w, "setDelegate:", self.target)  # textViewDidChange:
-            constrain(w, "widthAnchor", Float64(300))
+            prefer(w, "widthAnchor", Float64(300))
             constrain(w, "heightAnchor", Float64(node.size))
             shown = w
         elif node.kind == ALERT:
@@ -190,7 +190,7 @@ struct UIKitHost[A: App](Movable):
                 _ = msg(back, "setAccessibilityLabel:", ns_string("Back"))
                 _ = msg(item, "setLeftBarButtonItem:", back)
             _ = msg(w, "setItems:animated:", msg(cls("NSArray"), "arrayWithObject:", item), 0)
-            constrain(w, "widthAnchor", Float64(340))
+            prefer(w, "widthAnchor", Float64(340))
             shown = w
         elif node.kind == DATE:
             w = new("UIDatePicker")
@@ -225,7 +225,7 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setTag:", tag_for(self_addr, i))
             _ = msg(w, "setDataSource:", self.target)  # rows are asked for as they scroll into view
             _ = msg(w, "setDelegate:", self.target)
-            constrain(w, "widthAnchor", Float64(340))
+            prefer(w, "widthAnchor", Float64(340))
             constrain(w, "heightAnchor", Float64(node.size))
             shown = w
         elif node.kind == SPACER:
@@ -242,7 +242,7 @@ struct UIKitHost[A: App](Movable):
             var frame = msg(w, "frameLayoutGuide")
             _ = msg(msg(msg(content, "widthAnchor"), "constraintEqualToAnchor:", msg(frame, "widthAnchor")), "setActive:", 1)
             constrain(w, "heightAnchor", Float64(node.size))
-            constrain(w, "widthAnchor", Float64(320))
+            prefer(w, "widthAnchor", Float64(320))
             shown = w
         else:
             w = new("UIStackView")
@@ -269,7 +269,7 @@ struct UIKitHost[A: App](Movable):
             else:
                 _ = msg(w, "setDistribution:", 0)  # fill: the lowest-hugging view takes the free space
             var lead = 0
-            if node.justify_items == CENTER or node.justify_items == END:
+            if (node.justify_items == CENTER or node.justify_items == END) and not grows:  # a growing child takes it all
                 lead = flexible_spacer(vertical)
                 _ = msg(w, "addArrangedSubview:", lead)
             for c in node.children:
@@ -278,11 +278,11 @@ struct UIKitHost[A: App](Movable):
                 ref cn = self.rt.shown.nodes[c]
                 if cn.grows:  # flex-grow: lowest hugging priority along the stack
                     _ = msg(child, "setContentHuggingPriority:forAxis:", Float32(1), 1 if vertical else 0)
-                if cn.fills and node.align_items != STRETCH:  # stretch across: match the stack's margins
+                if cn.fills and node.align_items != STRETCH:  # stretch across: the stack minus its padding
                     var side = "widthAnchor" if vertical else "heightAnchor"
-                    var guide = msg(w, "layoutMarginsGuide")
-                    _ = msg(msg(msg(child, side), "constraintEqualToAnchor:", msg(guide, side)), "setActive:", 1)
-            if node.justify_items == CENTER:
+                    var inset = Float64(2 * (node.pad_h if vertical else node.pad_v))
+                    _ = msg(msg(msg(child, side), "constraintEqualToAnchor:constant:", msg(w, side), -inset), "setActive:", 1)
+            if node.justify_items == CENTER and not grows:
                 var trail = flexible_spacer(vertical)
                 _ = msg(w, "addArrangedSubview:", trail)
                 var side = "heightAnchor" if vertical else "widthAnchor"

@@ -67,11 +67,11 @@ input[type=text] { font: inherit; width: var(--control-width, 220px); max-width:
                    border: 1px solid var(--line); background: light-dark(#fff, #2c2c2e); color: inherit; }
 label.toggle { display: inline-flex; gap: 10px; align-items: center; min-height: 48px; cursor: pointer; }
 label.toggle input { width: 22px; height: 22px; accent-color: var(--accent); }
-select { font: inherit; min-height: 48px; padding: 6px 12px; border-radius: 12px; border: 1px solid var(--line);
+select { font: inherit; width: var(--control-width, auto); min-height: 48px; padding: 6px 12px; border-radius: 12px; border: 1px solid var(--line);
          background: light-dark(#fff, #2c2c2e); color: inherit; }
 input[type=range] { width: var(--control-width, 240px); min-height: 48px; accent-color: var(--accent); }
 progress { width: var(--control-width, 240px); height: 8px; accent-color: var(--accent); }
-hr { width: 280px; border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+hr { width: var(--control-width, 280px); border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 img.image { max-width: 100%; height: auto; border-radius: 12px; image-rendering: auto; }
 .scroll { overflow-y: auto; width: 100%; display: flex; flex-direction: column; align-items: center; }  /* like a VStack */
 .segmented, .tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: var(--surface); }
@@ -99,7 +99,7 @@ dialog.alert h3 { margin: 0 0 6px; } dialog.alert p { margin: 0 0 16px; color: v
 dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .icon { display: inline-flex; color: var(--accent); }
 .grid { display: grid; justify-items: center; align-items: center; }
-.lazylist { position: relative; overflow-y: auto; width: 340px; max-width: 90vw; border-radius: 12px;
+.lazylist { position: relative; overflow-y: auto; width: var(--control-width, 340px); max-width: 90vw; border-radius: 12px;
             background: light-dark(#fff, #2c2c2e); border: 1px solid var(--line); }
 .lazylist .row { position: absolute; left: 0; right: 0; display: flex; align-items: center; padding: 0 14px; cursor: pointer;
                  border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -134,7 +134,7 @@ class Session:
 
 ALIGN_CSS = {1: "flex-start", 2: "center", 3: "flex-end", 4: "stretch"}  # START, CENTER, END, STRETCH
 JUSTIFY_CSS = {1: "flex-start", 2: "center", 3: "flex-end", 5: "space-between"}  # START, CENTER, END, BETWEEN
-SIZED_CONTROLS = (FIELD, TEXTAREA, SLIDER, PROGRESS, DROPDOWN, DATE)
+SIZED_CONTROLS = (FIELD, TEXTAREA, SLIDER, PROGRESS, DROPDOWN, DATE, LAZYLIST, DIVIDER, SCROLL)
 
 
 def render(s, i, sid):
@@ -157,6 +157,8 @@ def render(s, i, sid):
         css.append("flex:1 1 0;min-width:0")  # grow from zero, so a growing field never pushes its row onto two lines
     if n["fills"]:
         css.append("align-self:stretch")
+        if n["max_w"]:
+            css.append("margin-inline:auto")  # stretched but capped: centred, as GTK's clamp does
     if n["align_items"] in ALIGN_CSS:
         css.append(f"align-items:{ALIGN_CSS[n['align_items']]}")
     if n["justify_items"] in JUSTIFY_CSS:

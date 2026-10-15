@@ -13,7 +13,7 @@ from std.memory.alloc import alloc, Layout
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
-    START, CENTER, END, STRETCH, BETWEEN, Node,
+    START, CENTER, END, STRETCH, BETWEEN, AUTO, Node,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
@@ -105,6 +105,7 @@ def texture(pixels: List[UInt32], w: Int, h: Int) -> Int:
 
 
 def width(widget: Int, w: Int):
+    """A control's default width (a GTK minimum). build() skips it when the app sizes the view."""
     external_call["gtk_widget_set_size_request", NoneType](widget, c_int(w), c_int(-1))
 
 
@@ -345,6 +346,8 @@ struct GtkHost[A: App](Movable):
     def build(mut self, i: Int, self_addr: Int) -> Int:
         """Creates the GTK widget for node i (and its children)."""
         var node = self.rt.shown.nodes[i].copy()  # copy: building children mutates self
+        # A control's built-in width yields when the app sizes it (fill, grow or width).
+        var sized = node.fills or node.grows or node.w != 0
         var w: Int
         if node.kind == TEXT:
             var t = node.text
@@ -374,7 +377,8 @@ struct GtkHost[A: App](Movable):
             var h = node.hint
             external_call["gtk_editable_set_text", NoneType](w, t.as_c_string_span())
             external_call["gtk_entry_set_placeholder_text", NoneType](w, h.as_c_string_span())
-            width(w, 220)
+            if not sized:
+                width(w, 220)
             connect(w, "changed", on_field_changed[Self.A], self_addr)
             connect(w, "activate", on_field_submit[Self.A], self_addr)
         elif node.kind == TOGGLE:
@@ -393,15 +397,18 @@ struct GtkHost[A: App](Movable):
         elif node.kind == SLIDER:
             w = external_call["gtk_scale_new_with_range", Int](c_int(HORIZONTAL), Float64(0), Float64(100), Float64(1))
             external_call["gtk_range_set_value", NoneType](w, Float64(node.value))
-            width(w, 240)
+            if not sized:
+                width(w, 240)
             connect(w, "value-changed", on_slid[Self.A], self_addr)
         elif node.kind == PROGRESS:
             w = external_call["gtk_progress_bar_new", Int]()
             external_call["gtk_progress_bar_set_fraction", NoneType](w, Float64(node.value) / 100.0)
-            width(w, 240)
+            if not sized:
+                width(w, 240)
         elif node.kind == DIVIDER:
             w = external_call["gtk_separator_new", Int](c_int(HORIZONTAL))
-            width(w, 280)
+            if not sized:
+                width(w, 280)
         elif node.kind == IMAGE:
             var tex = texture(node.pixels, node.spacing, node.size)
             w = external_call["gtk_picture_new_for_paintable", Int](tex)
@@ -451,7 +458,7 @@ struct GtkHost[A: App](Movable):
             w = external_call["gtk_scrolled_window_new", Int]()
             external_call["gtk_scrolled_window_set_child", NoneType](w, view)
             add_class(w, "card")
-            external_call["gtk_widget_set_size_request", NoneType](w, c_int(320), c_int(node.size))
+            external_call["gtk_widget_set_size_request", NoneType](w, c_int(-1 if sized else 320), c_int(node.size))
         elif node.kind == ALERT:
             var heading = node.text
             var body = node.hint
@@ -519,7 +526,7 @@ struct GtkHost[A: App](Movable):
             w = external_call["gtk_scrolled_window_new", Int]()
             external_call["gtk_scrolled_window_set_child", NoneType](w, list)
             external_call["gtk_scrolled_window_set_policy", NoneType](w, c_int(2), c_int(1))
-            external_call["gtk_widget_set_size_request", NoneType](w, c_int(340), c_int(node.size))
+            external_call["gtk_widget_set_size_request", NoneType](w, c_int(-1 if sized else 340), c_int(node.size))
         elif node.kind == SPACER:
             w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
             external_call["gtk_widget_set_hexpand", NoneType](w, c_int(1))
@@ -539,6 +546,9 @@ struct GtkHost[A: App](Movable):
                 external_call["gtk_widget_set_halign", NoneType](w, c_int(ALIGN_CENTER))
             # justify: GtkBox packs from the start; invisible expanding spacers do the rest.
             var j = node.justify_items
+            for c in node.children:  # a growing child takes all the free space: no spacers
+                if self.rt.shown.nodes[c].grows:
+                    j = AUTO
             if j == CENTER or j == END:
                 external_call["gtk_box_append", NoneType](w, spacer(orientation))
             for k in range(len(node.children)):

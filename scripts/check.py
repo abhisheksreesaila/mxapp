@@ -627,6 +627,18 @@ def m9():
         used = [m for m in (".fill()", ".grow()", ".padding(", ".justify(") if m in code]
         if len(used) < 3:
             problems.append(f"{ex} uses only {used} of the layout settings")
+    # Measure it: the filled field and list span their 320-wide columns exactly, on both hosts.
+    with tempfile.TemporaryDirectory() as tmp:
+        for steps, child, col in (("tab:0=Add", "amount", "add_column"), ("tab:0=History", "history", "history_column")):
+            r1, gout = gtk("expenses", steps, shot=str(Path(tmp) / "e.png"))
+            r2, wout = web("expenses", steps)
+            for host, r_, out in (("GTK", r1, gout), ("web", r2, wout)):
+                b = boxes(out) if r_ else {}
+                if child not in b or col not in b:
+                    problems.append(f"{host}: no boxes for {child}/{col}")
+                    continue
+                if abs(b[col][2] - 320) > TOL or abs(b[child][2] - b[col][2]) > TOL or abs(b[child][0] - b[col][0]) > TOL:
+                    problems.append(f"{host}: {child} {b[child][2]:.0f} wide at {b[child][0]:.0f} in a {b[col][2]:.0f}-wide column at {b[col][0]:.0f}")
     ok9, msg9 = g4_m9()  # expenses GTK + web identical, Mac + iPhone build
     if not ok9:
         problems.append(msg9)

@@ -230,3 +230,11 @@ def sf_symbol(name: String) -> String:
     if name == "fun": return "gamecontroller"
     if name == "chart": return "chart.bar"
     return "questionmark.square.dashed"
+
+
+def prefer(view: Int, anchor: String, points: Float64):
+    """A control's default size, as a *preferred* constraint (priority 750): the app's own
+    layout settings (fill, grow, width), which are required, always win over it."""
+    var c = msg(msg(view, anchor), "constraintEqualToConstant:", points)
+    _ = msg(c, "setPriority:", Float32(750))
+    _ = msg(c, "setActive:", 1)

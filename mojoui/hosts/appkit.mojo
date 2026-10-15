@@ -20,7 +20,7 @@ from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
 from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
 from mojoui.hosts.objc import (
-    cls, sel, msg, new, ns_string, ns_data, ns_array, ns_number, ns_date, date_text, sf_symbol, from_ns, constrain,
+    cls, sel, msg, new, ns_string, ns_data, ns_array, ns_number, ns_date, date_text, sf_symbol, from_ns, constrain, prefer,
     new_class, add_method, add_protocol, register_class, pool_push,
 )
 
@@ -89,7 +89,7 @@ struct AppKitHost[A: App](Movable):
             _ = msg(w, "setPlaceholderString:", ns_string(node.hint))
             _ = msg(w, "setDelegate:", self.target)  # controlTextDidChange: as you type
             self.wire(w, i, self_addr, "submit:")  # the action fires on Return
-            constrain(w, "widthAnchor", Float64(220))
+            prefer(w, "widthAnchor", Float64(220))
         elif node.kind == TOGGLE:
             w = msg(cls("NSButton"), "checkboxWithTitle:target:action:", ns_string(node.text), self.target, sel("toggle:"))
             _ = msg(w, "setTag:", tag_for(self_addr, i))
@@ -112,7 +112,7 @@ struct AppKitHost[A: App](Movable):
             )
             _ = msg(w, "setTag:", tag_for(self_addr, i))
             _ = msg(w, "setContinuous:", 1)
-            constrain(w, "widthAnchor", Float64(240))
+            prefer(w, "widthAnchor", Float64(240))
         elif node.kind == PROGRESS:
             w = new("NSProgressIndicator")
             _ = msg(w, "setStyle:", 0)  # bar
@@ -120,15 +120,15 @@ struct AppKitHost[A: App](Movable):
             _ = msg(w, "setMinValue:", Float64(0))
             _ = msg(w, "setMaxValue:", Float64(100))
             _ = msg(w, "setDoubleValue:", Float64(node.value))
-            constrain(w, "widthAnchor", Float64(240))
+            prefer(w, "widthAnchor", Float64(240))
         elif node.kind == DIVIDER:
             w = new("NSBox")
             _ = msg(w, "setBoxType:", 2)  # NSBoxSeparator
-            constrain(w, "widthAnchor", Float64(280))
+            prefer(w, "widthAnchor", Float64(280))
             constrain(w, "heightAnchor", Float64(1))
         elif node.kind == IMAGE:
             w = msg(cls("NSImageView"), "imageViewWithImage:", ns_image(node.pixels, node.spacing, node.size))
-            constrain(w, "widthAnchor", Float64(node.spacing))
+            prefer(w, "widthAnchor", Float64(node.spacing))
             constrain(w, "heightAnchor", Float64(node.size))
         elif node.kind == SEGMENTED or node.kind == TABS:
             w = msg(cls("NSSegmentedControl"), "segmentedControlWithLabels:trackingMode:target:action:",
@@ -154,7 +154,7 @@ struct AppKitHost[A: App](Movable):
             _ = msg(text, "setRichText:", 0)
             _ = msg(text, "setIdentifier:", ns_string(String(tag_for(self_addr, i))))  # NSTextView has no tag
             _ = msg(text, "setDelegate:", self.target)  # textDidChange:
-            constrain(w, "widthAnchor", Float64(320))
+            prefer(w, "widthAnchor", Float64(320))
             constrain(w, "heightAnchor", Float64(node.size))
             self.widgets[i] = text
         elif node.kind == ALERT:
@@ -212,7 +212,7 @@ struct AppKitHost[A: App](Movable):
             w = new("NSScrollView")
             _ = msg(w, "setHasVerticalScroller:", 1)
             _ = msg(w, "setDocumentView:", table)
-            constrain(w, "widthAnchor", Float64(340))
+            prefer(w, "widthAnchor", Float64(340))
             constrain(w, "heightAnchor", Float64(node.size))
             self.widgets[i] = table
         elif node.kind == SPACER:
@@ -228,7 +228,7 @@ struct AppKitHost[A: App](Movable):
             for anchor in ["topAnchor", "leadingAnchor", "widthAnchor"]:
                 _ = msg(msg(msg(content, anchor), "constraintEqualToAnchor:", msg(clip, anchor)), "setActive:", 1)
             constrain(w, "heightAnchor", Float64(node.size))
-            constrain(w, "widthAnchor", Float64(320))
+            prefer(w, "widthAnchor", Float64(320))
         else:
             w = new("NSStackView")
             var vertical = node.kind == VSTACK
@@ -252,7 +252,7 @@ struct AppKitHost[A: App](Movable):
             elif grows or node.justify_items != 0:
                 _ = msg(w, "setDistribution:", 0)  # fill: the lowest-hugging view takes the free space
             var lead = 0
-            if node.justify_items == CENTER or node.justify_items == END:
+            if (node.justify_items == CENTER or node.justify_items == END) and not grows:  # a growing child takes it all
                 lead = flexible_spacer(vertical)
                 _ = msg(w, "addArrangedSubview:", lead)
             for c in node.children:
@@ -266,7 +266,7 @@ struct AppKitHost[A: App](Movable):
                     var inset = Float64(2 * (node.pad_h if vertical else node.pad_v))
                     var c2 = msg(msg(child, side), "constraintEqualToAnchor:constant:", msg(w, side), -inset)
                     _ = msg(c2, "setActive:", 1)
-            if node.justify_items == CENTER:
+            if node.justify_items == CENTER and not grows:
                 var trail = flexible_spacer(vertical)
                 _ = msg(w, "addArrangedSubview:", trail)
                 var side = "heightAnchor" if vertical else "widthAnchor"
@@ -294,8 +294,10 @@ struct AppKitHost[A: App](Movable):
             _ = msg(msg(msg(outer, "widthAnchor"), "constraintGreaterThanOrEqualToConstant:", Float64(node.min_w)), "setActive:", 1)
         if node.max_w != 0:
             _ = msg(msg(msg(outer, "widthAnchor"), "constraintLessThanOrEqualToConstant:", Float64(node.max_w)), "setActive:", 1)
-            if node.kind == TEXT:
-                _ = msg(w, "setPreferredMaxLayoutWidth:", Float64(node.max_w - 2 * node.pad_h))  # wrap within it
+            if node.kind == TEXT:  # labels are single-line by default: let it wrap within the width
+                _ = msg(w, "setMaximumNumberOfLines:", 0)
+                _ = msg(w, "setLineBreakMode:", 0)  # word wrapping
+                _ = msg(w, "setPreferredMaxLayoutWidth:", Float64(node.max_w - 2 * node.pad_h))
         return outer
 
     def show(mut self, self_addr: Int):
