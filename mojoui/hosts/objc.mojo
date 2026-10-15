@@ -12,6 +12,8 @@
 # Pass Objective-C BOOLs as Int 1 or 0, not Mojo Bool, so the whole register is set.
 
 from std.ffi import external_call
+from std.memory import Pointer
+from std.memory.alloc import unsafe_alloc
 
 comptime RTLD_DEFAULT = -2  # Apple's "search every loaded library" handle
 
@@ -86,3 +88,54 @@ def register_class(c: Int):
 
 def pool_push() -> Int:
     return external_call["objc_autoreleasePoolPush", Int]()
+
+
+def from_ns(ns: Int) -> String:
+    """Copies an NSString into a Mojo String (via its UTF-8 bytes)."""
+    if ns == 0:
+        return ""
+    var utf8 = msg(ns, "UTF8String")
+    if utf8 == 0:
+        return ""
+    return String(unsafe_from_utf8_ptr=Pointer[Int8, MutUntrackedOrigin](unsafe_from_address=utf8))
+
+
+def constrain(view: Int, anchor: String, points: Float64):
+    """Auto Layout: fix a view's width or height (anchor = "widthAnchor"/"heightAnchor")."""
+    var c = msg(msg(view, anchor), "constraintEqualToConstant:", points)
+    _ = msg(c, "setActive:", 1)
+
+
+def fn_address[F: ImplicitlyCopyable & Deinitable](f: F) -> Int:
+    """The machine address of a Mojo `abi("C")` function."""
+    var copy = f
+    return Pointer(to=copy).unsafe_bitcast[Int]()[]
+
+
+def global_block[F: ImplicitlyCopyable & Deinitable](invoke: F, signature: String) -> Int:
+    """An Objective-C block whose body is a Mojo `abi("C")` function.
+
+    Built by hand as a *global* block (the kind the compiler emits for blocks that
+    capture nothing): {isa, flags, reserved, invoke, descriptor} with a descriptor
+    {reserved, size, signature}. Copying a global block returns it unchanged, so
+    APIs that keep the block (like UIAction's handler) are safe. It lives forever.
+    `invoke` must take the block itself first, then the block's arguments.
+    """
+    comptime BLOCK_IS_GLOBAL = 1 << 28
+    comptime BLOCK_HAS_SIGNATURE = 1 << 30
+    var isa_name = String("_NSConcreteGlobalBlock")
+    var isa = external_call["dlsym", Int](RTLD_DEFAULT, isa_name.as_c_string_span())
+    var sig = unsafe_alloc[Int8](signature.byte_length() + 1)  # C string, kept forever
+    for i in range(signature.byte_length()):
+        sig.unsafe_offset(i).unsafe_write(Int8(signature.as_bytes()[i]))
+    sig.unsafe_offset(signature.byte_length()).unsafe_write(Int8(0))
+    var desc = unsafe_alloc[Int](3)
+    desc.unsafe_write(0)  # reserved
+    desc.unsafe_offset(1).unsafe_write(40)  # sizeof the block literal
+    desc.unsafe_offset(2).unsafe_write(Int(sig))
+    var block = unsafe_alloc[Int](5)
+    block.unsafe_write(isa)
+    block.unsafe_offset(1).unsafe_write(BLOCK_IS_GLOBAL | BLOCK_HAS_SIGNATURE)  # flags (low 32 bits), reserved = 0
+    block.unsafe_offset(2).unsafe_write(fn_address(invoke))
+    block.unsafe_offset(3).unsafe_write(Int(desc))
+    return Int(block)

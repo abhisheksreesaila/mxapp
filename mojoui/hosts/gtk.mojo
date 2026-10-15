@@ -210,7 +210,10 @@ struct GtkHost[A: App](Movable):
 
     def apply(mut self, d: Diff, self_addr: Int):
         if d.rebuild:
-            self.show(self_addr)
+            # Rebuild on the next idle turn, never inside a signal handler: the widget
+            # that sent the signal would be destroyed while GTK is still using it.
+            set_busy(True)  # ignore events until the new widgets are up
+            _ = external_call["g_idle_add", c_uint](on_idle_rebuild[Self.A], self_addr)
             return
         set_busy(True)
         for p in d.patches:
@@ -252,6 +255,16 @@ def host_at[A: App](addr: Int) -> Pointer[GtkHost[A], MutUntrackedOrigin]:
 
 
 # ---------- signal handlers (GTK calls these) ----------
+
+def on_idle_rebuild[A: App](host_addr: Int) abi("C") -> c_int:
+    host_at[A](host_addr)[].show(host_addr)  # show() clears the busy flag
+    return 0  # G_SOURCE_REMOVE: run once
+
+
+def settle():
+    """Runs pending GTK work (such as a deferred rebuild) before the next test step."""
+    while external_call["g_main_context_pending", c_int](0) != 0:
+        _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
 
 def on_clicked[A: App](button: Int, host_addr: Int) abi("C"):
     if busy():
@@ -416,8 +429,9 @@ def save_png(window: Int, path: String):
         if external_call["gtk_widget_get_mapped", c_int](window) != 0:
             break
         _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
-    for _ in range(50):  # let layout and drawing settle
-        _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
+    for _ in range(60):  # let layout and drawing settle (~300 ms of frames)
+        settle()
+        external_call["g_usleep", NoneType](c_uint(5000))
     var paintable = external_call["gtk_widget_paintable_new", Int](window)
     var w = external_call["gtk_widget_get_width", c_int](window)
     var h = external_call["gtk_widget_get_height", c_int](window)
@@ -445,6 +459,7 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     if steps != "":
         for step in steps.split(";"):
             run_step[A](host_addr, String(step))
+            settle()
         report[A](host_addr)
     if shot != "":
         save_png(host[].window, shot)

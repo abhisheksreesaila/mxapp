@@ -39,3 +39,7 @@ Newest last. What was tried, what happened, dead ends.
 - Events with values (`Event(message, text, number)`) + 7 components: 14 core tests pass first try.
 - GTK: `g_signal_connect_data` needed two callback signatures → `ccall()` looks C functions up with dlsym and casts per call (same trick as objc msg).
 - Bug: after Reset, typing stopped reaching update(). Trace: the field's own "changed" signal fired re-entrantly while `apply()` ran, and `self.updating = True` wasn't visible to it (Mojo `mut self` is exclusive; the store can be optimised away). Fix: busy flag kept on the GApplication via g_object_set_data (opaque C calls), checked before handlers touch the host.
+- Web components: plain HTML controls + HTMX; text field inside a tiny form so Return submits with no custom JS. Playwright `has_text` regex failed on pretty-printed label HTML → match the label's <span>.
+- AppKit + UIKit hosts for every component compile; only Apple system functions. iOS dropdown = UIButton menu (showsMenuAsPrimaryAction + changesSelectionAsPrimaryAction) whose UIActions call a hand-built global Objective-C block (Mojo invoke function); identifier "<tag>:<index>".
+- Todo app: same 10 steps in GTK and Chromium → identical state reports.
+- GTK CRITICAL g_object_notify_by_pspec: rebuilding inside the dropdown's own notify handler destroyed it mid-signal → rebuilds deferred to g_idle_add; test steps run pending GTK work between steps. Screenshot after a deferred rebuild was empty → wait ~300 ms of real frames.

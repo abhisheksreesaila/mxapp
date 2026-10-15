@@ -36,3 +36,5 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-28 · browser tests drive /usr/bin/chromium with Playwright over chrome-devtools-axi · the axi tool only looks for Google Chrome; Playwright + system Chromium needs no download and is scriptable from the checker · yes
 - D-29 · GTK 'ignore our own changes' flag lives on the GApplication (g_object_set_data) over a Mojo field · signals re-enter while a `mut self` method runs; the compiler may drop a store only a re-entrant reader would see (found by tracing, see journal) · yes
 - D-30 · GTK Toggle = GtkCheckButton (one widget, label included) over GtkSwitch + label · simplest native on/off with a label; reads naturally for todo items · yes
+- D-31 · iOS dropdown = menu button with UIActions (handler = hand-built global block) over UIPickerView or a segmented control · it's the native iOS 15+ dropdown; blocks are the only way UIAction takes a handler · yes
+- D-32 · GTK rebuilds deferred to the next idle turn (g_idle_add) over rebuilding inside the signal handler · the emitting widget was destroyed mid-signal (GTK CRITICALs); events are ignored until the new widgets are up · yes
