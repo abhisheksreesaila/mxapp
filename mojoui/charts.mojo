@@ -46,12 +46,12 @@ def axis_money(cents: Int) -> String:
     var unit = String("")
     if t.endswith("B") or t.endswith("M") or t.endswith("K"):
         unit = String(t[byte = t.byte_length() - 1 :])
-        t = String(t[byte : t.byte_length() - 1])
+        t = String(t[byte = : t.byte_length() - 1])
     if "." in t:
         while t.endswith("0"):
-            t = String(t[byte : t.byte_length() - 1])
+            t = String(t[byte = : t.byte_length() - 1])
         if t.endswith("."):
-            t = String(t[byte : t.byte_length() - 1])
+            t = String(t[byte = : t.byte_length() - 1])
     return t + unit
 
 
