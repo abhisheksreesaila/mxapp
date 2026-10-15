@@ -1,36 +1,33 @@
-# GOAL 3: the web, real components, a real app on every platform
+# GOAL 4: the components real apps need, then a fancier app everywhere
 
-**End goal (owner's words, 2026-10-15):** "First, render the web… build a very small app prototype… once you have a good rhythm, build all the components necessary (dropdown, text, label, all the typical components)… build an app like a todo list… the same declarative code in Mojo runs on all of them… I would also try to build Android… then build an app that's also great on GPUs."
+**End goal (owner's words, 2026-10-15 morning):** "continue with 2–4, 8, then move to 9 … complete until 9 … on autopilot … and build a fancier app for all platforms, while I test on Apple."
+Items refer to the list in the chat: 2 segmented/radio, 3 multi-line text, 4 alerts, 5 date picker, 6 icons, 7 grid, 8 navigation (stack + tabs), 9 long lists that draw only visible rows.
 
-Goals 1–2 (`docs/goals/`) gave Mojo-only native rendering on Linux (GTK), Mac (AppKit) and iPhone (UIKit).
-
-## Milestones
-`scripts/check` prints PASS or FAIL per milestone. Order = build order.
+## Milestones (build order: 2, 3, 4, 8 first, then 5, 6, 7, 9, then the app)
+Each component: core node + tests, and all four hosts (GTK, web, AppKit, UIKit). GTK and web are driven by the shared step language and must end in identical states; Apple must build, link and sign with only the allowed system functions.
 
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M1 | Web prototype | `examples/hello/app.mojo`, unchanged, served by FastHTML (Python) calling the app compiled as a Mojo Python module; a real Chrome clicks Greet 3× and the page reads `Hello, Ada! (click 3)` |
-| M2 | Components in the core | events carry values (`Event`: message + text + number); new `TextField`, `Toggle`, `Dropdown`, `Slider`, `ProgressBar`, `Divider`, `Scroll`; `tests/test_mojoui.mojo` passes with exact trees/patches for each |
-| M3 | Components on Linux | `examples/gallery/app.mojo` (every component) in GTK test mode: typing, toggling, choosing, sliding change the real widgets and the labels that echo the state |
-| M4 | Components on the web | the same gallery in Chrome: same interactions, same echoed state |
-| M5 | Components on Mac + iPhone | gallery, hello and todo build, link and sign for both (symbols, entry point, signature, same app file) |
-| M6 | A real app everywhere | `examples/todo/app.mojo` rewritten as a real todo (type a task, add, tick done, filter All/Active/Done, remove, counts): passes a GTK run and a Chrome run with identical results; builds for Mac + iPhone; no platform code in any app file |
-| M7 | Android (stretch) | Mojo app code compiles for Android arm64 and a native Android host is built; or, if tools are out of bounds, a written blocker with evidence and the nearest step done |
-| M8 | GPU (stretch) | `examples/gpu/app.mojo`: a Mojo GPU kernel runs on the NVIDIA GPU and its result is shown in the UI (GTK + web runs report the GPU name and the computed result) |
-| M9 | You can try it | README + docs cover web, components, todo, Android/GPU status; every path named exists |
-
-## Done means
-M1–M6 and M9 pass; M7 and M8 pass or end in a clear, evidenced report. Real screenshots of Linux and web. The report says what ran here (Linux, web, GPU) vs. what needs your Mac/iPhone/Android phone.
+| M1 | Choice controls | `Segmented` and `Radio`; core tests; gallery2 GTK + web runs pick options and echo them, identical |
+| M2 | Multi-line text | `TextArea`; typing multi-line text round-trips on GTK + web, identical |
+| M3 | Alerts | `Alert` (declarative: present while it's in the view); choosing a button sends its index; GTK + web identical |
+| M4 | Navigation | `Tabs` (switch sections) and `NavBar` (title + back); a two-level flow works on GTK + web, identical |
+| M5 | Date picker | `DatePicker` → `event.text` "YYYY-MM-DD"; GTK + web identical |
+| M6 | Icons | `Icon(name)` with a shared name set mapped to each platform's own icons; GTK + web report them |
+| M7 | Grid | `Grid(items, columns)`; GTK + web lay children out in rows of N |
+| M8 | Long lists | `LazyList(count, …)`: only visible rows are built; a 10,000-row list scrolls and taps a far row on GTK + web, with far fewer than 10,000 rows ever built |
+| M9 | Fancier app | `examples/expenses/app.mojo` uses tabs, a nav stack, text area, date picker, segmented, alert, icons, grid and a long list; GTK + web runs identical; builds and signs for Mac + iPhone |
+| M10 | Nothing regressed | goal 3's checks still pass (hello, gallery, todo, GPU, Android library) |
+| M11 | Docs | README component table lists every component with its native control per platform; every path exists |
 
 ## Out of bounds
-No deploying, paid services, sign-ups, logins, secrets or pushing. No accepting licences on the owner's behalf (e.g. Android SDK `sdkmanager --licenses`, Xcode). Nothing outside this folder except pixi/cache downloads. Don't take over the desktop: windows may flash briefly during checks only.
+Same as goal 3: no deploying, sign-ups, logins, secrets, pushing or accepting licences; no taking over the desktop. Don't touch `../mojo-ui-apple-test` (the owner is testing from it).
 
-## Assumptions (made instead of asking)
-- Web = FastHTML server-side rendering + HTMX (the owner's idea); the Mojo app runs on the server inside Python, one app state per browser tab session. JS islands (ROADMAP decision 7) only if time allows.
-- Plain `python-fasthtml` for the web host, not fh-saas: this is a framework host, not a multi-tenant SaaS backend.
-- Events: `update(mut self, event: Event)`; `event.message` is the old Int message. Existing examples are updated (breaking change is fine pre-release).
-- Windows = the web host for now (no Mojo Windows target yet).
-- Browser tests use the local Chrome via `chrome-devtools-axi`.
+## Assumptions
+- Modals and navigation stay declarative: an `Alert` is shown while it's in the view; the current screen/tab is app state.
+- `Tabs` renders as each platform's segmented-style section switcher at the top (not a bottom tab bar) in this round.
+- Long lists ask the app for rows on demand through an `App.row(list_id, index)` method with a default.
+- Lazy rows are display-only plus one tap message per row (no controls inside lazy rows yet).
 
 ## Budget
-About 5 hours / 150 turns, owner asleep. Stop early with a clear report if blocked.
+~6 hours. Stop with a clear report if blocked.
