@@ -20,6 +20,22 @@ comptime PROGRESS = 10  # 0–100, read-only
 comptime DIVIDER = 11
 comptime SCROLL = 12  # one child, scrolls when taller than `size`
 comptime IMAGE = 13  # pixels (RGBA), `spacing` x `size` in size
+comptime SEGMENTED = 14  # pick one of a few options, shown side by side
+comptime RADIO = 15  # pick one option from a vertical list
+comptime TEXTAREA = 16  # several lines of text; `size` = height
+comptime ALERT = 17  # a modal question: text = title, hint = message, options = buttons
+comptime TABS = 18  # switch between sections: options = section names
+comptime NAVBAR = 19  # a screen's title bar; msg = back (0: no back button)
+comptime DATE = 20  # text = "YYYY-MM-DD"
+comptime ICON = 21  # text = icon name (see ICON_NAMES); size = points
+comptime GRID = 22  # children in rows of `value` columns; spacing = gap
+comptime LAZYLIST = 23  # value = row count, msg2 = list id, size = height, spacing = row height
+
+# Icon names every host understands (each maps them to its platform's own icons).
+comptime ICON_NAMES: List[String] = [
+    "star", "trash", "gear", "plus", "check", "calendar", "search", "heart", "home", "person",
+    "travel", "food", "fun", "chart",
+]
 
 # Text styles (each platform maps them to its own type scale)
 comptime BODY = 0
@@ -156,6 +172,53 @@ def Image(pixels: List[UInt32], width: Int, height: Int) -> View:
     return _one(Node(IMAGE, spacing=w, size=h, pixels=pixels.copy()))
 
 
+def Segmented(options: List[String], selected: Int, on_select: Int) -> View:
+    """A row of joined buttons, one selected. Sends `on_select` (event.number = index, event.text = option)."""
+    return _one(Node(SEGMENTED, "", on_select, value=selected, options=options.copy()))
+
+
+def Radio(options: List[String], selected: Int, on_select: Int) -> View:
+    """Radio buttons, one selected. Sends `on_select` (event.number = index, event.text = option)."""
+    return _one(Node(RADIO, "", on_select, value=selected, options=options.copy()))
+
+
+def TextArea(value: String, placeholder: String = "", on_change: Int = NO_MSG, height: Int = 120) -> View:
+    """Several lines of text. Sends `on_change` (event.text = all the text) as you type."""
+    return _one(Node(TEXTAREA, value, on_change, hint=placeholder, size=height))
+
+
+def Alert(title: String, message: String, buttons: List[String], on_choose: Int) -> View:
+    """A modal question, shown for as long as it's in the view.
+    Choosing a button sends `on_choose` (event.number = button index, event.text = its title)."""
+    return _one(Node(ALERT, title, on_choose, hint=message, options=buttons.copy()))
+
+
+def Tabs(sections: List[String], selected: Int, on_select: Int) -> View:
+    """Switch between sections. Sends `on_select` (event.number = index, event.text = section)."""
+    return _one(Node(TABS, "", on_select, value=selected, options=sections.copy()))
+
+
+def NavBar(title: String, on_back: Int = NO_MSG) -> View:
+    """A screen's title bar, with a Back button when `on_back` is given."""
+    return _one(Node(NAVBAR, title, on_back))
+
+
+def DatePicker(date: String, on_change: Int) -> View:
+    """Pick a date. `date` and event.text are "YYYY-MM-DD"."""
+    return _one(Node(DATE, date, on_change))
+
+
+def Icon(name: String, size: Int = 24) -> View:
+    """One of the shared icons (ICON_NAMES), drawn with each platform's own icon set."""
+    return _one(Node(ICON, name, size=size))
+
+
+def LazyList(count: Int, list_id: Int, on_tap: Int = NO_MSG, height: Int = 320, row_height: Int = 44) -> View:
+    """A long list: only the rows on screen are built, asking the app's `row(list_id, index)`
+    for their text. Tapping a row sends `on_tap` (event.number = row index)."""
+    return _one(Node(LAZYLIST, "", on_tap, value=count, msg2=list_id, size=height, spacing=row_height))
+
+
 def Divider() -> View:
     return _one(Node(DIVIDER))
 
@@ -203,6 +266,11 @@ def HStack(*items: View, spacing: Int = 8) -> View:
 
 def HStack(items: List[View], spacing: Int = 8) -> View:
     return _container(Node(HSTACK, spacing=spacing), items)
+
+
+def Grid(items: List[View], columns: Int, spacing: Int = 12) -> View:
+    """Items in rows of `columns`."""
+    return _container(Node(GRID, spacing=spacing, value=max(columns, 1)), items)
 
 
 def Scroll(content: View, height: Int = 320) -> View:

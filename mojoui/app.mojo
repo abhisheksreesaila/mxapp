@@ -35,6 +35,10 @@ trait App(Movable, Deinitable):
         """Describes the whole screen for the current state."""
         ...
 
+    def row(self, list_id: Int, index: Int) -> String:
+        """The text of one row of a LazyList (hosts ask only for rows on screen)."""
+        return ""
+
 
 struct Runtime[A: App](Movable):
     """Holds the app and the screen last shown. Hosts call dispatch() on every event."""

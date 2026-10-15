@@ -231,6 +231,75 @@ def test_spacer_is_a_leaf() raises:
     assert_equal(v.nodes[2], Node(SPACER))
 
 
+def test_goal4_components_record_their_values() raises:
+    var opts: List[String] = ["A", "B"]
+    var cells = List[View]()
+    for i in range(5):
+        cells.append(Text(String(i)))
+    var v = VStack(
+        Segmented(opts, 1, on_select=3),
+        Radio(opts, 0, on_select=4),
+        TextArea("x\ny", placeholder="Notes", on_change=5, height=90),
+        Alert("Sure?", "Really.", opts, on_choose=6),
+        Tabs(opts, 1, on_select=7),
+        NavBar("Details", on_back=8),
+        DatePicker("2026-10-15", on_change=9),
+        Icon("star", size=20),
+        Grid(cells, 2),
+        LazyList(10000, 1, on_tap=10, height=300, row_height=40),
+    )
+    assert_equal(v.nodes[1], Node(SEGMENTED, "", 3, value=1, options=["A", "B"]))
+    assert_equal(v.nodes[2], Node(RADIO, "", 4, value=0, options=["A", "B"]))
+    assert_equal(v.nodes[3], Node(TEXTAREA, "x\ny", 5, hint="Notes", size=90))
+    assert_equal(v.nodes[4], Node(ALERT, "Sure?", 6, hint="Really.", options=["A", "B"]))
+    assert_equal(v.nodes[5], Node(TABS, "", 7, value=1, options=["A", "B"]))
+    assert_equal(v.nodes[6], Node(NAVBAR, "Details", 8))
+    assert_equal(v.nodes[7], Node(DATE, "2026-10-15", 9))
+    assert_equal(v.nodes[8], Node(ICON, "star", size=20))
+    assert_equal(v.nodes[9].kind, GRID)
+    assert_equal(v.nodes[9].value, 2)
+    assert_equal(len(v.nodes[9].children), 5)
+    assert_equal(v.nodes[15], Node(LAZYLIST, "", 10, value=10000, msg2=1, size=300, spacing=40))
+
+
+def test_segment_and_date_changes_are_patches_but_alert_appearing_rebuilds() raises:
+    var opts: List[String] = ["A", "B"]
+    var d = diff(VStack(Segmented(opts, 0, on_select=1), DatePicker("2026-01-01", on_change=2)),
+                 VStack(Segmented(opts, 1, on_select=1), DatePicker("2026-12-25", on_change=2)))
+    assert_false(d.rebuild)
+    assert_equal(len(d.patches), 2)
+    assert_equal(d.patches[0], Patch(SET_VALUE, 1, "", 1))
+    assert_equal(d.patches[1], Patch(SET_TEXT, 2, "2026-12-25", 0))
+    assert_true(diff(VStack(Text("x")), VStack(Text("x"), Alert("?", "", opts, on_choose=3))).rebuild)
+    var grown = diff(VStack(LazyList(10, 1)), VStack(LazyList(11, 1)))
+    assert_false(grown.rebuild)  # a longer list is a value patch: hosts reload rows, not the screen
+    assert_equal(grown.patches[0], Patch(SET_VALUE, 1, "", 11))
+
+
+struct WithRows(App):
+    def __init__(out self):
+        pass
+
+    def title(self) -> String:
+        return "Rows"
+
+    def update(mut self, event: Event):
+        pass
+
+    def view(self) -> View:
+        return VStack(LazyList(1000, 7))
+
+    def row(self, list_id: Int, index: Int) -> String:
+        return "list " + String(list_id) + " row " + String(index)
+
+
+def test_apps_provide_rows_on_demand() raises:
+    var rt = Runtime(WithRows())
+    assert_equal(rt.app.row(7, 999), "list 7 row 999")
+    var plain = Runtime(Counter())
+    assert_equal(plain.app.row(1, 2), "")  # the default
+
+
 def main() raises:
     test_builders_make_a_flat_tree()
     test_components_record_their_values()
@@ -249,4 +318,7 @@ def main() raises:
     test_image_holds_pixels_and_patches_when_they_change()
     test_hint_submit_and_scroll_size_changes_rebuild()
     test_toggle_label_change_is_a_text_patch()
+    test_goal4_components_record_their_values()
+    test_segment_and_date_changes_are_patches_but_alert_appearing_rebuilds()
+    test_apps_provide_rows_on_demand()
     print("ALL TESTS PASSED")

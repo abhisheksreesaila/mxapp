@@ -12,6 +12,7 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
+    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
@@ -106,18 +107,123 @@ def width(widget: Int, w: Int):
     external_call["gtk_widget_set_size_request", NoneType](widget, c_int(w), c_int(-1))
 
 
+comptime INDEX_KEY = "mojoui-index"
+
+
+def set_index(obj: Int, index: Int):
+    var key = String(INDEX_KEY)
+    external_call["g_object_set_data", NoneType](obj, key.as_c_string_span(), index + 1)
+
+
+def get_index(obj: Int) -> Int:
+    var key = String(INDEX_KEY)
+    return external_call["g_object_get_data", Int](obj, key.as_c_string_span()) - 1
+
+
+def count_up(name: String):
+    """A counter kept on the GApplication (safe to bump from re-entrant callbacks)."""
+    var key = name
+    var app = external_call["g_application_get_default", Int]()
+    var n = external_call["g_object_get_data", Int](app, key.as_c_string_span())
+    external_call["g_object_set_data", NoneType](app, key.as_c_string_span(), n + 1)
+
+
+def counter(name: String) -> Int:
+    var key = name
+    var app = external_call["g_application_get_default", Int]()
+    return external_call["g_object_get_data", Int](app, key.as_c_string_span())
+
+
+def gtk_icon(name: String) -> String:
+    """mojoui icon names → Adwaita symbolic icons."""
+    if name == "star": return "starred-symbolic"
+    if name == "trash": return "user-trash-symbolic"
+    if name == "gear": return "emblem-system-symbolic"
+    if name == "plus": return "list-add-symbolic"
+    if name == "check": return "object-select-symbolic"
+    if name == "calendar": return "x-office-calendar-symbolic"
+    if name == "search": return "system-search-symbolic"
+    if name == "heart": return "emblem-favorite-symbolic"
+    if name == "home": return "go-home-symbolic"
+    if name == "person": return "avatar-default-symbolic"
+    if name == "travel": return "airplane-mode-symbolic"
+    if name == "food": return "emoji-food-symbolic"
+    if name == "fun": return "emoji-activities-symbolic"
+    if name == "chart": return "x-office-spreadsheet-symbolic"
+    return "image-missing-symbolic"
+
+
+def mojo_icon(gtk_name: String) -> String:
+    for n in ["star", "trash", "gear", "plus", "check", "calendar", "search", "heart", "home", "person", "travel", "food", "fun", "chart"]:
+        if gtk_icon(n) == gtk_name:
+            return n
+    return "?"
+
+
+def parse_date(text: String) -> Tuple[Int, Int, Int]:
+    """ "YYYY-MM-DD" → (year, month, day); (2000, 1, 1) if it doesn't parse."""
+    try:
+        var parts = text.split("-")
+        if len(parts) == 3:
+            return (Int(String(parts[0])), Int(String(parts[1])), Int(String(parts[2])))
+    except:
+        pass
+    return (2000, 1, 1)
+
+
+def two(n: Int) -> String:
+    return ("0" if n < 10 else "") + String(n)
+
+
+def calendar_date(cal: Int) -> String:
+    var dt = external_call["gtk_calendar_get_date", Int](cal)
+    var y = Int(external_call["g_date_time_get_year", c_int](dt))
+    var m = Int(external_call["g_date_time_get_month", c_int](dt))
+    var d = Int(external_call["g_date_time_get_day_of_month", c_int](dt))
+    external_call["g_date_time_unref", NoneType](dt)
+    return String(y) + "-" + two(m) + "-" + two(d)
+
+
+def calendar_select(cal: Int, text: String):
+    var ymd = parse_date(text)
+    var dt = external_call["g_date_time_new_local", Int](c_int(ymd[0]), c_int(ymd[1]), c_int(ymd[2]), c_int(0), c_int(0), Float64(0))
+    external_call["gtk_calendar_select_day", NoneType](cal, dt)
+    external_call["g_date_time_unref", NoneType](dt)
+
+
+def buffer_text(buffer: Int) -> String:
+    """All the text in a GtkTextBuffer."""
+    var start = List[Int](length=16, fill=0)  # GtkTextIter is ~80 bytes; 128 is plenty
+    var end = List[Int](length=16, fill=0)
+    external_call["gtk_text_buffer_get_bounds", NoneType](buffer, Int(start.unsafe_ptr()), Int(end.unsafe_ptr()))
+    var raw = external_call["gtk_text_buffer_get_text", Int](buffer, Int(start.unsafe_ptr()), Int(end.unsafe_ptr()), c_int(0))
+    # Keep the iterator buffers alive until here: Mojo frees values right after their
+    # last use, and turning a pointer into an Int doesn't count as a use.
+    _ = len(start)
+    _ = len(end)
+    var text = c_str(raw)
+    external_call["g_free", NoneType](raw)
+    return text
+
+
+def escape_newlines(text: String) -> String:
+    return text.replace("\n", "\\n")
+
+
 # ---------- the host ----------
 
 struct GtkHost[A: App](Movable):
     var rt: Runtime[Self.A]
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
+    var dialog: Int  # the open alert dialog, if any
     var focus: Int  # text field to keep focused across the next rebuild (-1: none)
 
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
         self.window = 0
         self.widgets = List[Int]()
+        self.dialog = 0
         self.focus = -1
 
     def build(mut self, i: Int, self_addr: Int) -> Int:
@@ -188,6 +294,110 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_widget_set_halign", NoneType](w, c_int(ALIGN_CENTER))
             external_call["gtk_widget_set_valign", NoneType](w, c_int(ALIGN_CENTER))
             external_call["gtk_widget_set_size_request", NoneType](w, c_int(node.spacing), c_int(node.size))
+        elif node.kind == SEGMENTED or node.kind == TABS:
+            w = external_call["adw_toggle_group_new", Int]()  # GNOME's own segmented control
+            for j in range(len(node.options)):
+                var t = external_call["adw_toggle_new", Int]()
+                var label = node.options[j]
+                external_call["adw_toggle_set_label", NoneType](t, label.as_c_string_span())
+                external_call["adw_toggle_group_add", NoneType](w, t)
+            external_call["adw_toggle_group_set_active", NoneType](w, c_uint(node.value))
+            if node.kind == TABS:
+                add_class(w, "round")
+            connect3(w, "notify::active", on_toggle_group[Self.A], self_addr)
+        elif node.kind == RADIO:
+            w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(4))
+            var first = 0
+            for j in range(len(node.options)):
+                var label = node.options[j]
+                var b = external_call["gtk_check_button_new_with_label", Int](label.as_c_string_span())
+                if first == 0:
+                    first = b
+                else:
+                    external_call["gtk_check_button_set_group", NoneType](b, first)  # radio look
+                external_call["gtk_check_button_set_active", NoneType](b, c_int(1 if j == node.value else 0))
+                set_node(b, i)
+                set_index(b, j)
+                connect(b, "toggled", on_radio[Self.A], self_addr)
+                external_call["gtk_box_append", NoneType](w, b)
+        elif node.kind == TEXTAREA:
+            var view = external_call["gtk_text_view_new", Int]()
+            external_call["gtk_text_view_set_wrap_mode", NoneType](view, c_int(2))  # GTK_WRAP_WORD
+            external_call["gtk_text_view_set_left_margin", NoneType](view, c_int(8))
+            external_call["gtk_text_view_set_top_margin", NoneType](view, c_int(8))
+            var buffer = external_call["gtk_text_view_get_buffer", Int](view)
+            var t = node.text
+            external_call["gtk_text_buffer_set_text", NoneType](buffer, t.as_c_string_span(), c_int(-1))
+            set_node(buffer, i)
+            connect(buffer, "changed", on_text_changed[Self.A], self_addr)
+            self.widgets[i] = view
+            w = external_call["gtk_scrolled_window_new", Int]()
+            external_call["gtk_scrolled_window_set_child", NoneType](w, view)
+            add_class(w, "card")
+            external_call["gtk_widget_set_size_request", NoneType](w, c_int(320), c_int(node.size))
+        elif node.kind == ALERT:
+            var heading = node.text
+            var body = node.hint
+            w = external_call["adw_alert_dialog_new", Int](heading.as_c_string_span(), body.as_c_string_span())
+            for j in range(len(node.options)):
+                var id = String(j)
+                var label = node.options[j]
+                external_call["adw_alert_dialog_add_response", NoneType](w, id.as_c_string_span(), label.as_c_string_span())
+            set_node(w, i)
+            connect3(w, "response", on_alert_response[Self.A], self_addr)
+            _ = external_call["g_object_ref_sink", Int](w)
+            self.dialog = w
+            self.widgets[i] = w
+            w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))  # nothing in the layout itself
+        elif node.kind == NAVBAR:
+            w = external_call["gtk_box_new", Int](c_int(HORIZONTAL), c_int(8))
+            if node.msg != 0:
+                var icon = String("go-previous-symbolic")
+                var back = external_call["gtk_button_new_from_icon_name", Int](icon.as_c_string_span())
+                add_class(back, "flat")
+                set_node(back, i)
+                connect(back, "clicked", on_clicked[Self.A], self_addr)
+                external_call["gtk_box_append", NoneType](w, back)
+            var t = node.text
+            var title = external_call["gtk_label_new", Int](t.as_c_string_span())
+            add_class(title, "title-2")
+            external_call["gtk_box_append", NoneType](w, title)
+        elif node.kind == DATE:
+            w = external_call["gtk_calendar_new", Int]()
+            calendar_select(w, node.text)
+            connect(w, "day-selected", on_day_selected[Self.A], self_addr)
+        elif node.kind == ICON:
+            var name = gtk_icon(node.text)
+            w = external_call["gtk_image_new_from_icon_name", Int](name.as_c_string_span())
+            external_call["gtk_image_set_pixel_size", NoneType](w, c_int(node.size))
+        elif node.kind == GRID:
+            w = external_call["gtk_grid_new", Int]()
+            external_call["gtk_grid_set_row_spacing", NoneType](w, c_uint(node.spacing))
+            external_call["gtk_grid_set_column_spacing", NoneType](w, c_uint(node.spacing))
+            external_call["gtk_grid_set_column_homogeneous", NoneType](w, c_int(1))
+            for k in range(len(node.children)):
+                var child = self.build(node.children[k], self_addr)
+                external_call["gtk_grid_attach", NoneType](w, child, c_int(k % node.value), c_int(k // node.value), c_int(1), c_int(1))
+        elif node.kind == LAZYLIST:
+            var model = external_call["gtk_string_list_new", Int](0)
+            var empty = String("")
+            for _ in range(node.value):  # placeholders only; row text is asked for when a row is shown
+                external_call["gtk_string_list_append", NoneType](model, empty.as_c_string_span())
+            var selection = external_call["gtk_no_selection_new", Int](model)
+            var factory = external_call["gtk_signal_list_item_factory_new", Int]()
+            set_node(factory, i)
+            connect3(factory, "setup", on_row_setup[Self.A], self_addr)
+            connect3(factory, "bind", on_row_bind[Self.A], self_addr)
+            var list = external_call["gtk_list_view_new", Int](selection, factory)
+            external_call["gtk_list_view_set_single_click_activate", NoneType](list, c_int(1))
+            add_class(list, "boxed-list")
+            set_node(list, i)
+            connect3(list, "activate", on_row_activate[Self.A], self_addr)
+            self.widgets[i] = list
+            w = external_call["gtk_scrolled_window_new", Int]()
+            external_call["gtk_scrolled_window_set_child", NoneType](w, list)
+            external_call["gtk_scrolled_window_set_policy", NoneType](w, c_int(2), c_int(1))
+            external_call["gtk_widget_set_size_request", NoneType](w, c_int(340), c_int(node.size))
         elif node.kind == SPACER:
             w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
             external_call["gtk_widget_set_hexpand", NoneType](w, c_int(1))
@@ -213,12 +423,17 @@ struct GtkHost[A: App](Movable):
                     external_call["gtk_widget_set_valign", NoneType](child, c_int(ALIGN_CENTER))
                 external_call["gtk_box_append", NoneType](w, child)
         set_node(w, i)
-        self.widgets[i] = w
+        if self.widgets[i] == 0:  # (some branches already stored an inner control)
+            self.widgets[i] = w
         return w
 
     def show(mut self, self_addr: Int):
         """(Re)builds the window's content from rt.shown."""
         set_busy(True)
+        if self.dialog != 0:  # the previous screen's alert goes with it
+            _ = external_call["adw_dialog_force_close", c_int](self.dialog)
+            external_call["g_object_unref", NoneType](self.dialog)
+            self.dialog = 0
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
         var root = self.build(0, self_addr)
         external_call["gtk_widget_set_valign", NoneType](root, c_int(ALIGN_CENTER))
@@ -227,6 +442,8 @@ struct GtkHost[A: App](Movable):
         external_call["gtk_widget_set_margin_start", NoneType](root, c_int(32))
         external_call["gtk_widget_set_margin_end", NoneType](root, c_int(32))
         external_call["gtk_window_set_child", NoneType](self.window, root)
+        if self.dialog != 0 and getenv("MOJOUI_TEST") == "":  # tests drive the dialog without showing it
+            external_call["adw_dialog_present", NoneType](self.dialog, self.window)
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
         self.focus = -1
@@ -252,6 +469,37 @@ struct GtkHost[A: App](Movable):
                 elif kind == FIELD:
                     if c_str(external_call["gtk_editable_get_text", Int](w)) != p.text:  # don't fight the typist
                         external_call["gtk_editable_set_text", NoneType](w, t.as_c_string_span())
+            elif p.op == SET_TEXT and kind == TEXTAREA:
+                pass  # (handled below)
+            if p.op == SET_TEXT and kind == TEXTAREA:
+                var buffer = external_call["gtk_text_view_get_buffer", Int](w)
+                if buffer_text(buffer) != p.text:  # don't fight the typist
+                    var t = p.text
+                    external_call["gtk_text_buffer_set_text", NoneType](buffer, t.as_c_string_span(), c_int(-1))
+            elif p.op == SET_TEXT and kind == DATE:
+                if calendar_date(w) != p.text:
+                    calendar_select(w, p.text)
+            elif p.op == SET_TEXT and kind == NAVBAR:
+                var title = external_call["gtk_widget_get_last_child", Int](w)
+                var t = p.text
+                external_call["gtk_label_set_text", NoneType](title, t.as_c_string_span())
+            elif p.op == SET_VALUE and (kind == SEGMENTED or kind == TABS):
+                external_call["adw_toggle_group_set_active", NoneType](w, c_uint(p.number))
+            elif p.op == SET_VALUE and kind == RADIO:
+                var b = external_call["gtk_widget_get_first_child", Int](w)
+                var j = 0
+                while b != 0:
+                    external_call["gtk_check_button_set_active", NoneType](b, c_int(1 if j == p.number else 0))
+                    b = external_call["gtk_widget_get_next_sibling", Int](b)
+                    j += 1
+            elif p.op == SET_VALUE and kind == LAZYLIST:
+                var model = external_call["gtk_string_list_new", Int](0)
+                var empty = String("")
+                for _ in range(p.number):
+                    external_call["gtk_string_list_append", NoneType](model, empty.as_c_string_span())
+                var selection = external_call["gtk_list_view_get_model", Int](w)
+                external_call["gtk_no_selection_set_model", NoneType](selection, model)
+                external_call["g_object_unref", NoneType](model)
             elif p.op == SET_VALUE:
                 if kind == TOGGLE:
                     external_call["gtk_check_button_set_active", NoneType](w, c_int(p.number))
@@ -333,6 +581,81 @@ def on_selected[A: App](dropdown: Int, pspec: Int, host_addr: Int) abi("C"):
     if index < len(host[].rt.shown.nodes[node].options):
         text = host[].rt.shown.nodes[node].options[index]
     host[].send(node, False, text, index, host_addr)
+
+
+def on_toggle_group[A: App](group: Int, pspec: Int, host_addr: Int) abi("C"):
+    if busy():
+        return
+    var host = host_at[A](host_addr)
+    var node = get_node(group)
+    var index = Int(external_call["adw_toggle_group_get_active", c_uint](group))
+    ref opts = host[].rt.shown.nodes[node].options
+    if index < 0 or index >= len(opts):
+        return
+    host[].send(node, False, opts[index], index, host_addr)
+
+
+def on_radio[A: App](button: Int, host_addr: Int) abi("C"):
+    if busy() or external_call["gtk_check_button_get_active", c_int](button) == 0:
+        return  # (the button being switched off also fires)
+    var host = host_at[A](host_addr)
+    var node = get_node(button)
+    var index = get_index(button)
+    host[].send(node, False, host[].rt.shown.nodes[node].options[index], index, host_addr)
+
+
+def on_text_changed[A: App](buffer: Int, host_addr: Int) abi("C"):
+    if busy():
+        return
+    host_at[A](host_addr)[].send(get_node(buffer), False, buffer_text(buffer), 0, host_addr)
+
+
+def on_alert_response[A: App](dialog: Int, response: Int, host_addr: Int) abi("C"):
+    if busy():
+        return
+    var host = host_at[A](host_addr)
+    var node = get_node(dialog)
+    var index = 0
+    try:
+        index = Int(c_str(response))
+    except:
+        return
+    host[].send(node, False, host[].rt.shown.nodes[node].options[index], index, host_addr)
+
+
+def on_day_selected[A: App](cal: Int, host_addr: Int) abi("C"):
+    if busy():
+        return
+    host_at[A](host_addr)[].send(get_node(cal), False, calendar_date(cal), 0, host_addr)
+
+
+def on_row_setup[A: App](factory: Int, item: Int, host_addr: Int) abi("C"):
+    var empty = String("")
+    var label = external_call["gtk_label_new", Int](empty.as_c_string_span())
+    external_call["gtk_label_set_xalign", NoneType](label, Float32(0))
+    external_call["gtk_widget_set_margin_start", NoneType](label, c_int(12))
+    external_call["gtk_widget_set_margin_top", NoneType](label, c_int(10))
+    external_call["gtk_widget_set_margin_bottom", NoneType](label, c_int(10))
+    external_call["gtk_list_item_set_child", NoneType](item, label)
+    count_up("mojoui-rows-built")  # a row widget was made (GTK reuses them while scrolling)
+
+
+def on_row_bind[A: App](factory: Int, item: Int, host_addr: Int) abi("C"):
+    var host = host_at[A](host_addr)
+    var node = get_node(factory)
+    if node < 0 or node >= len(host[].rt.shown.nodes):
+        return
+    var position = Int(external_call["gtk_list_item_get_position", c_uint](item))
+    var text = host[].rt.app.row(host[].rt.shown.nodes[node].msg2, position)  # asked for on demand
+    var label = external_call["gtk_list_item_get_child", Int](item)
+    external_call["gtk_label_set_text", NoneType](label, text.as_c_string_span())
+
+
+def on_row_activate[A: App](list: Int, position: Int, host_addr: Int) abi("C"):
+    if busy():
+        return
+    # `position` is a C guint: only the low 32 bits of the register are defined.
+    host_at[A](host_addr)[].send(get_node(list), False, "", position & 0xFFFFFFFF, host_addr)
 
 
 def on_slid[A: App](scale: Int, host_addr: Int) abi("C"):
@@ -426,6 +749,83 @@ def run_step[A: App](host_addr: Int, step: String):
             print("TEST: no slider", kv[0])
             return
         external_call["gtk_range_set_value", NoneType](host[].widgets[i], Float64(to_int(kv[1])))
+    elif verb == "segment" or verb == "tab" or verb == "radio":
+        var kv = split_at(rest, "=")
+        var kind = SEGMENTED if verb == "segment" else (TABS if verb == "tab" else RADIO)
+        var i = find(host[], kind, "", to_int(kv[0]))
+        if i < 0:
+            print("TEST: no", verb, kv[0])
+            return
+        var index = -1
+        ref opts = host[].rt.shown.nodes[i].options
+        for j in range(len(opts)):
+            if opts[j] == kv[1]:
+                index = j
+        if index < 0:
+            print("TEST: no option", kv[1])
+            return
+        if kind == RADIO:
+            var b = external_call["gtk_widget_get_first_child", Int](host[].widgets[i])
+            for _ in range(index):
+                b = external_call["gtk_widget_get_next_sibling", Int](b)
+            external_call["gtk_check_button_set_active", NoneType](b, c_int(1))
+        else:
+            external_call["adw_toggle_group_set_active", NoneType](host[].widgets[i], c_uint(index))
+    elif verb == "textarea":
+        var kv = split_at(rest, "=")
+        var i = find(host[], TEXTAREA, "", to_int(kv[0]))
+        if i < 0:
+            print("TEST: no textarea", kv[0])
+            return
+        var t = kv[1].replace("\\n", "\n")
+        var buffer = external_call["gtk_text_view_get_buffer", Int](host[].widgets[i])
+        external_call["gtk_text_buffer_set_text", NoneType](buffer, t.as_c_string_span(), c_int(-1))
+    elif verb == "alert":
+        var i = find(host[], ALERT, "", 0)
+        if i < 0:
+            print("TEST: no alert")
+            return
+        var index = -1
+        ref opts = host[].rt.shown.nodes[i].options
+        for j in range(len(opts)):
+            if opts[j] == rest:
+                index = j
+        if index < 0:
+            print("TEST: no alert button", rest)
+            return
+        var signal = String("response")
+        var id = String(index)
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], signal.as_c_string_span(), id.as_c_string_span())
+    elif verb == "back":
+        var i = find(host[], NAVBAR, "", 0)
+        if i < 0:
+            print("TEST: no navbar")
+            return
+        var back = external_call["gtk_widget_get_first_child", Int](host[].widgets[i])
+        var s = String("clicked")
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](back, s.as_c_string_span())
+    elif verb == "date":
+        var kv = split_at(rest, "=")
+        var i = find(host[], DATE, "", to_int(kv[0]))
+        if i < 0:
+            print("TEST: no date picker", kv[0])
+            return
+        calendar_select(host[].widgets[i], kv[1])
+        if calendar_date(host[].widgets[i]) == kv[1] and host[].rt.shown.nodes[i].text != kv[1]:
+            var s = String("day-selected")  # make sure the selection is reported like a click
+            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span())
+    elif verb == "scroll" or verb == "row":
+        var kv = split_at(rest, "=")
+        var i = find(host[], LAZYLIST, "", to_int(kv[0]))
+        if i < 0:
+            print("TEST: no list", kv[0])
+            return
+        var position = to_int(kv[1])
+        if verb == "scroll":
+            external_call["gtk_list_view_scroll_to", NoneType](host[].widgets[i], c_uint(position), c_int(0), 0)
+        else:
+            var s = String("activate")
+            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span(), c_uint(position))
     else:
         print("TEST: unknown step", step)
 
@@ -454,6 +854,43 @@ def report[A: App](host_addr: Int):
             print("SLIDER: " + String(Int(external_call["gtk_range_get_value", Float64](w) + 0.5)))
         elif n.kind == PROGRESS:
             print("PROGRESS: " + String(Int(external_call["gtk_progress_bar_get_fraction", Float64](w) * 100.0 + 0.5)))
+        elif n.kind == SEGMENTED or n.kind == TABS:
+            var index = external_call["adw_toggle_group_get_active", c_uint](w)
+            var t = external_call["adw_toggle_group_get_toggle", Int](w, index)
+            print(("SEGMENTED: " if n.kind == SEGMENTED else "TABS: ") + c_str(external_call["adw_toggle_get_label", Int](t)))
+        elif n.kind == RADIO:
+            var b = external_call["gtk_widget_get_first_child", Int](w)
+            while b != 0:
+                if external_call["gtk_check_button_get_active", c_int](b) != 0:
+                    print("RADIO: " + c_str(external_call["gtk_check_button_get_label", Int](b)))
+                b = external_call["gtk_widget_get_next_sibling", Int](b)
+        elif n.kind == TEXTAREA:
+            print("TEXTAREA: " + escape_newlines(buffer_text(external_call["gtk_text_view_get_buffer", Int](w))))
+        elif n.kind == ALERT:
+            var line = c_str(external_call["adw_alert_dialog_get_heading", Int](w)) + " | " + c_str(external_call["adw_alert_dialog_get_body", Int](w)) + " | "
+            for j in range(len(n.options)):
+                var id = String(j)
+                line += (", " if j > 0 else "") + c_str(external_call["adw_alert_dialog_get_response_label", Int](w, id.as_c_string_span()))
+            print("ALERT: " + line)
+        elif n.kind == NAVBAR:
+            var title = external_call["gtk_widget_get_last_child", Int](w)
+            var has_back = external_call["gtk_widget_get_first_child", Int](w) != title
+            print("NAV: " + c_str(external_call["gtk_label_get_text", Int](title)) + (" (back)" if has_back else ""))
+        elif n.kind == DATE:
+            print("DATE: " + calendar_date(w))
+        elif n.kind == ICON:
+            print("ICON: " + mojo_icon(c_str(external_call["gtk_image_get_icon_name", Int](w))))
+        elif n.kind == GRID:
+            var count = 0
+            var c = external_call["gtk_widget_get_first_child", Int](w)
+            while c != 0:
+                count += 1
+                c = external_call["gtk_widget_get_next_sibling", Int](c)
+            print("GRID: " + String(n.value) + " columns, " + String(count) + " items")
+        elif n.kind == LAZYLIST:
+            var selection = external_call["gtk_list_view_get_model", Int](w)
+            print("LIST: " + String(external_call["g_list_model_get_n_items", c_uint](selection)) + " rows")
+            print("LISTBUILT: " + String(counter("mojoui-rows-built")))
         elif n.kind == IMAGE:
             var paintable = external_call["gtk_picture_get_paintable", Int](w)
             print("IMAGE: " + String(external_call["gdk_texture_get_width", c_int](paintable)) + "x" + String(external_call["gdk_texture_get_height", c_int](paintable)))
