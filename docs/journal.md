@@ -49,3 +49,14 @@ Newest last. What was tried, what happened, dead ends.
 - Review (goal 3, round 1): NEEDS WORK — web lost a task on instant Return (reproduced by reviewer), CDN JS, .sesskey committed, checker weaker than goal 2's, etc. All fixed (D-34, D-35); new `enter:` step reproduces the race; harsher todo run identical on GTK and web.
 - htmx inherits hx-vals from ancestors: the field's input inherited the form's second=1 → typing = submit. M6 still passed because the shape-version check rejected the duplicate; added a draft-only final step so M6 catches it too.
 - GPU memory per web tab measured with nvidia-smi: 512 MiB at 1, 2, 5 and 10 sessions → MAX shares one CUDA context per process; no per-tab cost.
+
+## Goal 4: components real apps need + Pocket Expenses (2026-10-15)
+- Mojo traits support default method bodies → `App.row(list_id, index)` with a default; apps without lists don't change.
+- GTK: AdwToggleGroup (libadwaita 1.9) for segmented + tabs, AdwAlertDialog, GtkCalendar, GtkListView with a signal factory (row text asked for in `bind`). 10,000-row list built 205 row widgets.
+- Bug: GtkTextIter buffers freed before GTK wrote them (Mojo frees after last use; Int(ptr) isn't a use) → keep alive explicitly. Logged in docs/lessons.md.
+- Bug: `gtk_label_new(0)` vs `gtk_label_new(string)` → Mojo "conflicting signature" for one C symbol.
+- Web: JS regex with `\n` inside a Python string became a real newline; switched to char codes.
+- Web bug: list rows inherited the list's hx-target, failed to find it, and htmx silently sent nothing. Second inheritance bug → disableInheritance globally (D-42).
+- Web bug (caught by M1): all radio groups shared name="number" → one browser group; each group now named, choice sent in hx-vals (D-43).
+- AppKit/UIKit: NSSegmentedControl/UISegmentedControl, NSTableView/UITableView data sources (methods added to our runtime classes), NSAlert runModal on the next run-loop turn, UIAlertController actions with a data-carrying block (tag after the block header), SF Symbols, NSDatePicker/UIDatePicker via NSDateComponents.
+- Pocket Expenses: GTK and Chromium identical over 12 steps; checker 11/11.

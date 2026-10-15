@@ -169,8 +169,11 @@ def render(s, i, sid):
                    height=str(n["size"]), id=nid, cls="image", data_kind="image", alt="")
     if kind in (SEGMENTED, TABS, RADIO):
         group = f"g{s.shape}-{i}"
-        items = [Label(Input(type="radio", name="number", value=str(j), checked=(j == n["value"]), hx_trigger="change",
-                             **common), Span(o)) for j, o in enumerate(n["options"])]
+        # Each group needs its own name (browsers link all same-named radios on a page);
+        # the chosen index travels in hx-vals instead.
+        items = [Label(Input(type="radio", name=group, value=str(j), checked=(j == n["value"]), hx_trigger="change",
+                             **dict(common, hx_vals=json.dumps({"n": i, "number": j}))), Span(o))
+                 for j, o in enumerate(n["options"])]
         cls, kind_name = {SEGMENTED: ("segmented", "segmented"), TABS: ("tabs", "tabs"), RADIO: ("radio", "radio")}[kind]
         return Div(*items, cls=cls, id=nid, role="tablist" if kind == TABS else "radiogroup", data_kind=kind_name,
                    data_group=group)

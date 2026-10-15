@@ -50,3 +50,4 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 ## Goal 4: components real apps need, then a fancier app
 - D-41 · froze last night's Apple builds in a git worktree (../mojo-ui-apple-test) for the owner's testing · the checker deletes and rebuilds build/, which would pull the rug out from under them · yes
 - D-42 · htmx attribute inheritance switched off globally (htmx-config disableInheritance) after a second inheritance bug (list rows inherited the list's hx-target and silently sent nothing) · Encode Lessons in Structure: the same mistake can't recur · yes
+- D-43 · web radio groups get unique names (choice in hx-vals): same-named radios across groups are one group to the browser, so picking a size unticked the tab and period (caught by M1) · yes
