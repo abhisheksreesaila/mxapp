@@ -4,6 +4,18 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-15 · Experiment 5: components real apps need + Pocket Expenses (autopilot)
+
+**Goal (owner's words):** "continue with 2–4, 8, then … until 9 … and build a fancier app for all platforms." Contract: `GOAL.md`; report: `docs/report.md`.
+
+**What worked (`scripts/check` 11/11):** Segmented, Radio, TextArea, Alert, Tabs, NavBar, DatePicker, Icon, Grid and LazyList, on GTK, web, AppKit and UIKit (Apple ones build and sign; not run on hardware). Kitchen-sink and Pocket Expenses examples are identical on GTK and in Chromium. A 10,000-row list keeps 30 rows in the web page.
+
+**What broke and how it was fixed:** Mojo frees buffers after their last use (GtkTextIter); htmx attribute inheritance (twice); same-named radio groups; GTK `items_changed` refresh ignored; GTK alert Escape; web alert keyboard. See `docs/journal.md`, `docs/lessons.md`.
+
+**Next:** the owner's Apple results; bottom tab bar and push navigation on iPhone; controls inside list rows.
+
+---
+
 ## 2026-10-15 · Experiment 4: web, components, a real todo, GPU, Android (autopilot, overnight)
 
 **Goal (owner's words):** "render the web… build all the components… a todo list… the same declarative code in Mojo runs on all of them… try Android… an app that's great on GPUs." Contract: `GOAL.md`; report: `docs/report.md`.

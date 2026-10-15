@@ -15,7 +15,18 @@
 **Pocket Expenses** (`examples/expenses/app.mojo`) uses all of them. It runs on Linux and the web, where the checker drives it on both and requires identical results, and builds and signs for Mac and iPhone.
 
 ```
-CHECK_OUTPUT
+$ scripts/check
+PASS  M1  Segmented + Radio: chosen on GTK and web, echoed, identical
+PASS  M2  TextArea: two lines typed and echoed on GTK and web, identical
+PASS  M3  Alert shown on screen while in the view; Cancel, Delete and Escape answered on GTK and web, identical
+PASS  M4  Tabs switch sections; NavBar opens a screen and Back returns, on GTK and web, identical
+PASS  M5  DatePicker set on GTK and web; event carried 2026-12-25; identical
+PASS  M6  Icons: star, trash, gear shown with each platform's own icons
+PASS  M7  Grid: 6 items in rows of 3 on GTK and web
+PASS  M8  10,000-row list: scrolled to and tapped row 7500 on GTK and web; GTK made 410 row widgets (its recycling cache), the web page held 30 rows
+PASS  M9  Expenses app: add → history → detail → confirm delete → insights; GTK and web identical; Mac + iPhone build
+PASS  M10  goal 3's M1–M8 still pass; kitchen builds for Mac + iPhone
+PASS  M11  README covers every component and the expenses app; all paths exist
 ```
 
 Screenshots: `docs/img/expenses-{Add,History,Insights}-{linux,web}.png`, `docs/img/kitchen-web.png`.
@@ -32,6 +43,14 @@ Your Apple test copy of last night's build is untouched in `../mojo-ui-apple-tes
 ## 3 decisions worth your second look
 1. **Navigation and modals stay declarative (GOAL assumptions).** An `Alert` shows while it's in `view()`. The current tab or screen is app state, and `NavBar` is just a title bar with Back. The pro: one simple model on every platform. The con: no native push/pop animation and no swipe-back on iPhone yet, and tabs are a segmented switcher at the top, not a bottom tab bar.
 2. **D-42, htmx attribute inheritance is switched off for the web host.** It caused two silent bugs in two days, so the rule is now built in and can't recur.
-3. **Lazy lists ask the app for row text (`App.row`).** It's simple and fast: GTK built 205 row widgets for 10,000 rows. The limit for now: rows are text plus one tap, with no buttons inside rows.
+3. **Lazy lists ask the app for row text (`App.row`).** It's simple, and only rows on screen exist: the web page holds 30 of 10,000. Hosts ask for the visible rows again after every update, so edits show; that refresh is proven on both. The limit for now: rows are text plus one tap, with no buttons inside rows. On GTK each refresh creates new row widgets, cheap at about 200 but worth knowing.
 
 **Next:** your Apple results. Then a bottom tab bar and real push navigation on iPhone, and controls inside list rows.
+
+## Found and fixed along the way (two review rounds)
+- **Escape on a GTK alert** left the app stuck. Escape now answers like Cancel on every host.
+- **The web alert** blocked clicks but not the keyboard. It now sits above an inert page.
+- **Web radio groups** shared one name, so picking a size unticked the tab.
+- **Web list rows** inherited the wrong htmx target and silently did nothing. htmx inheritance is now off.
+- **GTK row refresh** was a no-op. The reviewer proved it with a probe; it now uses a fresh model, with a check on both hosts.
+- **Amount parsing** could overflow and accepted commas anywhere. It now has unit tests.

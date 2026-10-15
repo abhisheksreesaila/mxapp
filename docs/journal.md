@@ -60,3 +60,4 @@ Newest last. What was tried, what happened, dead ends.
 - Web bug (caught by M1): all radio groups shared name="number" → one browser group; each group now named, choice sent in hx-vals (D-43).
 - AppKit/UIKit: NSSegmentedControl/UISegmentedControl, NSTableView/UITableView data sources (methods added to our runtime classes), NSAlert runModal on the next run-loop turn, UIAlertController actions with a data-carrying block (tag after the block header), SF Symbols, NSDatePicker/UIDatePicker via NSDateComponents.
 - Pocket Expenses: GTK and Chromium identical over 12 steps; checker 11/11.
+- Review round 2 (goal 4): the GTK items_changed refresh was a no-op (reviewer probe); fresh model + Bump-row proof on both hosts. Web alert → overlay + inert page. LISTROW needed unbind tracking tied to the item (old row 0 unbinds after the new one binds).
