@@ -1,4 +1,4 @@
-"""Milestone checker for GOAL.md (goal 4; goal 3's checks run as M10). Rebuilds from scratch, prints PASS/FAIL per milestone.
+"""Milestone checker for GOAL.md (goal 5: layout; goal 4's checks run as M10, goal 3's inside them). Rebuilds from scratch, prints PASS/FAIL per milestone.
 
 Run: scripts/check   (earlier goals' checkers: docs/goals/0N-check.py)
 
@@ -23,8 +23,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 sys.path.insert(0, str(ROOT / "scripts"))
-EXAMPLES = ["hello", "gallery", "todo", "gpu", "kitchen", "expenses"]
-NATIVE_APPLE = ["hello", "gallery", "todo", "kitchen", "expenses"]
+EXAMPLES = ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout"]
+NATIVE_APPLE = ["hello", "gallery", "todo", "kitchen", "expenses", "layout"]
 
 ALLOWED = {
     # libobjc
@@ -360,17 +360,17 @@ def kitchen_has(expected, steps=KITCHEN_STEPS):
     return not problems, "; ".join(problems)
 
 
-def m1():
+def g4_m1():
     ok, msg = kitchen_has(["SEGMENTED: Week", "RADIO: Large", "LABEL: Period: Week · Size: Large"], "segment:0=Week;radio:0=Large")
     return ok, msg or "Segmented + Radio: chosen on GTK and web, echoed, identical"
 
 
-def m2():
+def g4_m2():
     ok, msg = kitchen_has(["TEXTAREA: Line one\\nLine two", "LABEL: 2 lines, 17 characters"], "tab:0=Text;textarea:0=Line one\\nLine two")
     return ok, msg or "TextArea: two lines typed and echoed on GTK and web, identical"
 
 
-def m3():
+def g4_m3():
     ok, msg = kitchen_has(["ALERT: Delete everything? | This can't be undone. | Cancel, Delete"], "tab:0=More;tap:Delete everything")
     if not ok:
         return ok, msg
@@ -389,7 +389,7 @@ def m3():
     return True, "Alert shown on screen while in the view; Cancel, Delete and Escape answered on GTK and web, identical"
 
 
-def m4():
+def g4_m4():
     ok, msg = kitchen_has(["NAV: Details (back)", "LABEL: This is the details screen."], "tap:Open details")
     if not ok:
         return ok, msg
@@ -397,22 +397,22 @@ def m4():
     return ok, msg or "Tabs switch sections; NavBar opens a screen and Back returns, on GTK and web, identical"
 
 
-def m5():
+def g4_m5():
     ok, msg = kitchen_has(["DATE: 2026-12-25", "LABEL: Date: 2026-12-25"], "tab:0=More;date:0=2026-12-25")
     return ok, msg or "DatePicker set on GTK and web; event carried 2026-12-25; identical"
 
 
-def m6():
+def g4_m6():
     ok, msg = kitchen_has(["ICON: star", "ICON: trash", "ICON: gear"], "tab:0=More")
     return ok, msg or "Icons: star, trash, gear shown with each platform's own icons"
 
 
-def m7():
+def g4_m7():
     ok, msg = kitchen_has(["GRID: 3 columns, 6 items", "LABEL: Cell 6"], "tab:0=More")
     return ok, msg or "Grid: 6 items in rows of 3 on GTK and web"
 
 
-def m8():
+def g4_m8():
     problems, gs, _, gout = both("kitchen", "tab:0=List;scroll:0=7500;row:0=7500")
     if "LIST: 10000 rows" not in gs or "LABEL: Tapped row 7500" not in gs:
         problems.append(f"list state wrong: {gs}")
@@ -435,7 +435,7 @@ EXPENSES_STEPS = ("type:Amount=12.50;segment:0=Travel;date:0=2026-10-01;textarea
                   "tab:0=History;row:0=0;tap:Delete;alert:Cancel;tap:Delete;alert:Delete;tab:0=Insights")
 
 
-def m9():
+def g4_m9():
     t = run(["pixi", "run", "mojo", "run", "-I", "examples/expenses", "-I", ".", "tests/test_expenses.mojo"])
     if "EXPENSES TESTS PASSED" not in t.stdout:
         return False, f"expenses unit tests: {(t.stdout + t.stderr)[-300:]}"
@@ -454,10 +454,10 @@ def m9():
     return not problems, "; ".join(problems) or "Expenses app: add → history → detail → confirm delete → insights; GTK and web identical; Mac + iPhone build"
 
 
-def m10():
+def g4_m10():
     problems = []
     for name, fn in [("M1", g3_m1), ("M2", g3_m2), ("M3", g3_m3), ("M4", g3_m4), ("M5", g3_m5), ("M6", g3_m6),
-                     ("M7", g3_m7), ("M8", g3_m8)]:
+                     ("M7", g3_m7), ("M8", g3_m8)]:  # (goal 3, run from goal 4's M10)
         ok, msg = fn()
         if not ok:
             problems.append(f"goal 3 {name}: {msg[:200]}")
@@ -468,7 +468,7 @@ def m10():
     return not problems, "; ".join(problems) or "goal 3's M1–M8 still pass; kitchen builds for Mac + iPhone"
 
 
-def m11():
+def g4_m11():
     problems = []
     readme = (ROOT / "README.md").read_text()
     for c in ("Segmented", "Radio", "TextArea", "Alert", "Tabs", "NavBar", "DatePicker", "Icon", "Grid", "LazyList",
@@ -479,6 +479,184 @@ def m11():
     if not ok:
         problems.append(msg)
     return not problems, "; ".join(problems) or "README covers every component and the expenses app; all paths exist"
+
+
+# ---------- goal 5: layout ----------
+
+TOL = 1.5  # points
+
+
+def boxes(out):
+    """{tag: (x, y, w, h)} from a host's "BOX: tag x y w h" lines."""
+    found = {}
+    for tag, x, y, w, h in re.findall(r"^BOX: (\S+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+)$", out, re.M):
+        found[tag] = tuple(float(v) for v in (x, y, w, h))
+    return found
+
+
+_layout_cache = {}
+
+
+def layout_boxes():
+    """Boxes of examples/layout on GTK (window shown) and in Chromium."""
+    if not _layout_cache:
+        with tempfile.TemporaryDirectory() as tmp:
+            r1, gout = gtk("layout", "tab:0=Boxes", shot=str(Path(tmp) / "l.png"))
+        r2, wout = web("layout", "tab:0=Boxes")
+        _layout_cache["gtk"] = (r1 is not None, boxes(gout) if r1 else gout[-400:])
+        _layout_cache["web"] = (r2 is not None, boxes(wout) if r2 else wout[-400:])
+    return _layout_cache
+
+
+def relations(name, rules):
+    """Checks each (description, function(b) -> (actual, expected) or bool) on both hosts."""
+    problems = []
+    for host, (ok, b) in layout_boxes().items():
+        if not ok:
+            problems.append(f"{host} run failed: {b}")
+            continue
+        for desc, rule in rules:
+            try:
+                got = rule(b)
+            except KeyError as e:
+                problems.append(f"{host}: no box {e}")
+                continue
+            if isinstance(got, tuple):
+                actual, expected = got
+                if abs(actual - expected) > TOL:
+                    problems.append(f"{host}: {desc}: {actual:.1f} vs {expected:.1f}")
+            elif not got:
+                problems.append(f"{host}: {desc}")
+    return not problems, "; ".join(problems) or name
+
+
+def X(b, t): return b[t][0]
+def Y(b, t): return b[t][1]
+def W(b, t): return b[t][2]
+def H(b, t): return b[t][3]
+def R(b, t): return b[t][0] + b[t][2]
+def CX(b, t): return b[t][0] + b[t][2] / 2
+
+
+def m1():
+    r = run(["pixi", "run", "mojo", "run", "-I", ".", "tests/test_mojoui.mojo"])
+    view = (ROOT / "mojoui/view.mojo").read_text()
+    missing = [m for m in ("padding", "width", "height", "min_width", "max_width", "grow", "fill", "align", "justify", "tag")
+               if f"def {m}(" not in view]
+    ok = "ALL TESTS PASSED" in r.stdout and not missing and "test_layout_" in (ROOT / "tests/test_mojoui.mojo").read_text()
+    return ok, "layout settings on every view; core tests pass" if ok else f"missing {missing}: {(r.stdout + r.stderr)[-300:]}"
+
+
+def m2():
+    return relations("padding 16: the child sits 16 in from the box's left and top, on GTK + web", [
+        ("child x - box x = 16", lambda b: (X(b, "pad_child") - X(b, "pad_box"), 16)),
+        ("child y - box y = 16", lambda b: (Y(b, "pad_child") - Y(b, "pad_box"), 16)),
+        ("box width = 300", lambda b: (W(b, "pad_box"), 300)),
+    ])
+
+
+def m3():
+    return relations("fixed 200×60 exact; max width 200 and min width 150 respected, on GTK + web", [
+        ("fixed width", lambda b: (W(b, "fixed"), 200)),
+        ("fixed height", lambda b: (H(b, "fixed"), 60)),
+        ("max width ≤ 200", lambda b: W(b, "maxw") <= 200 + TOL),
+        ("max width text wraps (taller than one line)", lambda b: H(b, "maxw") > 30),
+        ("min width ≥ 150", lambda b: W(b, "minw") >= 150 - TOL),
+    ])
+
+
+def m4():
+    return relations("a filled child spans its 320-wide box minus 10+10 padding, on GTK + web", [
+        ("box width", lambda b: (W(b, "fill_box"), 320)),
+        ("child width", lambda b: (W(b, "fill_child"), 300)),
+        ("child x", lambda b: (X(b, "fill_child") - X(b, "fill_box"), 10)),
+    ])
+
+
+def m5():
+    return relations("a growing child takes the rest of its 320-wide row, on GTK + web", [
+        ("label starts the row", lambda b: (X(b, "g_a"), X(b, "grow_row"))),
+        ("grower ends the row", lambda b: (R(b, "g_b"), R(b, "grow_row"))),
+        ("gap of 8 between", lambda b: (X(b, "g_b") - R(b, "g_a"), 8)),
+    ])
+
+
+def m6():
+    return relations("justify START/CENTER/END/BETWEEN in 320-wide rows, on GTK + web", [
+        ("start: L at the left", lambda b: (X(b, "js_l"), X(b, "js_row"))),
+        ("start: R right after L", lambda b: (X(b, "js_r") - R(b, "js_l"), 8)),
+        ("center: equal space both sides", lambda b: (X(b, "jc_l") - X(b, "jc_row"), R(b, "jc_row") - R(b, "jc_r"))),
+        ("center: not at the left", lambda b: X(b, "jc_l") - X(b, "jc_row") > 20),
+        ("end: R at the right", lambda b: (R(b, "je_r"), R(b, "je_row"))),
+        ("end: L right before R", lambda b: (X(b, "je_r") - R(b, "je_l"), 8)),
+        ("between: L at the left", lambda b: (X(b, "jb_l"), X(b, "jb_row"))),
+        ("between: R at the right", lambda b: (R(b, "jb_r"), R(b, "jb_row"))),
+    ])
+
+
+def m7():
+    return relations("align START/CENTER/END/STRETCH in 320-wide columns, on GTK + web", [
+        ("start: left edges", lambda b: (X(b, "as_c"), X(b, "as_col"))),
+        ("center: centres", lambda b: (CX(b, "ac_c"), CX(b, "ac_col"))),
+        ("end: right edges", lambda b: (R(b, "ae_c"), R(b, "ae_col"))),
+        ("stretch: full width", lambda b: (W(b, "ast_c"), W(b, "ast_col"))),
+        ("start child narrower than column", lambda b: W(b, "as_c") < W(b, "as_col") - 50),
+    ])
+
+
+def m8():
+    problems = []
+    for ex in ("layout", "expenses", "kitchen"):
+        for plat in ("mac", "ios"):
+            ok, msg = apple_ok(ex, plat)
+            if not ok:
+                problems.append(msg)
+    for host, needed in (("appkit", ("setEdgeInsets:", "setDistribution:", "constraintEqualToConstant:", "setContentHuggingPriority:forOrientation:")),
+                         ("uikit", ("setLayoutMargins:", "setLayoutMarginsRelativeArrangement:", "setDistribution:", "setContentHuggingPriority:forAxis:"))):
+        code = (ROOT / "mojoui" / "hosts" / f"{host}.mojo").read_text()
+        missing = [n for n in needed if n not in code]
+        if missing:
+            problems.append(f"{host} doesn't map layout with {missing}")
+    return not problems, "; ".join(problems) or "layout settings mapped to NSStackView/UIStackView + Auto Layout; layout, expenses, kitchen build and sign"
+
+
+def m9():
+    problems = []
+    for ex in ("expenses", "todo"):
+        code = (ROOT / "examples" / ex / "app.mojo").read_text()
+        used = [m for m in (".fill()", ".grow()", ".padding(", ".justify(") if m in code]
+        if len(used) < 3:
+            problems.append(f"{ex} uses only {used} of the layout settings")
+    ok9, msg9 = g4_m9()  # expenses GTK + web identical, Mac + iPhone build
+    if not ok9:
+        problems.append(msg9)
+    ok6, msg6 = g3_m6()  # todo GTK + web identical
+    if not ok6:
+        problems.append(msg6)
+    return not problems, "; ".join(problems) or "Pocket Expenses and todo use fill/grow/padding/justify; GTK + web still identical"
+
+
+def m10():
+    problems = []
+    for name, fn in [("M1", g4_m1), ("M2", g4_m2), ("M3", g4_m3), ("M4", g4_m4), ("M5", g4_m5), ("M6", g4_m6),
+                     ("M7", g4_m7), ("M8", g4_m8), ("M10", g4_m10)]:
+        ok, msg = fn()
+        if not ok:
+            problems.append(f"goal 4 {name}: {msg[:200]}")
+    return not problems, "; ".join(problems) or "goal 4's checks (and goal 3's inside them) still pass"
+
+
+def m11():
+    problems = []
+    readme = (ROOT / "README.md").read_text()
+    for m in (".padding(", ".width(", ".min_width(", ".max_width(", ".grow()", ".fill()", ".align(", ".justify(", ".tag(",
+              "examples/layout/app.mojo"):
+        if m not in readme:
+            problems.append(f"README.md doesn't show {m}")
+    ok, msg = g4_m11()
+    if not ok:
+        problems.append(msg)
+    return not problems, "; ".join(problems) or "README documents every layout setting; all paths exist"
 
 
 def main():
@@ -492,7 +670,7 @@ def main():
             print(f"build {ex} failed:\n" + (b.stdout + b.stderr)[-1500:])
     results = []
     for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7),
-                     ("M8", m8), ("M9", m9), ("M10", m10), ("M11", m11)]:
+                     ("M8", m8), ("M9", m9), ("M10", m10), ("M11", m11)]:  # goal 5
         try:
             ok, msg = fn()
         except Exception as e:  # a crashing check is a failing check
