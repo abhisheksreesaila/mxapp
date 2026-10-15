@@ -1,3 +1,4 @@
 .pixi/
 build/
 *.o
+__pycache__/

@@ -31,3 +31,4 @@ Newest last. What was tried, what happened, dead ends.
 - First GTK run: real buttons tapped, real label "Hello, Ada! (click 3)". Screenshot: button stretched full width → centre VStack children (native stacks do).
 - AppKit and UIKit hosts compiled first try. New needs: `_bzero`, `KGEN_CompilerRT_fprintf(i64 stream, ptr fmt, ...)` (assert-failure path) → stand-in.
 - Todo example: 3 adds + remove → rebuilds; GTK labels Task 1, Task 3, "2 tasks". Checker 7/7.
+- Re-review (goal 2): PASS. Fixed leftovers: untracked __pycache__, comment on the iOS height limit, oversized screens now show a 'Too many items' label instead of leaving stale controls.

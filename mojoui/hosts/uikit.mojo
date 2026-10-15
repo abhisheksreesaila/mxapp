@@ -72,13 +72,14 @@ struct UIKitHost[A: App](Movable):
     def show(mut self, self_addr: Int):
         # Old controls are deliberately never released: that keeps a tapped button
         # alive while the screen is replaced in the middle of its own action.
-        if len(self.rt.shown.nodes) >= (1 << NODE_BITS):
-            print("mojoui: screen has", len(self.rt.shown.nodes), "nodes; the limit is 65535")
-            return
         if self.root != 0:
             _ = msg(self.root, "removeFromSuperview")
-        self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
-        self.root = self.build(0, self_addr)
+        self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)  # 0 = nil: patches become no-ops
+        if len(self.rt.shown.nodes) >= (1 << NODE_BITS):
+            self.root = new("UILabel")  # no stale buttons left to tap
+            _ = msg(self.root, "setText:", ns_string("Too many items to show (limit 65,535)."))
+        else:
+            self.root = self.build(0, self_addr)
         _ = msg(self.view, "addSubview:", self.root)
         pin_center(self.root, self.view)
 
@@ -125,6 +126,8 @@ def pin_center(view: Int, inside: Int):
         msg(view, "widthAnchor"), "constraintLessThanOrEqualToAnchor:constant:", msg(guide, "widthAnchor"), Float64(-48)
     )
     _ = msg(w, "setActive:", 1)
+    # Keeps content inside the safe area. Without a scroll view (not built yet), very
+    # long screens get squashed rather than running off-screen.
     var h = msg(msg(view, "heightAnchor"), "constraintLessThanOrEqualToAnchor:", msg(guide, "heightAnchor"))
     _ = msg(h, "setActive:", 1)
 
