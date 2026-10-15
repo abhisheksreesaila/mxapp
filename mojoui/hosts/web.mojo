@@ -7,8 +7,8 @@ from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
 from mojoui.view import View
-from mojoui.diff import Diff, SET_TEXT, SET_MSG
-from mojoui.app import App, Runtime
+from mojoui.diff import Diff
+from mojoui.app import App, Event, Runtime
 
 
 def json_str(s: String) -> String:
@@ -37,7 +37,13 @@ def view_to_json(v: View) -> String:
         if i > 0:
             out += ","
         out += '{"kind":' + String(n.kind) + ',"text":' + json_str(n.text) + ',"msg":' + String(n.msg)
-        out += ',"style":' + String(n.style) + ',"spacing":' + String(n.spacing) + ',"children":['
+        out += ',"style":' + String(n.style) + ',"spacing":' + String(n.spacing) + ',"value":' + String(n.value)
+        out += ',"hint":' + json_str(n.hint) + ',"msg2":' + String(n.msg2) + ',"size":' + String(n.size) + ',"options":['
+        for j in range(len(n.options)):
+            if j > 0:
+                out += ","
+            out += json_str(n.options[j])
+        out += '],"children":['
         for j in range(len(n.children)):
             if j > 0:
                 out += ","
@@ -54,7 +60,7 @@ def diff_to_json(d: Diff, shown: View) -> String:
         ref p = d.patches[i]
         if i > 0:
             out += ","
-        out += '{"op":' + String(p.op) + ',"node":' + String(p.node) + ',"text":' + json_str(p.text) + ',"msg":' + String(p.msg) + "}"
+        out += '{"op":' + String(p.op) + ',"node":' + String(p.node) + ',"text":' + json_str(p.text) + ',"number":' + String(p.number) + "}"
     return out + "]}"
 
 
@@ -77,9 +83,9 @@ def web_view[A: App](handle: Int) -> String:
     return view_to_json(session_at[A](handle)[].shown)
 
 
-def web_event[A: App](handle: Int, message: Int) -> String:
+def web_event[A: App](handle: Int, message: Int, text: String, number: Int) -> String:
     var rt = session_at[A](handle)
-    var d = rt[].dispatch(message)
+    var d = rt[].dispatch(Event(message, text, number))
     return diff_to_json(d, rt[].shown)
 
 

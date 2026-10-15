@@ -15,7 +15,7 @@ def PyInit_mojoui_app() abi("C") -> PythonObject:
         m.def_function[new_session]("new_session", docstring="Start an app session; returns its handle.")
         m.def_function[title]("title", docstring="The app's title.")
         m.def_function[view]("view", docstring="The current screen as JSON.")
-        m.def_function[event]("event", docstring="Send a message; returns what changed as JSON.")
+        m.def_function[event]("event", docstring="Send an event (message, text, number); returns what changed as JSON.")
         m.def_function[close]("close", docstring="End a session.")
         return m.finalize()
     except e:
@@ -34,8 +34,8 @@ def view(handle: PythonObject) raises -> PythonObject:
     return PythonObject(web_view[Main](Int(py=handle)))
 
 
-def event(handle: PythonObject, message: PythonObject) raises -> PythonObject:
-    return PythonObject(web_event[Main](Int(py=handle), Int(py=message)))
+def event(handle: PythonObject, message: PythonObject, text: PythonObject, number: PythonObject) raises -> PythonObject:
+    return PythonObject(web_event[Main](Int(py=handle), Int(py=message), String(py=text), Int(py=number)))
 
 
 def close(handle: PythonObject) raises -> PythonObject:
