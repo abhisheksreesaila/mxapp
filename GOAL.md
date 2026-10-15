@@ -1,29 +1,32 @@
-# GOAL 7: Android, with Android's own views
+# GOAL 8: the analytics showcase (Linux + web), polished
 
-**End goal (owner's words, 2026-10-15):** "one code compile and you get for everything… Android iOS Mac OS Linux and Web at the same time"; "yes to the Android plan… a forty line Java file… is acceptable". The SDK is installed and its licences accepted by the owner (`scripts/android_setup.sh`).
+**End goal (owner's words, 2026-10-15):** "the analytics part… that's the poster child for all this… make this really polished and really good"; "UI charts with some sample data… then MX frame… load data, put them on GPU and then try to aggregate on GPU… render it on the UI"; "a common [design] language between the native and the web"; "push it to GitHub… put the gallery showcase so people can see". Linux and web now; the Mac after MX frame gains a Mojo-level API.
 
-The same `app.mojo` files become Android apps drawn with real Android views (TextView, Button, EditText, Switch, Spinner, SeekBar, LinearLayout…). Mojo creates and updates the views through JNI (Java's C interface, the role `objc_msgSend` plays on Apple). One small Java file in the framework (an Activity plus listeners) forwards Android's callbacks to Mojo; apps contain no Java.
+A Power BI / Tableau-style dashboard in one Mojo file: tens of millions of rows aggregated on the GPU every time a filter changes, drawn as charts the app paints itself (the same on every platform), around native controls styled in one shared design language (Fluent 2).
 
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M1 | Toolchain | `scripts/build.sh hello android` makes a signed APK (apksigner verifies it) with libmojoui.so for arm64-v8a and x86_64; the framework's Java is one file of ≤ 80 lines; apps contain no Java |
-| M2 | Runs, real touch | on the Android 36 emulator the hello APK starts, shows real Android views, and three real taps (`adb shell input tap`) on Greet show "Hello, Ada! (click 3)" |
-| M3 | Components | the gallery's steps (typing, Return, switch, dropdown, slider, reset) through real input end in the same state as on GTK |
-| M4 | Todo | the todo app's goal-3 steps through real input end in the same state as on GTK |
-| M5 | Layout | the layout example's relations (padding, fixed size, fill, grow, justify, align) hold on Android, measured from the real views' bounds (in dp, within 1.5) |
-| M6 | Canvas | the Data Lens runs on Android (CPU path): the canvas shows the map (rich screenshot) and a real swipe pans it as on GTK |
-| M7 | Nothing regressed | goal 6's checks still pass |
-| M8 | Docs | README status and `docs/android.md` describe what runs, with an Android screenshot |
+| M1 | Design language | `design()` = FLUENT applies Fluent 2 tokens on web (CSS) and GTK (CSS); `Card` container on every host; core tests pass |
+| M2 | Text on canvas | an anti-aliased font atlas (Noto Sans, baked from the font file) draws text at any scale; widths within 2 px of the font's own metrics; tests pass |
+| M3 | Charts | `mojoui.charts`: KPI tile, bar, line/area, histogram, with axes, gridlines, labels, selection and hit-testing; tests pass |
+| M4 | GPU aggregation | `mojoui.gpu` group-by sums over int32 columns, exact (64-bit): 20M rows, GPU = CPU to the cent, ≤ 5 ms per group-by |
+| M5 | Analytics app | `examples/analytics` (20M synthetic order lines): KPIs, revenue by month, by category and by region (tap to filter), order-value histogram, top products, year/channel filters; GTK + web end in the same state after the same clicks; fits 1440×900 and 1280×800 without scrolling on both; rich screenshots |
+| M6 | MX frame | the app's engine switch runs the same aggregates through MX frame (CPU), on web + Linux; MX frame and GPU totals agree exactly on the same data |
+| M7 | Gallery | `docs/gallery/index.html`: an interactive showcase (native shines / web shines / both, one Mojo file each), every image and link resolving, no console errors; published on GitHub Pages |
+| M8 | MX frame API spec | `docs/mxframe-mojo-api.md`: the Mojo-level API the Mac/native version needs (types, calls, memory, devices), from the app's real call sites |
+| M9 | Nothing regressed | goal 7's checks still pass |
+| M10 | Docs | README: the analytics showcase, how to run it on Linux and the web, the gallery link |
 
 ## Out of bounds
-No deploying, store uploads, sign-ups or pushing (unless the owner asks); don't accept licences (the owner did, via the wizard); the emulator may run headless during checks; don't touch `../mojo-ui-apple-test`.
+No deploying anything but the gallery's GitHub Pages site; push to `origin` (the owner asked for it) only after the checks pass; no sign-ups, secrets or licences; windows may show during checks; don't touch `../mojo-ui-apple-test`.
 
 ## Assumptions
-- Tested on the emulator (x86_64 image; no phone connected). The arm64 library is built and packaged but runs only on a real phone, which the owner can plug in later.
-- The Java file is an Activity plus listeners (`View.OnClickListener` etc.): Android only calls Java objects back. The owner approved ~40 lines; an Activity subclass instead of NativeActivity avoids taking the window back from native drawing and Java class-loader traps, at the cost of ~20 more lines (logged).
-- Goal-4 components (tabs, alerts, lists…) are a later goal; this one covers the goal-3 components, layout and Canvas.
-- Debug signing with a local key made by `keytool` (kept in `build/`, never committed).
+- "Flint" = Fluent 2, Microsoft's design system (the owner's words were "a design language called Flint which [Microsoft] use"): tokens shared by the charts (drawn by Mojo) and the native/web chrome. Light theme.
+- Charts are drawn by Mojo on Canvas views (no common native chart widget exists); numbers on KPI tiles too, so every platform looks the same. Text on canvases comes from a baked font atlas (Noto Sans, SIL OFL, installed here).
+- Sample data: synthetic retail order lines with seasonality (shaped so charts tell a story), generated deterministically; MX frame runs over the same columns.
+- Interactions are taps (filters, selections); hover tooltips need a pointer-move event mojoui doesn't have yet.
+- The web shows charts as PNG frames (crisp text); JPEG only while animating.
 
 ## Budget
-~3 hours. Stop with a clear report if blocked.
+~4 hours. Stop with a clear report if blocked.

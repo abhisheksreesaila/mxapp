@@ -154,7 +154,7 @@ Every Linux and web result above is checked by `scripts/check`, which rebuilds e
 ## Learn more
 - **[How it works](docs/architecture.md):** the view tree, the update loop, how each platform is reached (GTK through C, Apple through the Objective-C runtime, the web through Python, FastHTML and HTMX), the GPU canvas, and why it's built this way.
 - **[Decisions](docs/decisions.md):** every fork in the road, with the reason and whether it can be undone.
-- **[Experiments](EXPERIMENTS.md):** what was tried, what broke and what was learned. The latest report is `docs/report.md`.
+- **[Experiments](EXPERIMENTS.md):** what was tried, what broke and what was learned. The latest report is `docs/report.md`; earlier ones are in `docs/goals/`.
 - **[Roadmap](ROADMAP.md):** the vision and the long-term stages.
 
 ## Try it

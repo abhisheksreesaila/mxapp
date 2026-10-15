@@ -2,8 +2,9 @@
 
 Mode: experiment
 Ship: direct
+Design language: Fluent 2 (owner, 2026-10-15: one design language shared by native and web)
 
-Current experiment: `GOAL.md` (goal 7: Android with Android's own views via JNI; goals 1–6 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 8: the analytics showcase, Linux + web, Fluent 2; goals 1–7 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 

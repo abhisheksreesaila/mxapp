@@ -86,3 +86,8 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-70 · M6 (goal 7, written this goal) measures the painted share of the canvas (≥ 25%) and a gradient (≥ 20 colours) instead of ≥ 500 colours · the first full run showed the threshold was miscalibrated: 2M points on the CPU give a few dozen density levels (39 colours) on a fully drawn map (screenshot checked); not a weakened earlier check · yes
 - D-71 · CPU-only builds link two empty stand-ins for MAX's release functions (mojoui/hosts/no_gpu_rt.mojo), over restructuring PointCloud's fields · the GPU fields are always empty there but their destructors name those functions once the app can be freed (onDestroy); same approach as mojo_rt.mojo · yes
 - D-72 · Android content fits the system bars (setFitsSystemWindows) and centres with flexible space, over gravity centring · Android 15+ draws edge to edge for targetSdk ≥ 35, and gravity-centred content taller than the screen loses its top under the bars · yes
+
+## Goal 8: analytics showcase
+- D-73 · "Flint" read as Fluent 2 (Microsoft's design system) · the owner named Microsoft's design language; Fluent 2's tokens (neutrals, brand blue, radii, type ramp, elevation) are public and fit a data app · yes
+- D-74 · charts drawn by Mojo on Canvas views, text from a baked font atlas, over native chart widgets · there's no common native chart widget (Swift Charts on Apple only); one renderer looks identical everywhere and later runs on the GPU · yes
+- D-75 · money summed as 64-bit integer cents with atomics, over float sums · exact: GPU = CPU to the cent (probe: 20M rows, 64 groups, 1.9 ms) · yes
