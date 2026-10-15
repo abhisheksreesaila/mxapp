@@ -38,6 +38,8 @@ So the strongest case for Mojo is speed and zero-copy for data-heavy apps, not d
    - Pin and self-host third-party JS.
 8. **iOS from Linux: xtool + SwiftUI skin (decided 2026-10-14).** Mojo cross-compiles to an iPhone static library on Linux; a SwiftUI skin (a Swift package) calls it; xtool builds, signs and installs it on a real iPhone, no Mac or Xcode app needed. This also skips porting SDL3 to iOS. A Mac with Xcode remains the fallback, and is the only way to use the iOS Simulator.
 
+9. **Apple UI straight from Mojo (decided 2026-10-14, Experiment 2).** Supersedes the SwiftUI skin in decision 8 for Apple platforms: Mojo calls AppKit/UIKit through the Objective-C runtime, so the Mac and iPhone apps contain no Swift or C. xtool is still used, but only to sign and install the finished `.ipa`. Cons: every Objective-C call is untyped (mistakes show up at run time), Apple Silicon only, and the hand-written Mojo runtime functions are unofficial.
+
 ## Tracks
 | Track | Steps |
 |---|---|

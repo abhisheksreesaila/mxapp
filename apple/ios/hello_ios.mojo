@@ -35,11 +35,12 @@ def did_finish_launching(target: Int, cmd: Int, app: Int, options: Int) abi("C")
     return 1
 
 
-def label(text: String, size: Float64, bold: Bool = False) -> Int:
+def label(text: String, style: String) -> Int:
+    """A centred label in a Dynamic Type style, so it follows the user's text size."""
     var l = new("UILabel")
     _ = msg(l, "setText:", ns_string(text))
-    var font_name = "boldSystemFontOfSize:" if bold else "systemFontOfSize:"
-    _ = msg(l, "setFont:", msg(cls("UIFont"), font_name, size))
+    _ = msg(l, "setFont:", msg(cls("UIFont"), "preferredFontForTextStyle:", ns_string(style)))
+    _ = msg(l, "setAdjustsFontForContentSizeCategory:", 1)
     _ = msg(l, "setTextAlignment:", 1)  # NSTextAlignmentCenter
     _ = msg(l, "setNumberOfLines:", 0)
     return l
@@ -81,7 +82,7 @@ def scene_will_connect(delegate: Int, cmd: Int, scene: Int, session: Int, option
     var view = msg(controller, "view")
     _ = msg(view, "setBackgroundColor:", msg(cls("UIColor"), "systemBackgroundColor"))
 
-    var greeting = label("Tap Greet", 28.0, bold=True)
+    var greeting = label("Tap Greet", "UICTFontTextStyleTitle0")
     var screen = alloc(Layout[Screen].single()).unsafe_leak()  # lives as long as the app
     screen.unsafe_write(Screen(Hello("Ada", 0), greeting))
 
@@ -89,10 +90,10 @@ def scene_will_connect(delegate: Int, cmd: Int, scene: Int, session: Int, option
     _ = msg(stack, "setAxis:", 1)  # vertical
     _ = msg(stack, "setAlignment:", 3)  # centre
     _ = msg(stack, "setSpacing:", Float64(24))
-    _ = msg(stack, "addArrangedSubview:", label("mojo-ui · hello", 15.0))
+    _ = msg(stack, "addArrangedSubview:", label("mojo-ui · hello", "UICTFontTextStyleSubhead"))
     _ = msg(stack, "addArrangedSubview:", greeting)
     _ = msg(stack, "addArrangedSubview:", greet_button(delegate, Int(screen)))
-    _ = msg(stack, "addArrangedSubview:", label("Every line of this app is Mojo.", 13.0))
+    _ = msg(stack, "addArrangedSubview:", label("Every line of this app is Mojo.", "UICTFontTextStyleFootnote"))
     _ = msg(view, "addSubview:", stack)
     pin_center(stack, view)
 
@@ -103,7 +104,7 @@ def scene_will_connect(delegate: Int, cmd: Int, scene: Int, session: Int, option
 def register_delegates():
     var app_delegate = new_class("MojoAppDelegate", "UIResponder")
     add_protocol(app_delegate, "UIApplicationDelegate")
-    add_method(app_delegate, "application:didFinishLaunchingWithOptions:", did_finish_launching, "c@:@@")
+    add_method(app_delegate, "application:didFinishLaunchingWithOptions:", did_finish_launching, "B@:@@")
     register_class(app_delegate)
 
     var scene_delegate = new_class("MojoSceneDelegate", "UIResponder")

@@ -1,3 +1,5 @@
+> **Superseded (2026-10-14):** `apple/` now has a Mojo-only iPhone app with no Swift. See `apple/README.md`. Kept as a fallback.
+
 # HelloMojo for iPhone, built on Linux with xtool (M5 step 3)
 
 A SwiftUI app whose logic lives in Mojo. Tap **Greet** and the text comes from Mojo: "Hello, Ada! (click 1)".

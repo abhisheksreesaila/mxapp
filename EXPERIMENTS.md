@@ -4,6 +4,27 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-14 · Experiment 2: Mac and iPhone apps written only in Mojo (autopilot)
+
+**Goal (owner's words):** "Create a Mojo app for macOS which I can test, then do it for iOS. Mojo all the way." Contract: `GOAL.md`; decisions: `docs/decisions.md`; step-by-step: `docs/journal.md`.
+
+**Setup:** Linux x86-64, Mojo 1.1.0 via pixi (`pixi.toml`), `ld64.lld` from conda-forge, `rcodesign`, xtool (not signed in).
+
+**What worked (all verified on Linux by `scripts/check`, 6/6 PASS):**
+- Mojo drives AppKit and UIKit directly through the Objective-C runtime: `apple/objc.mojo` casts `objc_msgSend`'s address to a typed C function per call (the same trick Mojo's own `_DLCallable` uses). Button handlers are `abi("C")` Mojo functions added as methods to classes created at run time.
+- No Swift, C or Objective-C anywhere in `apple/`. Entry point via the linker's `-e _mojo_entry`; the three Mojo runtime functions are written in Mojo (`apple/mojo_rt.mojo`), so no Modular runtime library ships.
+- Linked on Linux with `ld64.lld` + `.tbd` stubs (`apple/sdk/`). Mac app ≈ 70 KB, loads only AppKit, libobjc, libSystem; iPhone app loads only UIKit, libobjc, libSystem.
+- Machine code checked: rects travel in d0–d3 like Apple's NSRect-by-value; no x18, no thread-locals, no static initialisers.
+- Ad-hoc signatures verified by our own hash checker (`scripts/verify_signature.py`), since `rcodesign verify` fails on ad-hoc signatures.
+
+**What broke and how it was fixed:** see `docs/journal.md` (runtime functions must be in their own Mojo file; `@export("main")` is refused; printing floats pulls in `KGEN_CompilerRT_fprintf`; linker's own signature left stray bytes).
+
+**Not verified yet:** running either app. Needs the owner's Apple Silicon Mac (copy `build/mac/HelloMojo-mac.zip`) and iPhone (`apple/install_iphone.sh`). See `apple/README.md`.
+
+**Next:** run both on real hardware and record the result here.
+
+---
+
 ## 2026-10-14 · Prep for M5 step 3: iPhone from Linux via xtool (not yet run)
 
 **Why:** xtool (github.com/xtool-org/xtool) builds, signs and installs Swift-package iOS apps from Linux, WSL or Windows onto a real iPhone. Combined with a SwiftUI skin, it removes the need for a Mac and for porting SDL3 to iOS.

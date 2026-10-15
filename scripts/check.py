@@ -19,12 +19,9 @@ BUILD = ROOT / "build"
 ALLOWED = {
     # libobjc
     "_objc_getClass", "_objc_getProtocol", "_sel_registerName", "_objc_allocateClassPair",
-    "_objc_registerClassPair", "_class_addMethod", "_class_addProtocol",
-    "_objc_autoreleasePoolPush", "_objc_autoreleasePoolPop", "_objc_msgSend",
-    # libSystem
-    "_dlopen", "_dlsym", "_dlclose", "_dlerror", "_dup", "_fclose", "_fdopen", "_fflush",
-    "_memcpy", "_memmove", "_memset", "_strlen", "_write", "_posix_memalign", "_free",
-    "_malloc", "_abort", "_exit",
+    "_objc_registerClassPair", "_class_addMethod", "_class_addProtocol", "_objc_autoreleasePoolPush",
+    # libSystem (dlsym finds objc_msgSend; the rest is Mojo's own print and memory)
+    "_dlsym", "_dup", "_fclose", "_fdopen", "_fflush", "_memcpy", "_write", "_posix_memalign", "_free",
     # UIKit
     "_UIApplicationMain",
 }
@@ -58,9 +55,9 @@ def dylibs(binary):
     return set(re.findall(r"cmd LC_LOAD_DYLIB\n\s+cmdsize \d+\n\s+name (\S+)", load_commands(binary)))
 
 
-def signature_ok(exe, plist):
+def signature_ok(exe, plist, resources):
     # rcodesign's own verify is documented as unreliable, so recompute the hashes ourselves.
-    r = run([sys.executable, "scripts/verify_signature.py", str(exe), str(plist)])
+    r = run([sys.executable, "scripts/verify_signature.py", str(exe), str(plist), str(resources)])
     return r.returncode == 0, (r.stdout + r.stderr).strip()[-300:]
 
 
@@ -121,7 +118,8 @@ def bundle_ok(app, want_dylibs, platform, plist_keys):
     m = re.search(r"^([0-9a-f]+) T _mojo_entry$", sym, re.M)
     if not entry or not m or int(m.group(1), 16) - 0x100000000 != int(entry.group(1)):
         problems.append("entry point is not _mojo_entry")
-    sig, msg = signature_ok(exe, plist_path)
+    resources = app / ("Contents/_CodeSignature/CodeResources" if platform == "MACOS" else "_CodeSignature/CodeResources")
+    sig, msg = signature_ok(exe, plist_path, resources)
     if not sig:
         problems.append(f"signature: {msg}")
     return not problems, "; ".join(problems) or f"{desc.split(':', 1)[1].strip()}; loads {len(libs)} system libs; signed"

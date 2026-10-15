@@ -1,8 +1,9 @@
 """Independent check of a Mach-O code signature (ad-hoc or not).
 
-Recomputes the hash of every code page and of Info.plist and compares them with
-the CodeDirectory, the same hashes the kernel checks before running the app.
-Usage: python scripts/verify_signature.py <executable> [<Info.plist>]
+Recomputes the hash of every code page, of Info.plist and of the bundle's resource
+seal (_CodeSignature/CodeResources) and compares them with the CodeDirectory:
+the hashes the system checks before running the app.
+Usage: python scripts/verify_signature.py <executable> [<Info.plist> [<CodeResources>]]
 """
 
 import hashlib
@@ -13,7 +14,7 @@ LC_CODE_SIGNATURE = 0x1D
 HASHES = {1: hashlib.sha1, 2: hashlib.sha256}
 
 
-def verify(exe_path, plist_path=None):
+def verify(exe_path, plist_path=None, resources_path=None):
     data = open(exe_path, "rb").read()
     magic, _, _, _, ncmds, _, _, _ = struct.unpack_from("<IiiIIIII", data, 0)
     assert magic == 0xFEEDFACF, "not a 64-bit Mach-O"
@@ -55,10 +56,21 @@ def verify(exe_path, plist_path=None):
             got = h(open(plist_path, "rb").read()).digest()[:hash_size]
             if got != want:
                 problems.append("Info.plist hash mismatch")
+        if resources_path:
+            if n_special < 3:
+                problems.append("no resource seal slot")
+            else:
+                want = blob[cd + hash_off - 3 * hash_size: cd + hash_off - 2 * hash_size]
+                try:
+                    got = h(open(resources_path, "rb").read()).digest()[:hash_size]
+                except FileNotFoundError:
+                    got = None
+                if got != want:
+                    problems.append("CodeResources (resource seal) hash mismatch or missing")
     return problems
 
 
 if __name__ == "__main__":
-    problems = verify(*sys.argv[1:3])
+    problems = verify(*sys.argv[1:4])
     print("signature OK" if not problems else "; ".join(problems))
     sys.exit(1 if problems else 0)

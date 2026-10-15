@@ -13,6 +13,7 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 3. `EXPERIMENTS.md`: what has actually been tried and what happened. **Trust this over the spec when they disagree.**
 
 ## Where things stand
+- **Newest (Experiment 2, 2026-10-14):** HelloMojo for Mac and iPhone written only in Mojo (`apple/`), built and signed on Linux; `scripts/check` passes. Not yet run on a real Mac or iPhone: see `apple/README.md`. This supersedes `ios-xtool/` (SwiftUI skin).
 - **Done:** M0 (Mojo ↔ C both directions, Mojo keeps state across calls from C) and M5 steps 1–2 (Mojo compiles to iPhone objects; the app needs only two Mojo runtime functions, covered by `spike/kgen_shim.c`).
 - **Next, main track (Linux):** M1, the real `core/` (`State`, `Msg`, `update`, `view`, `ViewTree`) with tests. See SPEC §5 and §9.
 - **Next, side track (iPhone):** M5 step 3 via xtool, using `ios-xtool/`. Needs the owner's machine, an iPhone, and Xcode.xip downloaded from Apple. See `ios-xtool/README.md`.
@@ -25,7 +26,7 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 - **Keep the repo honest:** mark anything unverified as unverified.
 
 ## Mojo rules that bite (verified on Mojo 1.1.0)
-- Install: `pip install mojo` (or `uv pip install mojo`).
+- Install: `pixi install` (this repo's `pixi.toml` pins Mojo 1.1); run with `pixi run mojo …`.
 - `def` only (`fn` is deprecated); no `@value` (use `@fieldwise_init` + explicit traits).
 - Imports use `std.`: `from std.ffi import external_call`, `from std.memory import Pointer`, `from std.memory.alloc import alloc, Layout`.
 - `UnsafePointer` is deprecated: use `Pointer`. Heap state handed to C: `alloc(Layout[T].single())` → `allocation^.unsafe_leak()` → `p.unsafe_write(...)`; back from an address with `Pointer[T, MutUntrackedOrigin](unsafe_from_address=addr)`; free with `unsafe_deinit_pointee()` + `unsafe_free()`.
@@ -51,7 +52,9 @@ m0_call_c.mojo     M0: Mojo calling C
 bridge/            C side: mojoui_bridge.c (bridge), host_main.c (C shell driving Mojo)
 spike/             iOS spike: tiny.mojo, kgen_shim.c (runtime stand-in)
 scripts/m0_linux.sh  reproduces Experiment 1 end to end on Linux
-ios-xtool/         M5 step 3: SwiftUI skin + prebuilt Mojo iPhone library, built with xtool
+apple/             Mac + iPhone apps in Mojo only: objc.mojo (ObjC runtime), mac/, ios/, sdk/ (.tbd stubs), build.sh, install_iphone.sh
+GOAL.md            current experiment contract; scripts/check proves it; docs/decisions.md, docs/journal.md
+ios-xtool/         superseded: earlier SwiftUI skin + prebuilt Mojo iPhone library
 docs/              visual guide (open visual-guide.html in a browser)
 ```
 M1 onwards follows the layout in SPEC §3 (`core/`, `hosts/native/`, `hosts/web/`, `tests/`); move the M0 files into it when convenient.

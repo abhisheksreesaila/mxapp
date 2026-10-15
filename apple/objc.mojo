@@ -74,8 +74,10 @@ def add_method[F: AnyType](c: Int, selector: String, imp: F, types: String):
 
 def add_protocol(c: Int, name: String):
     var p = protocol(name)
-    if p != 0:  # unknown protocol: skip rather than add a null entry
-        _ = external_call["class_addProtocol", Int8](c, p)
+    if p == 0:  # never add a null entry; say so, since UIKit may then reject the class
+        print("mojo-ui: Objective-C protocol not found:", name)
+        return
+    _ = external_call["class_addProtocol", Int8](c, p)
 
 
 def register_class(c: Int):

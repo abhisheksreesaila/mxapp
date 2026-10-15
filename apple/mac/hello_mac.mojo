@@ -35,17 +35,24 @@ def make_handler() -> Int:
     """An Objective-C object, MojoHandler, whose methods are the Mojo functions above."""
     var c = new_class("MojoHandler", "NSObject")
     add_method(c, "greet:", on_greet, "v@:@")
-    add_method(c, "applicationShouldTerminateAfterLastWindowClosed:", quit_when_closed, "c@:@")
+    add_method(c, "applicationShouldTerminateAfterLastWindowClosed:", quit_when_closed, "B@:@")
     register_class(c)
     return msg(c, "new")
 
 
 def make_menu(app: Int):
-    """A minimal menu bar so Cmd+Q works."""
+    """A minimal menu bar so Cmd+W and Cmd+Q work."""
     var bar = new("NSMenu")
     var app_item = new("NSMenuItem")
     _ = msg(bar, "addItem:", app_item)
     var app_menu = new("NSMenu")
+    _ = msg(
+        app_menu,
+        "addItemWithTitle:action:keyEquivalent:",
+        ns_string("Close Window"),
+        sel("performClose:"),
+        ns_string("w"),
+    )
     _ = msg(
         app_menu,
         "addItemWithTitle:action:keyEquivalent:",

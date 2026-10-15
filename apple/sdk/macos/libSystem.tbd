@@ -4,5 +4,5 @@ targets:         [ arm64-macos ]
 install-name:    '/usr/lib/libSystem.B.dylib'
 exports:
   - targets:         [ arm64-macos ]
-    symbols:         [ _dlopen, _dlsym, _dlclose, _dlerror, _dup, _fclose, _fdopen, _fflush, _memcpy, _memmove, _memset, _strlen, _write, _posix_memalign, _free, _malloc, _abort, _exit ]
+    symbols:         [ _dlsym, _dup, _fclose, _fdopen, _fflush, _memcpy, _write, _posix_memalign, _free ]
 ...

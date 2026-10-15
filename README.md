@@ -5,10 +5,13 @@ A long-term, experimental side project, built slowly, one verified step at a tim
 
 **Start here:** `CLAUDE.md` (briefing for Claude Code), then `ROADMAP.md`, `SPEC.md`, `EXPERIMENTS.md`.
 
+## Newest: a Mac and iPhone app written only in Mojo
+`apple/build.sh all` builds `HelloMojo` for Mac and iPhone (no Swift, no C). How to install and test: `apple/README.md`.
+
 ## Try what works today (Linux)
 ```bash
-pip install mojo          # Mojo 1.1
-./scripts/m0_linux.sh     # Mojo <-> C both ways, static build with no Mojo runtime, iPhone object check
+pixi install              # Mojo 1.1 (via pixi.toml)
+pixi run ./scripts/m0_linux.sh  # Mojo <-> C both ways, static build with no Mojo runtime, iPhone object check
 ```
 
 ## Next steps

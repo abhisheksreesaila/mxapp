@@ -18,3 +18,6 @@ Newest last. What was tried, what happened, dead ends.
 - Read Mojo's `std/ffi/__init__.mojo` (github modular/modular, `Mojo/stdlib/std/ffi`): `_DLCallable` just bitcasts the address to `def(*a: *T) thin abi("C") -> R`. Copied the trick: `dlsym(RTLD_DEFAULT=-2, "objc_msgSend")` + bitcast → one variadic `msg()`; no dlopen/dlclose, nothing raises, GetStackTrace no longer pulled in.
 - Gotcha: printing a Float64 pulls in `KGEN_CompilerRT_fprintf`. Don't print floats in app code (or add a stand-in).
 - Disassembly check (arm64): window init puts the rect in d0–d3 (0, 0, 460.0, 280.0) and style/backing/defer in x2/x3/x4 — same as Apple's NSRect-by-value convention. Insets: 32.0 in d0–d3.
+- Reviewer: PASS, nothing expected to crash; 10 findings. Fixed 1–9, #10 not an issue (xtool prefixes bundle IDs per user).
+- Quirk: Mojo built fine with an unfinished `def broken(` appended to an *imported* module (`hello_core.mojo`); it seems to parse imported modules lazily. Errors in the app file itself fail the build (exit 1), and `build.sh` now stops and leaves no stale objects. The M1 tests cover `hello_core`.
+- Resource seal (`_CodeSignature/CodeResources`) now verified too; tamper test caught.
