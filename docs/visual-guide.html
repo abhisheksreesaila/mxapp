@@ -1,0 +1,760 @@
+<title>mojo-ui Visual Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; each diagram sits on its own scrollable plate. Ember = native path, teal = web path. */
+:root{
+  --bg:#F4F6F8; --surface:#FFFFFF; --core:#EBEEF3; --ink:#15202B; --muted:#596574; --line:#C6CDD6;
+  --ember:#BE4416; --ember-soft:#F9E4DA; --teal:#0A6F7A; --teal-soft:#D8EEF0;
+  --display:"Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1318; --surface:#161D25; --core:#1C2530; --ink:#E5EAF0; --muted:#94A1AF; --line:#2E3946;
+  --ember:#F08A5D; --ember-soft:#3A2419; --teal:#4FC4CD; --teal-soft:#113239; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0E1318; --surface:#161D25; --core:#1C2530; --ink:#E5EAF0; --muted:#94A1AF; --line:#2E3946;
+  --ember:#F08A5D; --ember-soft:#3A2419; --teal:#4FC4CD; --teal-soft:#113239; color-scheme:dark }
+
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 64px}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,5vw,3rem);letter-spacing:-.01em}
+h2{font-size:1.6rem;margin-bottom:.5rem}
+p{max-width:65ch;margin:0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+header{display:grid;gap:14px;margin-bottom:40px}
+.lede{font-size:1.1rem;color:var(--ink)}
+.key{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:.9rem;color:var(--muted)}
+.key span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:22px;height:4px;border-radius:2px;display:inline-block}
+.sw.e{background:var(--ember)} .sw.t{background:var(--teal)}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+nav.toc a{font-size:.85rem;color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--ink)}
+section{display:grid;gap:14px;margin-top:56px}
+.plate{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto}
+figure{margin:0;display:grid;gap:10px}
+figcaption{font-size:.9rem;color:var(--muted);max-width:75ch}
+svg.d{display:block;width:100%;min-width:720px;height:auto;color:var(--ink);font-family:var(--body)}
+.d text{fill:currentColor;font-size:13px}
+.d .mono{font-family:var(--mono);font-size:12.5px}
+.d .sm{font-size:11.5px}
+.d .h{font-family:var(--display);font-weight:700;font-size:15px}
+.d .b{font-weight:600}
+.d .muted{fill:var(--muted)}
+.d .te{fill:var(--ember)} .d .tt{fill:var(--teal)}
+.d .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.d .core{fill:var(--core);stroke:var(--ink);stroke-width:1.5}
+.d .hn{fill:var(--ember-soft);stroke:var(--ember);stroke-width:1.5}
+.d .hw{fill:var(--teal-soft);stroke:var(--teal);stroke-width:1.5}
+.d .bnd{fill:none;stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}
+.d .ln{stroke:currentColor;stroke-width:1.5;fill:none}
+.d .le{stroke:var(--ember);stroke-width:1.8;fill:none}
+.d .lt{stroke:var(--teal);stroke-width:1.8;fill:none}
+.d .dash{stroke-dasharray:5 4}
+.d .life{stroke:var(--line);stroke-width:1.2;stroke-dasharray:3 4}
+.d .band-e{fill:var(--ember-soft)} .d .band-t{fill:var(--teal-soft)}
+.d .zone{fill:none;stroke:var(--muted);stroke-width:1.2;stroke-dasharray:6 5}
+.d .note{fill:var(--core);stroke:var(--line)}
+.d .mk{fill:currentColor} .d .mke{fill:var(--ember)} .d .mkt{fill:var(--teal)}
+.d g.path{transition:opacity .25s}
+figure[data-show="native"] .path-web, figure[data-show="web"] .path-nat{opacity:.18}
+@media (prefers-reduced-motion: reduce){.d g.path{transition:none}}
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface);width:max-content}
+.seg button{font:inherit;font-size:.85rem;border:0;background:transparent;color:var(--ink);padding:6px 14px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+
+/* playground */
+.play{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;align-items:start}
+@media (max-width:760px){.play{grid-template-columns:1fr}}
+.win{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.win .bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.win .body{display:grid;gap:12px;padding:20px}
+.win .ttl{font-family:var(--display);font-weight:700;font-size:1.15rem}
+.form{display:flex;gap:8px;flex-wrap:wrap}
+.form input{flex:1 1 160px;min-width:0;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.form input:focus{outline:2px solid var(--ember);outline-offset:1px}
+.mode-web .form input:focus{outline-color:var(--teal)}
+.btn{font:inherit;font-weight:600;padding:8px 16px;border-radius:8px;border:0;background:var(--ember);color:#fff;cursor:pointer}
+.mode-web .btn{background:var(--teal)}
+:root[data-theme="dark"] .btn{color:#0E1318}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .btn{color:#0E1318} }
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.greeting{font-size:1.2rem;min-height:1.6em}
+.hint{font-size:.85rem;color:var(--muted)}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{font:inherit;font-size:.85rem;background:none;border:0;border-bottom:2px solid transparent;padding:6px 10px;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.tabs button:focus-visible{outline:2px solid var(--teal)}
+.out{background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;min-height:260px;max-height:360px;overflow:auto}
+.out pre{margin:0;padding:14px;font-family:var(--mono);font-size:.8rem;line-height:1.55;white-space:pre;color:var(--ink)}
+.log{list-style:none;margin:0;padding:10px 14px;display:grid;gap:6px;font-family:var(--mono);font-size:.82rem}
+.log li{display:flex;gap:10px;align-items:baseline}
+.chip{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:4px;border:1px solid currentColor;flex:none}
+.chip.n{color:var(--ember)} .chip.w{color:var(--teal)} .chip.s{color:var(--muted)}
+
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td:first-child{font-weight:600;white-space:nowrap}
+.pill{display:inline-block;font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.n{background:var(--ember-soft);color:var(--ember)}
+.pill.w{background:var(--teal-soft);color:var(--teal)}
+.pill.l{background:var(--core);color:var(--muted)}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.tbl table{min-width:620px}
+.tbl tr:last-child td{border-bottom:0}
+footer{margin-top:64px;font-size:.85rem;color:var(--muted)}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">mojo-ui · v0 architecture</span>
+  <h1>One Mojo core, two hosts</h1>
+  <p class="lede">You write the app once as <code>State</code>, <code>update()</code> and <code>view()</code>. The native host draws it in a real window through a small C bridge. The web host turns the same tree into HTML. These diagrams follow the v0 "Hello, Name" app from <code>SPEC.md</code>.</p>
+  <div class="key"><span><i class="sw e"></i>Native path (SDL3 + Clay)</span><span><i class="sw t"></i>Web path (FastHTML + HTMX)</span></div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#big-picture">Big picture</a><a href="#loop">The loop</a><a href="#try">Try it</a><a href="#native-frame">A native frame</a><a href="#ios">iOS native</a><a href="#web-click">A web click</a><a href="#viewtree">ViewTree in memory</a><a href="#platforms">Where it runs</a><a href="#rust">Borrowed from Rust</a>
+  </nav>
+</header>
+
+<!-- 1 -->
+<section id="big-picture">
+  <span class="eyebrow">Start here</span>
+  <h2>The big picture</h2>
+  <p>The core never draws anything and never does I/O. It hands a <code>ViewTree</code> down to a host and gets <code>Msg</code> values back. Each host has exactly one boundary where it crosses into another language: C for native, Python for web.</p>
+  <figure id="fig-big" data-show="both">
+    <div class="seg" role="group" aria-label="Highlight a path">
+      <button type="button" data-show="both" aria-pressed="true">Both</button>
+      <button type="button" data-show="native" aria-pressed="false">Native path</button>
+      <button type="button" data-show="web" aria-pressed="false">Web path</button>
+    </div>
+    <div class="plate">
+    <svg class="d" viewBox="0 0 880 444" role="img" aria-label="A pure Mojo core with State, update and view sends a ViewTree to a native host built on a C bridge with Clay and SDL3, and to a web host built on a Mojo Python extension, FastHTML and HTMX. Both hosts send Msg values back to the core.">
+      <defs>
+        <marker id="b-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mke"/></marker>
+        <marker id="b-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mkt"/></marker>
+      </defs>
+      <rect x="190" y="16" width="500" height="124" rx="10" class="core"/>
+      <text x="206" y="40" class="h">core/<tspan class="muted sm" dx="8" font-weight="400" font-family="IBM Plex Sans, sans-serif">pure Mojo · no I/O, no FFI, no Python</tspan></text>
+      <rect x="206" y="56" width="150" height="66" rx="8" class="bx"/>
+      <rect x="362" y="56" width="150" height="66" rx="8" class="bx"/>
+      <rect x="518" y="56" width="150" height="66" rx="8" class="bx"/>
+      <text x="281" y="84" text-anchor="middle" class="mono b">State</text>
+      <text x="281" y="104" text-anchor="middle" class="sm muted">input · greeting · focus</text>
+      <text x="437" y="84" text-anchor="middle" class="mono b">update(state, msg)</text>
+      <text x="437" y="104" text-anchor="middle" class="sm muted">only place state changes</text>
+      <text x="593" y="84" text-anchor="middle" class="mono b">view(state)</text>
+      <text x="593" y="104" text-anchor="middle" class="sm muted">returns a ViewTree</text>
+
+      <g class="path path-nat">
+        <line x1="250" y1="140" x2="250" y2="226" class="le" marker-end="url(#b-e)"/>
+        <line x1="340" y1="228" x2="340" y2="144" class="le dash" marker-end="url(#b-e)"/>
+        <text x="244" y="190" text-anchor="end" class="mono te">ViewTree</text>
+        <text x="346" y="190" class="mono te">Msg</text>
+        <rect x="20" y="230" width="400" height="200" rx="12" class="hn"/>
+        <text x="38" y="256" class="h te">Native host<tspan class="muted sm" dx="10" font-weight="400" font-family="IBM Plex Sans, sans-serif">Linux · macOS · iOS next</tspan></text>
+        <rect x="36" y="270" width="368" height="30" rx="6" class="bx"/>
+        <text x="220" y="290" text-anchor="middle" class="mono">app_entry.mojo · called per event/frame</text>
+        <rect x="36" y="306" width="368" height="24" rx="6" class="bnd"/>
+        <text x="220" y="322" text-anchor="middle" class="sm muted">FFI · scalars, (ptr, len) strings, getters</text>
+        <rect x="36" y="336" width="368" height="30" rx="6" class="bx"/>
+        <text x="220" y="356" text-anchor="middle" class="mono">host_main.c + bridge · C</text>
+        <rect x="36" y="372" width="180" height="30" rx="6" class="bx"/>
+        <rect x="224" y="372" width="180" height="30" rx="6" class="bx"/>
+        <text x="126" y="392" text-anchor="middle" class="mono">clay.h · layout</text>
+        <text x="314" y="392" text-anchor="middle" class="mono">SDL3 + SDL3_ttf</text>
+        <text x="220" y="421" text-anchor="middle" class="sm muted">draws into a real OS window</text>
+      </g>
+
+      <g class="path path-web">
+        <line x1="560" y1="140" x2="560" y2="226" class="lt" marker-end="url(#b-t)"/>
+        <line x1="640" y1="228" x2="640" y2="144" class="lt dash" marker-end="url(#b-t)"/>
+        <text x="554" y="190" text-anchor="end" class="mono tt">ViewTree</text>
+        <text x="646" y="190" class="mono tt">Msg</text>
+        <rect x="460" y="230" width="400" height="200" rx="12" class="hw"/>
+        <text x="478" y="256" class="h tt">Web host<tspan class="muted sm" dx="10" font-weight="400" font-family="IBM Plex Sans, sans-serif">any browser</tspan></text>
+        <rect x="476" y="270" width="368" height="30" rx="6" class="bx"/>
+        <text x="660" y="290" text-anchor="middle" class="mono">mojoui_web.so · render_html()</text>
+        <rect x="476" y="306" width="368" height="24" rx="6" class="bnd"/>
+        <text x="660" y="322" text-anchor="middle" class="sm muted">Python ↔ Mojo · dict in, HTML string out</text>
+        <rect x="476" y="336" width="368" height="30" rx="6" class="bx"/>
+        <text x="660" y="356" text-anchor="middle" class="mono">server.py · FastHTML, no UI logic</text>
+        <rect x="476" y="372" width="368" height="30" rx="6" class="bx"/>
+        <text x="660" y="392" text-anchor="middle" class="mono">browser · HTMX swaps #app</text>
+        <text x="660" y="421" text-anchor="middle" class="sm muted">covers Windows and Android; iOS until M5</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>Solid arrows carry the UI down as data; dashed arrows carry user intent back up as messages. The dashed rows inside each host are the only places where Mojo talks to another language.</figcaption>
+  </figure>
+</section>
+
+<!-- 2 -->
+<section id="loop">
+  <span class="eyebrow">The pattern</span>
+  <h2>The loop every host runs</h2>
+  <p>This is the Elm pattern that Iced and Dioxus use in Rust. A host only has two jobs: turn raw input into a <code>Msg</code>, and put a <code>ViewTree</code> on screen. Everything inside the dashed zone is plain Mojo you can test without a window or a server.</p>
+  <figure>
+    <div class="plate">
+    <svg class="d" viewBox="0 0 880 300" role="img" aria-label="A cycle: a host turns input into a Msg, update changes State, view reads State and returns a ViewTree, and the host consumes the ViewTree. update, State, view and ViewTree sit inside the pure core.">
+      <defs><marker id="l-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk"/></marker></defs>
+      <rect x="320" y="14" width="546" height="272" rx="14" class="zone"/>
+      <text x="852" y="278" text-anchor="end" class="sm muted">core/ · pure, testable headless</text>
+
+      <rect x="40" y="36" width="180" height="60" rx="8" class="bx"/>
+      <text x="130" y="62" text-anchor="middle" class="mono b">Msg</text>
+      <text x="130" y="82" text-anchor="middle" class="sm muted">kind + payload</text>
+      <rect x="350" y="36" width="180" height="60" rx="8" class="bx"/>
+      <text x="440" y="62" text-anchor="middle" class="mono b">update(mut state, msg)</text>
+      <text x="440" y="82" text-anchor="middle" class="sm muted">only place state changes</text>
+      <rect x="660" y="36" width="180" height="60" rx="8" class="bx"/>
+      <text x="750" y="62" text-anchor="middle" class="mono b">State</text>
+      <text x="750" y="82" text-anchor="middle" class="sm muted">input · greeting · focus</text>
+
+      <rect x="40" y="204" width="180" height="60" rx="8" class="bx"/>
+      <text x="130" y="230" text-anchor="middle" class="mono b">Host</text>
+      <text x="130" y="250" text-anchor="middle" class="sm muted">clicks · keys · POST /event</text>
+      <rect x="350" y="204" width="180" height="60" rx="8" class="bx"/>
+      <text x="440" y="230" text-anchor="middle" class="mono b">ViewTree</text>
+      <text x="440" y="250" text-anchor="middle" class="sm muted">6 nodes in a flat list</text>
+      <rect x="660" y="204" width="180" height="60" rx="8" class="bx"/>
+      <text x="750" y="230" text-anchor="middle" class="mono b">view(state)</text>
+      <text x="750" y="250" text-anchor="middle" class="sm muted">pure function</text>
+
+      <line x1="220" y1="66" x2="348" y2="66" class="ln" marker-end="url(#l-a)"/>
+      <text x="284" y="56" text-anchor="middle" class="sm">dispatched</text>
+      <line x1="530" y1="66" x2="658" y2="66" class="ln" marker-end="url(#l-a)"/>
+      <text x="594" y="56" text-anchor="middle" class="sm">mutates</text>
+      <line x1="750" y1="96" x2="750" y2="202" class="ln" marker-end="url(#l-a)"/>
+      <text x="758" y="154" class="sm">read by</text>
+      <line x1="660" y1="234" x2="532" y2="234" class="ln" marker-end="url(#l-a)"/>
+      <text x="596" y="224" text-anchor="middle" class="sm">returns</text>
+      <line x1="350" y1="234" x2="222" y2="234" class="ln" marker-end="url(#l-a)"/>
+      <text x="286" y="224" text-anchor="middle" class="sm">drawn by</text>
+      <line x1="130" y1="204" x2="130" y2="98" class="ln" marker-end="url(#l-a)"/>
+      <text x="138" y="154" class="sm">translates input</text>
+    </svg>
+    </div>
+    <figcaption>Hosts never edit nodes or state directly. That rule is what lets the same core run in a window and in a browser.</figcaption>
+  </figure>
+</section>
+
+<!-- 3 -->
+<section id="try">
+  <span class="eyebrow">Hands on</span>
+  <h2>Try it: the core loop, live</h2>
+  <p>This is a JavaScript copy of the v0 <code>update()</code> and <code>view()</code> from the spec. Switch hosts and watch how different the message streams are while the state and tree end up the same. The tabs show what each host would produce from the tree.</p>
+  <div class="play">
+    <div class="win mode-native" id="win">
+      <div class="bar"><span>hello-native</span>
+        <div class="seg" role="group" aria-label="Host">
+          <button type="button" data-mode="native" aria-pressed="true">Native</button>
+          <button type="button" data-mode="web" aria-pressed="false">Web</button>
+        </div>
+      </div>
+      <div class="body">
+        <div class="ttl">mojo-ui · hello</div>
+        <form class="form" id="f" autocomplete="off">
+          <label for="name-in" class="hint" style="flex-basis:100%">Your name</label>
+          <input id="name-in" type="text" placeholder="Your name">
+          <button class="btn" id="greet-btn" type="submit">Greet</button>
+        </form>
+        <div class="greeting" id="greeting" aria-live="polite"></div>
+        <p class="hint" id="mode-hint"></p>
+      </div>
+    </div>
+    <div>
+      <div class="tabs" role="tablist" aria-label="Inspect">
+        <button type="button" role="tab" id="t-log" aria-selected="true" aria-controls="p-out">Msg log</button>
+        <button type="button" role="tab" id="t-state" aria-selected="false" aria-controls="p-out">State</button>
+        <button type="button" role="tab" id="t-html" aria-selected="false" aria-controls="p-out">Web: HTML</button>
+        <button type="button" role="tab" id="t-calls" aria-selected="false" aria-controls="p-out">Native: bridge calls</button>
+      </div>
+      <div class="out" id="p-out" role="tabpanel" tabindex="0"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="native-frame">
+  <span class="eyebrow">Native host</span>
+  <h2>One native frame, call by call</h2>
+  <p>The operating system owns the loop, and Mojo is called. A small C file, <code>host_main.c</code>, receives SDL3's callbacks and passes each one to an exported Mojo function. That is the same shape as Flutter's iOS shell calling its engine, which is why this one design works on Linux, macOS and iOS. Every call across the shaded strips carries only numbers and <code>(pointer, length)</code> string pairs.</p>
+  <figure>
+    <div class="plate">
+    <svg class="d" viewBox="0 0 880 560" role="img" aria-label="Sequence of one event and one frame: SDL3 calls host_main.c, which calls the exported mojo_app_event function. Mojo reads event details through bridge getters, runs update and marks the app dirty. On the next SDL_AppIterate, host_main.c calls mojo_app_frame, Mojo runs view and sends open, text and close calls to the bridge, which copies strings into a frame arena, runs Clay layout, and draws through SDL3.">
+      <defs>
+        <marker id="n-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk"/></marker>
+        <marker id="n-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mke"/></marker>
+      </defs>
+      <rect x="382" y="60" width="26" height="470" class="band-e"/>
+      <rect x="597" y="60" width="26" height="470" class="band-e"/>
+      <text x="395" y="548" text-anchor="middle" class="sm te b">C → Mojo</text>
+      <text x="610" y="548" text-anchor="middle" class="sm te b">Mojo → C</text>
+
+      <rect x="25" y="16" width="150" height="42" rx="8" class="bx"/>
+      <text x="100" y="34" text-anchor="middle" class="mono b">SDL3</text>
+      <text x="100" y="50" text-anchor="middle" class="sm muted">OS · window · input</text>
+      <rect x="215" y="16" width="150" height="42" rx="8" class="bx"/>
+      <text x="290" y="34" text-anchor="middle" class="mono b">host_main.c</text>
+      <text x="290" y="50" text-anchor="middle" class="sm muted">the shell</text>
+      <rect x="425" y="16" width="150" height="42" rx="8" class="hn"/>
+      <text x="500" y="34" text-anchor="middle" class="mono b">app_entry.mojo</text>
+      <text x="500" y="50" text-anchor="middle" class="sm muted">your app</text>
+      <rect x="645" y="16" width="150" height="42" rx="8" class="bx"/>
+      <text x="720" y="34" text-anchor="middle" class="mono b">bridge + Clay</text>
+      <text x="720" y="50" text-anchor="middle" class="sm muted">C</text>
+      <line x1="100" y1="58" x2="100" y2="532" class="life"/>
+      <line x1="290" y1="58" x2="290" y2="532" class="life"/>
+      <line x1="500" y1="58" x2="500" y2="532" class="life"/>
+      <line x1="720" y1="58" x2="720" y2="532" class="life"/>
+
+      <text x="30" y="86" class="sm muted b">You type a letter</text>
+      <line x1="100" y1="104" x2="287" y2="104" class="ln" marker-end="url(#n-a)"/>
+      <text x="194" y="97" text-anchor="middle" class="mono">SDL_AppEvent</text>
+      <line x1="290" y1="132" x2="497" y2="132" class="le" marker-end="url(#n-e)"/>
+      <text x="394" y="125" text-anchor="middle" class="mono">mojo_app_event(app, type)</text>
+      <line x1="500" y1="160" x2="717" y2="160" class="le" marker-end="url(#n-e)"/>
+      <text x="610" y="153" text-anchor="middle" class="mono">mui_event_text_byte(i)</text>
+      <rect x="420" y="174" width="160" height="40" rx="6" class="note"/>
+      <text x="500" y="190" text-anchor="middle" class="mono">update(state, msg)</text>
+      <text x="500" y="206" text-anchor="middle" class="sm">dirty = true</text>
+      <line x1="500" y1="236" x2="293" y2="236" class="le dash" marker-end="url(#n-e)"/>
+      <text x="394" y="229" text-anchor="middle" class="mono">0 = keep going</text>
+
+      <text x="30" y="272" class="sm muted b">Next frame</text>
+      <line x1="100" y1="290" x2="287" y2="290" class="ln" marker-end="url(#n-a)"/>
+      <text x="194" y="283" text-anchor="middle" class="mono">SDL_AppIterate</text>
+      <line x1="290" y1="318" x2="497" y2="318" class="le" marker-end="url(#n-e)"/>
+      <text x="394" y="311" text-anchor="middle" class="mono">mojo_app_frame(app)</text>
+      <rect x="420" y="332" width="160" height="40" rx="6" class="note"/>
+      <text x="500" y="348" text-anchor="middle" class="mono">view(state)</text>
+      <text x="500" y="364" text-anchor="middle" class="sm">→ ViewTree, 6 nodes</text>
+      <line x1="500" y1="398" x2="717" y2="398" class="le" marker-end="url(#n-e)"/>
+      <text x="610" y="391" text-anchor="middle" class="mono">open · text · close ×6</text>
+      <rect x="640" y="412" width="160" height="40" rx="6" class="note"/>
+      <text x="720" y="428" text-anchor="middle" class="sm">copy strings to arena</text>
+      <text x="720" y="444" text-anchor="middle" class="sm">Clay computes layout</text>
+      <line x1="500" y1="478" x2="717" y2="478" class="le" marker-end="url(#n-e)"/>
+      <text x="610" y="471" text-anchor="middle" class="mono">mui_end_and_present()</text>
+      <line x1="720" y1="510" x2="103" y2="510" class="ln" marker-end="url(#n-a)"/>
+      <text x="410" y="503" text-anchor="middle" class="mono">draw rects + text, present to screen</text>
+    </svg>
+    </div>
+    <figcaption>Mojo never waits for input; it only answers calls. On iOS, UIKit drives these same callbacks through SDL3, so nothing on the Mojo side changes between a Linux window and an iPhone.</figcaption>
+  </figure>
+</section>
+
+<!-- 4b -->
+<section id="ios">
+  <span class="eyebrow">iOS native</span>
+  <h2>iOS, the Flutter way</h2>
+  <p>Flutter ships on iOS by compiling your code ahead of time into native ARM code and placing it inside a thin Xcode app that draws everything itself. mojo-ui can be packaged the same way. Every layer exists today except one: Mojo's runtime libraries have never been built for iOS. Milestone M5 is a one-day test that tells you how much of that runtime your app actually needs.</p>
+  <figure>
+    <div class="plate">
+    <svg class="d" viewBox="0 0 880 372" role="img" aria-label="Two iOS app stacks side by side. Flutter: Xcode shell, your Dart compiled ahead of time, the Flutter engine drawing with Metal, the Dart runtime, then iOS. mojo-ui: SDL3 shell with host_main.c, your Mojo compiled ahead of time, the bridge with Clay and SDL3 drawing with Metal, the Mojo runtime for iOS which is the unknown that M5 measures, then iOS.">
+      <text x="40" y="34" class="h">Flutter app on iOS</text>
+      <text x="480" y="34" class="h te">mojo-ui app on iOS</text>
+
+      <rect x="40" y="52" width="360" height="48" rx="8" class="bx"/>
+      <text x="56" y="73" class="mono b">Xcode shell</text>
+      <text x="56" y="90" class="sm muted">FlutterViewController</text>
+      <rect x="40" y="110" width="360" height="48" rx="8" class="bx"/>
+      <text x="56" y="131" class="mono b">App.framework</text>
+      <text x="56" y="148" class="sm muted">your Dart, compiled ahead of time</text>
+      <rect x="40" y="168" width="360" height="48" rx="8" class="bx"/>
+      <text x="56" y="189" class="mono b">Flutter engine</text>
+      <text x="56" y="206" class="sm muted">draws every pixel with Metal</text>
+      <rect x="40" y="226" width="360" height="48" rx="8" class="bx"/>
+      <text x="56" y="247" class="mono b">Dart runtime</text>
+      <text x="56" y="264" class="sm muted">ships inside Flutter</text>
+      <rect x="40" y="284" width="360" height="48" rx="8" class="core"/>
+      <text x="56" y="305" class="mono b">iOS</text>
+      <text x="56" y="322" class="sm muted">UIKit · Metal · touch · keyboard</text>
+
+      <rect x="480" y="52" width="360" height="48" rx="8" class="bx"/>
+      <text x="496" y="73" class="mono b">SDL3 shell · host_main.c</text>
+      <text x="496" y="90" class="sm muted">exists today</text>
+      <rect x="480" y="110" width="360" height="48" rx="8" class="hn"/>
+      <text x="496" y="131" class="mono b">app.o · your Mojo</text>
+      <text x="496" y="148" class="sm muted">mojo build --emit object (experimental)</text>
+      <rect x="480" y="168" width="360" height="48" rx="8" class="bx"/>
+      <text x="496" y="189" class="mono b">bridge + Clay + SDL3</text>
+      <text x="496" y="206" class="sm muted">plain C · draws with Metal · exists today</text>
+      <rect x="480" y="226" width="360" height="48" rx="8" class="hn dash"/>
+      <text x="496" y="247" class="mono b te">Mojo runtime for iOS</text>
+      <text x="496" y="264" class="sm">not built by anyone yet · M5 measures it</text>
+      <rect x="480" y="284" width="360" height="48" rx="8" class="core"/>
+      <text x="496" y="305" class="mono b">iOS</text>
+      <text x="496" y="322" class="sm muted">UIKit · Metal · touch · keyboard</text>
+
+      <line x1="400" y1="76" x2="480" y2="76" class="ln dash"/>
+      <line x1="400" y1="134" x2="480" y2="134" class="ln dash"/>
+      <line x1="400" y1="192" x2="480" y2="192" class="ln dash"/>
+      <line x1="400" y1="250" x2="480" y2="250" class="le dash"/>
+      <line x1="400" y1="308" x2="480" y2="308" class="ln dash"/>
+      <text x="440" y="356" text-anchor="middle" class="sm muted">each row plays the same role in both apps</text>
+    </svg>
+    </div>
+    <figcaption>The highlighted row is the whole question. If the spike shows your compiled Mojo code only needs system functions, the app runs like a Flutter app. If it needs Modular's runtime, that runtime has to be built for iOS first, which is now possible because it is open source.</figcaption>
+  </figure>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>M5 result</th><th>What it means</th><th>Next step</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill n">Go</span></td><td>The iOS object file needs only system functions</td><td>Link it into the Xcode app, run "Hello, Ada!" on the simulator, then a phone</td></tr>
+        <tr><td><span class="pill l">Partial</span></td><td>It needs a few Modular runtime pieces</td><td>Port just those pieces for iOS from the open-source repo, then retry</td></tr>
+        <tr><td><span class="pill w">No-go for now</span></td><td>The compiler rejects the iOS target or needs most of the runtime</td><td>iOS stays on the web host; revisit after the port or an official target</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="web-click">
+  <span class="eyebrow">Web host</span>
+  <h2>One web click, request by request</h2>
+  <p>On the web, the browser holds the text you type until you press Greet. Then HTMX posts the value, Python passes it straight to Mojo, and Mojo hands back finished HTML. The Python file contains routing and nothing else.</p>
+  <figure>
+    <div class="plate">
+    <svg class="d" viewBox="0 0 880 396" role="img" aria-label="Sequence of one web click: the browser posts msg greet with value Ada to server.py, which calls dispatch in the Mojo module, gets a new state dict back, calls render, gets an HTML fragment, and returns it to the browser, which swaps the app element.">
+      <defs>
+        <marker id="w-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk"/></marker>
+        <marker id="w-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mkt"/></marker>
+      </defs>
+      <rect x="558" y="60" width="26" height="310" class="band-t"/>
+      <text x="571" y="388" text-anchor="middle" class="sm tt b">Python ↔ Mojo</text>
+
+      <rect x="40" y="16" width="160" height="42" rx="8" class="bx"/>
+      <text x="120" y="34" text-anchor="middle" class="mono b">Browser</text>
+      <text x="120" y="50" text-anchor="middle" class="sm muted">HTMX</text>
+      <rect x="340" y="16" width="160" height="42" rx="8" class="bx"/>
+      <text x="420" y="34" text-anchor="middle" class="mono b">server.py</text>
+      <text x="420" y="50" text-anchor="middle" class="sm muted">FastHTML · Python</text>
+      <rect x="640" y="16" width="160" height="42" rx="8" class="hw"/>
+      <text x="720" y="34" text-anchor="middle" class="mono b">mojoui_web.so</text>
+      <text x="720" y="50" text-anchor="middle" class="sm muted">Mojo</text>
+      <line x1="120" y1="58" x2="120" y2="372" class="life"/>
+      <line x1="420" y1="58" x2="420" y2="372" class="life"/>
+      <line x1="720" y1="58" x2="720" y2="372" class="life"/>
+
+      <line x1="120" y1="100" x2="417" y2="100" class="ln" marker-end="url(#w-a)"/>
+      <text x="270" y="93" text-anchor="middle" class="mono">POST /event  msg=greet value=Ada</text>
+      <line x1="420" y1="140" x2="717" y2="140" class="lt" marker-end="url(#w-t)"/>
+      <text x="530" y="133" text-anchor="middle" class="mono">dispatch(state, …)</text>
+      <rect x="630" y="154" width="200" height="42" rx="6" class="note"/>
+      <text x="730" y="171" text-anchor="middle" class="mono">SET_INPUT("Ada")</text>
+      <text x="730" y="188" text-anchor="middle" class="mono">GREET</text>
+      <line x1="720" y1="222" x2="423" y2="222" class="lt dash" marker-end="url(#w-t)"/>
+      <text x="530" y="215" text-anchor="middle" class="mono">new state dict</text>
+      <line x1="420" y1="256" x2="717" y2="256" class="lt" marker-end="url(#w-t)"/>
+      <text x="530" y="249" text-anchor="middle" class="mono">render(state)</text>
+      <rect x="630" y="268" width="200" height="42" rx="6" class="note"/>
+      <text x="730" y="285" text-anchor="middle" class="mono">view → render_html</text>
+      <text x="730" y="302" text-anchor="middle" class="sm">escapes &lt; &gt; &amp; " '</text>
+      <line x1="720" y1="334" x2="423" y2="334" class="lt dash" marker-end="url(#w-t)"/>
+      <text x="530" y="327" text-anchor="middle" class="mono">"&lt;div id=app&gt;…"</text>
+      <line x1="420" y1="360" x2="123" y2="360" class="ln dash" marker-end="url(#w-a)"/>
+      <text x="270" y="353" text-anchor="middle" class="mono">fragment → swap #app</text>
+    </svg>
+    </div>
+    <figcaption>Two calls cross the teal strip per click: one to change state and one to render. Every interaction is a round trip to the server, which is fine for SaaS forms and is the main thing a later client-side web host would remove.</figcaption>
+  </figure>
+</section>
+
+<!-- 6 -->
+<section id="viewtree">
+  <span class="eyebrow">Data layout</span>
+  <h2>The ViewTree in memory</h2>
+  <p>The tree is not built from nested objects. It is one flat list of six nodes in depth-first order, and each node points to its first child and its next sibling by index. Walking it means following those two links. Clay, Taffy and Masonry store their trees the same way.</p>
+  <figure>
+    <div class="plate">
+    <svg class="d" viewBox="0 0 880 286" role="img" aria-label="Six nodes stored in a flat list: root, title, form, name, greet, greeting. first_child links go from root to title and from form to name. next_sibling links go from title to form, form to greeting, and name to greet.">
+      <defs>
+        <marker id="v-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mke"/></marker>
+        <marker id="v-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mkt"/></marker>
+      </defs>
+      <line x1="40" y1="20" x2="70" y2="20" class="lt dash"/>
+      <text x="78" y="24" class="mono">next_sibling</text>
+      <line x1="200" y1="20" x2="230" y2="20" class="le"/>
+      <text x="238" y="24" class="mono">first_child</text>
+
+      <path d="M236 128 Q304 58 370 126" class="lt dash" marker-end="url(#v-t)"/>
+      <path d="M372 128 Q576 -48 778 126" class="lt dash" marker-end="url(#v-t)"/>
+      <path d="M508 128 Q576 64 642 126" class="lt dash" marker-end="url(#v-t)"/>
+      <path d="M100 192 Q168 300 234 194" class="le" marker-end="url(#v-e)"/>
+      <path d="M372 192 Q440 300 506 194" class="le" marker-end="url(#v-e)"/>
+
+      <g>
+        <rect x="40" y="128" width="120" height="64" rx="8" class="bx"/>
+        <text x="50" y="146" class="sm muted mono">[0]</text>
+        <text x="100" y="166" text-anchor="middle" class="mono b">root</text>
+        <text x="100" y="183" text-anchor="middle" class="sm muted">GROUP · column</text>
+        <rect x="176" y="128" width="120" height="64" rx="8" class="bx"/>
+        <text x="186" y="146" class="sm muted mono">[1]</text>
+        <text x="236" y="166" text-anchor="middle" class="mono b">title</text>
+        <text x="236" y="183" text-anchor="middle" class="sm muted">LABEL</text>
+        <rect x="312" y="128" width="120" height="64" rx="8" class="bx"/>
+        <text x="322" y="146" class="sm muted mono">[2]</text>
+        <text x="372" y="166" text-anchor="middle" class="mono b">form</text>
+        <text x="372" y="183" text-anchor="middle" class="sm muted">GROUP · row</text>
+        <rect x="448" y="128" width="120" height="64" rx="8" class="bx"/>
+        <text x="458" y="146" class="sm muted mono">[3]</text>
+        <text x="508" y="166" text-anchor="middle" class="mono b">name</text>
+        <text x="508" y="183" text-anchor="middle" class="sm muted">TEXTBOX</text>
+        <rect x="584" y="128" width="120" height="64" rx="8" class="bx"/>
+        <text x="594" y="146" class="sm muted mono">[4]</text>
+        <text x="644" y="166" text-anchor="middle" class="mono b">greet</text>
+        <text x="644" y="183" text-anchor="middle" class="sm muted">BUTTON</text>
+        <rect x="720" y="128" width="120" height="64" rx="8" class="bx"/>
+        <text x="730" y="146" class="sm muted mono">[5]</text>
+        <text x="780" y="166" text-anchor="middle" class="mono b">greeting</text>
+        <text x="780" y="183" text-anchor="middle" class="sm muted">LABEL</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>root's children are title → form → greeting (follow the teal links from [1]). form's children are name → greet. Every node also carries a role, so a future accessibility layer can read the same list.</figcaption>
+  </figure>
+</section>
+
+<!-- 7 -->
+<section id="platforms">
+  <span class="eyebrow">Reach</span>
+  <h2>Where it runs, today and next</h2>
+  <p>The web host is the bridge for every platform Mojo can't compile for yet. Each native target can switch over later without touching <code>core/</code>.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Platform</th><th>v0 host</th><th>What unlocks native</th></tr></thead>
+      <tbody>
+        <tr><td>Linux x86-64</td><td><span class="pill n">Native</span></td><td>Already supported. Primary dev target for the weekend build.</td></tr>
+        <tr><td>macOS arm64</td><td><span class="pill n">Native</span></td><td>Already supported. Stretch milestone M4: same code, <code>.dylib</code> instead of <code>.so</code>.</td></tr>
+        <tr><td>Windows</td><td><span class="pill w">Web</span></td><td>Native Mojo for Windows, announced with Microsoft at ModCon 2026. No release date yet.</td></tr>
+        <tr><td>iOS</td><td><span class="pill w">Web</span> → <span class="pill n">Native (M5)</span></td><td>Flutter-style: your Mojo compiled ahead of time into one app with SDL3 as the shell. The only open question is whether Mojo's runtime needs an iOS port; the M5 spike answers it.</td></tr>
+        <tr><td>Android</td><td><span class="pill w">Web</span></td><td>An Android Mojo target. Not announced.</td></tr>
+        <tr><td>Browser, client-side</td><td><span class="pill l">Later</span></td><td>Clay compiled to WASM with a Canvas or WebGPU renderer, or Mojo itself compiling to WASM.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="rust">
+  <span class="eyebrow">Prior art</span>
+  <h2>What we borrow from Rust</h2>
+  <p>Rust's UI projects have already worked through most of these problems. v0 takes one idea from each and puts it in a specific file.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Project</th><th>Idea</th><th>Lands in</th></tr></thead>
+      <tbody>
+        <tr><td>Iced, Elm</td><td>State, messages, update and view as the whole app model</td><td><code>core/app.mojo</code></td></tr>
+        <tr><td>Dioxus</td><td>One virtual tree feeding many renderers, including a server-driven web mode</td><td><code>ViewTree</code> + two hosts</td></tr>
+        <tr><td>Taffy</td><td>Layout as a separate engine you can swap</td><td>Clay behind the bridge, Mojo port later</td></tr>
+        <tr><td>AccessKit</td><td>Accessibility as a plain data tree</td><td><code>role</code> on every node</td></tr>
+        <tr><td>Vello, wgpu</td><td>A GPU renderer as its own layer</td><td>Roadmap</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>Drawn from SPEC.md v0 · mojo-ui "Hello, Name"</footer>
+</div>
+
+<script>
+(function(){
+  // ---------- big-picture toggle ----------
+  var fig = document.getElementById('fig-big');
+  fig.querySelectorAll('.seg button').forEach(function(b){
+    b.addEventListener('click', function(){
+      fig.dataset.show = b.dataset.show;
+      fig.querySelectorAll('.seg button').forEach(function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    });
+  });
+
+  // ---------- core (mirrors SPEC §5) ----------
+  var M = {NONE:0, SET_INPUT:1, APPEND_TEXT:2, BACKSPACE:3, FOCUS:4, BLUR:5, GREET:6};
+  var MN = ['NONE','SET_INPUT','APPEND_TEXT','BACKSPACE','FOCUS','BLUR','GREET'];
+  var enc = new TextEncoder();
+  function bytes(s){ return enc.encode(s).length; }
+
+  function update(s, m){
+    switch(m.kind){
+      case M.SET_INPUT: s.input = m.payload; break;
+      case M.APPEND_TEXT: if (bytes(s.input + m.payload) <= 64) s.input += m.payload; break;
+      case M.BACKSPACE: s.input = Array.from(s.input).slice(0,-1).join(''); break;
+      case M.FOCUS: s.focus = m.payload; break;
+      case M.BLUR: s.focus = ''; break;
+      case M.GREET: var t = s.input.trim(); s.greeting = t ? 'Hello, ' + t + '!' : 'Hello, world!'; break;
+    }
+  }
+
+  function view(s){
+    var nodes = [], stack = [], last = {};
+    function add(n){
+      n.first_child = -1; n.next_sibling = -1;
+      var i = nodes.length; nodes.push(n);
+      if (stack.length){
+        var p = stack[stack.length-1];
+        if (last[p] === undefined) nodes[p].first_child = i; else nodes[last[p]].next_sibling = i;
+        last[p] = i;
+      }
+      return i;
+    }
+    function open(n){ stack.push(add(n)); }
+    function close(){ stack.pop(); }
+    open({kind:'GROUP', role:'group', id:'root', dir:'column', pad:24, gap:12});
+      add({kind:'LABEL', role:'label', id:'title', text:'mojo-ui · hello', font:20});
+      open({kind:'GROUP', role:'group', id:'form', dir:'row', pad:0, gap:8});
+        add({kind:'TEXTBOX', role:'textbox', id:'name', text:s.input, placeholder:'Your name', on_input:'SET_INPUT', focused:s.focus === 'name', font:16});
+        add({kind:'BUTTON', role:'button', id:'greet', text:'Greet', on_click:'GREET', font:16});
+      close();
+      add({kind:'LABEL', role:'label', id:'greeting', text:s.greeting, font:18});
+    close();
+    return {nodes:nodes, root:0};
+  }
+
+  function esc(v){ return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+  function renderHTML(tree){
+    var out = [];
+    function walk(i, d){
+      var n = tree.nodes[i], ind = '  '.repeat(d);
+      if (n.kind === 'GROUP'){
+        var idAttr = i === tree.root ? 'id="app" data-node="root"' : 'id="' + esc(n.id) + '"';
+        out.push(ind + '<div ' + idAttr + ' role="' + n.role + '" style="display:flex;flex-direction:' + n.dir + ';gap:' + n.gap + 'px;padding:' + n.pad + 'px">');
+        for (var c = n.first_child; c !== -1; c = tree.nodes[c].next_sibling) walk(c, d+1);
+        out.push(ind + '</div>');
+      } else if (n.kind === 'LABEL'){
+        out.push(ind + '<p id="' + esc(n.id) + '">' + esc(n.text) + '</p>');
+      } else if (n.kind === 'TEXTBOX'){
+        out.push(ind + '<input type="text" name="value" id="' + esc(n.id) + '" placeholder="' + esc(n.placeholder) + '" value="' + esc(n.text) + '">');
+      } else if (n.kind === 'BUTTON'){
+        out.push(ind + '<button id="' + esc(n.id) + '" hx-post="/event" hx-vals=\'{"msg":"greet"}\'');
+        out.push(ind + '        hx-include="#app input" hx-target="#app" hx-swap="outerHTML">' + esc(n.text) + '</button>');
+      }
+    }
+    walk(tree.root, 0);
+    return out.join('\n');
+  }
+
+  function q(s){ return JSON.stringify(s); }
+  function renderCalls(tree){
+    var out = ['mui_begin(mouse_x, mouse_y, mouse_down)'];
+    function walk(i, d){
+      var n = tree.nodes[i], ind = '  '.repeat(d);
+      if (n.kind === 'GROUP'){
+        out.push(ind + 'mui_open(' + q(n.id) + ', dir=' + (n.dir === 'row' ? 0 : 1) + ', pad=' + n.pad + ', gap=' + n.gap + ')');
+        for (var c = n.first_child; c !== -1; c = tree.nodes[c].next_sibling) walk(c, d+1);
+        out.push(ind + 'mui_close()');
+      } else {
+        var shown = n.text, color = '0x15202BFF';
+        if (n.kind === 'TEXTBOX'){
+          if (!n.text && !n.focused){ shown = n.placeholder; color = '0x596574FF'; }
+          else if (n.focused) shown = n.text + '|';
+        }
+        var bg = n.kind === 'BUTTON' ? ', bg=0xBE4416FF' : n.kind === 'TEXTBOX' ? ', bg=0xF4F6F8FF' : '';
+        out.push(ind + 'mui_open(' + q(n.id) + bg + ')');
+        out.push(ind + '  mui_text(' + q(shown) + ', size=' + n.font + ', color=' + color + ')');
+        out.push(ind + 'mui_close()');
+      }
+    }
+    walk(tree.root, 0);
+    out.push('mui_end_and_present(clear=0xF4F6F8FF)');
+    return out.join('\n');
+  }
+
+  // ---------- host simulation ----------
+  var state = {input:'', greeting:'', focus:''};
+  var log = [];
+  var mode = 'native';
+  var input = document.getElementById('name-in');
+  var greetingEl = document.getElementById('greeting');
+  var win = document.getElementById('win');
+  var hint = document.getElementById('mode-hint');
+  var outEl = document.getElementById('p-out');
+  var tab = 't-log';
+
+  function dispatch(kind, payload, tag){
+    var m = {kind:kind, payload: payload || ''};
+    update(state, m);
+    log.unshift({tag: tag || mode, text: MN[kind] + (payload !== undefined && payload !== '' ? '(' + q(payload) + ')' : '')});
+    if (log.length > 14) log.length = 14;
+  }
+
+  function sync(){
+    var tree = view(state);
+    var gNode = tree.nodes[5];
+    greetingEl.textContent = gNode.text;
+    if (mode === 'native' && input.value !== state.input) input.value = state.input;
+    hint.textContent = mode === 'native'
+      ? 'Native: every keystroke becomes a message, the way SDL text events would.'
+      : 'Web: the browser keeps your typing until you press Greet, then one POST carries it.';
+    var html = '';
+    if (tab === 't-log'){
+      html = '<ul class="log">' + log.map(function(e){
+        var c = e.tag === 'native' ? 'n' : e.tag === 'web' ? 'w' : 's';
+        return '<li><span class="chip ' + c + '">' + e.tag + '</span><span>' + esc(e.text) + '</span></li>';
+      }).join('') + '</ul>';
+    } else {
+      var txt = tab === 't-state'
+        ? 'State {\n  input:    ' + q(state.input) + '\n  greeting: ' + q(state.greeting) + '\n  focus:    ' + q(state.focus) + '\n}\n\ninput is ' + bytes(state.input) + ' of 64 bytes'
+        : tab === 't-html' ? renderHTML(tree) : renderCalls(tree);
+      html = '<pre></pre>';
+      outEl.innerHTML = html;
+      outEl.querySelector('pre').textContent = txt;
+      return;
+    }
+    outEl.innerHTML = html;
+  }
+
+  var prev = '';
+  input.addEventListener('focus', function(){ if (mode === 'native'){ dispatch(M.FOCUS, 'name'); sync(); } });
+  input.addEventListener('blur', function(){ if (mode === 'native'){ dispatch(M.BLUR); sync(); } });
+  input.addEventListener('input', function(){
+    if (mode !== 'native') return;
+    var now = input.value, old = state.input;
+    if (now.length > old.length && now.indexOf(old) === 0) dispatch(M.APPEND_TEXT, now.slice(old.length));
+    else if (old.indexOf(now) === 0 && Array.from(old).length - Array.from(now).length === 1) dispatch(M.BACKSPACE);
+    else dispatch(M.SET_INPUT, now);
+    sync();
+  });
+  document.getElementById('f').addEventListener('submit', function(e){
+    e.preventDefault();
+    if (mode === 'web'){ dispatch(M.SET_INPUT, input.value); dispatch(M.GREET); input.value = state.input; }
+    else dispatch(M.GREET);
+    sync();
+  });
+
+  win.querySelectorAll('.seg button').forEach(function(b){
+    b.addEventListener('click', function(){
+      mode = b.dataset.mode;
+      win.classList.toggle('mode-web', mode === 'web');
+      win.classList.toggle('mode-native', mode === 'native');
+      win.querySelector('.bar span').textContent = mode === 'web' ? 'localhost:5001' : 'hello-native';
+      win.querySelectorAll('.seg button').forEach(function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+      sync();
+    });
+  });
+
+  document.querySelectorAll('.tabs button').forEach(function(b){
+    b.addEventListener('click', function(){
+      tab = b.id;
+      document.querySelectorAll('.tabs button').forEach(function(o){ o.setAttribute('aria-selected', o === b ? 'true' : 'false'); });
+      sync();
+    });
+  });
+
+  // sample run so the page opens in a working state
+  dispatch(M.APPEND_TEXT, 'A', 'sample'); dispatch(M.APPEND_TEXT, 'd', 'sample'); dispatch(M.APPEND_TEXT, 'a', 'sample'); dispatch(M.GREET, '', 'sample');
+  input.value = state.input;
+  sync();
+})();
+</script>
