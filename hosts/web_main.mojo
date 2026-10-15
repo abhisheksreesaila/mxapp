@@ -5,7 +5,7 @@ from std.python import PythonObject
 from std.python.bindings import PythonModuleBuilder
 
 from app import Main
-from mojoui.hosts.web import web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame
+from mojoui.hosts.web import web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design
 
 
 @export
@@ -19,6 +19,7 @@ def PyInit_mojoui_app() abi("C") -> PythonObject:
         m.def_function[image]("image", docstring="'address width height' of an image node's RGBA pixels.")
         m.def_function[rows]("rows", docstring="JSON list of a LazyList's row texts (node, first, count).")
         m.def_function[close]("close", docstring="End a session.")
+        m.def_function[design]("design", docstring="The app's design language (0 native, 1 Fluent 2).")
         m.def_function[draw]("draw", docstring="Paint a canvas (node, width, height, scale); JSON with the pixels' address and what changed.")
         m.def_function[gesture]("gesture", docstring="A canvas gesture (node, kind, x, y, dx, dy, zoom); returns what changed as JSON.")
         m.def_function[frame]("frame", docstring="A display frame for a canvas (node, microseconds); returns what changed as JSON.")
@@ -66,3 +67,7 @@ def gesture(handle: PythonObject, node: PythonObject, kind: PythonObject, x: Pyt
 
 def frame(handle: PythonObject, node: PythonObject, microseconds: PythonObject) raises -> PythonObject:
     return PythonObject(web_frame[Main](Int(py=handle), Int(py=node), Int(py=microseconds)))
+
+
+def design(handle: PythonObject) raises -> PythonObject:
+    return PythonObject(web_design[Main](Int(py=handle)))

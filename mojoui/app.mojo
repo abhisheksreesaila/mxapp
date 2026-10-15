@@ -69,6 +69,10 @@ trait App(Movable, Deinitable):
         """The window's starting size in points, on desktops."""
         return (480, 560)
 
+    def design(self) -> Int:
+        """The design language hosts style native controls with: NATIVE (default) or FLUENT."""
+        return 0
+
 
 struct Runtime[A: App](Movable):
     """Holds the app and the screen last shown. Hosts call dispatch() on every event."""

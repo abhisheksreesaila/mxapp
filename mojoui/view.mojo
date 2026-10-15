@@ -49,6 +49,13 @@ comptime TITLE = 1
 comptime HEADLINE = 2
 comptime CAPTION = 3
 
+# Container styles (on a VStack's `style`): hosts that know them draw them, others show a plain stack
+comptime CARD = 1  # a raised panel: the platform's own card look
+
+# Design languages (App.design()): how hosts style their native controls
+comptime NATIVE = 0  # each platform's own look, untouched
+comptime FLUENT = 1  # Fluent 2 tokens (neutral greys, brand blue, rounded panels) wherever the host can apply them
+
 # Button styles
 comptime PLAIN = 0
 comptime PROMINENT = 1
@@ -388,6 +395,16 @@ def VStack(*items: View, spacing: Int = 16) -> View:
 def VStack(items: List[View], spacing: Int = 16) -> View:
     """Children top to bottom, from a list (for rows that come and go)."""
     return _container(Node(VSTACK, spacing=spacing), items)
+
+
+def Card(*items: View, spacing: Int = 12) -> View:
+    """A raised panel holding its children top to bottom (padded 16). Hosts draw their own card look;
+    hosts that don't know cards show it as a plain VStack."""
+    var list = List[View]()
+    for item in items:
+        list.append(item.copy())
+    var v = _container(Node(VSTACK, spacing=spacing, style=CARD), list)
+    return v^.padding(16)
 
 
 def HStack(*items: View, spacing: Int = 8) -> View:

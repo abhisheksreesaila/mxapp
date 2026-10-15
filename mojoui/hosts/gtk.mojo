@@ -13,7 +13,7 @@ from std.memory.alloc import alloc, Layout
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, PAN, ZOOM, TAP,
-    START, CENTER, END, STRETCH, BETWEEN, AUTO, Node,
+    START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, FLUENT,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
@@ -642,6 +642,9 @@ struct GtkHost[A: App](Movable):
         else:
             var orientation = VERTICAL if node.kind == VSTACK else HORIZONTAL
             w = external_call["gtk_box_new", Int](c_int(orientation), c_int(node.spacing))
+            if node.kind == VSTACK and node.style == CARD:
+                add_class(w, "card")  # libadwaita's own card look
+                add_class(w, "mui-card")
             if node.kind == HSTACK:
                 external_call["gtk_widget_set_halign", NoneType](w, c_int(ALIGN_CENTER))
             # justify: GtkBox packs from the start; invisible expanding spacers do the rest.
@@ -1372,6 +1375,8 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
     var host = host_at[A](host_addr)
     if not alerts:
         print("NATIVE: GTK " + String(external_call["gtk_get_major_version", c_int]()) + "." + String(external_call["gtk_get_minor_version", c_int]()))
+        if host[].rt.app.design() == FLUENT:
+            print("DESIGN: fluent")
         if external_call["gtk_widget_get_mapped", c_int](host[].window) != 0:  # laid out, so measurable
             for i in range(len(host[].rt.shown.nodes)):
                 if host[].rt.shown.nodes[i].name != "":
@@ -1498,11 +1503,31 @@ def save_png(window: Int, path: String):
     print("SHOT:", path if ok != 0 else "failed")
 
 
+# Fluent 2 tokens for GTK (apps whose design() is FLUENT): neutral greys, the brand blue as the accent,
+# 4/8 px corners. Light theme. (Colours GTK can't take from CSS stay libadwaita's.)
+comptime FLUENT_CSS = """
+:root { --accent-bg-color: #0F6CBD; --accent-color: #0F6CBD; --accent-fg-color: #ffffff; }
+window.fluent { background-color: #F5F5F5; color: #242424; }
+window.fluent .mui-card { background-color: #ffffff; border-radius: 8px;
+  box-shadow: 0 0 2px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.14); }
+window.fluent button { border-radius: 4px; }
+window.fluent button.suggested-action { background-color: #0F6CBD; color: #ffffff; }
+window.fluent entry, window.fluent dropdown > button { border-radius: 4px; }
+"""
+
+
 def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     var host = host_at[A](host_addr)
     host[].window = external_call["gtk_application_window_new", Int](gapp)
     var title = host[].rt.app.title()
     external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
+    if host[].rt.app.design() == FLUENT:  # Fluent 2 tokens on top of libadwaita
+        var provider = external_call["gtk_css_provider_new", Int]()
+        var rules = String(FLUENT_CSS)
+        external_call["gtk_css_provider_load_from_string", NoneType](provider, rules.as_c_string_span())
+        var display = external_call["gdk_display_get_default", Int]()
+        external_call["gtk_style_context_add_provider_for_display", NoneType](display, provider, c_uint(801))
+        add_class(host[].window, "fluent")
     var size = host[].rt.app.window_size()
     external_call["gtk_window_set_default_size", NoneType](host[].window, c_int(size[0]), c_int(size[1]))
     for prop in ["notify::default-width", "notify::default-height", "notify::maximized", "notify::fullscreened"]:

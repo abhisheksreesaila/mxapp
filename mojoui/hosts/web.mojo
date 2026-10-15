@@ -102,6 +102,10 @@ def web_title[A: App](handle: Int) -> String:
     return session_at[A](handle)[].app.title()
 
 
+def web_design[A: App](handle: Int) -> Int:
+    return session_at[A](handle)[].app.design()
+
+
 def web_view[A: App](handle: Int) -> String:
     return view_to_json(session_at[A](handle)[].shown)
 

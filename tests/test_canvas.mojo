@@ -136,6 +136,17 @@ def test_window_size_defaults() raises:
     assert_equal(rt.app.window_size()[0], 480)
 
 
+def test_card_is_a_padded_vstack_with_the_card_style() raises:
+    var v = Card(Text("a"), Text("b"), spacing=6)
+    assert_equal(v.nodes[0].kind, VSTACK)  # hosts without cards still show a stack
+    assert_equal(v.nodes[0].style, CARD)
+    assert_equal(v.nodes[0].spacing, 6)
+    assert_equal(v.nodes[0].pad_v, 16)
+    assert_equal(v.nodes[0].children, [1, 2])
+    var rt = Runtime(Painter())
+    assert_equal(rt.app.design(), NATIVE)  # the default
+
+
 def main() raises:
     test_canvas_node_records_id_version_and_messages()
     test_surface_set_get_fill_and_points()

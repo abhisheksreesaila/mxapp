@@ -115,6 +115,7 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .canvas { position: relative; min-width: 240px; min-height: 240px; overflow: hidden; background: var(--surface); }
 .canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .canvas canvas:active { cursor: grabbing; }
+.vstack.card { background: light-dark(#fff, #2c2c2e); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 0 0 1px var(--line); }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
 """
 
@@ -239,6 +240,37 @@ CANVAS_JS = r"""
     });
   });
 })();
+"""
+
+
+# Fluent 2 (Microsoft's design system) tokens, for apps whose design() is FLUENT: neutral greys,
+# the brand blue, 4/8 px corners, the Segoe type ramp, soft elevation. Light theme.
+FLUENT_CSS = """
+body.fluent { color-scheme: light; --accent: #0F6CBD; --danger: #C50F1F; --muted: #616161; --surface: #F0F0F0;
+  --line: #E0E0E0; background: #F5F5F5; color: #242424;
+  font: 14px/20px "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif; }
+body.fluent .text.title { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: 0; }
+body.fluent .text.headline { font-size: 16px; line-height: 22px; font-weight: 600; }
+body.fluent .text.caption { font-size: 12px; line-height: 16px; color: #616161; }
+body.fluent .text { text-align: left; }
+body.fluent button { border-radius: 4px; min-height: 32px; padding: 5px 12px; font-weight: 600; background: #fff;
+  border: 1px solid #D1D1D1; transition: background .1s; }
+body.fluent button:hover { filter: none; background: #F5F5F5; }
+body.fluent button:active { transform: none; background: #E0E0E0; }
+body.fluent button.prominent { background: #0F6CBD; border-color: transparent; color: #fff; }
+body.fluent button.prominent:hover { background: #115EA3; }
+body.fluent select, body.fluent input[type=text], body.fluent input[type=date] { border-radius: 4px; min-height: 32px;
+  border: 1px solid #D1D1D1; border-bottom-color: #616161; background: #fff; }
+body.fluent label.toggle { min-height: 32px; }
+body.fluent .segmented, body.fluent .tabs { background: transparent; padding: 0; gap: 4px; }
+body.fluent .segmented span, body.fluent .tabs span { min-height: 32px; padding: 0 12px; border-radius: 4px; font-weight: 400; color: #424242; }
+body.fluent .segmented input:checked + span, body.fluent .tabs input:checked + span { background: #EBF3FC; color: #0F6CBD;
+  box-shadow: inset 0 0 0 1px #B4D6FA; font-weight: 600; }
+body.fluent .vstack.card { background: #fff; border-radius: 8px; box-shadow: 0 0 2px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.14); }
+body.fluent hr { border-top-color: #E0E0E0; }
+body.fluent .lazylist { border-radius: 4px; border-color: #E0E0E0; background: #fff; }
+body.fluent .lazylist .row { border-bottom-color: #F0F0F0; }
+body.fluent .canvas { background: transparent; }
 """
 
 
@@ -393,7 +425,7 @@ def render_node(s, i, sid):
     kids = [render(s, c, sid) for c in n["children"]]
     if kind == SCROLL:
         return Div(*kids, cls="scroll", id=nid, style=f"max-height:{n['size']}px")
-    cls = "vstack" if kind == VSTACK else "hstack"
+    cls = ("vstack card" if n["style"] == 1 else "vstack") if kind == VSTACK else "hstack"
     return Div(*kids, cls=cls, id=nid, style=f"gap:{n['spacing']}px")
 
 
@@ -448,7 +480,7 @@ def make_app(module_dir):
         # inherited their list's hx-target and silently sent nothing). Note: hx-vals is still
         # merged from ancestors even so, so elements set every key they rely on themselves.
         Meta(name="htmx-config", content='{"disableInheritance": true}'),
-        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS)))
+        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS), Style(FLUENT_CSS)))
     sessions = OrderedDict()  # sid → Session, oldest first
     sessions_lock = threading.Lock()
 
@@ -485,7 +517,9 @@ def make_app(module_dir):
                 with old.lock:
                     old.closed = True
                     mod.close(old.handle)
-        return Title(mod.title(s.handle)), *root(s, sid)
+        fluent = mod.design(s.handle) == 1
+        body_class = Script("document.body.classList.add('fluent')") if fluent else ""
+        return Title(mod.title(s.handle)), *root(s, sid), body_class
 
     @app.get("/img/{sid}/{n}")
     def image(sid: str, n: int):
@@ -621,9 +655,12 @@ def make_app(module_dir):
             rgba = ctypes.string_at(r["address"], r["width"] * r["height"] * 4)
             pending = bool(sess.pending and (sess.pending.get("rebuild") or sess.pending.get("patches")))
         out = io.BytesIO()
-        Image.frombuffer("RGBA", (r["width"], r["height"]), rgba, "raw", "RGBA", 0, 1).convert("RGB").save(
-            out, "JPEG", quality=JPEG_QUALITY)
-        return Response(out.getvalue(), media_type="image/jpeg",
+        picture = Image.frombuffer("RGBA", (r["width"], r["height"]), rgba, "raw", "RGBA", 0, 1).convert("RGB")
+        if tick:  # animating: small, fast JPEG frames
+            picture.save(out, "JPEG", quality=JPEG_QUALITY)
+        else:  # a still picture (charts, text): exact PNG
+            picture.save(out, "PNG", compress_level=1)
+        return Response(out.getvalue(), media_type="image/jpeg" if tick else "image/png",
                         headers={"Cache-Control": "no-store", "X-Mojoui-Pending": "1" if pending else "0",
                                  "X-Mojoui-Draw-Ms": f"{(time.perf_counter() - now) * 1000:.2f}"})
 
