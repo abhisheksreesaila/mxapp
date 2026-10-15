@@ -59,6 +59,7 @@ struct AppKitHost[A: App](Movable):
 
     def build(mut self, i: Int, self_addr: Int) -> Int:
         var node = self.rt.shown.nodes[i].copy()  # copy: building children mutates self
+        var sized = node.fills or node.grows or node.w != 0  # the app's layout decides this view's width
         var w: Int
         if node.kind == TEXT:
             w = msg(cls("NSTextField"), "labelWithString:", ns_string(node.text))
@@ -89,7 +90,8 @@ struct AppKitHost[A: App](Movable):
             _ = msg(w, "setPlaceholderString:", ns_string(node.hint))
             _ = msg(w, "setDelegate:", self.target)  # controlTextDidChange: as you type
             self.wire(w, i, self_addr, "submit:")  # the action fires on Return
-            prefer(w, "widthAnchor", Float64(220))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(220))
         elif node.kind == TOGGLE:
             w = msg(cls("NSButton"), "checkboxWithTitle:target:action:", ns_string(node.text), self.target, sel("toggle:"))
             _ = msg(w, "setTag:", tag_for(self_addr, i))
@@ -112,7 +114,8 @@ struct AppKitHost[A: App](Movable):
             )
             _ = msg(w, "setTag:", tag_for(self_addr, i))
             _ = msg(w, "setContinuous:", 1)
-            prefer(w, "widthAnchor", Float64(240))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(240))
         elif node.kind == PROGRESS:
             w = new("NSProgressIndicator")
             _ = msg(w, "setStyle:", 0)  # bar
@@ -120,16 +123,21 @@ struct AppKitHost[A: App](Movable):
             _ = msg(w, "setMinValue:", Float64(0))
             _ = msg(w, "setMaxValue:", Float64(100))
             _ = msg(w, "setDoubleValue:", Float64(node.value))
-            prefer(w, "widthAnchor", Float64(240))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(240))
         elif node.kind == DIVIDER:
             w = new("NSBox")
             _ = msg(w, "setBoxType:", 2)  # NSBoxSeparator
-            prefer(w, "widthAnchor", Float64(280))
-            constrain(w, "heightAnchor", Float64(1))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(280))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(1))
         elif node.kind == IMAGE:
             w = msg(cls("NSImageView"), "imageViewWithImage:", ns_image(node.pixels, node.spacing, node.size))
-            prefer(w, "widthAnchor", Float64(node.spacing))
-            constrain(w, "heightAnchor", Float64(node.size))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(node.spacing))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(node.size))
         elif node.kind == SEGMENTED or node.kind == TABS:
             w = msg(cls("NSSegmentedControl"), "segmentedControlWithLabels:trackingMode:target:action:",
                     ns_array(node.options), 0, self.target, sel("segment:"))  # 0 = select one
@@ -154,8 +162,10 @@ struct AppKitHost[A: App](Movable):
             _ = msg(text, "setRichText:", 0)
             _ = msg(text, "setIdentifier:", ns_string(String(tag_for(self_addr, i))))  # NSTextView has no tag
             _ = msg(text, "setDelegate:", self.target)  # textDidChange:
-            prefer(w, "widthAnchor", Float64(320))
-            constrain(w, "heightAnchor", Float64(node.size))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(320))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(node.size))
             self.widgets[i] = text
         elif node.kind == ALERT:
             # Shown on the next run-loop turn (not inside the event that asked for it).
@@ -212,8 +222,10 @@ struct AppKitHost[A: App](Movable):
             w = new("NSScrollView")
             _ = msg(w, "setHasVerticalScroller:", 1)
             _ = msg(w, "setDocumentView:", table)
-            prefer(w, "widthAnchor", Float64(340))
-            constrain(w, "heightAnchor", Float64(node.size))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(340))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(node.size))
             self.widgets[i] = table
         elif node.kind == SPACER:
             w = new("NSView")
@@ -227,8 +239,10 @@ struct AppKitHost[A: App](Movable):
             var clip = msg(w, "contentView")
             for anchor in ["topAnchor", "leadingAnchor", "widthAnchor"]:
                 _ = msg(msg(msg(content, anchor), "constraintEqualToAnchor:", msg(clip, anchor)), "setActive:", 1)
-            constrain(w, "heightAnchor", Float64(node.size))
-            prefer(w, "widthAnchor", Float64(320))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(node.size))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(320))
         else:
             w = new("NSStackView")
             var vertical = node.kind == VSTACK

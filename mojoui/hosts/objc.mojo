@@ -233,8 +233,9 @@ def sf_symbol(name: String) -> String:
 
 
 def prefer(view: Int, anchor: String, points: Float64):
-    """A control's default size, as a *preferred* constraint (priority 750): the app's own
-    layout settings (fill, grow, width), which are required, always win over it."""
+    """A control's default size, as a *preferred* constraint (priority 760: above the default
+    compression resistance of 750, below required). Hosts only add it when the app hasn't
+    sized the view itself."""
     var c = msg(msg(view, anchor), "constraintEqualToConstant:", points)
-    _ = msg(c, "setPriority:", Float32(750))
+    _ = msg(c, "setPriority:", Float32(760))
     _ = msg(c, "setActive:", 1)

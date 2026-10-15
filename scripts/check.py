@@ -562,6 +562,8 @@ def m3():
         ("max width ≤ 200", lambda b: W(b, "maxw") <= 200 + TOL),
         ("max width text wraps (taller than one line)", lambda b: H(b, "maxw") > 30),
         ("min width ≥ 150", lambda b: W(b, "minw") >= 150 - TOL),
+        ("fill + max width: as wide as the max", lambda b: (W(b, "fm_c"), 200)),
+        ("fill + max width: centred", lambda b: (CX(b, "fm_c"), CX(b, "fm_col"))),
     ])
 
 

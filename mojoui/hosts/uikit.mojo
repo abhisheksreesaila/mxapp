@@ -76,6 +76,7 @@ struct UIKitHost[A: App](Movable):
 
     def build(mut self, i: Int, self_addr: Int) -> Int:
         var node = self.rt.shown.nodes[i].copy()  # copy: building children mutates self
+        var sized = node.fills or node.grows or node.w != 0  # the app's layout decides this view's width
         var w: Int
         var shown: Int  # what goes into the parent (usually w itself)
         if node.kind == TEXT:
@@ -93,8 +94,10 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setReturnKeyType:", 9)  # Done
             self.wire(w, i, self_addr, "changed:", EDITING_CHANGED)
             _ = msg(w, "addTarget:action:forControlEvents:", self.target, sel("submit:"), EDITING_DID_END_ON_EXIT)
-            prefer(w, "widthAnchor", Float64(200))  # leaves room for a button beside it on an iPhone SE
-            constrain(w, "heightAnchor", Float64(44))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(200))  # leaves room for a button beside it on an iPhone SE
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(44))
             shown = w
         elif node.kind == TOGGLE:
             w = new("UISwitch")
@@ -122,18 +125,22 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setMaximumValue:", Float32(100))
             _ = msg(w, "setValue:animated:", Float32(node.value), 0)
             self.wire(w, i, self_addr, "slide:", VALUE_CHANGED)
-            prefer(w, "widthAnchor", Float64(260))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(260))
             shown = w
         elif node.kind == PROGRESS:
             w = msg(msg(cls("UIProgressView"), "alloc"), "initWithProgressViewStyle:", 0)
             _ = msg(w, "setProgress:animated:", Float32(node.value) / 100.0, 0)
-            prefer(w, "widthAnchor", Float64(260))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(260))
             shown = w
         elif node.kind == DIVIDER:
             w = new("UIView")
             _ = msg(w, "setBackgroundColor:", msg(cls("UIColor"), "separatorColor"))
-            prefer(w, "widthAnchor", Float64(280))
-            constrain(w, "heightAnchor", Float64(1))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(280))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(1))
             shown = w
         elif node.kind == IMAGE:
             w = msg(msg(cls("UIImageView"), "alloc"), "initWithImage:", ui_image(node.pixels, node.spacing, node.size))
@@ -152,7 +159,8 @@ struct UIKitHost[A: App](Movable):
             w = msg(msg(cls("UISegmentedControl"), "alloc"), "initWithItems:", ns_array(node.options))
             _ = msg(w, "setSelectedSegmentIndex:", node.value)
             self.wire(w, i, self_addr, "segment:", VALUE_CHANGED)
-            constrain(w, "heightAnchor", Float64(40 if node.kind == TABS else 34))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(40 if node.kind == TABS else 34))
             shown = w
         elif node.kind == RADIO:
             w = new("UIStackView")
@@ -172,8 +180,10 @@ struct UIKitHost[A: App](Movable):
             _ = msg(msg(w, "layer"), "setCornerRadius:", Float64(12))
             _ = msg(w, "setTag:", tag_for(self_addr, i))
             _ = msg(w, "setDelegate:", self.target)  # textViewDidChange:
-            prefer(w, "widthAnchor", Float64(300))
-            constrain(w, "heightAnchor", Float64(node.size))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(300))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(node.size))
             shown = w
         elif node.kind == ALERT:
             # Presented on the next run-loop turn (not inside the event that asked for it).
@@ -190,7 +200,8 @@ struct UIKitHost[A: App](Movable):
                 _ = msg(back, "setAccessibilityLabel:", ns_string("Back"))
                 _ = msg(item, "setLeftBarButtonItem:", back)
             _ = msg(w, "setItems:animated:", msg(cls("NSArray"), "arrayWithObject:", item), 0)
-            prefer(w, "widthAnchor", Float64(340))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(340))
             shown = w
         elif node.kind == DATE:
             w = new("UIDatePicker")
@@ -225,8 +236,10 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setTag:", tag_for(self_addr, i))
             _ = msg(w, "setDataSource:", self.target)  # rows are asked for as they scroll into view
             _ = msg(w, "setDelegate:", self.target)
-            prefer(w, "widthAnchor", Float64(340))
-            constrain(w, "heightAnchor", Float64(node.size))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(340))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(node.size))
             shown = w
         elif node.kind == SPACER:
             w = new("UIView")
@@ -241,8 +254,10 @@ struct UIKitHost[A: App](Movable):
                 _ = msg(msg(msg(content, anchor), "constraintEqualToAnchor:", msg(inner, anchor)), "setActive:", 1)
             var frame = msg(w, "frameLayoutGuide")
             _ = msg(msg(msg(content, "widthAnchor"), "constraintEqualToAnchor:", msg(frame, "widthAnchor")), "setActive:", 1)
-            constrain(w, "heightAnchor", Float64(node.size))
-            prefer(w, "widthAnchor", Float64(320))
+            if node.h == 0:
+                constrain(w, "heightAnchor", Float64(node.size))
+            if not sized:  # (the app sized it: its settings decide)
+                prefer(w, "widthAnchor", Float64(320))
             shown = w
         else:
             w = new("UIStackView")

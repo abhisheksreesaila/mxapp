@@ -158,7 +158,7 @@ def render(s, i, sid):
     if n["fills"]:
         css.append("align-self:stretch")
         if n["max_w"]:
-            css.append("margin-inline:auto")  # stretched but capped: centred, as GTK's clamp does
+            css.append("width:100%;margin-inline:auto")  # min(max, available), centred, as GTK's clamp does
     if n["align_items"] in ALIGN_CSS:
         css.append(f"align-items:{ALIGN_CSS[n['align_items']]}")
     if n["justify_items"] in JUSTIFY_CSS:

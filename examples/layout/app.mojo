@@ -48,6 +48,7 @@ struct Main(App):
             Button("Fixed", on_tap=0).width(200).height(60).tag("fixed"),
             Text("A long sentence that wraps because its maximum width is limited.").max_width(200).tag("maxw"),
             Text("x").min_width(150).tag("minw"),
+            VStack(Text("short").fill().max_width(200).tag("fm_c")).width(320).tag("fm_col"),
             # fill
             VStack(Button("Fill", on_tap=0, style=PROMINENT).fill().tag("fill_child")).padding(10).width(320).tag("fill_box"),
             # grow
