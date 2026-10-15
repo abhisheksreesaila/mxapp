@@ -12,13 +12,15 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
+    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
 from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
 from mojoui.hosts.objc import (
-    cls, sel, msg, new, ns_string, ns_data, from_ns, constrain, new_class, add_method, register_class, pool_push,
+    cls, sel, msg, new, ns_string, ns_data, ns_array, ns_number, ns_date, date_text, sf_symbol, from_ns, constrain,
+    new_class, add_method, add_protocol, register_class, pool_push,
 )
 
 comptime NODE_BITS = 16
@@ -127,6 +129,91 @@ struct AppKitHost[A: App](Movable):
             w = msg(cls("NSImageView"), "imageViewWithImage:", ns_image(node.pixels, node.spacing, node.size))
             constrain(w, "widthAnchor", Float64(node.spacing))
             constrain(w, "heightAnchor", Float64(node.size))
+        elif node.kind == SEGMENTED or node.kind == TABS:
+            w = msg(cls("NSSegmentedControl"), "segmentedControlWithLabels:trackingMode:target:action:",
+                    ns_array(node.options), 0, self.target, sel("segment:"))  # 0 = select one
+            _ = msg(w, "setTag:", tag_for(self_addr, i))
+            _ = msg(w, "setSelectedSegment:", node.value)
+            if node.kind == TABS:
+                _ = msg(w, "setControlSize:", 3)  # large
+        elif node.kind == RADIO:
+            w = new("NSStackView")
+            _ = msg(w, "setOrientation:", 1)
+            _ = msg(w, "setAlignment:", 1)  # leading
+            for j in range(len(node.options)):
+                var b = msg(cls("NSButton"), "radioButtonWithTitle:target:action:", ns_string(node.options[j]), self.target, sel("radio:"))
+                _ = msg(b, "setTag:", tag_for(self_addr, i))
+                _ = msg(b, "setState:", 1 if j == node.value else 0)
+                _ = msg(w, "addArrangedSubview:", b)
+        elif node.kind == TEXTAREA:
+            w = msg(cls("NSTextView"), "scrollableTextView")
+            var text = msg(w, "documentView")
+            _ = msg(text, "setString:", ns_string(node.text))
+            _ = msg(text, "setFont:", msg(cls("NSFont"), "systemFontOfSize:", Float64(13)))
+            _ = msg(text, "setRichText:", 0)
+            _ = msg(text, "setIdentifier:", ns_string(String(tag_for(self_addr, i))))  # NSTextView has no tag
+            _ = msg(text, "setDelegate:", self.target)  # textDidChange:
+            constrain(w, "widthAnchor", Float64(320))
+            constrain(w, "heightAnchor", Float64(node.size))
+            self.widgets[i] = text
+        elif node.kind == ALERT:
+            # Shown on the next run-loop turn (not inside the event that asked for it).
+            _ = msg(self.target, "performSelector:withObject:afterDelay:", sel("showAlert:"), ns_number(tag_for(self_addr, i)), Float64(0))
+            w = new("NSView")  # nothing in the layout itself
+        elif node.kind == NAVBAR:
+            w = new("NSStackView")
+            _ = msg(w, "setOrientation:", 0)
+            _ = msg(w, "setSpacing:", Float64(8))
+            if node.msg != 0:
+                var back = msg(cls("NSButton"), "buttonWithTitle:target:action:", ns_string("‹ Back"), self.target, sel("tap:"))
+                _ = msg(back, "setTag:", tag_for(self_addr, i))
+                _ = msg(w, "addArrangedSubview:", back)
+            var title = msg(cls("NSTextField"), "labelWithString:", ns_string(node.text))
+            _ = msg(title, "setFont:", msg(cls("NSFont"), "boldSystemFontOfSize:", Float64(17)))
+            _ = msg(w, "addArrangedSubview:", title)
+        elif node.kind == DATE:
+            w = new("NSDatePicker")
+            _ = msg(w, "setDatePickerStyle:", 0)  # text field and stepper
+            _ = msg(w, "setDatePickerElements:", 0x00E0)  # year, month, day
+            _ = msg(w, "setDateValue:", ns_date(node.text))
+            self.wire(w, i, self_addr, "date:")
+        elif node.kind == ICON:
+            var image = msg(cls("NSImage"), "imageWithSystemSymbolName:accessibilityDescription:", ns_string(sf_symbol(node.text)), 0)
+            w = msg(cls("NSImageView"), "imageViewWithImage:", image)
+            var config = msg(cls("NSImageSymbolConfiguration"), "configurationWithPointSize:weight:", Float64(node.size), Float64(0))
+            _ = msg(w, "setSymbolConfiguration:", config)
+            _ = msg(w, "setContentTintColor:", msg(cls("NSColor"), "controlAccentColor"))
+        elif node.kind == GRID:
+            w = new("NSStackView")
+            _ = msg(w, "setOrientation:", 1)
+            _ = msg(w, "setSpacing:", Float64(node.spacing))
+            var row = 0
+            for k in range(len(node.children)):
+                if k % node.value == 0:
+                    row = new("NSStackView")
+                    _ = msg(row, "setOrientation:", 0)
+                    _ = msg(row, "setDistribution:", 1)  # fill equally
+                    _ = msg(row, "setSpacing:", Float64(node.spacing))
+                    _ = msg(w, "addArrangedSubview:", row)
+                _ = msg(row, "addArrangedSubview:", self.build(node.children[k], self_addr))
+        elif node.kind == LAZYLIST:
+            var table = new("NSTableView")
+            var column = msg(msg(cls("NSTableColumn"), "alloc"), "initWithIdentifier:", ns_string("rows"))
+            _ = msg(column, "setWidth:", Float64(320))
+            _ = msg(table, "addTableColumn:", column)
+            _ = msg(table, "setHeaderView:", 0)
+            _ = msg(table, "setRowHeight:", Float64(node.spacing - 4))
+            _ = msg(table, "setUsesAlternatingRowBackgroundColors:", 1)
+            _ = msg(table, "setTag:", tag_for(self_addr, i))
+            _ = msg(table, "setDataSource:", self.target)  # rows are asked for as they scroll into view
+            _ = msg(table, "setTarget:", self.target)
+            _ = msg(table, "setAction:", sel("rowTap:"))
+            w = new("NSScrollView")
+            _ = msg(w, "setHasVerticalScroller:", 1)
+            _ = msg(w, "setDocumentView:", table)
+            constrain(w, "widthAnchor", Float64(340))
+            constrain(w, "heightAnchor", Float64(node.size))
+            self.widgets[i] = table
         elif node.kind == SPACER:
             w = new("NSView")
         elif node.kind == SCROLL:
@@ -148,7 +235,8 @@ struct AppKitHost[A: App](Movable):
             _ = msg(w, "setSpacing:", Float64(node.spacing))
             for c in node.children:
                 _ = msg(w, "addArrangedSubview:", self.build(c, self_addr))
-        self.widgets[i] = w
+        if self.widgets[i] == 0:  # (some branches already stored an inner control)
+            self.widgets[i] = w
         return w
 
     def show(mut self, self_addr: Int):
@@ -180,7 +268,7 @@ struct AppKitHost[A: App](Movable):
         for p in d.patches:
             var w = self.widgets[p.node]
             var kind = self.rt.shown.nodes[p.node].kind
-            if p.op == SET_TEXT:
+            if p.op == SET_TEXT and kind != TEXTAREA and kind != DATE and kind != NAVBAR:
                 if kind == TEXT:
                     _ = msg(w, "setStringValue:", ns_string(p.text))
                 elif kind == FIELD:
@@ -195,6 +283,22 @@ struct AppKitHost[A: App](Movable):
                     _ = msg(w, "selectItemAtIndex:", p.number)
                 elif kind == SLIDER or kind == PROGRESS:
                     _ = msg(w, "setDoubleValue:", Float64(p.number))
+            elif p.op == SET_VALUE and (kind == SEGMENTED or kind == TABS):
+                _ = msg(w, "setSelectedSegment:", p.number)
+            elif p.op == SET_VALUE and kind == RADIO:
+                var buttons = msg(w, "arrangedSubviews")
+                for j in range(msg(buttons, "count")):
+                    _ = msg(msg(buttons, "objectAtIndex:", j), "setState:", 1 if j == p.number else 0)
+            elif p.op == SET_VALUE and kind == LAZYLIST:
+                _ = msg(w, "reloadData")
+            elif p.op == SET_TEXT and kind == TEXTAREA:
+                if from_ns(msg(w, "string")) != p.text:  # don't fight the typist
+                    _ = msg(w, "setString:", ns_string(p.text))
+            elif p.op == SET_TEXT and kind == DATE:
+                _ = msg(w, "setDateValue:", ns_date(p.text))
+            elif p.op == SET_TEXT and kind == NAVBAR:
+                var views = msg(w, "arrangedSubviews")
+                _ = msg(msg(views, "lastObject"), "setStringValue:", ns_string(p.text))
             elif p.op == SET_IMAGE:
                 ref img = self.rt.shown.nodes[p.node]
                 _ = msg(w, "setImage:", ns_image(img.pixels, img.spacing, img.size))
@@ -267,6 +371,77 @@ def on_select[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
     host_at[A](t[0])[].send(t[1], False, from_ns(msg(sender, "titleOfSelectedItem")), index, t[0])
 
 
+def on_segment[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
+    var t = from_tag(sender)
+    var index = msg(sender, "selectedSegment")
+    host_at[A](t[0])[].send(t[1], False, from_ns(msg(sender, "labelForSegment:", index)), index, t[0])
+
+
+def on_radio[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
+    var t = from_tag(sender)
+    var index = msg(msg(msg(sender, "superview"), "arrangedSubviews"), "indexOfObject:", sender)
+    host_at[A](t[0])[].send(t[1], False, from_ns(msg(sender, "title")), index, t[0])
+
+
+def on_text_did_change[A: App](target: Int, cmd: Int, notification: Int) abi("C"):
+    var text = msg(notification, "object")
+    try:
+        var tag = Int(from_ns(msg(text, "identifier")))
+        var host_addr = tag >> NODE_BITS
+        host_at[A](host_addr)[].send(tag & ((1 << NODE_BITS) - 1), False, from_ns(msg(text, "string")), 0, host_addr)
+    except:
+        return
+
+
+def on_date[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
+    var t = from_tag(sender)
+    host_at[A](t[0])[].send(t[1], False, date_text(msg(sender, "dateValue")), 0, t[0])
+
+
+def on_show_alert[A: App](target: Int, cmd: Int, number: Int) abi("C"):
+    """Runs the alert for an Alert node (if it's still on screen) and sends the answer."""
+    var tag = msg(number, "longValue")
+    var host_addr = tag >> NODE_BITS
+    var node = tag & ((1 << NODE_BITS) - 1)
+    var host = host_at[A](host_addr)
+    if node >= len(host[].rt.shown.nodes) or host[].rt.shown.nodes[node].kind != ALERT:
+        return  # the screen changed before it could be shown
+    var n = host[].rt.shown.nodes[node].copy()
+    var alert = msg(msg(cls("NSAlert"), "new"), "autorelease")
+    _ = msg(alert, "setMessageText:", ns_string(n.text))
+    _ = msg(alert, "setInformativeText:", ns_string(n.hint))
+    for o in n.options:
+        _ = msg(alert, "addButtonWithTitle:", ns_string(o))
+    var index = msg(alert, "runModal") - 1000  # NSAlertFirstButtonReturn = 1000
+    if 0 <= index < len(n.options):
+        host[].send(node, False, n.options[index], index, host_addr)
+
+
+def on_row_count[A: App](target: Int, cmd: Int, table: Int) abi("C") -> Int:
+    var t = from_tag(table)
+    var host = host_at[A](t[0])
+    if t[1] >= len(host[].rt.shown.nodes):
+        return 0
+    return host[].rt.shown.nodes[t[1]].value
+
+
+def on_row_value[A: App](target: Int, cmd: Int, table: Int, column: Int, row: Int) abi("C") -> Int:
+    """NSTableView asks for one row's text only when it scrolls into view."""
+    var t = from_tag(table)
+    var host = host_at[A](t[0])
+    if t[1] >= len(host[].rt.shown.nodes):
+        return 0
+    return ns_string(host[].rt.app.row(host[].rt.shown.nodes[t[1]].msg2, row))
+
+
+def on_row_tap[A: App](target: Int, cmd: Int, table: Int) abi("C"):
+    var row = msg(table, "clickedRow")
+    if row < 0:
+        return
+    var t = from_tag(table)
+    host_at[A](t[0])[].send(t[1], False, "", row, t[0])
+
+
 def on_slide[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
     var t = from_tag(sender)
     var value = Int(msg[Float64](sender, "doubleValue") + 0.5)
@@ -320,6 +495,15 @@ def run[A: App]() -> c_int:
     add_method(c, "slide:", on_slide[A], "v@:@")
     add_method(c, "controlTextDidChange:", on_text_change[A], "v@:@")
     add_method(c, "focusField:", on_focus_field, "v@:@")
+    add_method(c, "segment:", on_segment[A], "v@:@")
+    add_method(c, "radio:", on_radio[A], "v@:@")
+    add_method(c, "textDidChange:", on_text_did_change[A], "v@:@")
+    add_method(c, "date:", on_date[A], "v@:@")
+    add_method(c, "showAlert:", on_show_alert[A], "v@:@")
+    add_method(c, "rowTap:", on_row_tap[A], "v@:@")
+    add_method(c, "numberOfRowsInTableView:", on_row_count[A], "q@:@")
+    add_method(c, "tableView:objectValueForTableColumn:row:", on_row_value[A], "@@:@@q")
+    add_protocol(c, "NSTableViewDataSource")
     add_method(c, "applicationShouldTerminateAfterLastWindowClosed:", quit_when_closed, "B@:@")
     register_class(c)
     host[].target = msg(c, "new")

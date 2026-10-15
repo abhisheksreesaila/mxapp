@@ -6,7 +6,7 @@
 from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
-from mojoui.view import View, DROPDOWN, IMAGE
+from mojoui.view import View, DROPDOWN, IMAGE, SEGMENTED, RADIO, TABS, ALERT, LAZYLIST
 from mojoui.diff import Diff
 from mojoui.app import App, Event, Runtime
 
@@ -97,10 +97,26 @@ def web_event[A: App](handle: Int, node: Int, second: Bool, text: String, number
     if message == 0:
         return '{"ignored":true}'
     var event_text = text
-    if n.kind == DROPDOWN:  # the option's text comes from the screen, not the browser
+    if n.kind == DROPDOWN or n.kind == SEGMENTED or n.kind == RADIO or n.kind == TABS or n.kind == ALERT:
+        # the option's text comes from the screen, not the browser
         event_text = n.options[number] if 0 <= number < len(n.options) else String("")
     var d = rt[].dispatch(Event(message, event_text, number))
     return diff_to_json(d, rt[].shown)
+
+
+def web_rows[A: App](handle: Int, node: Int, first: Int, count: Int) -> String:
+    """JSON list of row texts first..first+count of a LazyList (asked for on demand)."""
+    var rt = session_at[A](handle)
+    if node < 0 or node >= len(rt[].shown.nodes) or rt[].shown.nodes[node].kind != LAZYLIST:
+        return "[]"
+    ref n = rt[].shown.nodes[node]
+    var out = String("[")
+    var last = min(first + count, n.value)
+    for i in range(max(first, 0), last):
+        if i > max(first, 0):
+            out += ","
+        out += json_str(rt[].app.row(n.msg2, i))
+    return out + "]"
 
 
 def web_image[A: App](handle: Int, node: Int) -> String:

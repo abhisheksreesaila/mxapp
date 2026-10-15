@@ -40,7 +40,7 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 ## Guardrails
 - `spike/kgen_shim.c` is an **unofficial** stand-in for two Mojo runtime functions; signatures were inferred from compiled code. Keep it in `spike/`, labelled. After any change to Mojo code destined for iOS, re-run `llvm-nm -u` and record new `KGEN_*` symbols in `EXPERIMENTS.md`.
 - Don't patch the Mojo compiler or rewrite Mach-O platform tags. If blocked, record the blocker and stop; the owner decides.
-- Don't commit or push unless asked.
+- Experiment mode: commit after each passing milestone; never push.
 
 ## Repo map
 ```

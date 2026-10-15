@@ -22,17 +22,21 @@ from collections import OrderedDict
 from pathlib import Path
 
 from fasthtml.common import (
-    Button, Div, FastHTML, Form, H1, H3, Hr, Img, Input, Label, Main, Meta, Option, P, Progress, Response, Script,
-    Select, Span, Style, Title,
+    Button, Dialog, Div, FastHTML, Form, H1, H2, H3, Header, Hr, Img, Input, Label, Main, Meta, NotStr, Option, P,
+    Progress, Response, Script, Select, Span, Style, Textarea, Title,
 )
 
 # Mirrors mojoui/view.mojo and mojoui/diff.mojo.
-TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE = range(1, 14)
+(TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
+ SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST) = range(1, 24)
+CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE = 0, 1, 2
 SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE = 1, 2, 3, 4
 MAX_SESSIONS = 200  # oldest tabs are closed beyond this
 STATIC = Path(__file__).parent / "static"
+ICONS = {p.stem: p.read_text().split("-->", 1)[-1].strip() for p in (STATIC / "icons").glob("*.svg")}  # Lucide (ISC)
+LIST_WINDOW = 30  # rows sent around the visible part of a LazyList
 
 CSS = """
 :root { color-scheme: light dark; --accent: #0a84ff; --danger: #ff453a; --muted: #8e8e93;
@@ -69,6 +73,35 @@ progress { width: 240px; height: 8px; accent-color: var(--accent); }
 hr { width: 280px; border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 img.image { max-width: 100%; height: auto; border-radius: 12px; image-rendering: auto; }
 .scroll { overflow-y: auto; width: 100%; display: flex; justify-content: center; }
+.segmented, .tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: var(--surface); }
+.segmented label, .tabs label { position: relative; }
+.segmented input, .tabs input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.segmented span, .tabs span { display: inline-flex; align-items: center; min-height: 42px; padding: 0 16px; border-radius: 9px; font-weight: 600; }
+.segmented input:checked + span, .tabs input:checked + span { background: light-dark(#fff, #3a3a3c); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.segmented input:focus-visible + span, .tabs input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--accent) 60%, transparent); }
+.tabs span { padding: 0 20px; }
+.radio { display: flex; flex-direction: column; gap: 2px; }
+.radio label { display: inline-flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
+.radio input { width: 20px; height: 20px; accent-color: var(--accent); }
+textarea { font: inherit; width: 320px; max-width: 80vw; padding: 10px 12px; border-radius: 12px; resize: vertical;
+           border: 1px solid var(--line); background: light-dark(#fff, #2c2c2e); color: inherit; }
+input[type=date] { font: inherit; min-height: 48px; padding: 6px 12px; border-radius: 12px; border: 1px solid var(--line);
+                   background: light-dark(#fff, #2c2c2e); color: inherit; }
+header.nav { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 420px; }
+header.nav h2 { margin: 0; font-size: 22px; }
+header.nav button { padding: 10px 14px; }
+dialog.alert { border: 0; border-radius: 18px; padding: 22px; max-width: 320px; text-align: center; position: fixed; inset: 0;
+               margin: auto; height: fit-content; box-shadow: 0 0 0 100vmax rgba(0,0,0,.35), 0 20px 50px rgba(0,0,0,.3);
+               background: light-dark(#fff, #2c2c2e); color: inherit; }
+dialog.alert h3 { margin: 0 0 6px; } dialog.alert p { margin: 0 0 16px; color: var(--muted); }
+dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
+.icon { display: inline-flex; color: var(--accent); }
+.grid { display: grid; justify-items: center; align-items: center; }
+.lazylist { position: relative; overflow-y: auto; width: 340px; max-width: 90vw; border-radius: 12px;
+            background: light-dark(#fff, #2c2c2e); border: 1px solid var(--line); }
+.lazylist .row { position: absolute; left: 0; right: 0; display: flex; align-items: center; padding: 0 14px; cursor: pointer;
+                 border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lazylist .row:hover { background: var(--surface); }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
 """
 
@@ -134,6 +167,42 @@ def render(s, i, sid):
     if kind == IMAGE:
         return Img(src=f"/img/{sid}/{i}?v={s.shape}.{s.images.get(i, 0)}", width=str(n["spacing"]),
                    height=str(n["size"]), id=nid, cls="image", data_kind="image", alt="")
+    if kind in (SEGMENTED, TABS, RADIO):
+        group = f"g{s.shape}-{i}"
+        items = [Label(Input(type="radio", name="number", value=str(j), checked=(j == n["value"]), hx_trigger="change",
+                             **common), Span(o)) for j, o in enumerate(n["options"])]
+        cls, kind_name = {SEGMENTED: ("segmented", "segmented"), TABS: ("tabs", "tabs"), RADIO: ("radio", "radio")}[kind]
+        return Div(*items, cls=cls, id=nid, role="tablist" if kind == TABS else "radiogroup", data_kind=kind_name,
+                   data_group=group)
+    if kind == TEXTAREA:
+        return Textarea(n["text"], name="text", placeholder=n["hint"], id=nid, data_kind="textarea",
+                        rows=str(max(n["size"] // 24, 2)), autofocus=(s.focus == i), hx_trigger="input",
+                        hx_sync="this:queue all", **common)
+    if kind == ALERT:
+        buttons = [Button(o, cls="prominent" if j == len(n["options"]) - 1 else "",
+                          **dict(common, hx_vals=json.dumps({"n": i, "number": j}))) for j, o in enumerate(n["options"])]
+        return Dialog(H3(n["text"]), P(n["hint"]), Div(*buttons, cls="buttons"), open=True, cls="alert", id=nid,
+                      data_kind="alert", role="alertdialog")
+    if kind == NAVBAR:
+        back = (Button("‹ Back", data_kind="navback", **common),) if n["msg"] else ()
+        return Header(*back, H2(n["text"]), cls="nav", id=nid, data_kind="nav", data_back="1" if n["msg"] else "0")
+    if kind == DATE:
+        return Input(type="date", name="text", value=n["text"], id=nid, data_kind="date", hx_trigger="change", **common)
+    if kind == ICON:
+        size = n["size"] or 24
+        svg = ICONS.get(n["text"], "").replace('width="24"', f'width="{size}"').replace('height="24"', f'height="{size}"')
+        return Span(NotStr(svg), cls="icon", id=nid, data_kind="icon", data_icon=n["text"], aria_hidden="true")
+    if kind == GRID:
+        kids = [render(s, c, sid) for c in n["children"]]
+        return Div(*kids, cls="grid", id=nid, data_kind="grid", data_columns=str(n["value"]),
+                   style=f"grid-template-columns:repeat({n['value']}, auto);gap:{n['spacing']}px")
+    if kind == LAZYLIST:
+        row_h, count = n["spacing"] or 44, n["value"]
+        return Div(Div(*rows_html(s, i, sid, 0), cls="rows", style=f"height:{count * row_h}px;position:relative"),
+                   cls="lazylist", id=nid, data_kind="list", data_count=str(count), data_row_height=str(row_h),
+                   style=f"height:{n['size']}px",
+                   hx_post=f"/rows/{sid}/{i}", hx_trigger="scroll throttle:60ms", hx_target="find .rows",
+                   hx_swap="innerHTML", hx_vals="js:{top: event.target.scrollTop}", hx_include="#mojoui-v")
     if kind == DIVIDER:
         return Hr(id=nid)
     if kind == SPACER:
@@ -145,11 +214,26 @@ def render(s, i, sid):
     return Div(*kids, cls=cls, id=nid, style=f"gap:{n['spacing']}px")
 
 
+def rows_html(s, i, sid, top):
+    """The rows of LazyList node i around scroll position `top` (only these exist in the page)."""
+    n = s.nodes[i]
+    row_h, count = n["spacing"] or 44, n["value"]
+    first = max(0, top // row_h - 5)
+    texts = json.loads(s.mod.rows(s.handle, i, first, LIST_WINDOW))
+    return [Div(t, cls="row", data_row=str(first + k), style=f"top:{(first + k) * row_h}px;height:{row_h}px",
+                hx_post=f"/e/{sid}", hx_vals=json.dumps({"n": i, "number": first + k}), hx_swap="none",
+                hx_target="this",  # htmx inherits hx-target: without this, rows inherit the list's
+                hx_include="#mojoui-v") for k, t in enumerate(texts)]  # "find .rows", fail to find it, and silently send nothing
+
+
 def make_app(module_dir):
     sys.path.insert(0, str(Path(module_dir).resolve()))
     mod = importlib.import_module("mojoui_app")
     app = FastHTML(default_hdrs=False, secret_key=uuid.uuid4().hex, hdrs=(  # no .sesskey file
         Meta(charset="utf-8"), Meta(name="viewport", content="width=device-width, initial-scale=1, viewport-fit=cover"),
+        # No attribute inheritance: every element states its own hx-* attributes. (Inheritance
+        # caused two silent bugs: a text input inheriting its form's hx-vals, list rows their list's hx-target.)
+        Meta(name="htmx-config", content='{"disableInheritance": true}'),
         Script(src="/static/htmx.min.js"), Style(CSS)))
     sessions = OrderedDict()  # sid → Session, oldest first
     sessions_lock = threading.Lock()
@@ -193,6 +277,16 @@ def make_app(module_dir):
             data = png(ctypes.string_at(addr, nbytes), w, h)
         return Response(data, media_type="image/png", headers={"Cache-Control": "no-store"})
 
+    @app.post("/rows/{sid}/{n}")
+    def rows(sid: str, n: int, top: int = 0, v: int = -1):
+        s = sessions.get(sid)
+        if s is None:
+            return ""
+        with s.lock:
+            if s.closed or v != s.shape or not 0 <= n < len(s.nodes) or s.nodes[n]["kind"] != LAZYLIST:
+                return ""
+            return tuple(rows_html(s, n, sid, max(top, 0)))
+
     @app.post("/e/{sid}")
     def event(sid: str, n: int, v: int = -1, second: int = 0, text: str = "", number: int = 0, on: str = ""):
         s = sessions.get(sid)
@@ -213,7 +307,8 @@ def make_app(module_dir):
             if d["rebuild"]:
                 s.shape += 1
                 s.images.clear()
-                s.focus = n if source["kind"] == FIELD and n < len(s.nodes) and s.nodes[n]["kind"] == FIELD else None
+                typing = (FIELD, TEXTAREA)
+                s.focus = n if source["kind"] in typing and n < len(s.nodes) and s.nodes[n]["kind"] == source["kind"] else None
                 out = root(s, sid, oob=True)
                 s.focus = None
                 return out
@@ -225,8 +320,8 @@ def make_app(module_dir):
                     s.images[i] = s.images.get(i, 0) + 1
                 # Don't re-send the control in use if it already shows this (that would steal
                 # focus or interrupt a drag); other changes to it still go out.
-                echo = i == n and ((op == SET_TEXT and target["kind"] == FIELD and target["text"] == text)
-                                   or (op == SET_VALUE and target["kind"] in (TOGGLE, DROPDOWN, SLIDER)
+                echo = i == n and ((op == SET_TEXT and target["kind"] in (FIELD, TEXTAREA, DATE) and target["text"] == text)
+                                   or (op == SET_VALUE and target["kind"] in (TOGGLE, SLIDER) + CHOICES
                                        and target["value"] == number))
                 if op != SET_MSG and not echo and i not in changed:
                     changed.append(i)

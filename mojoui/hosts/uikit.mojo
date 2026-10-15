@@ -13,13 +13,15 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
+    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
 from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
 from mojoui.hosts.objc import (
-    cls, sel, msg, new, ns_string, ns_data, from_ns, constrain, global_block, new_class, add_method, add_protocol,
+    cls, sel, msg, new, ns_string, ns_data, ns_array, ns_number, ns_date, date_text, sf_symbol, from_ns, constrain,
+    global_block, data_block, block_data, new_class, add_method, add_protocol,
     register_class, pool_push,
 )
 
@@ -145,6 +147,85 @@ struct UIKitHost[A: App](Movable):
             var aspect = msg(msg(w, "heightAnchor"), "constraintEqualToAnchor:multiplier:", msg(w, "widthAnchor"), ratio)
             _ = msg(aspect, "setActive:", 1)
             shown = w
+        elif node.kind == SEGMENTED or node.kind == TABS:
+            w = msg(msg(cls("UISegmentedControl"), "alloc"), "initWithItems:", ns_array(node.options))
+            _ = msg(w, "setSelectedSegmentIndex:", node.value)
+            self.wire(w, i, self_addr, "segment:", VALUE_CHANGED)
+            constrain(w, "heightAnchor", Float64(40 if node.kind == TABS else 34))
+            shown = w
+        elif node.kind == RADIO:
+            w = new("UIStackView")
+            _ = msg(w, "setAxis:", 1)
+            _ = msg(w, "setAlignment:", 1)  # leading
+            for j in range(len(node.options)):
+                var b = radio_button(node.options[j], j == node.value)
+                self.wire(b, i, self_addr, "radio:", TOUCH_UP_INSIDE)
+                _ = msg(w, "addArrangedSubview:", b)
+            shown = w
+        elif node.kind == TEXTAREA:
+            w = new("UITextView")
+            _ = msg(w, "setText:", ns_string(node.text))
+            _ = msg(w, "setFont:", msg(cls("UIFont"), "preferredFontForTextStyle:", ns_string("UICTFontTextStyleBody")))
+            _ = msg(w, "setAdjustsFontForContentSizeCategory:", 1)
+            _ = msg(w, "setBackgroundColor:", msg(cls("UIColor"), "secondarySystemBackgroundColor"))
+            _ = msg(msg(w, "layer"), "setCornerRadius:", Float64(12))
+            _ = msg(w, "setTag:", tag_for(self_addr, i))
+            _ = msg(w, "setDelegate:", self.target)  # textViewDidChange:
+            constrain(w, "widthAnchor", Float64(300))
+            constrain(w, "heightAnchor", Float64(node.size))
+            shown = w
+        elif node.kind == ALERT:
+            # Presented on the next run-loop turn (not inside the event that asked for it).
+            _ = msg(self.target, "performSelector:withObject:afterDelay:", sel("presentAlert:"), ns_number(tag_for(self_addr, i)), Float64(0))
+            w = new("UIView")  # nothing in the layout itself
+            shown = w
+        elif node.kind == NAVBAR:
+            w = new("UINavigationBar")
+            var item = msg(msg(msg(cls("UINavigationItem"), "alloc"), "initWithTitle:", ns_string(node.text)), "autorelease")
+            if node.msg != 0:
+                var chevron = msg(cls("UIImage"), "systemImageNamed:", ns_string("chevron.backward"))
+                var back = msg(msg(cls("UIBarButtonItem"), "alloc"), "initWithImage:style:target:action:", chevron, 0, self.target, sel("tap:"))
+                _ = msg(back, "setTag:", tag_for(self_addr, i))
+                _ = msg(item, "setLeftBarButtonItem:", back)
+            _ = msg(w, "setItems:animated:", msg(cls("NSArray"), "arrayWithObject:", item), 0)
+            constrain(w, "widthAnchor", Float64(340))
+            shown = w
+        elif node.kind == DATE:
+            w = new("UIDatePicker")
+            _ = msg(w, "setDatePickerMode:", 1)  # date only
+            _ = msg(w, "setPreferredDatePickerStyle:", 2)  # compact
+            _ = msg(w, "setDate:", ns_date(node.text))
+            self.wire(w, i, self_addr, "date:", VALUE_CHANGED)
+            shown = w
+        elif node.kind == ICON:
+            var config = msg(cls("UIImageSymbolConfiguration"), "configurationWithPointSize:", Float64(node.size))
+            var image = msg(cls("UIImage"), "systemImageNamed:withConfiguration:", ns_string(sf_symbol(node.text)), config)
+            w = msg(msg(cls("UIImageView"), "alloc"), "initWithImage:", image)
+            shown = w
+        elif node.kind == GRID:
+            w = new("UIStackView")
+            _ = msg(w, "setAxis:", 1)
+            _ = msg(w, "setSpacing:", Float64(node.spacing))
+            var row = 0
+            for k in range(len(node.children)):
+                if k % node.value == 0:
+                    row = new("UIStackView")
+                    _ = msg(row, "setAxis:", 0)
+                    _ = msg(row, "setDistribution:", 1)  # fill equally
+                    _ = msg(row, "setSpacing:", Float64(node.spacing))
+                    _ = msg(w, "addArrangedSubview:", row)
+                _ = msg(row, "addArrangedSubview:", self.build(node.children[k], self_addr))
+            shown = w
+        elif node.kind == LAZYLIST:
+            w = msg(msg(cls("UITableView"), "alloc"), "initWithFrame:style:", Float64(0), Float64(0), Float64(340), Float64(node.size), 2)  # inset grouped
+            _ = msg(w, "registerClass:forCellReuseIdentifier:", cls("UITableViewCell"), ns_string("row"))
+            _ = msg(w, "setRowHeight:", Float64(node.spacing))
+            _ = msg(w, "setTag:", tag_for(self_addr, i))
+            _ = msg(w, "setDataSource:", self.target)  # rows are asked for as they scroll into view
+            _ = msg(w, "setDelegate:", self.target)
+            constrain(w, "widthAnchor", Float64(340))
+            constrain(w, "heightAnchor", Float64(node.size))
+            shown = w
         elif node.kind == SPACER:
             w = new("UIView")
             shown = w
@@ -198,7 +279,22 @@ struct UIKitHost[A: App](Movable):
         for p in d.patches:
             var w = self.widgets[p.node]
             ref node = self.rt.shown.nodes[p.node]
-            if p.op == SET_TEXT:
+            if p.op == SET_TEXT and node.kind == TEXTAREA:
+                if from_ns(msg(w, "text")) != p.text:  # don't fight the typist
+                    _ = msg(w, "setText:", ns_string(p.text))
+            elif p.op == SET_TEXT and node.kind == DATE:
+                _ = msg(w, "setDate:", ns_date(p.text))
+            elif p.op == SET_TEXT and node.kind == NAVBAR:
+                _ = msg(msg(w, "topItem"), "setTitle:", ns_string(p.text))
+            elif p.op == SET_VALUE and (node.kind == SEGMENTED or node.kind == TABS):
+                _ = msg(w, "setSelectedSegmentIndex:", p.number)
+            elif p.op == SET_VALUE and node.kind == RADIO:
+                var buttons = msg(w, "arrangedSubviews")
+                for j in range(msg(buttons, "count")):
+                    set_radio(msg(buttons, "objectAtIndex:", j), j == p.number)
+            elif p.op == SET_VALUE and node.kind == LAZYLIST:
+                _ = msg(w, "reloadData")
+            elif p.op == SET_TEXT:
                 if node.kind == TEXT:
                     _ = msg(w, "setText:", ns_string(p.text))
                 elif node.kind == FIELD:
@@ -237,6 +333,25 @@ struct UIKitHost[A: App](Movable):
 def ui_image(pixels: List[UInt32], width: Int, height: Int) -> Int:
     """A UIImage from RGBA pixels, via PNG bytes made in Mojo (mojoui/png.mojo)."""
     return msg(cls("UIImage"), "imageWithData:", ns_data(encode_png(pixels, width, height)))
+
+
+def radio_button(title: String, selected: Bool) -> Int:
+    """iOS has no radio button: a plain button with a circle / filled-circle symbol."""
+    var config = msg(cls("UIButtonConfiguration"), "plainButtonConfiguration")
+    _ = msg(config, "setTitle:", ns_string(title))
+    _ = msg(config, "setImagePadding:", Float64(10))
+    _ = msg(config, "setButtonSize:", 3)  # large touch target
+    var b = msg(cls("UIButton"), "buttonWithConfiguration:primaryAction:", config, 0)
+    set_radio(b, selected)
+    return b
+
+
+def set_radio(button: Int, selected: Bool):
+    var config = msg(msg(button, "configuration"), "copy")
+    var symbol = "largecircle.fill.circle" if selected else "circle"
+    _ = msg(config, "setImage:", msg(cls("UIImage"), "systemImageNamed:", ns_string(symbol)))
+    _ = msg(button, "setConfiguration:", config)
+    _ = msg(button, "setSelected:", 1 if selected else 0)
 
 
 def label(text: String, style: Int) -> Int:
@@ -325,6 +440,89 @@ def on_toggle[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
     host_at[A](t[0])[].send(t[1], False, "", 1 if on != 0 else 0, t[0])
 
 
+def on_segment[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
+    var t = from_tag(sender)
+    var index = msg(sender, "selectedSegmentIndex")
+    host_at[A](t[0])[].send(t[1], False, from_ns(msg(sender, "titleForSegmentAtIndex:", index)), index, t[0])
+
+
+def on_radio[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
+    var t = from_tag(sender)
+    var index = msg(msg(msg(sender, "superview"), "arrangedSubviews"), "indexOfObject:", sender)
+    host_at[A](t[0])[].send(t[1], False, from_ns(msg(msg(sender, "configuration"), "title")), index, t[0])
+
+
+def on_text_view_change[A: App](target: Int, cmd: Int, view: Int) abi("C"):
+    var t = from_tag(view)
+    host_at[A](t[0])[].send(t[1], False, from_ns(msg(view, "text")), 0, t[0])
+
+
+def on_date[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
+    var t = from_tag(sender)
+    host_at[A](t[0])[].send(t[1], False, date_text(msg(sender, "date")), 0, t[0])
+
+
+def on_alert_action[A: App](block: Int, action: Int) abi("C"):
+    """An alert button was tapped: the block carries "(host << 16) | node"; the action's title says which."""
+    var tag = block_data(block)
+    var host_addr = tag >> NODE_BITS
+    var node = tag & ((1 << NODE_BITS) - 1)
+    var host = host_at[A](host_addr)
+    if node >= len(host[].rt.shown.nodes) or host[].rt.shown.nodes[node].kind != ALERT:
+        return
+    var title = from_ns(msg(action, "title"))
+    ref opts = host[].rt.shown.nodes[node].options
+    for j in range(len(opts)):
+        if opts[j] == title:
+            host[].send(node, False, title, j, host_addr)
+            return
+
+
+def on_present_alert[A: App](target: Int, cmd: Int, number: Int) abi("C"):
+    var tag = msg(number, "longValue")
+    var host_addr = tag >> NODE_BITS
+    var node = tag & ((1 << NODE_BITS) - 1)
+    var host = host_at[A](host_addr)
+    if node >= len(host[].rt.shown.nodes) or host[].rt.shown.nodes[node].kind != ALERT:
+        return  # the screen changed before it could be shown
+    var n = host[].rt.shown.nodes[node].copy()
+    var alert = msg(cls("UIAlertController"), "alertControllerWithTitle:message:preferredStyle:", ns_string(n.text), ns_string(n.hint), 1)
+    var handler = data_block(on_alert_action[A], "v16@?0@8", tag)
+    for j in range(len(n.options)):
+        var style = 1 if (j == 0 and len(n.options) > 1) else 0  # the first of several is Cancel
+        var action = msg(cls("UIAlertAction"), "actionWithTitle:style:handler:", ns_string(n.options[j]), style, handler)
+        _ = msg(alert, "addAction:", action)
+    var root = msg(host[].window, "rootViewController")
+    _ = msg(root, "presentViewController:animated:completion:", alert, 1, 0)
+
+
+def on_row_count[A: App](target: Int, cmd: Int, table: Int, section: Int) abi("C") -> Int:
+    var t = from_tag(table)
+    var host = host_at[A](t[0])
+    if t[1] >= len(host[].rt.shown.nodes):
+        return 0
+    return host[].rt.shown.nodes[t[1]].value
+
+
+def on_row_cell[A: App](target: Int, cmd: Int, table: Int, index_path: Int) abi("C") -> Int:
+    """UITableView asks for a row's cell only when it scrolls into view."""
+    var t = from_tag(table)
+    var host = host_at[A](t[0])
+    var cell = msg(table, "dequeueReusableCellWithIdentifier:forIndexPath:", ns_string("row"), index_path)
+    if t[1] < len(host[].rt.shown.nodes):
+        var row = msg(index_path, "row")
+        var config = msg(cell, "defaultContentConfiguration")
+        _ = msg(config, "setText:", ns_string(host[].rt.app.row(host[].rt.shown.nodes[t[1]].msg2, row)))
+        _ = msg(cell, "setContentConfiguration:", config)
+    return cell
+
+
+def on_row_select[A: App](target: Int, cmd: Int, table: Int, index_path: Int) abi("C"):
+    _ = msg(table, "deselectRowAtIndexPath:animated:", index_path, 1)
+    var t = from_tag(table)
+    host_at[A](t[0])[].send(t[1], False, "", msg(index_path, "row"), t[0])
+
+
 def on_slide[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
     var t = from_tag(sender)
     var value = Int(msg[Float32](sender, "value") + 0.5)
@@ -386,5 +584,16 @@ def run[A: App](argc: c_int, argv: Int) -> c_int:
     add_method(scene_delegate, "submit:", on_submit[A], "v@:@")
     add_method(scene_delegate, "toggle:", on_toggle[A], "v@:@")
     add_method(scene_delegate, "slide:", on_slide[A], "v@:@")
+    add_method(scene_delegate, "segment:", on_segment[A], "v@:@")
+    add_method(scene_delegate, "radio:", on_radio[A], "v@:@")
+    add_method(scene_delegate, "date:", on_date[A], "v@:@")
+    add_method(scene_delegate, "textViewDidChange:", on_text_view_change[A], "v@:@")
+    add_method(scene_delegate, "presentAlert:", on_present_alert[A], "v@:@")
+    add_method(scene_delegate, "tableView:numberOfRowsInSection:", on_row_count[A], "q@:@q")
+    add_method(scene_delegate, "tableView:cellForRowAtIndexPath:", on_row_cell[A], "@@:@@")
+    add_method(scene_delegate, "tableView:didSelectRowAtIndexPath:", on_row_select[A], "v@:@@")
+    add_protocol(scene_delegate, "UITextViewDelegate")
+    add_protocol(scene_delegate, "UITableViewDataSource")
+    add_protocol(scene_delegate, "UITableViewDelegate")
     register_class(scene_delegate)
     return external_call["UIApplicationMain", c_int](argc, argv, 0, ns_string("MojoAppDelegate"))

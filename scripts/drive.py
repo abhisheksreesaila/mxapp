@@ -29,6 +29,18 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind]')].map(e
   if (k === 'slider') return 'SLIDER: ' + e.value;
   if (k === 'progress') return 'PROGRESS: ' + e.value;
   if (k === 'image') return 'IMAGE: ' + e.naturalWidth + 'x' + e.naturalHeight;
+  const picked = () => { const i = e.querySelector('input:checked'); return i ? i.nextElementSibling.textContent : ''; };
+  if (k === 'segmented') return 'SEGMENTED: ' + picked();
+  if (k === 'tabs') return 'TABS: ' + picked();
+  if (k === 'radio') return 'RADIO: ' + picked();
+  if (k === 'textarea') return 'TEXTAREA: ' + e.value.split(String.fromCharCode(10)).join(String.fromCharCode(92) + 'n');
+  if (k === 'alert') return 'ALERT: ' + e.querySelector('h3').textContent + ' | ' + e.querySelector('p').textContent + ' | '
+    + [...e.querySelectorAll('button')].map(b => b.textContent).join(', ');
+  if (k === 'nav') return 'NAV: ' + e.querySelector('h2').textContent + (e.dataset.back === '1' ? ' (back)' : '');
+  if (k === 'date') return 'DATE: ' + e.value;
+  if (k === 'icon') return 'ICON: ' + (e.querySelector('svg') ? e.dataset.icon : '?');
+  if (k === 'grid') return 'GRID: ' + e.dataset.columns + ' columns, ' + e.children.length + ' items';
+  if (k === 'list') return 'LIST: ' + e.dataset.count + ' rows';
 }).filter(Boolean).join('\\n')"""
 
 
@@ -67,6 +79,29 @@ def step(page, s):
     elif verb == "select":
         k, _, option = rest.partition("=")
         page.locator("select[data-kind=dropdown]").nth(int(k)).select_option(label=option)
+    elif verb in ("segment", "tab", "radio"):
+        k, _, option = rest.partition("=")
+        kind = {"segment": "segmented", "tab": "tabs", "radio": "radio"}[verb]
+        group = page.locator(f"[data-kind={kind}]").nth(int(k))
+        group.locator("label").filter(has=page.locator("span", has_text=exact(option))).first.click()
+    elif verb == "textarea":
+        k, _, text = rest.partition("=")
+        page.locator("textarea[data-kind=textarea]").nth(int(k)).fill(text.replace("\\n", "\n"))
+    elif verb == "alert":
+        page.locator("dialog[data-kind=alert] button").filter(has_text=exact(rest)).first.click()
+    elif verb == "back":
+        page.locator("[data-kind=navback]").first.click()
+    elif verb == "date":
+        k, _, value = rest.partition("=")
+        page.locator("input[data-kind=date]").nth(int(k)).fill(value)
+    elif verb == "scroll":
+        k, _, row = rest.partition("=")
+        page.locator("[data-kind=list]").nth(int(k)).evaluate(
+            "(e, row) => { e.scrollTop = row * Number(e.dataset.rowHeight); e.dispatchEvent(new Event('scroll')); }",
+            int(row))
+    elif verb == "row":
+        k, _, row = rest.partition("=")
+        page.locator("[data-kind=list]").nth(int(k)).locator(f'[data-row="{int(row)}"]').click()
     elif verb == "slide":
         k, _, value = rest.partition("=")
         page.locator("input[data-kind=slider]").nth(int(k)).fill(value)

@@ -144,3 +144,89 @@ def global_block[F: ImplicitlyCopyable & Deinitable](invoke: F, signature: Strin
     block.unsafe_offset(2).unsafe_write(fn_address(invoke))
     block.unsafe_offset(3).unsafe_write(Int(desc))
     return Int(block)
+
+
+def data_block[F: ImplicitlyCopyable & Deinitable](invoke: F, signature: String, data: Int) -> Int:
+    """Like global_block, plus one word of data stored right after the block header.
+
+    The invoke function receives the block itself first, so it reads the data back
+    with block_data(block). (A real compiler-made block keeps captured values in
+    the same place.) It lives forever, so copying it is safe.
+    """
+    var base = global_block(invoke, signature)  # 32-byte header we copy, then extend
+    var block = unsafe_alloc[Int](5)
+    for k in range(4):
+        block.unsafe_offset(k).unsafe_write(Pointer[Int, MutUntrackedOrigin](unsafe_from_address=base + 8 * k)[])
+    block.unsafe_offset(4).unsafe_write(data)
+    var desc = Pointer[Int, MutUntrackedOrigin](unsafe_from_address=block.unsafe_offset(3)[])
+    var new_desc = unsafe_alloc[Int](3)
+    new_desc.unsafe_write(0)
+    new_desc.unsafe_offset(1).unsafe_write(40)  # header + one captured word
+    new_desc.unsafe_offset(2).unsafe_write(Pointer[Int, MutUntrackedOrigin](unsafe_from_address=Int(desc) + 16)[])
+    block.unsafe_offset(3).unsafe_write(Int(new_desc))
+    return Int(block)
+
+
+def block_data(block: Int) -> Int:
+    return Pointer[Int, MutUntrackedOrigin](unsafe_from_address=block + 32)[]
+
+
+def ns_array(items: List[String]) -> Int:
+    """An NSArray of NSStrings."""
+    var a = msg(cls("NSMutableArray"), "array")
+    for s in items:
+        _ = msg(a, "addObject:", ns_string(s))
+    return a
+
+
+def ns_number(n: Int) -> Int:
+    return msg(cls("NSNumber"), "numberWithLong:", n)
+
+
+def _date_part(text: String, k: Int, fallback: Int) -> Int:
+    try:
+        var parts = text.split("-")
+        if len(parts) == 3:
+            return Int(String(parts[k]))
+    except:
+        pass
+    return fallback
+
+
+def ns_date(text: String) -> Int:
+    """An NSDate (noon, local time) from "YYYY-MM-DD"."""
+    var c = msg(msg(cls("NSDateComponents"), "new"), "autorelease")
+    _ = msg(c, "setYear:", _date_part(text, 0, 2000))
+    _ = msg(c, "setMonth:", _date_part(text, 1, 1))
+    _ = msg(c, "setDay:", _date_part(text, 2, 1))
+    _ = msg(c, "setHour:", 12)
+    return msg(msg(cls("NSCalendar"), "currentCalendar"), "dateFromComponents:", c)
+
+
+def date_text(date: Int) -> String:
+    """ "YYYY-MM-DD" for an NSDate, in local time."""
+    comptime YEAR_MONTH_DAY = 4 | 8 | 16  # NSCalendarUnitYear | Month | Day
+    var c = msg(msg(cls("NSCalendar"), "currentCalendar"), "components:fromDate:", YEAR_MONTH_DAY, date)
+    var y = msg(c, "year")
+    var m = msg(c, "month")
+    var d = msg(c, "day")
+    return String(y) + "-" + ("0" if m < 10 else "") + String(m) + "-" + ("0" if d < 10 else "") + String(d)
+
+
+def sf_symbol(name: String) -> String:
+    """mojoui icon names → SF Symbols (Apple's own icon set)."""
+    if name == "star": return "star.fill"
+    if name == "trash": return "trash"
+    if name == "gear": return "gearshape"
+    if name == "plus": return "plus"
+    if name == "check": return "checkmark"
+    if name == "calendar": return "calendar"
+    if name == "search": return "magnifyingglass"
+    if name == "heart": return "heart.fill"
+    if name == "home": return "house"
+    if name == "person": return "person"
+    if name == "travel": return "airplane"
+    if name == "food": return "fork.knife"
+    if name == "fun": return "gamecontroller"
+    if name == "chart": return "chart.bar"
+    return "questionmark.square.dashed"
