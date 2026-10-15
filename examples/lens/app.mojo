@@ -8,7 +8,7 @@
 # The trips are made up (a seeded generator below); they are four float32 columns,
 # x, y, hour and kind, so a real dataframe can hand its columns over instead.
 
-from std.math import sqrt, log, cos, sin, exp
+from mojoui.maths import sqrt, log, cos, sin
 
 from mojoui import (
     App, Event, View, Surface, VStack, HStack, Text, Button, Toggle, Slider, Segmented, Divider, Canvas,

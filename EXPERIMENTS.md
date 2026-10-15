@@ -4,6 +4,18 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-15 · Experiment 7: GPU Data Lens (autopilot)
+
+**Goal (owner's words):** "a real fancy app which takes advantage of GPUs… same code base which builds a web and a Linux and later a Mac app." Contract `GOAL.md`, report `docs/report.md`.
+
+**What worked:** a Canvas view (the app paints it in `draw()`, gestures and per-frame events come back as events) on GTK, web, AppKit and UIKit; `mojoui.gpu.PointCloud` bins 20M points into a 1080p frame in 1.48 ms on the RTX 3090 (CPU 132 ms, identical pixels); Data Lens runs at 59.2 fps on GTK and streams at 59.9 fps to Chromium; Mac/iPhone build and sign on the CPU path (not run).
+
+**What broke and how it was fixed:** web readiness probe started 20M-point sessions; web fps measured through a start-up gap and unpaced pulls; GTK first draw before the window manager tiled the window; empty test steps didn't report; the lens imported std.math (now `mojoui.maths`). Probes: no wasm target in Mojo 1.1; `std.atomic`; Apple GPU code compiles out; CGPoint returns in d0/d1. See `docs/journal.md`.
+
+**Next:** MX frame columns into PointCloud; galaxy/deep-zoom showcases; Android (Java shim, after the owner accepts Google's SDK licence); Apple GPU.
+
+---
+
 ## 2026-10-15 · Experiment 6: layout as a thin layer (autopilot)
 
 **Goal:** flexbox-named layout settings mapped onto each platform's own layout (ROADMAP decision 10). Contract `GOAL.md`, report `docs/report.md`.

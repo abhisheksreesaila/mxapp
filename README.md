@@ -111,7 +111,42 @@ HStack(
 
 Stacks centre their children unless you say otherwise. Every setting is proven by measuring the real widgets on GTK and in Chromium (`examples/layout/app.mojo`, checked by `scripts/check`). Layout isn't pixel-identical across platforms, because fonts and control sizes differ, but the relations are the same: offsets, fixed sizes, who takes the free space.
 
+## Canvas: draw it yourself (on the GPU when there is one)
+
+Native controls can't show 20 million data points. A `Canvas` is a surface the app paints itself, sized by the layout like any other view; everything around it stays native. Each platform maps it onto its own image surface, display clock and gesture system: a GtkPicture with GTK's frame clock and drag/scroll/zoom gestures; a `<canvas>` on the web; an NSImageView or UIImageView with a CADisplayLink and pan/pinch recognisers on Apple.
+
+```mojo
+def view(self) -> View:
+    return HStack(
+        sidebar,                                                    # native controls
+        Canvas(0, self.version, on_gesture=GESTURE, on_frame=FRAME if self.playing else NO_MSG).grow().fill(),
+    )
+
+def draw(mut self, canvas: Int, mut surface: Surface):             # hosts call this at the canvas's real pixel size
+    var hits = self.cloud.bin[place](surface.width, surface.height, self.knobs())
+    self.cloud.shade[colour](surface, self.knobs())
+
+def update(mut self, event: Event):
+    if event.message == GESTURE and event.number == PAN:
+        self.centre_x -= event.dx * self.units_per_point()         # event.dx, dy: points moved
+        self.version += 1                                           # a new version → hosts redraw
+```
+
+| Piece | What it does |
+|---|---|
+| `Canvas(id, version, on_gesture=, on_frame=)` | a view the app paints; hosts call `draw(id, surface)` again when `version` changes or the canvas is resized |
+| `def draw(mut self, canvas: Int, mut surface: Surface)` | an `App` method (default: blank). It may also update state shown elsewhere (e.g. how long drawing took); hosts refresh the rest of the screen afterwards |
+| `Surface` | RGBA pixels: `width`, `height` (pixels), `scale` (pixels per point), `set(x, y, rgba(...))`, `get`, `fill`, `points_width()` |
+| `on_gesture` | `event.number` is `PAN` (`event.dx`, `dy` in points), `ZOOM` (`event.zoom`, a factor, around `event.x`, `y`) or `TAP` (`event.x`, `y`). Drags, wheels (4 notches = 2×), trackpad and touch pinches |
+| `on_frame` | one event per display frame while set (`event.number` = microseconds since the last); set it to `NO_MSG` to stop |
+| `def window_size(self)` | the window's starting size on desktops (default 480 × 560) |
+
+**`mojoui.gpu`** runs plain Mojo functions over millions of points: `PointCloud(x, y, a, b)` takes four float32 columns (what a dataframe hands over) and keeps them on the GPU. `cloud.bin[place](w, h, knobs)` calls `place(point, w, h, knobs) -> pixel index` (or `OUTSIDE`/`FILTERED`) once per point and counts hits per pixel; `cloud.shade[colour](surface, knobs)` turns each count into a colour. With a GPU (NVIDIA/AMD on Linux) both run as GPU kernels and the data stays on the GPU between frames; without one, the very same functions run on the CPU (Mac and iPhone builds use the CPU for now).
+
+**Web:** the Mojo app runs in the server. The page pulls one JPEG frame at a time from it, at most once per display refresh, and sends gestures back as ordinary events. The JavaScript is a small fixed adapter in `mojoui/hosts/web.py`; apps never contain any.
+
 ## Examples
+- `examples/lens/app.mojo`: **Data Lens**, the GPU showcase. 20 million trips in a made-up city, drawn live as a density map: pick a kind (taxi, rideshare, bike), slide through the hours or press Play to watch a day go by, drag, scroll or pinch to explore. Every frame re-counts all 20 million trips: **about 1.5 ms per 1080p frame on an RTX 3090** (130 ms on the CPU, same pixels), 59–60 fps on GTK and streamed to the browser.
 - `examples/hello/app.mojo`: the smallest app.
 - `examples/gallery/app.mojo`: every component, wired to some state.
 - `examples/kitchen/app.mojo`: every component added in goal 4 (tabs, a details screen, alert, date, icons, grid, a 10,000-row list).
@@ -138,15 +173,16 @@ The app file imports only `mojoui`; it never touches GTK, HTML, AppKit or UIKit 
   - `gtk.mojo` (Linux);
   - `web.mojo` + `web.py` (FastHTML; htmx vendored in `mojoui/hosts/static/`);
   - `appkit.mojo` and `uikit.mojo` (Apple). These call the frameworks through the Objective-C runtime (`objc.mojo`), so there's no Swift or C anywhere.
-- `mojoui/gpu.mojo`: run a Mojo function per pixel on the GPU.
+- `mojoui/canvas.mojo`: `Surface`, the pixels a Canvas is painted into.
+- `mojoui/gpu.mojo`: run a Mojo function per pixel, or bin millions of points (`PointCloud`), on the GPU, with the same functions on the CPU when there's no GPU.
 - `hosts/`: tiny entry points that import your `app.mojo` and start the right renderer.
 - `scripts/build.sh` builds; `scripts/check` proves; `scripts/drive.py` drives the web app in headless Chromium using the same test steps as the GTK test mode.
 
 ## Status and limits
-- **Runs here:** Linux and the web, including the GPU example. `scripts/check` drives the real widgets: GTK through its signals, the browser through Playwright. It reads them back and requires GTK and the web to end in identical states.
+- **Runs here:** Linux and the web, including the GPU fractal and the Data Lens (20M points, GPU). `scripts/check` drives the real widgets: GTK through its signals, the browser through Playwright. It reads them back and requires GTK and the web to end in identical states.
 - **Mac and iPhone:** they compile, link and sign here. A reviewer checked the compiled code for every native call that passes or returns floating-point values or rectangles, plus the selectors and constants. **They haven't been run on real hardware yet.**
 - **Android:** a real arm64 library builds. Drawing with Android views and receiving taps needs a decision and Google's SDK licence: `docs/android.md`.
 - **Not yet:** controls inside lazy-list rows (rows are text plus one tap), a bottom tab bar on iPhone (tabs are a segmented switcher at the top), accessibility labels beyond the platforms' defaults, and JS "islands" on the web.
-- **Limits:** up to 65,535 nodes per screen; Mac/iPhone keep replaced controls in memory (fine for small apps).
+- **Limits:** up to 65,535 nodes per screen; Mac/iPhone keep replaced controls in memory (fine for small apps). Canvas frames reach the screen as one copy per frame (GPU → memory → the platform's texture); each web tab builds its own dataset (3 s and ~640 MB for the lens).
 
 History: `EXPERIMENTS.md` (what was tried), `docs/decisions.md`, `docs/journal.md`, `docs/goals/` (earlier goals, reports and checkers).

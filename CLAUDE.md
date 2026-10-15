@@ -13,7 +13,8 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 3. `EXPERIMENTS.md`: what has actually been tried and what happened. **Trust this over the spec when they disagree.**
 
 ## Where things stand
-- **Newest (Experiment 6, 2026-10-15):** layout settings (padding, sizes, grow, fill, align, justify) on every host; no layout engine (ROADMAP decision 10).
+- **Newest (Experiment 7, 2026-10-15):** Canvas view + GPU PointCloud + Data Lens (`examples/lens`): 20M points, 1.5 ms/frame on the GPU, ~60 fps on GTK and streamed to the web; Mac/iPhone CPU path (builds, not run). See `docs/report.md`.
+- **Experiment 6 (2026-10-15):** layout settings (padding, sizes, grow, fill, align, justify) on every host; no layout engine (ROADMAP decision 10).
 - **Experiment 5 (2026-10-15):** segmented, radio, text area, alert, tabs, navbar, date, icon, grid, lazy list; Pocket Expenses (`examples/expenses`).
 - **Experiment 4 (2026-10-15):** web host (FastHTML), all common components, a real todo app, a GPU example, Android exploration. Linux + web run and are tested here; see `docs/report.md`.
 - **Experiment 3 (2026-10-15):** declarative UI. Apps are `examples/<name>/app.mojo` (`view()`/`update()`), drawn natively by `mojoui/hosts/` (GTK, AppKit, UIKit). Build with `scripts/build.sh <name> all`. Linux runs and is tested here; Mac/iPhone build and sign but haven't run on hardware yet.
@@ -57,7 +58,7 @@ spike/             iOS spike: tiny.mojo, kgen_shim.c (runtime stand-in)
 scripts/m0_linux.sh  reproduces Experiment 1 end to end on Linux
 mojoui/            the framework: view.mojo (components), diff.mojo, app.mojo (App, Event, Runtime), gpu.mojo, png.mojo, hosts/ (gtk, web.mojo+web.py, appkit, uikit, objc, mojo_rt)
 hosts/             entry points per platform (import your app.mojo)
-examples/          hello/, gallery/, todo/, gpu/, kitchen/, expenses/: one app.mojo each (optional `platforms` file)
+examples/          hello/, gallery/, todo/, gpu/, kitchen/, expenses/, layout/, lens/: one app.mojo each (optional `platforms` file)
 scripts/build.sh   build an example for linux|web|mac|ios|android|all
 scripts/drive.py   drives the web app in headless Chromium with the GTK test-mode steps
 apple/             Info.plists, sdk/ (.tbd stubs), install_iphone.sh, README
