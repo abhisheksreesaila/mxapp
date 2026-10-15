@@ -347,7 +347,7 @@ struct GtkHost[A: App](Movable):
         """Creates the GTK widget for node i (and its children)."""
         var node = self.rt.shown.nodes[i].copy()  # copy: building children mutates self
         # A control's built-in width yields when the app sizes it (fill, grow or width).
-        var sized = node.fills or node.grows or node.w != 0
+        var sized = node.sized_width()
         var w: Int
         if node.kind == TEXT:
             var t = node.text

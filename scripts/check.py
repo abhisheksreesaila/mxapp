@@ -564,6 +564,8 @@ def m3():
         ("min width ≥ 150", lambda b: W(b, "minw") >= 150 - TOL),
         ("fill + max width: as wide as the max", lambda b: (W(b, "fm_c"), 200)),
         ("fill + max width: centred", lambda b: (CX(b, "fm_c"), CX(b, "fm_col"))),
+        ("a list growing downwards keeps its own width", lambda b: W(b, "vg_list") >= 300),
+        ("…and takes the column's free height", lambda b: H(b, "vg_list") >= 130),
     ])
 
 

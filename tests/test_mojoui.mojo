@@ -313,6 +313,17 @@ def test_layout_settings_chain_onto_the_view_itself() raises:
     assert_equal(v.nodes[0].children, [1, 2])  # settings don't change the tree
 
 
+def test_stacks_record_which_size_they_decide() raises:
+    var v = VStack(Text("a").fill(), Text("b").grow(), HStack(Text("c").grow(), Text("d").fill()))
+    assert_true(v.nodes[1].sized_width())  # fill in a VStack: width
+    assert_false(v.nodes[1].sized_height())
+    assert_true(v.nodes[2].sized_height())  # grow in a VStack: height
+    assert_false(v.nodes[2].sized_width())
+    assert_true(v.nodes[4].sized_width())  # grow in an HStack: width
+    assert_true(v.nodes[5].sized_height())  # fill in an HStack: height
+    assert_false(v.nodes[5].sized_width())
+
+
 def test_layout_change_rebuilds_but_same_layout_still_patches() raises:
     assert_true(diff(VStack(Text("x")), VStack(Text("x").padding(4))).rebuild)
     assert_true(diff(VStack(Text("x")).align(START), VStack(Text("x")).align(END)).rebuild)
@@ -352,4 +363,5 @@ def main() raises:
     test_back_button_and_alert_question_changes_rebuild()
     test_layout_settings_chain_onto_the_view_itself()
     test_layout_change_rebuilds_but_same_layout_still_patches()
+    test_stacks_record_which_size_they_decide()
     print("ALL TESTS PASSED")

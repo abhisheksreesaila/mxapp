@@ -53,6 +53,6 @@ The review then found that each host's built-in control widths fought the app's 
 ## Worth your second look
 1. **Sizes are border-box everywhere**: `width(300)` includes padding. GTK size requests already work that way. On Apple I add the constraints to the outer (padded) view.
 2. **On GTK, fixed and maximum widths go through `AdwClamp`**, because GTK's size request is only a minimum.
-3. **Apple layout is compiled and signed but not yet run.** It's the riskiest part of this goal, and the reviewer is checking it now.
+3. **Apple layout is compiled and signed but not yet run.** The reviewer passed it after three rounds of checking the compiled calls. Real Auto Layout behaviour is the part your Mac and iPhone test will prove.
 
 **Next:** your Apple test results, then the Android route.

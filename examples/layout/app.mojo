@@ -2,7 +2,7 @@
 # The settings are flexbox names; each platform's own layout system does the work.
 
 from mojoui import (
-    App, Event, View, VStack, HStack, Text, Button, Tabs, Scroll, TITLE, CAPTION, PROMINENT,
+    App, Event, View, VStack, HStack, Text, Button, Tabs, Scroll, LazyList, TITLE, CAPTION, PROMINENT,
     START, CENTER, END, STRETCH, BETWEEN,
 )
 
@@ -49,6 +49,7 @@ struct Main(App):
             Text("A long sentence that wraps because its maximum width is limited.").max_width(200).tag("maxw"),
             Text("x").min_width(150).tag("minw"),
             VStack(Text("short").fill().max_width(200).tag("fm_c")).width(320).tag("fm_col"),
+            VStack(LazyList(20, 9, height=100).grow().tag("vg_list")).height(160).width(320).tag("vg_col"),
             # fill
             VStack(Button("Fill", on_tap=0, style=PROMINENT).fill().tag("fill_child")).padding(10).width(320).tag("fill_box"),
             # grow

@@ -4,6 +4,18 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-15 · Experiment 6: layout as a thin layer (autopilot)
+
+**Goal:** flexbox-named layout settings mapped onto each platform's own layout (ROADMAP decision 10). Contract `GOAL.md`, report `docs/report.md`.
+
+**What worked (`scripts/check` 11/11):** padding, width/height, min/max width, grow, fill, align and justify on every view, measured on GTK and in Chromium (same geometric relations within 1.5 pt). Pocket Expenses and todo use them; field and list widths measured equal to their columns. Apple: NSStackView/UIStackView + Auto Layout (builds and signs; not run).
+
+**What broke and how it was fixed:** web grow wrapped rows; web Scroll was a row; GTK fixed width was only a minimum (AdwClamp); wrapping labels squeezed; built-in control widths fought app layout on every host (now preferences that yield, direction-aware); a test window caught the owner's keystrokes (test windows ignore input). See `docs/journal.md`.
+
+**Next:** the owner's Apple results; Android route.
+
+---
+
 ## 2026-10-15 · Experiment 5: components real apps need + Pocket Expenses (autopilot)
 
 **Goal (owner's words):** "continue with 2–4, 8, then … until 9 … and build a fancier app for all platforms." Contract: `GOAL.md`; report: `docs/report.md`.

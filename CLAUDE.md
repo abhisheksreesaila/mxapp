@@ -3,7 +3,7 @@
 Mode: experiment
 Ship: direct
 
-Current experiment: `GOAL.md` (goal 4: components real apps need + Pocket Expenses; goals 1–3 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 5: layout settings mapped onto native layout; goals 1–4 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 
@@ -13,7 +13,8 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 3. `EXPERIMENTS.md`: what has actually been tried and what happened. **Trust this over the spec when they disagree.**
 
 ## Where things stand
-- **Newest (Experiment 5, 2026-10-15):** segmented, radio, text area, alert, tabs, navbar, date, icon, grid, lazy list; Pocket Expenses (`examples/expenses`).
+- **Newest (Experiment 6, 2026-10-15):** layout settings (padding, sizes, grow, fill, align, justify) on every host; no layout engine (ROADMAP decision 10).
+- **Experiment 5 (2026-10-15):** segmented, radio, text area, alert, tabs, navbar, date, icon, grid, lazy list; Pocket Expenses (`examples/expenses`).
 - **Experiment 4 (2026-10-15):** web host (FastHTML), all common components, a real todo app, a GPU example, Android exploration. Linux + web run and are tested here; see `docs/report.md`.
 - **Experiment 3 (2026-10-15):** declarative UI. Apps are `examples/<name>/app.mojo` (`view()`/`update()`), drawn natively by `mojoui/hosts/` (GTK, AppKit, UIKit). Build with `scripts/build.sh <name> all`. Linux runs and is tested here; Mac/iPhone build and sign but haven't run on hardware yet.
 - **Done:** M0 (Mojo ↔ C both directions, Mojo keeps state across calls from C) and M5 steps 1–2 (Mojo compiles to iPhone objects; the app needs only two Mojo runtime functions, covered by `spike/kgen_shim.c`).

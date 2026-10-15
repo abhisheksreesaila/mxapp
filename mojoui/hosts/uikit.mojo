@@ -76,7 +76,7 @@ struct UIKitHost[A: App](Movable):
 
     def build(mut self, i: Int, self_addr: Int) -> Int:
         var node = self.rt.shown.nodes[i].copy()  # copy: building children mutates self
-        var sized = node.fills or node.grows or node.w != 0  # the app's layout decides this view's width
+        var sized = node.sized_width()  # the app's layout decides this view's width
         var w: Int
         var shown: Int  # what goes into the parent (usually w itself)
         if node.kind == TEXT:
@@ -96,7 +96,7 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "addTarget:action:forControlEvents:", self.target, sel("submit:"), EDITING_DID_END_ON_EXIT)
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(200))  # leaves room for a button beside it on an iPhone SE
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(44))
             shown = w
         elif node.kind == TOGGLE:
@@ -139,7 +139,7 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setBackgroundColor:", msg(cls("UIColor"), "separatorColor"))
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(280))
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(1))
             shown = w
         elif node.kind == IMAGE:
@@ -159,7 +159,7 @@ struct UIKitHost[A: App](Movable):
             w = msg(msg(cls("UISegmentedControl"), "alloc"), "initWithItems:", ns_array(node.options))
             _ = msg(w, "setSelectedSegmentIndex:", node.value)
             self.wire(w, i, self_addr, "segment:", VALUE_CHANGED)
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(40 if node.kind == TABS else 34))
             shown = w
         elif node.kind == RADIO:
@@ -182,7 +182,7 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setDelegate:", self.target)  # textViewDidChange:
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(300))
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(node.size))
             shown = w
         elif node.kind == ALERT:
@@ -238,7 +238,7 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setDelegate:", self.target)
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(340))
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(node.size))
             shown = w
         elif node.kind == SPACER:
@@ -254,7 +254,7 @@ struct UIKitHost[A: App](Movable):
                 _ = msg(msg(msg(content, anchor), "constraintEqualToAnchor:", msg(inner, anchor)), "setActive:", 1)
             var frame = msg(w, "frameLayoutGuide")
             _ = msg(msg(msg(content, "widthAnchor"), "constraintEqualToAnchor:", msg(frame, "widthAnchor")), "setActive:", 1)
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(node.size))
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(320))

@@ -84,6 +84,10 @@ struct Node(Copyable, Movable, Equatable, Writable):
     var align_items: Int  # stacks: cross-axis alignment of children (START/CENTER/END/STRETCH)
     var justify_items: Int  # stacks: main-axis placement of children (START/CENTER/END/BETWEEN)
     var name: String  # a tag for tests and accessibility
+    # Set by the parent stack: whether its fill/grow decides this view's width / height
+    # (fill in a VStack or grow in an HStack sets width; the reverse sets height).
+    var width_from_parent: Bool
+    var height_from_parent: Bool
 
     def __init__(
         out self,
@@ -123,6 +127,8 @@ struct Node(Copyable, Movable, Equatable, Writable):
         self.align_items = AUTO
         self.justify_items = AUTO
         self.name = ""
+        self.width_from_parent = False
+        self.height_from_parent = False
 
     def __eq__(self, other: Self) -> Bool:
         return (
@@ -147,7 +153,16 @@ struct Node(Copyable, Movable, Equatable, Writable):
             and self.min_w == other.min_w and self.max_w == other.max_w and self.grows == other.grows
             and self.fills == other.fills and self.align_items == other.align_items
             and self.justify_items == other.justify_items and self.name == other.name
+            and self.width_from_parent == other.width_from_parent
+            and self.height_from_parent == other.height_from_parent
         )
+
+    def sized_width(self) -> Bool:
+        """Whether the app's layout decides this view's width (so a control drops its default)."""
+        return self.w != 0 or self.width_from_parent
+
+    def sized_height(self) -> Bool:
+        return self.h != 0 or self.height_from_parent
 
     def write_to(self, mut writer: Some[Writer]):
         writer.write("Node(kind=", self.kind, ", '", self.text, "', msg=", self.msg, ", value=", self.value, ", children=", self.children, ")")
@@ -330,13 +345,17 @@ def Spacer() -> View:
 # ---------- containers ----------
 
 def _container(var root: Node, items: List[View]) -> View:
+    var vertical = root.kind != HSTACK  # VStack, Scroll (and Grid cells) stack downwards
     var nodes = List[Node]()
     nodes.append(root^)
     for item in items:
         var base = len(nodes)
         nodes[0].children.append(base)
-        for node in item.nodes:
-            var copy = node.copy()
+        for k in range(len(item.nodes)):
+            var copy = item.nodes[k].copy()
+            if k == 0 and nodes[0].kind != GRID:  # the child itself: which size does this stack decide?
+                copy.width_from_parent = (copy.fills and vertical) or (copy.grows and not vertical)
+                copy.height_from_parent = (copy.grows and vertical) or (copy.fills and not vertical)
             for i in range(len(copy.children)):
                 copy.children[i] += base
             nodes.append(copy^)

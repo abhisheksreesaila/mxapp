@@ -59,7 +59,7 @@ struct AppKitHost[A: App](Movable):
 
     def build(mut self, i: Int, self_addr: Int) -> Int:
         var node = self.rt.shown.nodes[i].copy()  # copy: building children mutates self
-        var sized = node.fills or node.grows or node.w != 0  # the app's layout decides this view's width
+        var sized = node.sized_width()  # the app's layout decides this view's width
         var w: Int
         if node.kind == TEXT:
             w = msg(cls("NSTextField"), "labelWithString:", ns_string(node.text))
@@ -130,13 +130,13 @@ struct AppKitHost[A: App](Movable):
             _ = msg(w, "setBoxType:", 2)  # NSBoxSeparator
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(280))
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(1))
         elif node.kind == IMAGE:
             w = msg(cls("NSImageView"), "imageViewWithImage:", ns_image(node.pixels, node.spacing, node.size))
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(node.spacing))
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(node.size))
         elif node.kind == SEGMENTED or node.kind == TABS:
             w = msg(cls("NSSegmentedControl"), "segmentedControlWithLabels:trackingMode:target:action:",
@@ -164,7 +164,7 @@ struct AppKitHost[A: App](Movable):
             _ = msg(text, "setDelegate:", self.target)  # textDidChange:
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(320))
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(node.size))
             self.widgets[i] = text
         elif node.kind == ALERT:
@@ -224,7 +224,7 @@ struct AppKitHost[A: App](Movable):
             _ = msg(w, "setDocumentView:", table)
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(340))
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(node.size))
             self.widgets[i] = table
         elif node.kind == SPACER:
@@ -239,7 +239,7 @@ struct AppKitHost[A: App](Movable):
             var clip = msg(w, "contentView")
             for anchor in ["topAnchor", "leadingAnchor", "widthAnchor"]:
                 _ = msg(msg(msg(content, anchor), "constraintEqualToAnchor:", msg(clip, anchor)), "setActive:", 1)
-            if node.h == 0:
+            if not node.sized_height():
                 constrain(w, "heightAnchor", Float64(node.size))
             if not sized:  # (the app sized it: its settings decide)
                 prefer(w, "widthAnchor", Float64(320))
