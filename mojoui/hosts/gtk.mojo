@@ -1326,6 +1326,20 @@ def to_int(s: String) -> Int:
         return 0
 
 
+def wait_frame(window: Int):
+    """Lets the shown window's frame clock tick once (up to 300 ms), so a step's layout (a new tab
+    page, a rebuilt board) is allocated before the next step or the report measures it. On X11 the
+    tick is a timer, which `settle()` (pending work only) doesn't wait for."""
+    var clock = external_call["gtk_widget_get_frame_clock", Int](window)
+    if clock == 0:
+        return
+    var before = external_call["gdk_frame_clock_get_frame_counter", Int64](clock)
+    external_call["gdk_frame_clock_request_phase", NoneType](clock, c_int(1 << 3))  # GDK_FRAME_CLOCK_PHASE_LAYOUT
+    var deadline = perf_counter_ns() + 300_000_000
+    while external_call["gdk_frame_clock_get_frame_counter", Int64](clock) == before and perf_counter_ns() < deadline:
+        _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+
+
 def wait_allocated(widget: Int):
     """Runs pending main-loop work until the widget has a size (the first step may come before the
     first layout pass). Never blocks: an unshown test window has nothing pending, so it gives up."""
@@ -1758,11 +1772,20 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
         external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
     if not testing or shot != "":
         external_call["gtk_window_present", NoneType](host[].window)
+    if testing and shot != "":
+        # On X11 (the headless display) the first layout waits for the server's map event, which
+        # isn't pending yet: block for it, up to 3 s, so steps and measurements see a laid-out window.
+        var up_by = perf_counter_ns() + 3_000_000_000
+        while external_call["gtk_widget_get_width", c_int](host[].window) == 0 and perf_counter_ns() < up_by:
+            _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+        settle()
     if testing:
         for step in steps.split(";"):
             if String(step) != "":
                 run_step[A](host_addr, String(step))
             settle()
+            if shot != "":
+                wait_frame(host[].window)
         if shot != "" and len(host[].canvases) > 0:  # on screen: let canvases draw what they show now
             var deadline = perf_counter_ns() + 5_000_000_000
             while not host[].canvases_drawn() and perf_counter_ns() < deadline:

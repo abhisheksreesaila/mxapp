@@ -41,7 +41,7 @@ def ensure():
         print("headless: no Xvfb in the pixi environment (pixi install); windows will show")
         return False
     n = _free_display()
-    cmd = [str(xvfb), f":{n}", "-screen", "0", "3840x2400x24", "-nolisten", "tcp"]  # room for a 1440×900-pt window at scale 2
+    cmd = [str(xvfb), f":{n}", "-screen", "0", "2560x1600x24", "-nolisten", "tcp"]
     xkb = _xkb_dir()
     if xkb:
         cmd += ["-xkbdir", xkb]
@@ -55,8 +55,11 @@ def ensure():
             _server = None
             return False
         time.sleep(0.05)
-    os.environ.update({"DISPLAY": f":{n}", "GDK_BACKEND": "x11", "GSK_RENDERER": "cairo", "GDK_DISABLE": "gl,vulkan"})
+    # Scale 1: the desktop's GDK_SCALE=2 would make every frame four times the pixels (the lens
+    # drops to 27 fps through cairo at 1880×1600); a 1× monitor is a real target too.
+    os.environ.update({"DISPLAY": f":{n}", "GDK_BACKEND": "x11", "GSK_RENDERER": "cairo", "GDK_DISABLE": "gl,vulkan", "GDK_SCALE": "1"})
     os.environ.pop("WAYLAND_DISPLAY", None)
+    os.environ.pop("GDK_DPI_SCALE", None)
     return True
 
 

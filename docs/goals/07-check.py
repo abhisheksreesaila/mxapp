@@ -170,8 +170,16 @@ def m6():
     return not problems, "; ".join(problems) or f"lens on Android (CPU, 2M trips) draws the map; a real swipe pans it as on GTK: {view(moved)}"
 
 
+def stop_emulator():
+    """Shuts the test emulator down (the Android checks boot it headless and leave it running)."""
+    adb = Path.home() / "Android/Sdk/platform-tools/adb"
+    if adb.exists():
+        subprocess.run([str(adb), "emu", "kill"], capture_output=True, text=True, timeout=60)
+
+
 def m7():
     problems = []
+    stop_emulator()  # goal 6's frame-rate check needs the CPU the emulator was using
     for name in ("m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8"):
         ok, msg = getattr(g6, name)()
         if not ok:
