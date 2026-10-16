@@ -58,3 +58,9 @@ PASS  M10  README opens picture-first (4 images) and shows the workbook
 ```
 M7 timed out on goal 6's lens again under the load from other projects' jobs. Right after the run, at a load average of 6, the lens drew 180 frames at 31.9 fps on GTK: it works, but goal 6's bar is 55 fps, which this machine reaches only when idle (59 fps measured on 2026-10-15). An M7-only run is queued to start when the load average falls below 2; its output lands in `/tmp/check9_m7.txt` and will be pasted here.
 
+## M7, run on its own after the fixes (2026-10-16 05:08, load average 9–12)
+```
+FAIL  M7  goal 8 M9: goal 7 M7: goal 6 M3: 21.8 fps < 55; goal 6 M6: web canvas looks blank (39 colours)
+```
+Three real regressions surfaced once M7 could run, all fixed and committed: the test-only layout wait blocked on an unshown window (goal 6's lens runs hung); goal 8's spec and engine tests construct the analytics app without a host, so the shared data must build lazily; the apps had picked up `std.*` imports (goal 5's rule: apps import only `mojoui`). What remains are the two goal-6 lens items that predate this goal and need the owner's decision: the 55 fps bar (this machine reaches it only when idle; other projects' jobs ran all night) and the "not blank" colour count (invalidated by goal 8's PNG frames; a painted-share measure was proposed). Every other check in goals 3–8 passes.
+
