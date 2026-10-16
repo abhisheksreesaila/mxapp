@@ -48,6 +48,7 @@ def view_to_json(v: View) -> String:
         out += ',"fills":' + ("true" if n.fills else "false") + ',"align_items":' + String(n.align_items)
         out += ',"justify_items":' + String(n.justify_items) + ',"name":' + json_str(n.name)
         out += ',"width_from_parent":' + ("true" if n.width_from_parent else "false") + ',"height_from_parent":' + ("true" if n.height_from_parent else "false")
+        out += ',"x":' + String(n.x) + ',"y":' + String(n.y)
         out += ',"options":['
         for j in range(len(n.options)):
             if j > 0:
@@ -91,6 +92,11 @@ def tab_at[A: App](handle: Int) -> Pointer[WebSession[A], MutUntrackedOrigin]:
 
 def session_at[A: App](handle: Int) -> Pointer[Runtime[A], MutUntrackedOrigin]:
     return Pointer(to=tab_at[A](handle)[].rt).unsafe_origin_cast[MutUntrackedOrigin]()
+
+
+def web_init_shared[A: App]():
+    """Builds the app's shared data once per server process (before any session)."""
+    A.init_shared()
 
 
 def web_new[A: App]() -> Int:

@@ -54,6 +54,7 @@ struct UIKitHost[A: App](Movable):
     var last_frame: Float64
 
     def __init__(out self):
+        Self.A.init_shared()
         self.rt = Runtime(Self.A())
         self.canvases = List[AppleCanvas]()
         self.link = 0

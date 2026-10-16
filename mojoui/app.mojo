@@ -1,6 +1,6 @@
 # What an app provides, and the platform-independent loop every host runs.
 
-from mojoui.view import View, CANVAS
+from mojoui.view import View, CANVAS, BOARD, PAN, ZOOM
 from mojoui.diff import Diff, diff
 from mojoui.canvas import Surface
 
@@ -43,6 +43,12 @@ trait App(Movable, Deinitable):
     def __init__(out self):
         """The starting state. Hosts create the app themselves."""
         ...
+
+    @staticmethod
+    def init_shared():
+        """Builds what every session of a process shares (large read-only data, GPU buffers), once,
+        before the first session; see mojoui.shared. Sessions find it with get_shared()."""
+        pass
 
     def title(self) -> String:
         """The window title."""
@@ -110,10 +116,19 @@ struct Runtime[A: App](Movable):
         return self.refresh()
 
     def gesture(mut self, node: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64) -> Diff:
-        """A gesture on canvas node `node` (PAN, ZOOM or TAP)."""
-        if node < 0 or node >= len(self.shown.nodes) or self.shown.nodes[node].kind != CANVAS or self.shown.nodes[node].msg == 0:
+        """A gesture on canvas node `node` (PAN, ZOOM or TAP); on a Board node, a child moved
+        (PAN: x = the child's index, dx/dy = how far) or resized (ZOOM: the same fields)."""
+        if node < 0 or node >= len(self.shown.nodes):
             return Diff(False, [])
-        return self.dispatch(Event(self.shown.nodes[node].msg, "", kind, x, y, dx, dy, zoom))
+        ref n = self.shown.nodes[node]
+        if n.kind == BOARD:
+            var msg = n.msg if kind == PAN else (n.msg2 if kind == ZOOM else 0)
+            if msg == 0:
+                return Diff(False, [])
+            return self.dispatch(Event(msg, "", Int(x), x, y, dx, dy, zoom))
+        if n.kind != CANVAS or n.msg == 0:
+            return Diff(False, [])
+        return self.dispatch(Event(n.msg, "", kind, x, y, dx, dy, zoom))
 
     def frame(mut self, node: Int, microseconds: Int) -> Diff:
         """One display frame for canvas node `node` (only if it asked for frames)."""

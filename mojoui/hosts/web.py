@@ -33,7 +33,7 @@ from PIL import Image
 
 # Mirrors mojoui/view.mojo and mojoui/diff.mojo.
 (TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
- SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS) = range(1, 25)
+ SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD) = range(1, 26)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE = 0, 1, 2
@@ -113,12 +113,62 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 #mojoui-root.full { max-width: none; padding: 0; height: 100dvh; align-items: stretch; }
 #mojoui-root.full > div { flex: 1 1 0; min-width: 0; }
 .canvas { position: relative; overflow: hidden; background: var(--surface); }
+.board { position: relative; flex: none; }
+.board > .object { position: absolute; box-sizing: border-box; touch-action: none; }
+.board > .object > .vstack.card { width: 100%; height: 100%; box-sizing: border-box; }
+.board > .object::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 12px; height: 12px; cursor: nwse-resize;
+  border-right: 2px solid var(--line); border-bottom: 2px solid var(--line); border-radius: 0 0 4px 0; }
+.board > .object.moving { opacity: .92; box-shadow: 0 12px 32px rgba(0,0,0,.18); z-index: 2; }
+@media (max-width: 719px) { .board { width: auto !important; height: auto !important; display: flex; flex-direction: column; gap: 16px; }
+  .board > .object { position: static !important; width: auto !important; left: auto; top: auto; } .board > .object::after { display: none; } }
 .canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .canvas canvas:active { cursor: grabbing; }
 .vstack.card { background: light-dark(#fff, #2c2c2e); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 0 0 1px var(--line); }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
 """
 
+
+BOARD_JS = r"""
+// mojoui Board adapter (fixed, part of the web host). Drag an object's header to move it, its
+// bottom-right corner to resize it; the app gets one event at the end (PAN = moved, ZOOM = resized,
+// x = the object's index, dx/dy = how far) and answers with the final, snapped layout.
+(() => {
+  const PAN = 1, ZOOM = 2;
+  const shape = () => document.getElementById('mojoui-v').value;
+  function attach(board) {
+    if (board.mojouiBoard) return;
+    board.mojouiBoard = true;
+    board.addEventListener('pointerdown', e => {
+      const obj = e.target.closest('.object');
+      if (!obj || obj.parentElement !== board || e.button !== 0) return;
+      if (e.target.closest('input, textarea, select, button, canvas, a, [contenteditable]')) return;
+      const r = obj.getBoundingClientRect();
+      const resizing = e.clientX > r.right - 24 && e.clientY > r.bottom - 24;
+      if (!resizing && e.clientY - r.top > 44) return;  // only the header moves it
+      e.preventDefault();
+      const x0 = e.clientX, y0 = e.clientY, left = obj.offsetLeft, top = obj.offsetTop, w = obj.offsetWidth, h = obj.offsetHeight;
+      obj.classList.add('moving');
+      obj.setPointerCapture(e.pointerId);
+      const move = ev => {
+        const dx = ev.clientX - x0, dy = ev.clientY - y0;
+        if (resizing) { obj.style.width = Math.max(w + dx, 120) + 'px'; obj.style.height = Math.max(h + dy, 80) + 'px'; }
+        else { obj.style.left = Math.max(left + dx, 0) + 'px'; obj.style.top = Math.max(top + dy, 0) + 'px'; }
+      };
+      const up = ev => {
+        obj.removeEventListener('pointermove', move); obj.removeEventListener('pointerup', up); obj.removeEventListener('pointercancel', up);
+        obj.classList.remove('moving');
+        const dx = ev.clientX - x0, dy = ev.clientY - y0;
+        htmx.ajax('POST', `/e/${board.dataset.sid}`, { values: { n: Number(board.dataset.node), number: resizing ? ZOOM : PAN,
+          x: Number(obj.dataset.index), y: 0, dx, dy, zoom: 1, v: shape() }, swap: 'none', source: board });
+      };
+      obj.addEventListener('pointermove', move); obj.addEventListener('pointerup', up); obj.addEventListener('pointercancel', up);
+    });
+  }
+  const scan = () => document.querySelectorAll('[data-kind=board]').forEach(attach);
+  scan();
+  new MutationObserver(scan).observe(document.documentElement, { childList: true, subtree: true });
+})();
+"""
 
 CANVAS_JS = r"""
 // mojoui Canvas adapter (fixed, part of the web host; apps never contain JavaScript).
@@ -283,17 +333,24 @@ def png(rgba, w, h):
             + chunk(b"IDAT", zlib.compress(rows, 6)) + chunk(b"IEND", b""))
 
 
+ENGINE_LOCK = threading.Lock()  # apps with shared data: one call into Mojo at a time (shared GPU scratch)
+SESSIONS_MADE = [0]
+
+
 class Session:
     """One browser tab: its Mojo app, the screen last sent, and a lock so its events run one at a time."""
 
-    def __init__(self, mod):
+    def __init__(self, mod, shared=False):
         self.mod = mod
         self.handle = mod.new_session()
+        SESSIONS_MADE[0] += 1
+        if shared:
+            print(f"SHARED: {mod.init_shared()} load, {SESSIONS_MADE[0]} sessions", flush=True)
         self.nodes = json.loads(mod.view(self.handle))
         self.shape = 0  # bumps on every rebuild; node numbers only mean something within one shape
         self.images = {}  # node → version, for cache-busting image URLs
         self.focus = None  # field to focus after the next rebuild
-        self.lock = threading.Lock()
+        self.lock = ENGINE_LOCK if shared else threading.Lock()
         self.closed = False  # set (under lock) when the tab is evicted; its Mojo handle is gone
         self.list_top = {}  # LazyList node → last scroll position, to re-send its visible rows
         self.pending = None  # screen changes made while drawing canvases, not yet sent (a diff)
@@ -416,6 +473,15 @@ def render_node(s, i, sid):
                    hx_post=f"/rows/{sid}/{i}", hx_trigger="scroll throttle:60ms, scroll delay:150ms",
                    hx_target=f"#rows{i}", hx_swap="outerHTML", hx_sync="this:replace",
                    hx_vals="js:{top: event.target.scrollTop}", hx_include="#mojoui-v")
+    if kind == BOARD:
+        kids = []
+        for k, c in enumerate(n["children"]):
+            ch = s.nodes[c]
+            kids.append(Div(render(s, c, sid), cls="object", data_kind="object", data_index=str(k), data_tag=ch["name"],
+                            data_x=str(ch["x"]), data_y=str(ch["y"]), data_w=str(ch["w"]), data_h=str(ch["h"]),
+                            style=f"left:{ch['x']}px;top:{ch['y']}px;width:{ch['w']}px;height:{ch['h']}px"))
+        return Div(*kids, cls="board", id=nid, data_kind="board", data_node=str(i), data_sid=sid,
+                   style=f"width:{n['spacing']}px;height:{n['size']}px")
     if kind == CANVAS:
         # Its own size only when the app's layout doesn't size it (as on the other hosts).
         sized_w = n["w"] or (n["width_from_parent"] if "width_from_parent" in n else n["grows"] or n["fills"])
@@ -479,6 +545,9 @@ def rows_html(s, i, sid, top):
 def make_app(module_dir):
     sys.path.insert(0, str(Path(module_dir).resolve()))
     mod = importlib.import_module("mojoui_app")
+    loads = mod.init_shared() if hasattr(mod, "init_shared") else 0  # the app's shared data, once per process
+    if loads:
+        print(f"SHARED: {loads} load, 0 sessions", flush=True)
     app = FastHTML(default_hdrs=False, secret_key=uuid.uuid4().hex, hdrs=(  # no .sesskey file
         Meta(charset="utf-8"), Meta(name="viewport", content="width=device-width, initial-scale=1, viewport-fit=cover"),
         # No attribute inheritance: every element states its own hx-* attributes (list rows once
@@ -509,12 +578,12 @@ def make_app(module_dir):
 
     @app.get("/static/mojoui-canvas.js")
     def canvas_js():
-        return Response(CANVAS_JS, media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+        return Response(CANVAS_JS + "\n" + BOARD_JS, media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
     @app.get("/")
     def index():
         sid = uuid.uuid4().hex  # one app session per page load (tab)
-        s = Session(mod)
+        s = Session(mod, shared=bool(loads))
         with sessions_lock:
             sessions[sid] = s
             while len(sessions) > MAX_SESSIONS:
@@ -619,7 +688,7 @@ def make_app(module_dir):
             source = s.nodes[n]
             if source["kind"] == TOGGLE:
                 number = 1 if on else 0
-            if source["kind"] == CANVAS:
+            if source["kind"] in (CANVAS, BOARD):
                 d = json.loads(mod.gesture(s.handle, n, number, x, y, dx, dy, zoom))
             else:
                 d = json.loads(mod.event(s.handle, n, second, text, number))

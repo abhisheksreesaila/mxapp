@@ -27,7 +27,7 @@ SHOWN = r"^(LABEL|SEGMENTED|DROPDOWN|BUTTON|FIELD|TEXTAREA|BOARD): "
 TIMING = ("LABEL: Recomputed", "LABEL: Loaded")
 
 # The morning walkthrough, scripted. The grid is canvas 0 of the Table object; tapat is in thousandths.
-EDIT = "tapat:0=300,300;enter:Value=7"  # tap a cell of the first table, type 7, Enter
+EDIT = "tapat:0=620,300;enter:Value=7"  # tap a cell of the first table (the cents column, row 3), type 7, Enter
 PIVOT = "select:0=category;select:1=year"  # the pivot's row and column dropdowns
 CHART = "tapat:2=500,500"  # click a bar of the chart: crossfilter
 FORMULA = "enter:Formula=margin = cents - cost"  # a formula column typed as text
@@ -36,7 +36,8 @@ NARROW = (640, 900)
 
 
 def shown(out):
-    return [l for l in out.splitlines() if re.match(SHOWN, l) and not l.startswith(TIMING)]
+    """The widgets' state, as a sorted list: GTK and the web report the same widgets in a different order."""
+    return sorted(l for l in out.splitlines() if re.match(SHOWN, l) and not l.startswith(TIMING))
 
 
 def gtk(steps, size=None, shot=None, example="workbook"):
@@ -129,8 +130,9 @@ def m3():
     if shown(before[0]) != shown(before[1]):
         problems.append(f"GTK and web start differently: {sorted(set(shown(before[0])) ^ set(shown(before[1])))[:4]}")
     for tag in ("table", "pivot", "chart", "note"):
-        if not re.search(rf"^(LABEL|CANVAS|TEXTAREA|BOARD): .*\[{tag}\]", before[0], re.M) and f"[{tag}]" not in before[0]:
-            problems.append(f"no object tagged {tag} on GTK")
+        for host, out in (("GTK", before[0]), ("web", before[1])):
+            if not re.search(rf"^BOX: {tag} ", out, re.M):
+                problems.append(f"no object tagged {tag} on {host}")
     after = both(EDIT, shot_name="edit")
     if after[0] is None:
         return False, after[1]
@@ -143,8 +145,8 @@ def m3():
         return False, piv[1]
     if shown(piv[0]) != shown(piv[1]):
         problems.append("GTK and web differ after choosing pivot fields")
-    if not re.search(r"^LABEL: .*2023.*\[pivot\]", piv[0], re.M):
-        problems.append("the pivot didn't show year columns")
+    if not re.search(r"^LABEL: 2023$", piv[0], re.M) or re.search(r"^LABEL: 2023$", before[0], re.M):
+        problems.append("the pivot didn't switch to year columns")
     cf = both(CHART, shot_name="chart")
     if cf[0] is None:
         return False, cf[1]
@@ -153,7 +155,7 @@ def m3():
     fm = both(FORMULA, shot_name="formula")
     if fm[0] is None:
         return False, fm[1]
-    if "margin" not in fm[0] or shown(fm[0]) != shown(fm[1]):
+    if not re.search(r"^LABEL: .*formulas: margin = cents - cost", fm[0], re.M) or shown(fm[0]) != shown(fm[1]):
         problems.append("the formula column didn't appear identically on both hosts")
     return not problems, "; ".join(problems) or "table, pivot, chart and note objects; edits, pivots, crossfilter and formulas identical on GTK and web"
 

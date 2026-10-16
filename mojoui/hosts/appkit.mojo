@@ -44,6 +44,7 @@ struct AppKitHost[A: App](Movable):
     var last_frame: Float64  # the link's last timestamp (seconds)
 
     def __init__(out self):
+        Self.A.init_shared()
         self.rt = Runtime(Self.A())
         self.window = 0
         self.target = 0

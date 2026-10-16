@@ -12,7 +12,7 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
-    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, PAN, ZOOM, TAP,
+    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, FLUENT,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
@@ -338,9 +338,35 @@ struct GtkCanvas(Copyable, Movable):
         self.quiet = 0
 
 
+struct BoardChild(Copyable, Movable):
+    """One object on a Board: dragged by its header (move) or its bottom-right corner (resize)."""
+
+    var board: Int  # the Board node
+    var node: Int  # the child node
+    var index: Int  # its index among the board's children
+    var widget: Int
+    var fixed: Int  # the GtkFixed holding it
+    var drag: Int  # GtkGestureDrag
+    var active: Bool
+    var resizing: Bool
+
+    def __init__(out self, board: Int, node: Int, index: Int, widget: Int, fixed: Int, drag: Int):
+        self.board = board
+        self.node = node
+        self.index = index
+        self.widget = widget
+        self.fixed = fixed
+        self.drag = drag
+        self.active = False
+        self.resizing = False
+
+
 struct GtkHost[A: App](Movable):
     var rt: Runtime[Self.A]
     var canvases: List[GtkCanvas]
+    var boards: List[BoardChild]
+    var window_w: Int  # the window's width in points (boards narrower than 720 become lists)
+    var board_list: Bool  # the last build showed boards as lists
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
     var dialog: Int  # the open alert dialog, if any
@@ -351,6 +377,9 @@ struct GtkHost[A: App](Movable):
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
         self.canvases = List[GtkCanvas]()
+        self.boards = List[BoardChild]()
+        self.window_w = 0
+        self.board_list = False
         self.window = 0
         self.widgets = List[Int]()
         self.dialog = 0
@@ -655,6 +684,30 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_scrolled_window_set_propagate_natural_width", NoneType](w, c_int(1))
             for c in node.children:
                 external_call["gtk_scrolled_window_set_child", NoneType](w, self.build(c, self_addr))
+        elif node.kind == BOARD:
+            if self.window_w != 0 and self.window_w < 720:  # a phone-width window: the objects as a list
+                self.board_list = True
+                w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(16))
+                for c in node.children:
+                    var child = self.build(c, self_addr)
+                    external_call["gtk_widget_set_halign", NoneType](child, c_int(0))  # fill the width
+                    external_call["gtk_widget_set_hexpand", NoneType](child, c_int(1))
+                    external_call["gtk_box_append", NoneType](w, child)
+            else:
+                w = external_call["gtk_fixed_new", Int]()
+                external_call["gtk_widget_set_size_request", NoneType](w, c_int(node.spacing), c_int(node.size))
+                external_call["gtk_widget_set_halign", NoneType](w, c_int(1))  # start: positions are absolute
+                for k in range(len(node.children)):
+                    var c = node.children[k]
+                    var child = self.build(c, self_addr)
+                    external_call["gtk_fixed_put", NoneType](w, child, Float64(self.rt.shown.nodes[c].x), Float64(self.rt.shown.nodes[c].y))
+                    var drag = external_call["gtk_gesture_drag_new", Int]()
+                    set_index(drag, len(self.boards))
+                    connect_any(drag, "drag-begin", on_board_drag_begin[Self.A], self_addr)
+                    connect_any(drag, "drag-update", on_board_drag_update[Self.A], self_addr)
+                    connect_any(drag, "drag-end", on_board_drag_end[Self.A], self_addr)
+                    external_call["gtk_widget_add_controller", NoneType](child, drag)
+                    self.boards.append(BoardChild(i, c, k, child, w, drag))
         else:
             var orientation = VERTICAL if node.kind == VSTACK else HORIZONTAL
             w = external_call["gtk_box_new", Int](c_int(orientation), c_int(node.spacing))
@@ -696,6 +749,7 @@ struct GtkHost[A: App](Movable):
             self.dialog = 0
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
         self.canvases = List[GtkCanvas]()
+        self.boards = List[BoardChild]()
         var root = self.build(0, self_addr)
         if self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills:  # the screen fills the window
             external_call["gtk_widget_set_valign", NoneType](root, c_int(0))
@@ -1019,6 +1073,47 @@ def on_click_released[A: App](click: Int, presses: c_int, x: Float64, y: Float64
     host[].canvas_send(ci, TAP, x, y, 0, 0, 1, host_addr)
 
 
+def on_board_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi("C"):
+    var host = host_at[A](host_addr)
+    var bi = get_index(drag)
+    if bi < 0 or bi >= len(host[].boards):
+        return
+    var w = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].boards[bi].widget)))
+    var h = Float64(Int(external_call["gtk_widget_get_height", c_int](host[].boards[bi].widget)))
+    host[].boards[bi].resizing = x > w - 24 and y > h - 24
+    host[].boards[bi].active = host[].boards[bi].resizing or y < 44  # the header moves it; the rest is the object's own
+    if not host[].boards[bi].active:
+        external_call["gtk_gesture_set_state", c_int](drag, c_int(2))  # GTK_EVENT_SEQUENCE_DENIED
+
+
+def on_board_drag_update[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr: Int) abi("C"):
+    if busy():
+        return
+    var host = host_at[A](host_addr)
+    var bi = get_index(drag)
+    if bi < 0 or bi >= len(host[].boards) or not host[].boards[bi].active:
+        return
+    ref b = host[].boards[bi]
+    ref n = host[].rt.shown.nodes[b.node]
+    if b.resizing:  # live feedback; the app decides the final size on drag-end
+        external_call["gtk_widget_set_size_request", NoneType](b.widget, c_int(max(n.w + Int(off_x), 120)), c_int(max(n.h + Int(off_y), 80)))
+    else:
+        external_call["gtk_fixed_move", NoneType](b.fixed, b.widget, Float64(max(n.x + Int(off_x), 0)), Float64(max(n.y + Int(off_y), 0)))
+
+
+def on_board_drag_end[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr: Int) abi("C"):
+    if busy():
+        return
+    var host = host_at[A](host_addr)
+    var bi = get_index(drag)
+    if bi < 0 or bi >= len(host[].boards) or not host[].boards[bi].active:
+        return
+    host[].boards[bi].active = False
+    var b = host[].boards[bi].copy()
+    var d = host[].rt.gesture(b.board, ZOOM if b.resizing else PAN, Float64(b.index), 0, off_x, off_y, 1)
+    host[].apply(d, host_addr)
+
+
 def on_clicked[A: App](button: Int, host_addr: Int) abi("C"):
     if busy():
         return
@@ -1197,6 +1292,13 @@ def to_int(s: String) -> Int:
         return 0
 
 
+def wait_allocated(widget: Int):
+    """Runs the main loop until the widget has a size (the first step may come before the first layout pass)."""
+    var deadline = perf_counter_ns() + 3_000_000_000
+    while external_call["gtk_widget_get_width", c_int](widget) == 0 and perf_counter_ns() < deadline:
+        _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+
+
 def run_step[A: App](host_addr: Int, step: String):
     var host = host_at[A](host_addr)
     var verb_rest = split_at(step, ":")
@@ -1344,6 +1446,10 @@ def run_step[A: App](host_addr: Int, step: String):
         if ci < 0:
             print("TEST: no canvas", kv[0])
             return
+        wait_allocated(host[].canvases[ci].widget)
+        var drawn_by = perf_counter_ns() + 3_000_000_000  # and drawn once: a person can't tap what isn't on screen yet
+        while not host[].canvases_drawn() and perf_counter_ns() < drawn_by:
+            _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
         if verb == "tapat":  # a click at (x, y) thousandths of the canvas: the click gesture's own signal
             var xy = split_at(kv[1], ",")
             var cw = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].canvases[ci].widget)))
@@ -1387,6 +1493,31 @@ def run_step[A: App](host_addr: Int, step: String):
             var got = host[].canvases[ci].frames - start - 1
             var fps = Float64(got) / (ms / 1000.0) if ms > 0 else 0.0
             print("FRAMES: " + String(got) + " in " + one_decimal(Float32(ms)) + " ms = " + one_decimal(Float32(fps)) + " fps, draws " + String(host[].canvases[ci].draws - draws))
+    elif verb == "move" or verb == "resize":  # a board object dragged by its header (or its corner), as a real drag sends it
+        var kv = split_at(rest, "=")
+        var xy = split_at(kv[1], ",")
+        var dx = Float64(to_int(xy[0]))
+        var dy = Float64(to_int(xy[1]))
+        var bi = -1
+        for k in range(len(host[].boards)):
+            if host[].rt.shown.nodes[host[].boards[k].node].name == kv[0]:
+                bi = k
+        if bi < 0:
+            print("TEST: no board object", kv[0])
+            return
+        wait_allocated(host[].boards[bi].widget)
+        var w = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].boards[bi].widget)))
+        var h = Float64(Int(external_call["gtk_widget_get_height", c_int](host[].boards[bi].widget)))
+        var sx = w - 8 if verb == "resize" else 20.0
+        var sy = h - 8 if verb == "resize" else 16.0
+        var begin = String("drag-begin")
+        var update = String("drag-update")
+        var end = String("drag-end")
+        var g = host[].boards[bi].drag
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](g, begin.as_c_string_span(), sx, sy)
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](g, update.as_c_string_span(), dx / 2, dy / 2)
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](g, update.as_c_string_span(), dx, dy)
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](g, end.as_c_string_span(), dx, dy)
     else:
         print("TEST: unknown step", step)
 
@@ -1413,6 +1544,13 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
                         print("BOX: " + host[].rt.shown.nodes[i].name + " " + one_decimal(rect[0]) + " " + one_decimal(rect[1])
                               + " " + one_decimal(rect[2]) + " " + one_decimal(rect[3]))
                     _ = len(rect)
+    for i in range(len(host[].rt.shown.nodes)):
+        if host[].rt.shown.nodes[i].kind == BOARD and not alerts:
+            print("LAYOUT: " + ("list" if host[].board_list else "board"))
+            for c in host[].rt.shown.nodes[i].children:
+                ref ch = host[].rt.shown.nodes[c]
+                if not host[].board_list:
+                    print("BOARD: " + ch.name + " at " + String(ch.x) + "," + String(ch.y) + " " + String(ch.w) + "x" + String(ch.h))
     for i in range(len(host[].rt.shown.nodes)):
         ref n = host[].rt.shown.nodes[i]
         var w = host[].widgets[i]
@@ -1563,6 +1701,7 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
         var wh = split_at(forced, "x")
         size = (to_int(wh[0]), to_int(wh[1]))
     external_call["gtk_window_set_default_size", NoneType](host[].window, c_int(size[0]), c_int(size[1]))
+    host[].window_w = size[0]
     for prop in ["notify::default-width", "notify::default-height", "notify::maximized", "notify::fullscreened"]:
         connect3(host[].window, prop, on_window_resized[A], host_addr)
     connect(host[].window, "realize", on_window_realize[A], host_addr)
@@ -1601,6 +1740,7 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
 def run[A: App]() -> Int:
     """Opens the app in a native GTK window and runs until it's closed."""
     var host = alloc(Layout[GtkHost[A]].single()).unsafe_leak()  # lives as long as the app
+    A.init_shared()
     host.unsafe_write(GtkHost[A](A()))
     var id = String("dev.mojoui.App")
     var gapp = external_call["adw_application_new", Int](id.as_c_string_span(), c_int(G_APPLICATION_NON_UNIQUE))

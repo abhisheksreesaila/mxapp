@@ -81,6 +81,7 @@ struct AndroidHost[A: App](Movable):
     var ticking: Bool  # a frame callback is posted
 
     def __init__(out self, env: Int, activity: Int):
+        Self.A.init_shared()
         self.rt = Runtime(Self.A())
         self.jni = Jni(env)
         self.activity = self.jni.keep(activity)

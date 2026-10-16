@@ -5,13 +5,15 @@ from std.python import PythonObject
 from std.python.bindings import PythonModuleBuilder
 
 from app import Main
-from mojoui.hosts.web import web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design
+from mojoui.shared import shared_loads
+from mojoui.hosts.web import web_init_shared, web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design
 
 
 @export
 def PyInit_mojoui_app() abi("C") -> PythonObject:
     try:
         var m = PythonModuleBuilder("mojoui_app")
+        m.def_function[init_shared]("init_shared", docstring="Build the app's shared data once per process; returns how many times it has been built.")
         m.def_function[new_session]("new_session", docstring="Start an app session; returns its handle.")
         m.def_function[title]("title", docstring="The app's title.")
         m.def_function[view]("view", docstring="The current screen as JSON.")
@@ -26,6 +28,11 @@ def PyInit_mojoui_app() abi("C") -> PythonObject:
         return m.finalize()
     except e:
         abort(String("mojoui: couldn't create the Python module: ", e))
+
+
+def init_shared() raises -> PythonObject:
+    web_init_shared[Main]()
+    return PythonObject(shared_loads())
 
 
 def new_session() raises -> PythonObject:

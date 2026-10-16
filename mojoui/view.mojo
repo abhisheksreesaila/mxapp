@@ -31,6 +31,7 @@ comptime ICON = 21  # text = icon name (see ICON_NAMES); size = points
 comptime GRID = 22  # children in rows of `value` columns; spacing = gap
 comptime LAZYLIST = 23  # value = row count, msg2 = list id, size = height, spacing = row height
 comptime CANVAS = 24  # drawn by the app's draw(): style = canvas id, value = version, msg = on_gesture, msg2 = on_frame
+comptime BOARD = 25  # children at absolute positions (.at(x, y), sized with .width/.height): msg = on_move, msg2 = on_resize; spacing = width, size = height
 
 # Canvas gestures (event.number)
 comptime PAN = 1  # event.dx, dy: movement in points; event.x, y: where the pointer is
@@ -101,6 +102,8 @@ struct Node(Copyable, Movable, Equatable, Writable):
     # (fill in a VStack or grow in an HStack sets width; the reverse sets height).
     var width_from_parent: Bool
     var height_from_parent: Bool
+    var x: Int  # position inside a Board
+    var y: Int
 
     def __init__(
         out self,
@@ -142,6 +145,8 @@ struct Node(Copyable, Movable, Equatable, Writable):
         self.name = ""
         self.width_from_parent = False
         self.height_from_parent = False
+        self.x = 0
+        self.y = 0
 
     def __eq__(self, other: Self) -> Bool:
         return (
@@ -168,6 +173,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
             and self.justify_items == other.justify_items and self.name == other.name
             and self.width_from_parent == other.width_from_parent
             and self.height_from_parent == other.height_from_parent
+            and self.x == other.x and self.y == other.y
         )
 
     def sized_width(self) -> Bool:
@@ -242,6 +248,12 @@ struct View(Copyable, Movable):
     def tag(var self, name: String) -> View:
         """Names the view, for tests and accessibility."""
         self.nodes[0].name = name
+        return self^
+
+    def at(var self, x: Int, y: Int) -> View:
+        """Where the view sits inside a Board (points from its top-left)."""
+        self.nodes[0].x = x
+        self.nodes[0].y = y
         return self^
 
 
@@ -382,6 +394,15 @@ def _container(var root: Node, items: List[View]) -> View:
                 copy.children[i] += base
             nodes.append(copy^)
     return View(nodes^)
+
+
+def Board(items: List[View], width: Int, height: Int, on_move: Int = NO_MSG, on_resize: Int = NO_MSG) -> View:
+    """A page: children sit where their .at(x, y) says, sized by .width/.height (a Numbers-style
+    free-flow layout). Dragging a child's edge area moves it (on_move: event.number = child index,
+    event.dx/dy = how far); dragging its bottom-right corner resizes it (on_resize, the same fields).
+    Hosts narrower than 720 points show the children as a full-width list instead."""
+    var v = _container(Node(BOARD, msg=on_move, msg2=on_resize, spacing=width, size=height), items)
+    return v^
 
 
 def VStack(*items: View, spacing: Int = 16) -> View:

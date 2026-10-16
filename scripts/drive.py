@@ -9,6 +9,7 @@ state as the browser reports it (LABEL/BUTTON/FIELD/TOGGLE/DROPDOWN/SLIDER/PROGR
 
 import re
 import socket
+import os
 import subprocess
 import sys
 import time
@@ -38,6 +39,10 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
     + [...e.querySelectorAll('button')].map(b => b.textContent).join(', ');
   if (k === 'nav') return 'NAV: ' + e.querySelector('h2').textContent + (e.dataset.back === '1' ? ' (back)' : '');
   if (k === 'date') return 'DATE: ' + e.value;
+  if (k === 'board') { const list = getComputedStyle(e).display === 'flex';
+    return ['LAYOUT: ' + (list ? 'list' : 'board')].concat(list ? [] : [...e.children].map(o =>
+      'BOARD: ' + o.dataset.tag + ' at ' + o.dataset.x + ',' + o.dataset.y + ' ' + o.dataset.w + 'x' + o.dataset.h)).join(String.fromCharCode(10)); }
+  if (k === 'object') return '';
   if (k === 'icon') return 'ICON: ' + (e.querySelector('svg') ? e.dataset.icon : '?');
   if (k === 'grid') return 'GRID: ' + e.dataset.columns + ' columns, ' + e.children.length + ' items';
   if (k === 'canvas') { const cv = e.querySelector('canvas'), r = e.getBoundingClientRect(), st = e.mojoui;
@@ -156,6 +161,18 @@ def step(page, s):
                             start + n + 1)
             ms = canvas.evaluate("(e, a) => e.mojoui.times[a[1]] - e.mojoui.times[a[0]]", [start, start + n])
             return f"FRAMES: {n} in {ms:.1f} ms = {n / (ms / 1000):.1f} fps, draws {n}"
+    elif verb in ("move", "resize"):  # a board object dragged by its header (or its corner) with the mouse
+        tag, _, arg = rest.partition("=")
+        dx, dy = (int(v) for v in arg.split(","))
+        obj = page.locator(f"[data-kind=object][data-tag={tag!r}]").first
+        box = obj.bounding_box()
+        sx = box["x"] + (box["width"] - 8 if verb == "resize" else 20)
+        sy = box["y"] + (box["height"] - 8 if verb == "resize" else 16)
+        page.mouse.move(sx, sy)
+        page.mouse.down()
+        page.mouse.move(sx + dx / 2, sy + dy / 2)
+        page.mouse.move(sx + dx, sy + dy)
+        page.mouse.up()
     elif verb == "wait":  # until a button with this title appears (e.g. after frames change the screen)
         page.locator("[data-kind=button]").filter(has_text=exact(rest)).first.wait_for(timeout=15000)
     elif verb == "slide":
@@ -175,19 +192,26 @@ def web_run(module_dir, steps, shot=None, viewport=(900, 900)):
                               cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     url = f"http://127.0.0.1:{port}/"
     try:
-        for _ in range(100):
+        up = False
+        for _ in range(1800):  # apps that load big shared data take a while to start
             try:
                 urllib.request.urlopen(url + "static/htmx.min.js", timeout=1)  # cheap: "/" starts an app session
+                up = True
                 break
             except OSError:
                 if server.poll() is not None:
                     return SimpleNamespace(returncode=1), "server died:\n" + server.stdout.read()
                 time.sleep(0.1)
+        if not up:
+            return SimpleNamespace(returncode=1), "server didn't come up in 3 minutes"
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path=CHROMIUM, headless=True)
             page = browser.new_page(viewport={"width": viewport[0], "height": viewport[1]})
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
+            if os.environ.get("DRIVE_DEBUG"):  # every event the page posts, and the server's log, on stderr
+                page.on("request", lambda r: print("REQ", r.method, r.url.split("/", 3)[-1], (r.post_data or "")[:160], file=sys.stderr) if "/e/" in r.url else None)
+                page.on("console", lambda m: print("CONSOLE", m.text[:200], file=sys.stderr))
             page.goto(url)
             settle(page)
             extra = ""
