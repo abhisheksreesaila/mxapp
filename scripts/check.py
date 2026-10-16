@@ -262,6 +262,9 @@ def m9():
     doc = ROOT / "docs/wasm.md"
     if not doc.exists():
         return False, "no docs/wasm.md"
+    spike = run(["scripts/wasm_spike.sh"], timeout=1200)  # rebuilds build/wasm from spike/*.mojo
+    if spike.returncode != 0 or spike.stdout.count("WASM: hello") < 4:
+        return False, f"wasm spike: {(spike.stdout + spike.stderr)[-400:]}"
     text = doc.read_text()
     m = re.search(r"^WASM: (shim-sized|wall)", text, re.M)
     count = re.search(r"(\d+) (missing|undefined) symbols", text)
@@ -274,7 +277,7 @@ def m9():
         r = run(["pixi", "run", "python", "scripts/wasm_run.py", str(wasm)], timeout=300)
         if "WASM: hello" not in r.stdout:
             return False, f"hello.wasm didn't run in Chromium: {(r.stdout + r.stderr)[-300:]}"
-        return True, f"wasm: {count[0]}, hello.wasm runs in headless Chromium"
+        return True, f"wasm: {count[0]} before the shim; hello, List/String and print samples run in headless Chromium"
     for w in ("missing", "compiler"):
         if w not in text:
             return False, f"docs/wasm.md (wall) lacks '{w}'"

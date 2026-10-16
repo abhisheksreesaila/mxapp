@@ -1,12 +1,48 @@
 # mojo-ui
 
+<p align="center">
+  <a href="https://github.com/abhisheksreesaila/mxapp/blob/main/LICENSE"><img alt="MIT" src="https://img.shields.io/badge/licence-MIT-2ea44f"></a>
+  <img alt="Mojo 1.1" src="https://img.shields.io/badge/Mojo-1.1-ff5f1f">
+  <img alt="Linux · Web · Mac · iPhone · Android" src="https://img.shields.io/badge/runs%20on-Linux%20%C2%B7%20Web%20%C2%B7%20Mac%20%C2%B7%20iPhone%20%C2%B7%20Android-0f6cbd">
+  <img alt="GPU" src="https://img.shields.io/badge/GPU-NVIDIA%20today-76b900">
+  <a href="https://abhisheksreesaila.github.io/mxapp/gallery/"><img alt="Gallery" src="https://img.shields.io/badge/showcase-gallery-8a2be2"></a>
+</p>
+
 **Write an app once in Mojo. Compile it. Get a native Linux app, a web app, a Mac app, an iPhone app and an Android app. When the machine has a GPU, the same file lights it up.**
 
-![Contoso Retail: a sales dashboard over 20 million rows, in one Mojo file](docs/img/analytics-linux.png)
+<table>
+<tr>
+<td width="50%"><a href="docs/morning.md"><img src="docs/img/workbook-linux.png" alt="The Workbook: a 20M-row table, a pivot, two charts and a note on one page, in a native Linux window"></a><br><b>The Workbook</b> · tables, pivots, charts and notes on one page, one engine, 20M rows on the GPU · <code>examples/workbook/app.mojo</code></td>
+<td width="50%"><a href="#showcase-analytics-on-the-gpu"><img src="docs/img/analytics-linux.png" alt="Contoso Retail: a sales dashboard over 20 million rows"></a><br><b>Analytics</b> · a Power BI-style dashboard re-aggregated in 6–9 ms per click · <code>examples/analytics/app.mojo</code></td>
+</tr>
+<tr>
+<td><a href="#the-hybrid-native-controls-plus-a-gpu-canvas"><img src="docs/img/lens-linux.jpg" alt="The Data Lens: 20 million points at 60 fps"></a><br><b>Data Lens</b> · 20 million points, 1.5 ms a frame on the GPU, native controls around it · <code>examples/lens/app.mojo</code></td>
+<td><a href="docs/android.md"><img src="docs/img/android-todo.png" alt="The todo app on Android, with real Android views" height="420"></a><br><b>Android</b> · the same todo file as real Android views, driven over JNI from Mojo · <code>examples/todo/app.mojo</code></td>
+</tr>
+</table>
 
-**[See the showcase gallery →](https://abhisheksreesaila.github.io/mxapp/gallery/)**
+**[See the showcase gallery →](https://abhisheksreesaila.github.io/mxapp/gallery/)** · the two-minute [Workbook walkthrough](docs/morning.md) · [Mojo in the browser: the wasm spike](docs/wasm.md)
 
-> An experiment, built in the open. Linux and the web run and are tested by `scripts/check`; Mac and iPhone build and sign but haven't run on real hardware yet. See [Status](#status-honestly).
+## One file, every platform
+
+```mermaid
+flowchart LR
+    A["app.mojo<br/>(your whole app)"] --> B{"scripts/build.sh app all"}
+    B --> L["Linux<br/>GTK 4 window"]
+    B --> W["Web<br/>FastHTML server + browser"]
+    B --> M["Mac<br/>AppKit .app"]
+    B --> I["iPhone<br/>UIKit .ipa"]
+    B --> D["Android<br/>Android views (.apk)"]
+    A -. "same functions" .-> G["GPU kernels<br/>(NVIDIA today)"]
+```
+
+| | Linux | Web | Mac | iPhone | Android | GPU |
+|---|---|---|---|---|---|---|
+| Builds | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Runs, tested by `scripts/check` | ✅ | ✅ | ⏳ needs hardware | ⏳ needs hardware | ✅ emulator | ✅ NVIDIA |
+| Native controls | GTK 4 | HTML | AppKit | UIKit (Liquid Glass) | Android views | — |
+
+> An experiment, built in the open. Linux, the web and the Android emulator run and are tested; Mac and iPhone build and sign but haven't run on real hardware yet. See [Status](#status-honestly).
 
 ## Why
 
@@ -21,19 +57,6 @@ Cross-platform frameworks fix the "several times" part, but each asks you to giv
 And in none of them is the **GPU code** normally written in the same language as the buttons (Rust has experimental options such as rust-gpu). Charts over millions of rows, image filters and on-device AI all end up in a separate shader or CUDA language, behind a boundary that copies data.
 
 **mojo-ui's bet:** one language, Mojo, that is as easy to read as Python, compiles to native code like C++ or Rust, and can run the same functions on the GPU. You describe the screen; each platform draws it with **its own native controls**; the heavy lifting runs on the GPU when there is one. No Swift, no Kotlin, no app JavaScript, no shader language. (The framework itself has one 78-line Java file, because Android only calls Java objects back.)
-
-## One file, every platform
-
-```mermaid
-flowchart LR
-    A["app.mojo<br/>(your whole app)"] --> B{"scripts/build.sh app all"}
-    B --> L["Linux<br/>GTK 4 window"]
-    B --> W["Web<br/>FastHTML server + browser"]
-    B --> M["Mac<br/>AppKit .app"]
-    B --> I["iPhone<br/>UIKit .ipa"]
-    B --> D["Android<br/>Android views (.apk)"]
-    A -. "same functions" .-> G["GPU kernels<br/>(NVIDIA today)"]
-```
 
 Here is a complete app in one file: no project setup, no platform folders.
 
