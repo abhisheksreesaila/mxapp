@@ -1293,10 +1293,12 @@ def to_int(s: String) -> Int:
 
 
 def wait_allocated(widget: Int):
-    """Runs the main loop until the widget has a size (the first step may come before the first layout pass)."""
+    """Runs pending main-loop work until the widget has a size (the first step may come before the
+    first layout pass). Never blocks: an unshown test window has nothing pending, so it gives up."""
     var deadline = perf_counter_ns() + 3_000_000_000
     while external_call["gtk_widget_get_width", c_int](widget) == 0 and perf_counter_ns() < deadline:
-        _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+        if external_call["g_main_context_iteration", c_int](0, c_int(0)) == 0:
+            return  # nothing pending: nothing will change
 
 
 def run_step[A: App](host_addr: Int, step: String):
@@ -1449,7 +1451,8 @@ def run_step[A: App](host_addr: Int, step: String):
         wait_allocated(host[].canvases[ci].widget)
         var drawn_by = perf_counter_ns() + 3_000_000_000  # and drawn once: a person can't tap what isn't on screen yet
         while not host[].canvases_drawn() and perf_counter_ns() < drawn_by:
-            _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+            if external_call["g_main_context_iteration", c_int](0, c_int(0)) == 0 and getenv("MOJOUI_SHOT") == "":
+                break  # unshown window: it will never draw
         if verb == "tapat":  # a click at (x, y) thousandths of the canvas: the click gesture's own signal
             var xy = split_at(kv[1], ",")
             var cw = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].canvases[ci].widget)))
