@@ -46,13 +46,16 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
   if (k === 'icon') return 'ICON: ' + (e.querySelector('svg') ? e.dataset.icon : '?');
   if (k === 'grid') return 'GRID: ' + e.dataset.columns + ' columns, ' + e.children.length + ' items';
   if (k === 'canvas') { const cv = e.querySelector('canvas'), r = e.getBoundingClientRect(), st = e.mojoui;
-    let colours = 0;
-    if (cv.width > 0) { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data, seen = new Set();
-      const step = Math.max(1, Math.floor(d.length / 4 / 20000));
-      for (let i = 0; i < d.length / 4; i += step) seen.add((d[4 * i] << 16) | (d[4 * i + 1] << 8) | d[4 * i + 2]);
-      colours = seen.size; }
+    let colours = 0, painted = 0;
+    if (cv.width > 0) { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data, seen = new Map();
+      const step = Math.max(1, Math.floor(d.length / 4 / 20000)), sample = [];
+      for (let i = 0; i < d.length / 4; i += step) { const c = (d[4 * i] << 16) | (d[4 * i + 1] << 8) | d[4 * i + 2]; sample.push(c); seen.set(c, (seen.get(c) || 0) + 1); }
+      colours = seen.size;
+      let bg = 0, best = 0; seen.forEach((n, c) => { if (n > best) { best = n; bg = c; } });  // the background: the most common colour
+      const far = c => Math.abs((c >> 16 & 255) - (bg >> 16 & 255)) + Math.abs((c >> 8 & 255) - (bg >> 8 & 255)) + Math.abs((c & 255) - (bg & 255)) > 30;
+      painted = Math.floor(100 * sample.filter(far).length / sample.length); }
     return 'CANVAS: ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' pt ' + cv.width + 'x' + cv.height + ' px scale '
-      + (window.devicePixelRatio || 1).toFixed(1) + ' colours ' + colours + ' draws ' + (st ? st.count : 0); }
+      + (window.devicePixelRatio || 1).toFixed(1) + ' colours ' + colours + ' draws ' + (st ? st.count : 0) + ' painted ' + painted; }
   if (k === 'list') { const r0 = e.querySelector('[data-row="0"]');
     return 'LIST: ' + e.querySelector('.rows').dataset.count + ' rows' + String.fromCharCode(10) + 'LISTROWS: ' + e.querySelectorAll('.row').length
       + (r0 ? String.fromCharCode(10) + 'LISTROW: ' + r0.textContent : ''); }

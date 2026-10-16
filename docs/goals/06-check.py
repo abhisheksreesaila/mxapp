@@ -7,7 +7,7 @@ The lens is driven with the shared step language (scripts/drive.py) plus canvas 
   drag:0=100,50   pan canvas 0 by (100, 50) points
   zoom:0=2        zoom canvas 0 by 2× around its centre
   frames:0=180    let canvas 0 run 180 display frames; prints FRAMES: n in ms = fps, draws d
-Each host reports CANVAS: <w>x<h> pt <W>x<H> px scale <s> colours <k> draws <d>.
+Each host reports CANVAS: <w>x<h> pt <W>x<H> px scale <s> colours <k> draws <d> painted <p>.
 """
 
 import importlib.util
@@ -38,9 +38,13 @@ def lens_state(out):
 
 
 def canvas(out):
-    m = re.search(r"^CANVAS: (\d+)x(\d+) pt (\d+)x(\d+) px scale ([\d.]+) colours (\d+) draws (\d+)$", out, re.M)
+    m = re.search(r"^CANVAS: (\d+)x(\d+) pt (\d+)x(\d+) px scale ([\d.]+) colours (\d+) draws (\d+) painted (\d+)$", out, re.M)
     return None if not m else dict(wpt=int(m[1]), hpt=int(m[2]), wpx=int(m[3]), hpx=int(m[4]), scale=float(m[5]),
-                                   colours=int(m[6]), draws=int(m[7]))
+                                   colours=int(m[6]), draws=int(m[7]), painted=int(m[8]))
+
+
+PAINTED = 15  # percent of the canvas away from its background: blank ≈ 0, the lens tens of percent (goal 7's measure, D-70;
+# colour counts depended on the renderer's antialiasing and on JPEG vs PNG frames; owner's decision 2026-10-16)
 
 
 def frames(out):
@@ -88,8 +92,8 @@ def m2():
         problems.append(f"canvas drawn at {c['wpx']}x{c['hpx']} px, laid out at {c['wpt']}x{c['hpt']} pt × {c['scale']}")
     if c["wpt"] < 400 or c["hpt"] < 300:
         problems.append(f"canvas too small: {c['wpt']}x{c['hpt']} pt")
-    if c["colours"] < 50:
-        problems.append(f"canvas looks blank ({c['colours']} colours)")
+    if c["painted"] < PAINTED:
+        problems.append(f"canvas looks blank ({c['painted']}% painted, {c['colours']} colours)")
     r1, dragged = gtk_shown("drag:0=100,50")
     r2, zoomed = gtk_shown("drag:0=100,50;zoom:0=2")
     v0, v1, v2 = view_line(base), view_line(dragged or ""), view_line(zoomed or "")
@@ -101,7 +105,7 @@ def m2():
     if not (abs(v2[2] - 2 * v1[2]) < 1e-6 and v2[:2] == v1[:2]):
         problems.append(f"zoom 2× at the centre should double zoom, keep the centre: {v1} → {v2}")
     return not problems, "; ".join(problems) or (
-        f"canvas {c['wpt']}x{c['hpt']} pt drawn at {c['wpx']}x{c['hpx']} px (scale {c['scale']}), {c['colours']} colours; drag + zoom reach update()")
+        f"canvas {c['wpt']}x{c['hpt']} pt drawn at {c['wpx']}x{c['hpx']} px (scale {c['scale']}), {c['painted']}% painted; drag + zoom reach update()")
 
 
 def m3():
@@ -210,8 +214,8 @@ def m6():
         return False, f"no CANVAS on the web: {wout[-400:]}"
     if abs(c["wpx"] - round(c["wpt"] * c["scale"])) > 1 or abs(c["hpx"] - round(c["hpt"] * c["scale"])) > 1:
         problems.append(f"web frame {c['wpx']}x{c['hpx']} px for a {c['wpt']}x{c['hpt']} pt canvas × {c['scale']}")
-    if c["colours"] < 50:
-        problems.append(f"web canvas looks blank ({c['colours']} colours)")
+    if c["painted"] < PAINTED:
+        problems.append(f"web canvas looks blank ({c['painted']}% painted, {c['colours']} colours)")
     ws, gs = lens_state(wout), lens_state(gout)
     if ws != gs:
         problems.append(f"web and GTK differ:\n  web {ws}\n  gtk {gs}")

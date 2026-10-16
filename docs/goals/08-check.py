@@ -173,9 +173,13 @@ def m5():
             if p:
                 problems.append(p)
     from PIL import Image
-    colours = len(set(Image.open(BUILD / "analytics" / "gtk.png").convert("RGB").getdata()))
-    if colours < 1500:
-        problems.append(f"screenshot has only {colours} colours")
+    # The page is drawn, not blank: the share of pixels away from the background (a drawn dashboard
+    # measures ~16%; a colour count depended on the renderer's text antialiasing: D-96, owner 2026-10-16).
+    px = list(Image.open(BUILD / "analytics" / "gtk.png").convert("RGB").getdata())
+    background = max(set(px), key=px.count)
+    painted = sum(1 for p in px if sum(abs(a - b) for a, b in zip(p, background)) > 30) / len(px)
+    if painted < 0.08:
+        problems.append(f"screenshot looks blank ({painted:.0%} painted)")
     return not problems, "; ".join(problems) or (
         "dashboard over 20M rows; GTK and web identical after year/channel/bar/column/line taps; fits 1440×900 and 1280×800 on both")
 

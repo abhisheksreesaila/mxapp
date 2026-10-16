@@ -1675,7 +1675,7 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
                 if c.node == i and c.wpx > 0:
                     print("CANVAS: " + String(Int(external_call["gtk_widget_get_width", c_int](w))) + "x" + String(Int(external_call["gtk_widget_get_height", c_int](w)))
                           + " pt " + String(c.wpx) + "x" + String(c.hpx) + " px scale " + one_decimal(Float32(c.scale)) + " colours "
-                          + String(colours(c.pixels)) + " draws " + String(c.draws))
+                          + String(colours(c.pixels)) + " draws " + String(c.draws) + " painted " + String(painted(c.pixels)))
         elif n.kind == IMAGE:
             var paintable = external_call["gtk_picture_get_paintable", Int](w)
             print("IMAGE: " + String(external_call["gdk_texture_get_width", c_int](paintable)) + "x" + String(external_call["gdk_texture_get_height", c_int](paintable)))
@@ -1693,6 +1693,37 @@ def colours(pixels: List[UInt32]) -> Int:
         if i == 0 or sample[i] != sample[i - 1]:
             n += 1
     return n
+
+
+def painted(pixels: List[UInt32]) -> Int:
+    """The share (percent) of a sample of the pixels that differ clearly from the most common colour,
+    the background: a blank canvas is ~0, a drawn map or chart tens of percent (goal 7's measure, D-70).
+    Colour counts depend on the renderer's antialiasing; this doesn't."""
+    var sample = List[UInt32]()
+    var step = max(len(pixels) // 20000, 1)
+    for i in range(0, len(pixels), step):
+        sample.append(pixels[i])
+    if len(sample) == 0:
+        return 0
+    var sorted_ = sample.copy()
+    sort(sorted_)
+    var background = sorted_[0]
+    var best = 0
+    var run_start = 0
+    for i in range(1, len(sorted_) + 1):
+        if i == len(sorted_) or sorted_[i] != sorted_[run_start]:
+            if i - run_start > best:
+                best = i - run_start
+                background = sorted_[run_start]
+            run_start = i
+    var n = 0
+    for px in sample:
+        var d = 0
+        for shift in [0, 8, 16]:
+            d += abs(Int((px >> UInt32(shift)) & 0xFF) - Int((background >> UInt32(shift)) & 0xFF))
+        if d > 30:
+            n += 1
+    return n * 100 // len(sample)
 
 
 def save_png(window: Int, path: String):
