@@ -539,7 +539,8 @@ struct Main(App):
                 self.message = "Couldn't save: " + String(e)
             self.version += 1
         elif m == OPEN:
-            self.load(self.path)
+            var path = self.path
+            self.load(path)
             self.compute()
             self.version += 1
         elif m == MOVE or m == RESIZE:

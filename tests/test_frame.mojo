@@ -77,10 +77,23 @@ def main() raises:
     except:
         pass
     assert_true(chain_ok, "a chain too deep for the GPU must be refused")
-    # replacing a formula recompiles the formulas built on it
-    _ = f.formula("margin = cents - cost - 1")
-    assert_equal(f.display(total, 1), "49.00")
+    # replacing a formula recompiles the formulas built on it (a scale change: margin becomes a plain count)
+    var plus = f.formula("plus = margin + cost")
+    assert_equal(f.display(plus, 1), "120.00")
+    _ = f.formula("margin = quantity")
+    assert_equal(f.display(plus, 1), "71.00")  # 1 + 70.00, re-aligned
     _ = f.formula("margin = cents - cost")
+    assert_equal(f.display(plus, 1), "120.00")
+    # a replacement that would push a dependant past the GPU's depth is refused, and nothing changes
+    var four = f.formula("four = quantity + cost * margin")  # 4 slots with margin = cents - cost
+    var refused_replace = False
+    try:
+        _ = f.formula("margin = (cents - cost) * (quantity + 1)")  # fine alone; makes `four` need 5
+    except:
+        refused_replace = True
+    assert_true(refused_replace, "a replacement that breaks a dependant must be refused")
+    assert_equal(f.display(margin, 1), "50.00")
+    assert_equal(f.display(four, 1), "3501.00")  # 1 + 70.00 × 50.00
     # bad values are refused
     var bad = 0
     for text in ["12.5x", "1.2.3", "2024-13-01", "2024-02-30"]:

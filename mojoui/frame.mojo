@@ -711,15 +711,21 @@ struct Frame(Movable):
         col.formula = String(String(expr).strip())
         col.program = comp.code.copy()
         if existing >= 0:
+            # the formulas built on this one recompile against its new scale and depth; if any of
+            # them can't (too deep now), nothing changes
+            var before = self.formulas.copy()
             self.formulas[existing - self.stored()] = col^
-            self.edits += 1
-            # the formulas built on this one recompile against its new scale and depth
             var texts = List[String]()
             for f in range(len(self.formulas)):
                 if self.depends(f, existing):
                     texts.append(self.formulas[f].name + " = " + self.formulas[f].formula)
             for t in texts:
-                _ = self.formula(t)
+                try:
+                    _ = self.formula(t)
+                except e:
+                    self.formulas = before^
+                    raise Error("'" + String(name) + "' can't change: " + String(e))
+            self.edits += 1
             return existing
         self.formulas.append(col^)
         self.edits += 1
