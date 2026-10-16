@@ -93,6 +93,47 @@ def main() raises:
     var back = group_sum(frame, gf, col(CATEGORY), col(CENTS), List[Range](), 8)
     for k in range(8):
         assert_equal(back.sums[k], before.sums[k])
+        assert_equal(back.counts[k], before.counts[k])
+    # the awkward overlays: edited then removed; appended then edited; a row moved to another group;
+    # an edit undone back to the shared value; a chained formula flattened for the kernel
+    var r2 = 4321
+    var c2 = Int(frame.get(CATEGORY, r2))
+    frame.set(CENTS, r2, frame.get(CENTS, r2) + 50_000)
+    frame.remove(r2)  # its old value must leave the total and its new one never enter
+    var r3 = frame.append(["2025-01-02", "Home", "Europe", "Stores", "Desk lamp", "1", "10.00", "4.00", "2025"])
+    frame.set(CENTS, r3, 2500)  # appended, then edited: the edited value counts
+    var r4 = 777
+    var c4 = Int(frame.get(CATEGORY, r4))
+    var v4 = Int(frame.get(CENTS, r4))
+    frame.set(CATEGORY, r4, Int64((c4 + 1) % 8))  # moved to the next group
+    var r5 = 999
+    var v5 = frame.get(CENTS, r5)
+    frame.set(CENTS, r5, v5 + 1)
+    frame.set(CENTS, r5, v5)  # back to the shared value: nothing should change
+    var now = group_sum(frame, gf, col(CATEGORY), col(CENTS), List[Range](), 8)
+    for k in range(8):
+        var e = before.sums[k]
+        var n_ = before.counts[k]
+        if k == c2:
+            e -= Int(frame.base()[].cols[CENTS].values[r2])
+            n_ -= 1
+        if k == 1:  # Home
+            e += 2500
+            n_ += 1
+        if k == c4:
+            e -= v4
+            n_ -= 1
+        if k == (c4 + 1) % 8:
+            e += v4
+            n_ += 1
+        assert_equal(now.sums[k], e, "overlay sums, group " + String(k))
+        assert_equal(now.counts[k], n_, "overlay counts, group " + String(k))
+    var chained = frame.formula("double_margin = margin * 2")
+    var gpu_c = group_sum(frame, gf, col(CATEGORY), frame.program_for(chained), List[Range](), 8)
+    var cpu_c = group_sum(frame, gf, col(CATEGORY), frame.program_for(chained), List[Range](), 8, use_gpu=False)
+    for k in range(8):
+        assert_equal(gpu_c.sums[k], cpu_c.sums[k], "chained formula, group " + String(k))
+    _ = r3
     print("PATCH: edit visible in the next group-by (" + String(after.milliseconds) + " ms with deltas); undo restores")
     _ = added
     print("GROUPBY: " + String(n) + " rows, GPU = CPU on " + String(compared) + " numbers, max " + String(worst) + " ms, device " + gf.device_name())

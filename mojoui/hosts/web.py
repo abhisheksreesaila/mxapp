@@ -114,13 +114,15 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 #mojoui-root.full > div { flex: 1 1 0; min-width: 0; }
 .canvas { position: relative; overflow: hidden; background: var(--surface); }
 .board { position: relative; flex: none; }
-.board > .object { position: absolute; box-sizing: border-box; touch-action: none; }
+.board > .object { position: absolute; box-sizing: border-box; }
+.board > .object > .vstack.card > :first-child { touch-action: none; cursor: move; }
 .board > .object > .vstack.card { width: 100%; height: 100%; box-sizing: border-box; }
 .board > .object::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 12px; height: 12px; cursor: nwse-resize;
   border-right: 2px solid var(--line); border-bottom: 2px solid var(--line); border-radius: 0 0 4px 0; }
 .board > .object.moving { opacity: .92; box-shadow: 0 12px 32px rgba(0,0,0,.18); z-index: 2; }
 @media (max-width: 719px) { .board { width: auto !important; height: auto !important; display: flex; flex-direction: column; gap: 16px; }
-  .board > .object { position: static !important; width: auto !important; left: auto; top: auto; } .board > .object::after { display: none; } }
+  .board > .object { position: static !important; width: auto !important; left: auto; top: auto; } .board > .object::after { display: none; }
+  .board > .object > .vstack.card > :first-child { touch-action: auto; cursor: default; } }
 .canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .canvas canvas:active { cursor: grabbing; }
 .vstack.card { background: light-dark(#fff, #2c2c2e); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 0 0 1px var(--line); }
@@ -139,6 +141,7 @@ BOARD_JS = r"""
     if (board.mojouiBoard) return;
     board.mojouiBoard = true;
     board.addEventListener('pointerdown', e => {
+      if (getComputedStyle(board).display === 'flex') return;  // the narrow list: nothing to drag
       const obj = e.target.closest('.object');
       if (!obj || obj.parentElement !== board || e.button !== 0) return;
       if (e.target.closest('input, textarea, select, button, canvas, a, [contenteditable]')) return;
@@ -342,11 +345,12 @@ class Session:
 
     def __init__(self, mod, shared=False):
         self.mod = mod
-        self.handle = mod.new_session()
+        with ENGINE_LOCK:  # (a new session computes on the shared GPU data)
+            self.handle = mod.new_session()
+            self.nodes = json.loads(mod.view(self.handle))
         SESSIONS_MADE[0] += 1
         if shared:
             print(f"SHARED: {mod.init_shared()} load, {SESSIONS_MADE[0]} sessions", flush=True)
-        self.nodes = json.loads(mod.view(self.handle))
         self.shape = 0  # bumps on every rebuild; node numbers only mean something within one shape
         self.images = {}  # node → version, for cache-busting image URLs
         self.focus = None  # field to focus after the next rebuild

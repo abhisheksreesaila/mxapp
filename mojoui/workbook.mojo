@@ -51,6 +51,12 @@ def json_string(s: String) -> String:
             out += "\\\\"
         elif c == "\n":
             out += "\\n"
+        elif c == "\t":
+            out += "\\t"
+        elif c == "\r":
+            out += "\\r"
+        elif ord(c) < 32:
+            out += "\\u00" + ("0" if ord(c) < 16 else "1") + String(ord(c) % 16) if ord(c) % 16 < 10 else "\\u00" + ("0" if ord(c) < 16 else "1") + chr(ord("a") + ord(c) % 16 - 10)
         else:
             out += c
     return out + '"'
@@ -184,25 +190,40 @@ def open_workbook(path: String, shared_source: String, shared_addr: Int, mut obj
             cols.add(col^)
         addr = share(cols^)
     var frame = Frame(addr)
+    var stored = frame.stored()
+    var rows = frame.base()[].rows
     var formulas = t["formulas"]
     for k in range(Int(py=formulas.__len__())):
         _ = frame.formula(py_str(formulas[k]))
     var words = t["words"]
     for k in range(Int(py=words.__len__())):
         var c = Int(py=words[k][0])
+        if c < 0 or c >= stored:
+            raise Error("words: column " + String(c) + " doesn't exist")
         frame.words[c].append(py_str(words[k][1]))
     var added = t["added"]
     for k in range(Int(py=added.__len__())):
         var r = Row(0)
-        for c in range(Int(py=added[k].__len__())):
+        var width = Int(py=added[k].__len__())
+        if width > stored:
+            raise Error("added row " + String(k) + " has " + String(width) + " values for " + String(stored) + " columns")
+        for c in range(width):
             r[c] = Int64(Int(py=added[k][c]))
         frame.added.append(r)
     var edits = t["edits"]
     for k in range(Int(py=edits.__len__())):
-        frame.set(Int(py=edits[k][0]), Int(py=edits[k][1]), Int64(Int(py=edits[k][2])))
+        var c = Int(py=edits[k][0])
+        var row = Int(py=edits[k][1])
+        if c < 0 or c >= stored or row < 0 or row >= frame.rows():
+            raise Error("edit " + String(k) + " names column " + String(c) + ", row " + String(row) + ": not in the table")
+        frame.set(c, row, Int64(Int(py=edits[k][2])))
     var removed = t["removed"]
     for k in range(Int(py=removed.__len__())):
-        frame.remove(Int(py=removed[k]))
+        var row = Int(py=removed[k])
+        if row < 0 or row >= frame.rows():
+            raise Error("removed row " + String(row) + ": not in the table")
+        frame.remove(row)
+    _ = rows
     frame.log = List[Edit]()  # what the file holds isn't undoable
     objects = List[ObjectSpec]()
     var objs = doc["objects"]

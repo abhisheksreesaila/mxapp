@@ -207,8 +207,14 @@ def m5():
     r, o = gtk(f"{EDIT};tap:Save;tap:Open")
     if r is None:
         return False, o
-    if summary(o) == summary(gtk("")[1] or ""):
-        problems.append("save then open lost the edit in the app")
+    edited = gtk(EDIT)[1] or ""
+    if not re.search(r"^LABEL: Opened ", o, re.M):
+        problems.append(f"the app didn't report opening the file: {[l for l in o.splitlines() if l.startswith('LABEL: ') and ('Saved' in l or 'open' in l.lower())][:2]}")
+    if summary(o) != summary(edited) or summary(o) == summary(gtk("")[1] or ""):
+        problems.append("save then open didn't keep the edit in the app")
+    start = gtk("")[1] or ""
+    if not re.search(r"^LABEL: Opened .*contoso\.mxwb", start, re.M):
+        problems.append("the app doesn't open the sample workbook at start")
     return not problems, "; ".join(problems) or "save → open round-trips tables, formulas, pivots, charts, notes and layout"
 
 
@@ -255,6 +261,13 @@ def m8():
         problems.append(f"the server didn't report shared loads: {out[-300:]}")
     elif found[-1][0] != "1" or int(found[-1][1]) < 2:  # the last line: after both tabs opened
         problems.append(f"expected 1 load for 2 sessions, got {found[-1]}")
+    try:  # the analytics app too: one copy for two tabs
+        r2, out2 = drive.web_run(BUILD / "analytics" / "web", "", tabs=2)
+    except Exception as e:
+        return False, f"two-tab analytics run crashed: {e!r}"
+    found2 = re.findall(r"^SHARED: (\d+) loads?, (\d+) sessions", out2, re.M)
+    if not found2 or found2[-1][0] != "1" or int(found2[-1][1]) < 2:
+        problems.append(f"analytics: expected 1 load for 2 sessions, got {found2[-1:] or out2[-200:]}")
     return not problems, "; ".join(problems) or "20M rows loaded once per process and shared by every session (workbook and analytics)"
 
 
@@ -287,7 +300,7 @@ def m9():
 def m10():
     readme = (ROOT / "README.md").read_text()
     head = "\n".join(readme.splitlines()[:60])
-    images = len(re.findall(r"!\[[^\]]*\]\([^)]+\)|<img ", head))
+    images = len(re.findall(r"!\[[^\]]*\]\(docs/img/[^)]+\)|<img src=\"docs/img/", head))  # pictures of the apps, not badges
     problems = []
     if images < 4:
         problems.append(f"only {images} images in the first 60 lines")

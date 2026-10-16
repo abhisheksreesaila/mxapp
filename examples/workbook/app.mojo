@@ -23,7 +23,7 @@ from mojoui.workbook import save_workbook, open_workbook, ObjectSpec
 from std.math import log2
 from std.os import getenv
 
-comptime SOURCE = "contoso:20000000"  # the shared table's source name (a workbook file names it instead of copying it)
+comptime SOURCE_PREFIX = "contoso:"  # + the row count: the shared table's source name (a workbook file names it instead of copying it)
 comptime SAMPLE = "examples/workbook/contoso.mxwb"
 
 # messages
@@ -100,6 +100,7 @@ struct Main(App):
     var version: Int
     var sizes: List[Tuple[Float64, Float64]]  # per object: its canvas size in points
     var path: String  # where Save writes and Open reads (MOJOUI_WORKBOOK, or ~/Documents/Contoso Workbook.mxwb)
+    var pan: Float64  # a drag's leftover below one row, carried to the next motion event
 
     @staticmethod
     def init_shared():
@@ -140,7 +141,33 @@ struct Main(App):
         self.path = getenv("MOJOUI_WORKBOOK", "")
         if self.path == "":
             self.path = getenv("HOME", ".") + "/Documents/Contoso Workbook.mxwb"
+        self.pan = 0
+        self.load(SAMPLE, quiet=True)  # the sample workbook, when run from the repo; else the built-in page
         self.compute()
+
+    def source(self) -> String:
+        return SOURCE_PREFIX + String(self.frame.base()[].rows)
+
+    def load(mut self, path: String, quiet: Bool = False):
+        """Opens a workbook file into this session (objects, formulas, edits)."""
+        try:
+            var specs = List[ObjectSpec]()
+            var base_addr = 0
+            self.frame = open_workbook(path, self.source(), get_shared(0), specs, base_addr)
+            self.gf_addr = get_shared(1) if base_addr == get_shared(0) else keep(GpuFrame(base_addr))  # (a table of its own: on the GPU for this process; not freed)
+            self.objects = List[Obj]()
+            for o in specs:
+                self.objects.append(Obj(o.kind, o.title, o.x, o.y, o.w, o.h, o.a, o.b, o.c, o.text, o.selected))
+            self.sizes = List[Tuple[Float64, Float64]]()
+            for _ in range(len(self.objects)):
+                self.sizes.append((400.0, 300.0))
+            self.order = List[Int]()
+            self.sort_col = -1
+            self.select_cell(-1, -1)
+            self.message = "Opened " + path
+        except e:
+            if not quiet:
+                self.message = "Couldn't open: " + String(e)
 
     def title(self) -> String:
         return "Contoso Workbook"
@@ -398,7 +425,11 @@ struct Main(App):
                 if hit[0] >= 0 and hit[1] >= 0:
                     self.select_cell(hit[0], hit[1])
             elif event.number == PAN:
-                self.scroll_rows(-Int(event.dy / ROW_H))
+                self.pan -= event.dy / ROW_H
+                var rows = Int(self.pan)  # whole rows; the remainder waits for the next motion
+                self.pan -= Float64(rows)
+                if rows != 0:
+                    self.scroll_rows(rows)
             elif event.number == ZOOM and event.zoom > 0:
                 self.scroll_rows(Int(-log2(event.zoom) * 12.0))
         elif m == COMMIT:
@@ -439,8 +470,14 @@ struct Main(App):
                 self.select_cell(-1, -1)
                 self.compute()
         elif m == UNDO:
+            var rows = self.frame.rows()
             if self.frame.undo():
                 self.message = "Undone"
+                if self.frame.rows() != rows:  # an appended row went away: nothing may point at it
+                    self.order = List[Int]()
+                    self.sort_col = -1
+                    if self.cur_row >= self.frame.rows():
+                        self.select_cell(-1, -1)
                 if self.cur_row >= 0 and self.cur_col >= 0:
                     self.edit_text = self.frame.display(self.cur_col, self.cur_row)
                 self.compute()
@@ -496,31 +533,14 @@ struct Main(App):
             self.compute()
         elif m == SAVE:
             try:
-                save_workbook(self.path, self.frame, SOURCE, self.specs())
+                save_workbook(self.path, self.frame, self.source(), self.specs())
                 self.message = "Saved " + self.path
             except e:
                 self.message = "Couldn't save: " + String(e)
             self.version += 1
         elif m == OPEN:
-            try:
-                var specs = List[ObjectSpec]()
-                var base_addr = 0
-                self.frame = open_workbook(self.path, SOURCE, get_shared(0), specs, base_addr)
-                if base_addr != get_shared(0):
-                    self.gf_addr = keep(GpuFrame(base_addr))  # a table of its own: on the GPU for this process
-                self.objects = List[Obj]()
-                for o in specs:
-                    self.objects.append(Obj(o.kind, o.title, o.x, o.y, o.w, o.h, o.a, o.b, o.c, o.text, o.selected))
-                self.sizes = List[Tuple[Float64, Float64]]()
-                for _ in range(len(self.objects)):
-                    self.sizes.append((400.0, 300.0))
-                self.order = List[Int]()
-                self.sort_col = -1
-                self.select_cell(-1, -1)
-                self.message = "Opened " + self.path
-                self.compute()
-            except e:
-                self.message = "Couldn't open: " + String(e)
+            self.load(self.path)
+            self.compute()
             self.version += 1
         elif m == MOVE or m == RESIZE:
             var k = event.number

@@ -1,7 +1,7 @@
 # Mojo → WebAssembly: the spike (goal 9, M9)
 
 **Question:** can Mojo code run in the browser today, without forking the compiler?
-**Answer:** yes, for real stdlib code, with an 8-symbol runtime shim. `scripts/wasm_spike.sh` reproduces everything below in about a minute.
+**Answer:** for three small programs that use the stdlib (a struct, `List`, `String`, `print`): yes, with a 7-symbol runtime shim and the linker's stack pointer. That is evidence, not a proof for every program: the IR was generated for x86-64 (its SIMD widths and layout choices are x86's), and retargeting it is a trick, not a supported path. `scripts/wasm_spike.sh` reproduces everything below in about a minute.
 
 WASM: shim-sized
 
@@ -9,7 +9,7 @@ WASM: shim-sized
 1. `mojo build --target-triple wasm32-unknown-unknown` (and wasm64): **refused**: "No available targets are compatible with triple". Mojo 1.1's compiler ships no wasm backend.
 2. `mojo build --emit llvm spike/tiny.mojo`: the compiler's LLVM IR for the host. Retargeting that IR (the triple, the data layout, the x86 CPU/feature attributes; `scripts/wasm_convert.sh`) and feeding it to LLVM 22's own `llc -mtriple=wasm64-unknown-unknown` **works**: pointers and `Int` are 64-bit in the IR, so the target is wasm64 (Memory64), which Chromium 152 runs.
 3. `wasm-ld --no-entry --export-all` → `build/wasm/hello.wasm` (671 bytes). Headless Chromium calls `mojo_add(2, 3)` and gets **5** (`scripts/wasm_run.py`).
-4. A realistic sample (`spike/wasm_medium.mojo`: a struct, `List`, `String` building, loops) has **8 undefined symbols** after retargeting; `spike/wasm_print.mojo` (`print`) has 7, the same ones:
+4. A realistic sample (`spike/wasm_medium.mojo`: a struct, `List`, `String` building, loops) has **8 undefined symbols** after retargeting (7 for the shim, 1 for the linker); `spike/wasm_print.mojo` (`print`) has 7, the same ones:
 
    | symbol | what it is | provided by |
    |---|---|---|
@@ -20,7 +20,7 @@ WASM: shim-sized
    `spike/wasm_shim.c` is 25 lines, built with `clang --target=wasm64-unknown-unknown -nostdlib`. With it: `sum_squares(1000) = 333832500`, `text_length(5) = 10`, and `say(41)` prints "hello from Mojo 41" through the import and returns 42, all in headless Chromium.
 
 ## What this means
-- **The compiler is not the wall.** LLVM's wasm backend already does the work; Mojo only needs to stop refusing the triple (or keep emitting IR). No fork, no new target.
+- **The compiler may not be the wall.** LLVM's wasm backend did the work for these samples; Mojo would need to accept the triple (so its IR is generated for wasm, not retargeted from x86) rather than a new backend. No fork was needed to find that out.
 - **The runtime is small.** Everything a stdlib program asked for fits in one C file. The iOS spike found the same two `KGEN_*` entry points.
 - **The browser is the host.** mojo-ui's web host already turns the view tree into JSON and renders it with a fixed JavaScript adapter; a wasm build of an app would emit that same JSON in the page, with no server, and the Canvas adapter would paint frames from the module's memory. That is the "client-side mojo-ui" path.
 

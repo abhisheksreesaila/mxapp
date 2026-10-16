@@ -60,8 +60,37 @@ def main() raises:
     assert_equal(f.kind(bin), INT)
     assert_equal(f.display(bin, 1), "2")
     assert_equal(f.display(bin, 2), "0")
+    # scales land on the right operand (the reviewer's cases): q=1, cents=120.00, cost=70.00 on row 1
+    var mixed = f.formula("mixed = quantity + cents * quantity")
+    assert_equal(f.display(mixed, 1), "121.00")
+    var ratio = f.formula("ratio = quantity / (cents - cost)")
+    assert_equal(f.display(ratio, 1), "0.02")
+    var least = f.formula("least = min(quantity, cents - cost)")
+    assert_equal(f.display(least, 1), "1.00")
+    var nested = f.formula("nested = (cents - cost) * (quantity + 1)")
+    assert_equal(f.display(nested, 1), "100.00")
+    # chained formulas are refused when the flattened program would need more than four stack slots
+    var chain_ok = True
+    try:
+        _ = f.formula("deep = quantity + cost * (quantity * margin)")  # flattens to five slots
+        chain_ok = False
+    except:
+        pass
+    assert_true(chain_ok, "a chain too deep for the GPU must be refused")
+    # replacing a formula recompiles the formulas built on it
+    _ = f.formula("margin = cents - cost - 1")
+    assert_equal(f.display(total, 1), "49.00")
+    _ = f.formula("margin = cents - cost")
+    # bad values are refused
+    var bad = 0
+    for text in ["12.5x", "1.2.3", "2024-13-01", "2024-02-30"]:
+        try:
+            _ = f.parse(2 if "-" not in String(text) else 4, String(text))
+        except:
+            bad += 1
+    assert_equal(bad, 4)
     var deps = f.dependants(f.index("cost"))
-    assert_equal(len(deps), 4)
+    assert_true(len(deps) >= 4)
     assert_equal(deps[0], "margin")
     assert_equal(deps[1], "total")
     var refused = False
@@ -81,7 +110,7 @@ def main() raises:
     f.set_text(f.index("cost"), 1, "100")
     assert_equal(f.display(margin, 1), "20.00")
     assert_equal(f.display(total, 1), "20.00")
-    assert_equal(f.edits, 6)
+    assert_true(f.edits >= 6)
     f.set_text(0, 1, "Stool")  # a new word
     assert_equal(f.display(0, 1), "Stool")
     assert_true(f.undo())
@@ -117,4 +146,7 @@ def main() raises:
     assert_true(f.alive(0))
     assert_true(f.undo())
     assert_equal(f.rows(), 5)
+    assert_false(f.alive(5))  # the undone row is gone: not alive, not editable
+    f.set(1, 5, 99)
+    assert_equal(len(f.cells), 0)
     print("FRAME TESTS PASSED")

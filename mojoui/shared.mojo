@@ -10,15 +10,21 @@
 #       self.frame = Frame(get_shared(0))
 
 from std.os import getenv, setenv
+from std.ffi import external_call, c_int
 from std.memory.alloc import alloc, Layout
 
 
+def key(slot: Int) -> String:
+    """MOJOUI_SHARED_<pid>_<slot>: a child process inherits the environment but must not follow a parent's addresses."""
+    return "MOJOUI_SHARED_" + String(Int(external_call["getpid", c_int]())) + "_" + String(slot)
+
+
 def put_shared(slot: Int, addr: Int):
-    _ = setenv("MOJOUI_SHARED_" + String(slot), String(addr), True)
+    _ = setenv(key(slot), String(addr), True)
 
 
 def get_shared(slot: Int) -> Int:
-    var text = getenv("MOJOUI_SHARED_" + String(slot), "")
+    var text = getenv(key(slot), "")
     if text == "":
         return 0
     try:

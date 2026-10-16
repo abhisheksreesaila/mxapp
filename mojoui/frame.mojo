@@ -146,7 +146,16 @@ def parse_date(text: String) raises -> Int64:
     var parts = text.strip().split("-")
     if len(parts) != 3:
         raise Error("dates look like 2024-07-01")
-    return Int64(days_from_civil(Int(String(parts[0])), Int(String(parts[1])), Int(String(parts[2]))))
+    var y = Int(String(parts[0]))
+    var m = Int(String(parts[1]))
+    var d = Int(String(parts[2]))
+    if m < 1 or m > 12 or d < 1 or d > 31:
+        raise Error("not a date: '" + text + "'")
+    var days = days_from_civil(y, m, d)
+    var back = civil_from_days(days)
+    if back[1] != m or back[2] != d:
+        raise Error("not a date: '" + text + "'")
+    return Int64(days)
 
 
 def parse_decimal(text: String, scale: Int) raises -> Int64:
@@ -159,6 +168,9 @@ def parse_decimal(text: String, scale: Int) raises -> Int64:
     var dot = t.find(".")
     var whole = t if dot < 0 else String(t[byte=:dot])
     var frac = String("") if dot < 0 else String(t[byte=dot + 1:])
+    for c in (whole + frac).codepoint_slices():
+        if not (ord("0") <= ord(c) <= ord("9")):
+            raise Error("not a number: '" + text + "'")
     var v = (Int64(Int(whole)) if whole != "" else 0) * pow10(scale)
     var f: Int64 = 0
     var digits = 0
@@ -293,7 +305,6 @@ struct Compiler:
     var names: List[String]
     var scales: List[Int]
     var used: List[Int]
-    var top_start: Int  # where the code of the most recent operand starts
 
     def __init__(out self, text: String, names: List[String], scales: List[Int]):
         self.text = text
@@ -302,7 +313,6 @@ struct Compiler:
         self.names = names.copy()
         self.scales = scales.copy()
         self.used = List[Int]()
-        self.top_start = 0
 
     def peek(mut self) -> String:
         self.skip()
@@ -320,35 +330,34 @@ struct Compiler:
 
 
     def expr(mut self) raises -> Int:
-        var start = len(self.code)
         var s = self.term()
         while self.peek() == "+" or self.peek() == "-":
             var op = self.peek()
             self.pos += 1
-            self.top_start = len(self.code)
+            var rhs = len(self.code)  # where the right operand's code starts
             var s2 = self.term()
-            s = self.align2(s, s2, start)
+            s = self.align2(s, s2, rhs)
             self.emit(OP_ADD if op == "+" else OP_SUB)
         return s
 
-    def align2(mut self, s_under: Int, s_top: Int, under_start: Int) -> Int:
-        if s_top < s_under:
-            self.emit(OP_SCALE, pow10(s_under - s_top))
-            return s_under
-        if s_under < s_top:
-            self.code.insert(self.top_start, pow10(s_top - s_under))
-            self.code.insert(self.top_start, Int64(OP_SCALE))
-            return s_top
-        return s_top
+    def align2(mut self, s_left: Int, s_right: Int, rhs: Int) -> Int:
+        """Brings both operands to one scale: the right one by a SCALE at the end, the left one by a
+        SCALE inserted just before the right operand's code (at rhs)."""
+        if s_right < s_left:
+            self.emit(OP_SCALE, pow10(s_left - s_right))
+            return s_left
+        if s_left < s_right:
+            self.code.insert(rhs, pow10(s_right - s_left))
+            self.code.insert(rhs, Int64(OP_SCALE))
+            return s_right
+        return s_right
 
     def term(mut self) raises -> Int:
-        var start = len(self.code)
         var s = self.factor()
         while True:
             var c = self.peek()
             if c == "*":
                 self.pos += 1
-                self.top_start = len(self.code)
                 var s2 = self.factor()
                 self.emit(OP_MUL)
                 s = s + s2
@@ -359,28 +368,28 @@ struct Compiler:
                 self.pos += 1
                 if self.pos < self.text.byte_length() and String(self.text[byte=self.pos:self.pos + 1]) == "/":
                     self.pos += 1
-                    self.top_start = len(self.code)
+                    var rhs = len(self.code)
                     var s2 = self.factor()
-                    _ = self.align2(s, s2, start)
+                    _ = self.align2(s, s2, rhs)
                     self.emit(OP_FLOORDIV)
                     s = 0
                 else:
-                    self.top_start = len(self.code)
+                    var rhs = len(self.code)
                     var s2 = self.factor()
                     # result scale 2: (a · 10^k) / b where k = 2 - s + s2
                     var k = 2 - s + s2
                     if k > 0:
-                        self.code.insert(self.top_start, pow10(k))
-                        self.code.insert(self.top_start, Int64(OP_SCALE))
+                        self.code.insert(rhs, pow10(k))
+                        self.code.insert(rhs, Int64(OP_SCALE))
                     elif k < 0:
                         self.emit(OP_SCALE, pow10(-k))
                     self.emit(OP_DIV)
                     s = 2
             elif c == "%":
                 self.pos += 1
-                self.top_start = len(self.code)
+                var rhs = len(self.code)
                 var s2 = self.factor()
-                s = self.align2(s, s2, start)
+                s = self.align2(s, s2, rhs)
                 self.emit(OP_MOD)
             else:
                 return s
@@ -430,17 +439,16 @@ struct Compiler:
                 if self.peek() != "(":
                     raise Error(word + " needs (a, b)")
                 self.pos += 1
-                var under_start = len(self.code)
                 var s1 = self.expr()
                 if self.peek() != ",":
                     raise Error(word + " needs two values")
                 self.pos += 1
-                self.top_start = len(self.code)
+                var rhs = len(self.code)
                 var s2 = self.expr()
                 if self.peek() != ")":
                     raise Error("missing )")
                 self.pos += 1
-                var s = self.align2(s1, s2, under_start)
+                var s = self.align2(s1, s2, rhs)
                 self.emit(OP_MIN if word == "min" else OP_MAX)
                 return s
             for k in range(len(self.names)):
@@ -494,7 +502,7 @@ struct Frame(Movable):
         return self.base()[].rows + len(self.added)
 
     def alive(self, row: Int) -> Bool:
-        return row not in self.removed
+        return 0 <= row < self.rows() and row not in self.removed
 
     def name(self, col: Int) -> String:
         return self.base()[].cols[col].name if col < self.stored() else self.formulas[col - self.stored()].name
@@ -558,19 +566,7 @@ struct Frame(Movable):
 
     def flat_program(self, f: Int) -> List[Int64]:
         """The formula's bytecode with references to other formulas inlined (what GPU kernels run)."""
-        var out = List[Int64]()
-        ref p = self.formulas[f].program
-        for k in range(len(p) // 2):
-            var op = p[2 * k]
-            var arg = p[2 * k + 1]
-            if op == OP_COL and Int(arg) >= self.stored():
-                var inner = self.flat_program(Int(arg) - self.stored())
-                for v in inner:
-                    out.append(v)
-            else:
-                out.append(op)
-                out.append(arg)
-        return out^
+        return self.flatten(self.formulas[f].program)
 
     def text_of(self, col: Int, code: Int64) -> String:
         ref dictionary = self.base()[].cols[col].dictionary
@@ -613,8 +609,8 @@ struct Frame(Movable):
     # ---- edits ----
 
     def set(mut self, col: Int, row: Int, value: Int64):
-        if col >= self.stored():
-            return  # formulas aren't edited; their inputs are
+        if col < 0 or col >= self.stored() or row < 0 or row >= self.rows():
+            return  # formulas aren't edited; their inputs are; rows past the end don't exist
         var old = self.stored_value(col, row)
         self.cells[row * MAX_COLS + col] = value
         self.log.append(Edit(SET, col, row, old, value))
@@ -703,23 +699,44 @@ struct Frame(Movable):
         var scale = comp.expr()
         if comp.peek() != "":
             raise Error("unexpected '" + comp.peek() + "'")
-        if len(comp.code) > 2 * MAX_PROGRAM:
-            raise Error("formula too long")
-        if program_depth(comp.code) > MAX_DEPTH:
-            raise Error("formula too deeply nested: split it into two columns")
         for u in comp.used:
             if u == existing or (u >= self.stored() and self.depends(u - self.stored(), existing)):
                 raise Error("'" + String(name) + "' would depend on itself")
+        var flat = self.flatten(comp.code)  # what the kernels run: other formulas inlined
+        if len(flat) > 2 * MAX_PROGRAM:
+            raise Error("formula too long")
+        if program_depth(flat) > MAX_DEPTH:
+            raise Error("formula too deeply nested: split it into two columns")
         var col = Column(String(name), DECIMAL if scale > 0 else INT, scale)
         col.formula = String(String(expr).strip())
         col.program = comp.code.copy()
         if existing >= 0:
             self.formulas[existing - self.stored()] = col^
             self.edits += 1
+            # the formulas built on this one recompile against its new scale and depth
+            var texts = List[String]()
+            for f in range(len(self.formulas)):
+                if self.depends(f, existing):
+                    texts.append(self.formulas[f].name + " = " + self.formulas[f].formula)
+            for t in texts:
+                _ = self.formula(t)
             return existing
         self.formulas.append(col^)
         self.edits += 1
         return self.columns() - 1
+
+    def flatten(self, code: List[Int64]) -> List[Int64]:
+        var out = List[Int64]()
+        for k in range(len(code) // 2):
+            var op = code[2 * k]
+            var arg = code[2 * k + 1]
+            if op == OP_COL and Int(arg) >= self.stored():
+                for v in self.flat_program(Int(arg) - self.stored()):
+                    out.append(v)
+            else:
+                out.append(op)
+                out.append(arg)
+        return out^
 
     def depends(self, f: Int, col: Int) -> Bool:
         """Does formula f read column col (directly or through other formulas)?"""

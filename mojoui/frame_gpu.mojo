@@ -14,7 +14,8 @@ from max.gpu import global_idx, grid_dim, block_dim, thread_idx, barrier
 from max.gpu.host import DeviceContext, DeviceBuffer
 from max.gpu.memory import AddressSpace
 from mojoui.gpu import Gpu, GPU_BUILD, SHARED_GROUPS, GroupSums
-from mojoui.frame import Columns, Frame, Range, Row, MAX_COLS, MAX_DEPTH, eval_program, base_at
+from mojoui.frame import (Columns, Frame, Range, Row, MAX_COLS, MAX_DEPTH, eval_program, base_at, OP_CONST, OP_COL, OP_ADD, OP_SUB,
+                          OP_MUL, OP_DIV, OP_MIN, OP_MAX, OP_FLOORDIV, OP_MOD, OP_SCALE, OP_UNSCALE, OP_NEG)
 from mojoui.clock import now_ns
 
 comptime MAX_FILTERS = 8
@@ -32,8 +33,8 @@ def _eval_direct(prog: UnsafePointer[Int64, MutAnyOrigin], n: Int, rows: UnsafeP
     for k in range(n):
         var op = prog[unsafe_offset=2 * k]
         var arg = prog[unsafe_offset=2 * k + 1]
-        if op <= 1:  # push
-            var v = arg if op == 0 else Int64(rows[unsafe_offset=at + Int(arg)])
+        if op == OP_CONST or op == OP_COL:  # push
+            var v = arg if op == OP_CONST else Int64(rows[unsafe_offset=at + Int(arg)])
             if sp == 0:
                 s0 = v
             elif sp == 1:
@@ -45,27 +46,27 @@ def _eval_direct(prog: UnsafePointer[Int64, MutAnyOrigin], n: Int, rows: UnsafeP
             sp += 1
         else:
             var top = s3 if sp == 4 else (s2 if sp == 3 else (s1 if sp == 2 else s0))
-            if op == 10:  # scale
+            if op == OP_SCALE:
                 top *= arg
-            elif op == 11:  # unscale
+            elif op == OP_UNSCALE:
                 top //= arg
-            elif op == 12:  # negate
+            elif op == OP_NEG:
                 top = -top
             else:
                 sp -= 1
                 var a = s2 if sp == 3 else (s1 if sp == 2 else (s0 if sp == 1 else 0))
                 var b = top
-                if op == 2:
+                if op == OP_ADD:
                     top = a + b
-                elif op == 3:
+                elif op == OP_SUB:
                     top = a - b
-                elif op == 4:
+                elif op == OP_MUL:
                     top = a * b
-                elif op == 5 or op == 8:
+                elif op == OP_DIV or op == OP_FLOORDIV:
                     top = a // b if b != 0 else 0
-                elif op == 9:
+                elif op == OP_MOD:
                     top = a % b if b != 0 else 0
-                elif op == 6:
+                elif op == OP_MIN:
                     top = a if a < b else b
                 else:
                     top = a if a > b else b
@@ -153,6 +154,8 @@ struct GpuFrame(Movable):
                     for c in range(self.stride):
                         ref values = base.cols[c].values
                         for i in range(self.rows):
+                            if values[i] > 2147483647 or values[i] < -2147483648:
+                                raise Error("column " + base.cols[c].name + " has a value that doesn't fit 32 bits (row " + String(i) + ")")
                             host[self.stride * i + c] = Int32(values[i])
                     ref ctx = self.gpu.ctx.value()
                     var buf = ctx.enqueue_create_buffer[DType.int32](self.stride * self.rows)
@@ -265,12 +268,12 @@ def pivot_program(row_key: List[Int64], columns: Int, col_key: List[Int64]) -> L
     var p = List[Int64]()
     for v in row_key:
         p.append(v)
-    p.append(0)  # OP_CONST
+    p.append(Int64(OP_CONST))
     p.append(Int64(columns))
-    p.append(4)  # OP_MUL
+    p.append(Int64(OP_MUL))
     p.append(0)
     for v in col_key:
         p.append(v)
-    p.append(2)  # OP_ADD
+    p.append(Int64(OP_ADD))
     p.append(0)
     return p^
