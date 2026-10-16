@@ -42,3 +42,19 @@ Walkthrough: `docs/morning.md`.
 
 ## Next
 The MX frame Mojo API (spec items 13–22) so the Workbook runs on the Mac; a real wasm allocator and a client-side host.
+
+## The final full run (2026-10-16 02:03, after the review fixes; load average 6–14 during the run)
+```
+PASS  M1  typed columns, formulas with a dependency graph, edits, tombstones, sort permutation, undo
+PASS  M2  20,000,000 rows: GPU = CPU on 262 numbers, ≤ 1.953574 ms, patch + pivot, on NVIDIA GeForce RTX 3090
+PASS  M3  table, pivot, chart and note objects; edits, pivots, crossfilter and formulas identical on GTK and web
+PASS  M4  Board: absolute positions, drag, resize + snap identical on GTK and web; narrow windows show a list
+PASS  M5  save → open round-trips tables, formulas, pivots, charts, notes and layout
+PASS  M6  packaged Linux app + web, launcher, morning walkthrough, gallery and README updated
+FAIL  M7  check crashed: TimeoutExpired(['/home/abhisheksreesaila/Projects/mxapp/mojo-ui/build/lens/linux/lens'], 120)
+PASS  M8  20M rows loaded once per process and shared by every session (workbook and analytics)
+PASS  M9  wasm: 8 undefined symbols before the shim; hello, List/String and print samples run in headless Chromium
+PASS  M10  README opens picture-first (4 images) and shows the workbook
+```
+M7 timed out on goal 6's lens again under the load from other projects' jobs. Right after the run, at a load average of 6, the lens drew 180 frames at 31.9 fps on GTK: it works, but goal 6's bar is 55 fps, which this machine reaches only when idle (59 fps measured on 2026-10-15). An M7-only run is queued to start when the load average falls below 2; its output lands in `/tmp/check9_m7.txt` and will be pasted here.
+
