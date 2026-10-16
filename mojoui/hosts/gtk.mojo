@@ -14,7 +14,7 @@ from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, FLUENT,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, SUBTLE, ICON_ONLY,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, SUBTLE, ICON_ONLY,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.app import App, Event, Runtime
@@ -582,6 +582,7 @@ struct GtkHost[A: App](Movable):
             set_index(drag, ci)
             connect_any(drag, "drag-begin", on_drag_begin[Self.A], self_addr)
             connect_any(drag, "drag-update", on_drag_update[Self.A], self_addr)
+            connect_any(drag, "drag-end", on_drag_end[Self.A], self_addr)
             external_call["gtk_widget_add_controller", NoneType](w, drag)
             var scroll = external_call["gtk_event_controller_scroll_new", Int](c_int(1))  # vertical
             set_index(scroll, ci)
@@ -878,16 +879,25 @@ struct GtkHost[A: App](Movable):
         var hadj = external_call["gtk_scrolled_window_get_hadjustment", Int](sw)
         var page = external_call["gtk_adjustment_get_page_size", Float64](vadj)
         var upper = external_call["gtk_adjustment_get_upper", Float64](vadj)
-        if page <= 0 or upper < Float64(b.size):
+        if page <= 0 or (not self.board_list and upper < Float64(b.size)):
             return False
-        ref c = self.rt.shown.nodes[b.children[k]]
+        # where the card really is (on the page, or stacked in the narrow list): its widget's bounds
+        var rect = List[Float32](length=4, fill=0)  # graphene_rect_t: x, y, width, height
+        var inner = self.widgets[i]
+        if external_call["gtk_widget_compute_bounds", c_int](self.widgets[b.children[k]], inner, Int(rect.unsafe_ptr())) == 0:
+            return False
+        var cx = Float64(rect[0])
+        var cy = Float64(rect[1])
+        var cw = Float64(rect[2])
+        var ch = Float64(rect[3])
+        _ = len(rect)
         var v = external_call["gtk_adjustment_get_value", Float64](vadj)
-        if Float64(c.y) < v + 72 or Float64(c.y + min(c.h, Int(page) - 160)) > v + page - 56:  # (clear of the top and bottom islands)
-            external_call["gtk_adjustment_set_value", NoneType](vadj, max(Float64(c.y) - 88, 0.0))
+        if cy < v + 72 or cy + min(ch, page - 160) > v + page - 56:  # (clear of the top and bottom islands)
+            external_call["gtk_adjustment_set_value", NoneType](vadj, max(cy - 88, 0.0))
         var hv = external_call["gtk_adjustment_get_value", Float64](hadj)
         var hpage = external_call["gtk_adjustment_get_page_size", Float64](hadj)
-        if Float64(c.x) < hv or Float64(c.x + min(c.w, Int(hpage) - 48)) > hv + hpage:
-            external_call["gtk_adjustment_set_value", NoneType](hadj, max(Float64(c.x) - 24, 0.0))
+        if cx < hv or cx + min(cw, hpage - 48) > hv + hpage:
+            external_call["gtk_adjustment_set_value", NoneType](hadj, max(cx - 24, 0.0))
         self.revealed = b.value
         self.reveal_pending = -1
         return True
@@ -1166,6 +1176,16 @@ def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi
     host[].canvases[ci].moved = False
     if not busy():
         host[].canvas_send(ci, PRESS, x, y, 0, 0, 1, host_addr)  # where a drag (or a tap) starts
+
+
+def on_drag_end[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr: Int) abi("C"):
+    if busy():
+        return
+    var host = host_at[A](host_addr)
+    var ci = get_index(drag)
+    if ci < 0 or ci >= len(host[].canvases) or not host[].canvases[ci].moved:
+        return  # (a plain tap: the click gesture sends TAP)
+    host[].canvas_send(ci, RELEASE, host[].canvases[ci].start_x + off_x, host[].canvases[ci].start_y + off_y, 0, 0, 1, host_addr)
 
 
 def on_drag_update[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr: Int) abi("C"):

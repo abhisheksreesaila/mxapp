@@ -126,6 +126,7 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .board-scroll { overflow: auto; position: relative; min-height: 0; }
 .board { position: relative; flex: none; min-width: 100%; min-height: 100%; box-sizing: border-box; }
 .board > .object.revealed { animation: mojoui-revealed 1.2s ease-out; }
+@media (prefers-reduced-motion: reduce) { .board > .object.revealed { animation: none; } }
 @keyframes mojoui-revealed { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent); } to { box-shadow: 0 0 0 3px transparent; } }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 button.with-icon, button.icon-only { display: inline-flex; align-items: center; gap: 6px; }
@@ -219,7 +220,7 @@ CANVAS_JS = r"""
 // its version or size changes. Gestures: drag = PAN, wheel/pinch = ZOOM, click = TAP,
 // sent through htmx like any other event, so the rest of the page updates as usual.
 (() => {
-  const PAN = 1, ZOOM = 2, TAP = 3, PRESS = 4;
+  const PAN = 1, ZOOM = 2, TAP = 3, PRESS = 4, RELEASE = 5;
   const shape = () => document.getElementById('mojoui-v').value;
   function attach(div) {
     if (div.mojoui) return;
@@ -312,6 +313,7 @@ CANVAS_JS = r"""
       const [x, y] = at(e);
       pointers.delete(e.pointerId);
       if (pointers.size === 0 && !moved && e.type === 'pointerup') send(TAP, x, y, 0, 0, 1);
+      else if (pointers.size === 0 && moved) send(RELEASE, x, y, 0, 0, 1);  // a drag ended
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('wheel', e => {

@@ -313,7 +313,8 @@ struct Main(App):
             elif event.number == TAP:
                 self.centre_x += ox * upp
                 self.centre_y += oy * upp
-            self.version += 1
+            if event.number == PAN or event.number == ZOOM or event.number == TAP:  # (PRESS/RELEASE change nothing: no redraw)
+                self.version += 1
         elif event.message == FRAME:
             var seconds = Float64(event.number) / 1e6
             if seconds > 0:

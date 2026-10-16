@@ -8,7 +8,7 @@
 
 from mojoui.view import (View, Text, Button, TextField, Dropdown, TextArea, Canvas, Board, Overlay, VStack, HStack, Card, Grid, Spacer,
                          Divider, Scroll, TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, START, CENTER, END,
-                         BETWEEN, TAP, PAN, ZOOM, PRESS, FLUENT, NO_MSG)
+                         BETWEEN, TAP, PAN, ZOOM, PRESS, RELEASE, FLUENT, NO_MSG)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface, rgba
 from mojoui.text import Font, REGULAR, MEDIUM, LEFT, RIGHT, CENTRE
@@ -27,7 +27,7 @@ comptime SOURCE_PREFIX = "contoso:"  # + the row count: the shared table's sourc
 comptime SAMPLE = "examples/workbook/contoso.mxwb"
 
 # messages
-comptime GRID_GESTURE = 1
+comptime GRID_GESTURE = 250  # + the table card's index (each table knows its own size)
 comptime COMMIT = 2
 comptime FORMULA = 3
 comptime ADD_ROW = 4
@@ -110,6 +110,7 @@ struct Main(App):
     var pan: Float64  # a drag's leftover below one row, carried to the next motion event
     var bar_drag: Bool  # the grid's current drag started on its scroll bar
     var bar_grab: Float64  # where on the thumb it was grabbed (points from the thumb's top)
+    var grid_k: Int  # the table card the last grid gesture came from (its size drives the scroll bar)
     var reveal_k: Int  # the object the page should scroll to (the one just inserted), or -1
     var reveal_count: Int
 
@@ -157,6 +158,7 @@ struct Main(App):
         self.pan = 0
         self.bar_drag = False
         self.bar_grab = 0
+        self.grid_k = 0
         self.reveal_k = -1
         self.reveal_count = 0
         self.load(SAMPLE, quiet=True)  # the sample workbook, when run from the repo; else the built-in page
@@ -320,8 +322,12 @@ struct Main(App):
         return len(self.order) if len(self.order) > 0 else self.frame.rows()
 
     def grid_rows(self) -> Int:
-        """Whole rows the grid shows (from its last drawn size)."""
-        var h = self.sizes[self.table_index()][1] if self.table_index() >= 0 else 380.0
+        """Whole rows the grid shows (from the last-used table's drawn size)."""
+        var k = self.grid_k if 0 <= self.grid_k < len(self.objects) and self.objects[self.grid_k].kind == TABLE else self.table_index()
+        var h = self.sizes[k][1] if k >= 0 else 380.0
+        return self.rows_in(h)
+
+    def rows_in(self, h: Float64) -> Int:
         return max(Int((h - HEADER_H) / ROW_H), 1)
 
     def table_index(self) -> Int:
@@ -334,7 +340,7 @@ struct Main(App):
         """The scroll bar's thumb (top, height) in points for a grid h points tall."""
         var track = h - HEADER_H
         var count = max(self.shown_count(), 1)
-        var visible = min(self.grid_rows(), count)
+        var visible = min(self.rows_in(h), count)
         var size = max(track * Float64(visible) / Float64(count), 28.0)
         var span = max(count - visible, 1)
         return (HEADER_H + (track - size) * Float64(min(self.top, span)) / Float64(span), size)
@@ -343,7 +349,7 @@ struct Main(App):
         """Moves the grid so the thumb's top sits at thumb_top (points)."""
         var t = self.thumb(h)
         var room = max(h - HEADER_H - t[1], 1.0)
-        var span = max(self.shown_count() - min(self.grid_rows(), self.shown_count()), 0)
+        var span = max(self.shown_count() - min(self.rows_in(h), self.shown_count()), 0)
         var f = min(max((thumb_top - HEADER_H) / room, 0.0), 1.0)
         var top = Int(f * Float64(span) + 0.5)
         if top != self.top:
@@ -424,9 +430,10 @@ struct Main(App):
         rect(s, right, HEADER_H * k, BAR_W * k, h - HEADER_H * k, BAR_TRACK)
         rect(s, right + 3 * k, t[0] * k + 2 * k, (BAR_W - 6) * k, t[1] * k - 4 * k, BAR_THUMB_ACTIVE if self.bar_drag else BAR_THUMB)
 
-    def on_bar(self, x_pt: Float64) -> Bool:
-        var t = self.table_index()
-        return t >= 0 and x_pt >= self.sizes[t][0] - BAR_W
+    def on_bar(self, x_pt: Float64, y_pt: Float64) -> Bool:
+        """Whether (x, y) is on the scroll bar of the last-used table (below its header)."""
+        var t = self.grid_k
+        return 0 <= t < len(self.sizes) and x_pt >= self.sizes[t][0] - BAR_W and y_pt >= HEADER_H
 
     def header_hit(self, x_pt: Float64, y_pt: Float64) -> Int:
         """The column whose header is under (x, y) in points, or -1."""
@@ -497,11 +504,12 @@ struct Main(App):
 
     def update(mut self, event: Event):
         var m = event.message
-        if m == GRID_GESTURE:
-            var h = self.sizes[self.table_index()][1] if self.table_index() >= 0 else 380.0
+        if GRID_GESTURE <= m < GRID_GESTURE + MAX_OBJECTS:
+            self.grid_k = m - GRID_GESTURE
+            var h = self.sizes[self.grid_k][1] if self.grid_k < len(self.sizes) else 380.0
             if event.number == PRESS:  # a drag or tap starts: on the scroll bar it grabs (or jumps) the thumb
                 var was = self.bar_drag
-                self.bar_drag = self.on_bar(event.x)
+                self.bar_drag = self.on_bar(event.x, event.y)
                 if self.bar_drag:
                     var t = self.thumb(h)
                     if t[0] <= event.y < t[0] + t[1]:
@@ -512,8 +520,12 @@ struct Main(App):
                     self.version += 1
                 elif was:
                     self.version += 1
+            elif event.number == RELEASE:  # a drag ended: the thumb lets go
+                if self.bar_drag:
+                    self.bar_drag = False
+                    self.version += 1
             elif event.number == TAP:
-                if self.on_bar(event.x):
+                if self.on_bar(event.x, event.y):
                     self.bar_drag = False
                     self.version += 1
                 elif event.y < HEADER_H:
@@ -796,7 +808,7 @@ struct Main(App):
                 TextField("", placeholder="Formula", on_submit=FORMULA).width(320),
                 spacing=8,
             ).fill(),
-            Canvas(k, self.version, on_gesture=GRID_GESTURE).fill().height(o.h - 124),  # (a fixed size: the same cell under a tap on every host)
+            Canvas(k, self.version, on_gesture=GRID_GESTURE + k).fill().height(o.h - 124),  # (a fixed size: the same cell under a tap on every host)
             spacing=10,
         )
 

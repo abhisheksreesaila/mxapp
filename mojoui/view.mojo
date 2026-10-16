@@ -39,6 +39,7 @@ comptime PAN = 1  # event.dx, dy: movement in points; event.x, y: where the poin
 comptime ZOOM = 2  # event.zoom: scale factor (2 = twice as big) around event.x, y
 comptime TAP = 3  # event.x, y
 comptime PRESS = 4  # the pointer went down at event.x, y; a TAP or PANs follow (where a drag starts)
+comptime RELEASE = 5  # a drag (PANs) ended at event.x, y (not sent after a plain TAP)
 
 # Icon names every host understands (each maps them to its platform's own icons).
 comptime ICON_NAMES: List[String] = [
