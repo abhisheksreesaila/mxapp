@@ -40,6 +40,7 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 - FFI: scalars and `(ptr, len)` strings only (`s.unsafe_ptr()`, `s.byte_length()`); never structs by value. Exports use `@export` + `abi("C")` and cannot `raise`.
 - Linking a Mojo shared library: add `-Xlinker -rpath -Xlinker '$ORIGIN'` (Mojo sets its own RUNPATH).
 - Inspect Mach-O (iOS) objects on Linux with `llvm-nm` / `llvm-objdump`, not GNU `nm`.
+- A `SIMD` vector indexed with a run-time index as scratch space (`stack[sp] = v`) segfaults the compiler (no message, exit 139): use `stack_allocation[n, T]()`. Bisect compiler crashes with tiny probe files built in parallel.
 - The compiler tries to reach `telemetry.modular.com`; in a sandbox that warning is harmless.
 - When unsure of an API, fetch the docs as Markdown: append `.md` to any `mojolang.org/docs/...` URL, or start from `https://mojolang.org/llms.txt`. Don't guess.
 
