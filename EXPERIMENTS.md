@@ -4,6 +4,18 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-16 · Experiment 10: the Workbook (autopilot, overnight)
+
+**Goal (owner's words):** "a spreadsheet where you can edit rows… but also a report and a dashboard built on the same engine"; Numbers-style, "you can place tables and you can place charts, everything is free flowing"; columns instead of Excel's cells, on purpose. Contract `GOAL.md`, report `docs/report.md`, walkthrough `docs/morning.md`.
+
+**What worked:** `mojoui/frame.mojo` (typed columns shared per process, a session's edits as a sparse overlay, formula columns compiled to a small bytecode with a column-level dependency graph, tombstones, sort permutations, undo); `mojoui/frame_gpu.mojo` (group-bys whose key, value and filters are chosen at run time, 0.8–1.9 ms on 20M rows, exact; pivots; edits applied as deltas); the Workbook app (`examples/workbook`): a table grid over 20M rows, a pivot, two Flint charts with crossfiltering, a note, all on a `Board` (a new container: absolute positions, drag by the header, resize by the corner, snap to 8 pt; a list on narrow windows), identical on GTK and the web; workbook files (JSON + Parquet); `App.init_shared()` so every web tab shares one GPU copy of the rows (the analytics app too). The wasm spike: Mojo's LLVM IR retargeted to wasm64 plus a 25-line C shim runs List/String/print code in Chromium (`docs/wasm.md`).
+
+**What broke and how it was fixed:** a `SIMD` vector used as an interpreter stack segfaults the compiler (stack_allocation instead); the first GPU interpreter took 23 ms (a row vector in local memory) until columns were read directly and the stack moved to registers; GTK test taps landed on a 0×0 canvas before the first layout (the steps now wait for layout and the first draw); Mojo has no global variables (the shared registry lives in the process environment); a struct holding a Frame can't be partly moved (out-parameters). See `docs/journal.md`.
+
+**Next:** the MX frame Mojo API (`docs/mxframe-mojo-api.md`, items 13–22) so the workbook runs on the Mac; a real allocator for wasm and a client-side host; AI column types; the drag-and-drop chart editor.
+
+---
+
 ## 2026-10-15 · Experiment 9: the analytics showcase (autopilot)
 
 **Goal (owner's words):** "the analytics part… the poster child… really polished"; Flint as the common chart language; MX frame; a gallery on GitHub. Contract `GOAL.md`, report `docs/report.md`.
