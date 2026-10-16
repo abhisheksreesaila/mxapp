@@ -32,6 +32,7 @@ PIVOT = "select:0=category;select:1=year"  # the pivot's row and column dropdown
 CHART = "tapat:2=500,500"  # click a bar of the chart: crossfilter
 FORMULA = "enter:Formula=margin = cents - cost"  # a formula column typed as text
 MOVE = "move:note=160,96"  # drag the note object by 160, 96 points on the board
+RESIZE = "resize:note=84,44"  # drag its bottom-right corner
 NARROW = (640, 900)
 
 
@@ -186,12 +187,26 @@ def m4():
         x, y = map(int, re.search(r"at (\d+),(\d+)", note[0]).groups())
         if x % 8 or y % 8:
             problems.append(f"not snapped to the 8-pt grid: {note[0]}")
+    rs = both(RESIZE, shot_name="resized")
+    if rs[0] is None:
+        return False, rs[1]
+    note_rs = [l for l in pos(rs[0]) if " note " in l]
+    if pos(rs[0]) != pos(rs[1]) or not note_rs:
+        problems.append(f"after the resize GTK and web disagree: {[l for l in pos(rs[0]) if 'note' in l]} vs {[l for l in pos(rs[1]) if 'note' in l]}")
+    elif not re.search(r" (\d+)x(\d+)$", note_rs[0]):
+        problems.append("no size reported for the note")
+    else:
+        w, h = map(int, re.search(r" (\d+)x(\d+)$", note_rs[0]).groups())
+        if (w, h) == (520, 104):
+            problems.append("the corner drag didn't resize the note")
+        if w % 8 or h % 8:
+            problems.append(f"size not snapped to the 8-pt grid: {note_rs[0]}")
     narrow = both("", size=NARROW, shot_name="narrow")
     if narrow[0] is None:
         return False, narrow[1]
     if pos(narrow[0]) or not re.search(r"^LAYOUT: list", narrow[0], re.M) or not re.search(r"^LAYOUT: list", narrow[1], re.M):
         problems.append("a narrow window should render the page as a list")
-    return not problems, "; ".join(problems) or "Board: absolute positions, drag + snap identical on GTK and web; narrow windows show a list"
+    return not problems, "; ".join(problems) or "Board: absolute positions, drag, resize + snap identical on GTK and web; narrow windows show a list"
 
 
 def m5():

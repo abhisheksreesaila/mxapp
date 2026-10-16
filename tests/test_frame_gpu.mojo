@@ -128,7 +128,7 @@ def main() raises:
             n_ += 1
         assert_equal(now.sums[k], e, "overlay sums, group " + String(k))
         assert_equal(now.counts[k], n_, "overlay counts, group " + String(k))
-    var chained = frame.formula("double_margin = margin * 2")
+    var chained = frame.formula("four = quantity + cost * margin")  # 4 slots once flattened: the kernel's whole stack
     var gpu_c = group_sum(frame, gf, col(CATEGORY), frame.program_for(chained), List[Range](), 8)
     var cpu_c = group_sum(frame, gf, col(CATEGORY), frame.program_for(chained), List[Range](), 8, use_gpu=False)
     for k in range(8):

@@ -3,7 +3,22 @@
 **End goal (owner's words):** "a spreadsheet where you can edit rows… but you can also create a report and a dashboard built on the same engine"; Numbers-style free-flow objects; columns, never cell addresses; packaged for the morning.
 
 ## How far it got
-_(the final `scripts/check` output is pasted below when the run finishes)_
+Full run (before the review fixes, machine under a load average of ~23 from other projects' processes):
+```
+PASS  M1  typed columns, formulas with a dependency graph, edits, tombstones, sort permutation, undo
+PASS  M2  20,000,000 rows: GPU = CPU on 262 numbers, ≤ 1.900826 ms, patch + pivot, on NVIDIA GeForce RTX 3090
+PASS  M3  table, pivot, chart and note objects; edits, pivots, crossfilter and formulas identical on GTK and web
+PASS  M4  Board: absolute positions, drag + snap identical on GTK and web; narrow windows show a list
+PASS  M5  save → open round-trips tables, formulas, pivots, charts, notes and layout
+PASS  M6  packaged Linux app + web, launcher, morning walkthrough, gallery and README updated
+FAIL  M7  check crashed: TimeoutExpired(['…/build/lens/linux/lens'], 120)
+PASS  M8  20M rows loaded once per process and shared by every session (workbook and analytics)
+PASS  M9  wasm: 8 undefined symbols, hello.wasm runs in headless Chromium
+PASS  M10 README opens picture-first (9 images) and shows the workbook
+```
+After the review fixes (three reviewer rounds; PASS on the code), the targeted checks were rerun: M1–M6, M8 and M10 PASS with the stricter proofs (M4 now includes a corner resize; M5 asserts "Opened" and the kept edit; M8 runs the analytics app with two tabs too; M10 counts app pictures, not badges).
+
+**M7 (goal 8's regression suite) is unproven**, not failed on merit: goal 6's Data Lens got 0 drawn frames in 20 s on GTK. Goal 7's own build, run alternately at the same moment, also drew 0 frames (A/B), with the GPU idle and the CPU load average at 17–23 from six other-project Python jobs. It will be rerun when the machine is quiet; the run's output goes at the bottom of this file.
 
 ## Result
 - `mojoui/frame.mojo`: typed columns (integer, decimal, text dictionary, date) shared read-only per process; a session's edits, appended and removed rows as a sparse overlay; formula columns (`margin = cents - cost`) compiled to a small bytecode with a column-level dependency graph; sort permutations; undo.
