@@ -8,22 +8,66 @@
   <a href="https://abhisheksreesaila.github.io/mxapp/gallery/"><img alt="Gallery" src="https://img.shields.io/badge/showcase-gallery-8a2be2"></a>
 </p>
 
-**Write an app once in Mojo. Compile it. Get a native Linux app, a web app, a Mac app, an iPhone app and an Android app. When the machine has a GPU, the same file lights it up.**
+> ## 🎯 The mission
+> **Write an app once, in one readable language, and get a real native app on every screen** 🐧 Linux · 🌐 Web · 🤖 Android · 🍎 Mac · 📱 iPhone, **with the GPU ⚡ doing the heavy lifting** in that same language.
+> Not a toy with buttons: a growing library of **serious components** 🧩 (a data grid over millions of rows, pivots, Flint charts, a free-form page) so that a person 🧑‍💻, or an agent 🤖, can build a Numbers-class app in one file.
+
+## 💡 What this is
+- **One file, every platform.** `app.mojo` describes the screen (`view()`) and answers events (`update()`); each platform draws it with **its own native controls** (GTK, HTML, Android views, AppKit, UIKit). No Swift, no Kotlin, no app JavaScript, no shader language.
+- **The GPU in the same language.** Group-bys, pivots, filters and formula columns run as Mojo GPU kernels: under a millisecond over 20 million rows on an NVIDIA card.
+- **Components first.** Every feature starts by asking which components it needs; they're built in `mojoui/` and tracked per platform in a generated matrix, so the library grows, not the apps.
+
+## 🎬 The showcase
+
+![The Workbook: select a column, sort 20 million rows, edit a cell in place, insert a pivot, crossfilter a chart](docs/img/workbook.gif)
 
 <table>
 <tr>
-<td width="50%"><a href="docs/morning.md"><img src="docs/img/workbook-linux.png" alt="The Workbook: a 20M-row table, a pivot, two charts and a note on one page, in a native Linux window"></a><br><b>The Workbook</b> · tables, pivots, charts and notes on one page, one engine, 20M rows on the GPU · <code>examples/workbook/app.mojo</code></td>
-<td width="50%"><a href="#showcase-analytics-on-the-gpu"><img src="docs/img/analytics-linux.png" alt="Contoso Retail: a sales dashboard over 20 million rows"></a><br><b>Analytics</b> · a Power BI-style dashboard re-aggregated in 6–9 ms per click · <code>examples/analytics/app.mojo</code></td>
+<td width="50%"><a href="docs/morning.md"><img src="docs/img/workbook-linux.png" alt="The Workbook in a native Linux window, in the Omarchy theme"></a><br><b>🧮 The Workbook</b> · tables, pivots, charts and notes on a free-form page, one GPU engine, 20M rows · <code>scripts/workbook.sh</code></td>
+<td width="50%"><a href="#showcase-analytics-on-the-gpu"><img src="docs/img/analytics-linux.png" alt="Contoso Retail: a sales dashboard over 20 million rows"></a><br><b>📊 Analytics</b> · a Power BI-style dashboard re-aggregated in 6–9 ms per click · <code>examples/analytics/app.mojo</code></td>
 </tr>
 <tr>
-<td><a href="#the-hybrid-native-controls-plus-a-gpu-canvas"><img src="docs/img/lens-linux.jpg" alt="The Data Lens: 20 million points at 60 fps"></a><br><b>Data Lens</b> · 20 million points, 1.5 ms a frame on the GPU, native controls around it · <code>examples/lens/app.mojo</code></td>
-<td><a href="docs/android.md"><img src="docs/img/android-todo.png" alt="The todo app on Android, with real Android views" height="420"></a><br><b>Android</b> · the same todo file as real Android views, driven over JNI from Mojo · <code>examples/todo/app.mojo</code></td>
+<td><a href="#the-hybrid-native-controls-plus-a-gpu-canvas"><img src="docs/img/lens-linux.jpg" alt="The Data Lens: 20 million points at 60 fps"></a><br><b>🔭 Data Lens</b> · 20 million points, 1.5 ms a frame on the GPU · <code>examples/lens/app.mojo</code></td>
+<td><a href="docs/android.md"><img src="docs/img/android-todo.png" alt="The todo app on Android, with real Android views" height="420"></a><br><b>🤖 Android</b> · the same todo file as real Android views · <code>examples/todo/app.mojo</code></td>
 </tr>
 </table>
 
-**[See the showcase gallery →](https://abhisheksreesaila.github.io/mxapp/gallery/)** · the two-minute [Workbook walkthrough](docs/morning.md) · [Mojo in the browser: the wasm spike](docs/wasm.md)
+**[Open the gallery →](https://abhisheksreesaila.github.io/mxapp/gallery/)** · [the two-minute Workbook walkthrough](docs/morning.md) · [Mojo in the browser: the wasm spike](docs/wasm.md)
+
+## 📍 Where it stands today
+Every ✅ below is run by `scripts/check` on that platform; 🔨 builds but hasn't run there; ❌ isn't built yet. The full per-component matrix is **[docs/components.md](docs/components.md)** (generated from the code; the check fails if it's stale).
+
+| Platform | ✅ proven | 🔨 built, not run | ❌ missing | Notes |
+|---|---|---|---|---|
+| 🐧 **Linux** (GTK 4) | 42 | 0 | 0 | every component, gesture and theme; your Omarchy theme |
+| 🌐 **Web** (FastHTML) | 42 | 0 | 0 | the same results as Linux, checked in Chromium |
+| 🤖 **Android** (views over JNI) | 19 | 10 | 13 | the classic controls on the emulator; the Workbook's new components not yet |
+| 🍎 **Mac** (AppKit) | 0 | 29 | 13 | builds and signs; not run on a Mac yet |
+| 📱 **iPhone** (UIKit) | 0 | 29 | 13 | builds and signs; not run on an iPhone yet |
+| ⚡ **GPU** | NVIDIA | | | Apple and phone GPUs use the CPU path for now |
+
+Measured on this machine: a page recompute in ~8 ms, a grid redraw in ~6 ms, a GPU group-by under 1 ms, a sort of 20M rows in 0.3–2 s.
+
+## 🚀 What it becomes
+
+![What mojo-ui becomes: one Mojo file and a component library, drawn natively on six platforms, with a GPU engine and shared data underneath](docs/img/mission.png)
+
+**When it's done**, a person or an agent writes one `app.mojo` and gets:
+- 🧮 a **Numbers-class workbook**, a **Power BI-class dashboard** and a **billion-point lens**, each a single file;
+- 🧩 every component ✅ on every platform in the matrix: `DataGrid`, `PivotTable`, `Chart`, `Board`, `Overlay` next to every native control;
+- ⚡ the GPU on **NVIDIA, Apple and phones**, with data from **MX frame** shared by every window and tab;
+- 🌐 the web running **Mojo in WebAssembly** in the browser, and 🪟 Windows natively when Mojo ships there.
+
+**What's left to get there:**
+1. 🧩 Turn the Workbook's grid, pivot and chart wiring into real components (`docs/plans/datagrid.md`).
+2. ⌨️ Keyboard events on every host (Escape, arrows, typing into a cell).
+3. 🤖 🍎 📱 Bring Board, Overlay, the new gestures and themes to Android, then run Mac and iPhone on real hardware.
+4. 🎨 Cell formatting, column-first (`docs/plans/formatting.md`).
+5. ⚡ Apple and phone GPUs; Mojo in WebAssembly.
 
 ## One file, every platform
+
+The diagram: one `app.mojo`, one build command, a native app per platform.
 
 ```mermaid
 flowchart LR
@@ -35,14 +79,6 @@ flowchart LR
     B --> D["Android<br/>Android views (.apk)"]
     A -. "same functions" .-> G["GPU kernels<br/>(NVIDIA today)"]
 ```
-
-| | Linux | Web | Mac | iPhone | Android | GPU |
-|---|---|---|---|---|---|---|
-| Builds | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Runs, tested by `scripts/check` | ✅ | ✅ | ⏳ needs hardware | ⏳ needs hardware | ✅ emulator | ✅ NVIDIA |
-| Native controls | GTK 4 | HTML | AppKit | UIKit (Liquid Glass) | Android views | — |
-
-> An experiment, built in the open. Linux, the web and the Android emulator run and are tested; Mac and iPhone build and sign but haven't run on real hardware yet. See [Status](#status-honestly).
 
 ## Why
 
@@ -187,34 +223,12 @@ This is how many serious apps are built anyway: map and photo apps put native co
 
 **Where others are ahead today:** maturity, tooling, documentation, app-store pipelines and real production users. Flutter and React Native ship to millions of phones; mojo-ui is an experiment.
 
-### Today and tomorrow
-
-| Today (working, measured here) | Tomorrow (planned) |
-|---|---|
-| The web app runs in the server (Mojo inside FastHTML); the browser gets plain HTML and streamed canvas frames | Mojo compiled to WebAssembly, running in the browser (Mojo 1.1 has no WebAssembly target yet; a first probe converted Mojo's LLVM output) |
-| GPU on Linux (NVIDIA tested) | Apple GPUs on Mac and iPhone (Mac/iPhone use the CPU path today) |
-| Canvas frames copied GPU → memory → screen | Zero-copy: the GPU writes straight into the screen's texture |
-| Android runs on the emulator (CPU path for canvases) | Tested on real phones; the GPU on phones |
-| Synthetic data | MX frame (a Mojo dataframe) feeding billions of rows straight into the GPU |
-
-## Status (honestly)
-
-| Platform | Draws with | Status |
-|---|---|---|
-| **Linux** | GTK 4 + libadwaita | runs; every check drives the real widgets |
-| **Web** | HTML controls + HTMX, served by FastHTML; Canvas frames streamed | runs; checked in Chromium, same results as Linux |
-| **Mac** (Apple Silicon) | AppKit | builds and signs; **not yet run on a Mac** |
-| **iPhone** | UIKit | builds and signs; **not yet run on an iPhone** |
-| **Android** | Android views via JNI | runs on the Android 16 emulator, same results as Linux through real input; **not yet run on a phone** (`docs/android.md`) |
-| **Windows** | the web version | no Mojo for Windows yet |
-
-Every Linux and web result above is checked by `scripts/check`, which rebuilds everything and drives each app on GTK and in a headless browser. The comparison and the Apple rows are not checked by it. Each experiment's contract, results and decisions are kept in the repo.
-
 ## Learn more
 - **[How it works](docs/architecture.md):** the view tree, the update loop, how each platform is reached (GTK through C, Apple through the Objective-C runtime, the web through Python, FastHTML and HTMX), the GPU canvas, and why it's built this way.
 - **[Decisions](docs/decisions.md):** every fork in the road, with the reason and whether it can be undone.
 - **[Experiments](EXPERIMENTS.md):** what was tried, what broke and what was learned. The latest report is `docs/report.md`; earlier ones are in `docs/goals/`.
-- **[Roadmap](ROADMAP.md):** the vision and the long-term stages.
+- **[The long view](ROADMAP.md):** the original vision and decisions.
+- **[Components × platforms](docs/components.md):** what exists where, generated from the code.
 
 ## Try it
 
