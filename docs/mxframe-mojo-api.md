@@ -78,3 +78,23 @@ var revenue = result.int64("revenue")                  # List-like / Span[Int64]
 
 ## Done means
 `mojoui/mxframe.mojo` swaps `std.python` for `from mxframe import …`, keeps its `MxFrame.group_sum(by, value, groups, ranges, equals)` signature, and the dashboard's "MX frame" engine then builds for the Mac (`scripts/build.sh analytics mac`) with only Apple system functions, matching the GPU totals exactly (the check in `scripts/check` M6).
+
+## Added 2026-10-15 for the workbook (goal 9: tables, formulas, pivots and charts on one page)
+
+The spreadsheet edits the data the dashboard reads. Numbers-style: every table is a frame with typed columns; formulas are **column** expressions, never cell addresses.
+
+### Must have
+13. **Mutable columns:** `frame.set(column, row, value)` and `frame.patch(column, rows: Span[Int], values)`; the CPU copy is the truth, a device copy is a cache with a per-column dirty flag. A batch of edits smaller than a few thousand is applied on the device with a patch kernel; larger ones re-upload the column.
+14. **Derived columns with a dependency graph:** `frame.with_column("margin", (col("cents") - col("cost")) / col("cents"))` recomputed (on the chosen device) when any input column changes, in topological order; `frame.dependants("cost")`.
+15. **Rows:** `append(values...)`, `remove(rows)` as a tombstone mask (compacted on `compact()`), `permutation(sort_by=…)` returning an index, so data never moves on sort.
+16. **Text columns:** dictionary-encoded (`int32` codes + a string table), `frame.dictionary("product")`, so group-by on text is an integer group-by, and `col("product") == "Chair"` compares codes.
+17. **Dates:** days since the epoch as `int32`, with `year()`, `month()`, `day()` column functions.
+18. **Edit log:** `frame.edits()` since a mark and `frame.revert(mark)`, for undo.
+19. **Files:** `read_parquet` / `write_parquet` per table, Arrow C Data Interface in both directions (item 10).
+
+### Should have
+20. **Pivot in one call:** `frame.pivot(rows="region", columns="year", value=sum("cents"))` → a dense 2-D result, which is one group-by over `(row key × column key)`.
+21. **Aggregates over derived columns** without materialising them (`sum((col("cents") - col("cost")))`).
+
+### Later
+22. **Column plugins:** a column type backed by a model (embedding vectors for semantic search, a classifier, a maths model) exposed as `col("note").similar_to("late delivery")` and `col("note").classify(labels)`. The UI leaves a slot for these; MX frame owns them.
