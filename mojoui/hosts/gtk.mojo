@@ -16,7 +16,7 @@ from mojoui.view import (
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, FLUENT,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
 )
-from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE
+from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.app import App, Event, Runtime
 from mojoui.canvas import Surface
 from std.math import log2
@@ -697,16 +697,19 @@ struct GtkHost[A: App](Movable):
                 w = external_call["gtk_fixed_new", Int]()
                 external_call["gtk_widget_set_size_request", NoneType](w, c_int(node.spacing), c_int(node.size))
                 external_call["gtk_widget_set_halign", NoneType](w, c_int(1))  # start: positions are absolute
+                # One drag gesture on the board itself (never on the object it moves: a gesture
+                # measures from the widget it's attached to, so a moving widget would measure
+                # against itself and jitter); drag-begin finds the object under the pointer.
+                var drag = external_call["gtk_gesture_drag_new", Int]()
+                set_index(drag, len(self.boards))  # its first child in self.boards
+                connect_any(drag, "drag-begin", on_board_drag_begin[Self.A], self_addr)
+                connect_any(drag, "drag-update", on_board_drag_update[Self.A], self_addr)
+                connect_any(drag, "drag-end", on_board_drag_end[Self.A], self_addr)
+                external_call["gtk_widget_add_controller", NoneType](w, drag)
                 for k in range(len(node.children)):
                     var c = node.children[k]
                     var child = self.build(c, self_addr)
                     external_call["gtk_fixed_put", NoneType](w, child, Float64(self.rt.shown.nodes[c].x), Float64(self.rt.shown.nodes[c].y))
-                    var drag = external_call["gtk_gesture_drag_new", Int]()
-                    set_index(drag, len(self.boards))
-                    connect_any(drag, "drag-begin", on_board_drag_begin[Self.A], self_addr)
-                    connect_any(drag, "drag-update", on_board_drag_update[Self.A], self_addr)
-                    connect_any(drag, "drag-end", on_board_drag_end[Self.A], self_addr)
-                    external_call["gtk_widget_add_controller", NoneType](child, drag)
                     self.boards.append(BoardChild(i, c, k, child, w, drag))
         else:
             var orientation = VERTICAL if node.kind == VSTACK else HORIZONTAL
@@ -825,6 +828,14 @@ struct GtkHost[A: App](Movable):
                 var tex = texture(img.pixels, img.spacing, img.size)
                 external_call["gtk_picture_set_paintable", NoneType](w, tex)
                 external_call["g_object_unref", NoneType](tex)
+            elif p.op == SET_PLACE and not self.board_list:  # (a list ignores positions)
+                ref n = self.rt.shown.nodes[p.node]
+                if kind == BOARD:
+                    external_call["gtk_widget_set_size_request", NoneType](w, c_int(n.spacing), c_int(n.size))
+                else:
+                    for b in self.boards:
+                        if b.node == p.node:
+                            external_call["gtk_fixed_move", NoneType](b.fixed, b.widget, Float64(n.x), Float64(n.y))
             # SET_MSG needs nothing: events look the message up in rt.shown.
         # Ask for the visible rows of every long list again: row text isn't part of the
         # view, so an edit that keeps the row count wouldn't show otherwise. GTK only
@@ -1073,25 +1084,48 @@ def on_click_released[A: App](click: Int, presses: c_int, x: Float64, y: Float64
     host[].canvas_send(ci, TAP, x, y, 0, 0, 1, host_addr)
 
 
+def board_object[A: App](host: Pointer[GtkHost[A], MutUntrackedOrigin], drag: Int) -> Int:
+    """The object this board gesture is dragging (its index in host.boards), or -1."""
+    var bi = get_index(drag)
+    while 0 <= bi < len(host[].boards) and host[].boards[bi].drag == drag:
+        if host[].boards[bi].active:
+            return bi
+        bi += 1
+    return -1
+
+
 def on_board_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi("C"):
     var host = host_at[A](host_addr)
-    var bi = get_index(drag)
-    if bi < 0 or bi >= len(host[].boards):
+    var first = get_index(drag)
+    if first < 0 or first >= len(host[].boards):
         return
-    var w = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].boards[bi].widget)))
-    var h = Float64(Int(external_call["gtk_widget_get_height", c_int](host[].boards[bi].widget)))
-    host[].boards[bi].resizing = x > w - 24 and y > h - 24
-    host[].boards[bi].active = host[].boards[bi].resizing or y < 44  # the header moves it; the rest is the object's own
-    if not host[].boards[bi].active:
-        external_call["gtk_gesture_set_state", c_int](drag, c_int(2))  # GTK_EVENT_SEQUENCE_DENIED
+    var last = first
+    while last + 1 < len(host[].boards) and host[].boards[last + 1].drag == drag:
+        last += 1
+    var bi = last  # the topmost object under the pointer (later children draw above earlier ones)
+    while bi >= first:
+        ref b = host[].boards[bi]
+        ref n = host[].rt.shown.nodes[b.node]
+        var w = Float64(Int(external_call["gtk_widget_get_width", c_int](b.widget)))
+        var h = Float64(Int(external_call["gtk_widget_get_height", c_int](b.widget)))
+        var lx = x - Float64(n.x)
+        var ly = y - Float64(n.y)
+        if 0.0 <= lx and lx < w and 0.0 <= ly and ly < h:
+            host[].boards[bi].resizing = lx > w - 24 and ly > h - 24
+            host[].boards[bi].active = host[].boards[bi].resizing or ly < 44  # the header moves it; the rest is the object's own
+            if not host[].boards[bi].active:
+                external_call["gtk_gesture_set_state", c_int](drag, c_int(2))  # GTK_EVENT_SEQUENCE_DENIED
+            return
+        bi -= 1
+    external_call["gtk_gesture_set_state", c_int](drag, c_int(2))  # nothing under it
 
 
 def on_board_drag_update[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr: Int) abi("C"):
     if busy():
         return
     var host = host_at[A](host_addr)
-    var bi = get_index(drag)
-    if bi < 0 or bi >= len(host[].boards) or not host[].boards[bi].active:
+    var bi = board_object[A](host, drag)
+    if bi < 0:
         return
     ref b = host[].boards[bi]
     ref n = host[].rt.shown.nodes[b.node]
@@ -1105,8 +1139,8 @@ def on_board_drag_end[A: App](drag: Int, off_x: Float64, off_y: Float64, host_ad
     if busy():
         return
     var host = host_at[A](host_addr)
-    var bi = get_index(drag)
-    if bi < 0 or bi >= len(host[].boards) or not host[].boards[bi].active:
+    var bi = board_object[A](host, drag)
+    if bi < 0:
         return
     host[].boards[bi].active = False
     var b = host[].boards[bi].copy()
@@ -1511,8 +1545,9 @@ def run_step[A: App](host_addr: Int, step: String):
         wait_allocated(host[].boards[bi].widget)
         var w = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].boards[bi].widget)))
         var h = Float64(Int(external_call["gtk_widget_get_height", c_int](host[].boards[bi].widget)))
-        var sx = w - 8 if verb == "resize" else 20.0
-        var sy = h - 8 if verb == "resize" else 16.0
+        ref n = host[].rt.shown.nodes[host[].boards[bi].node]
+        var sx = Float64(n.x) + (w - 8 if verb == "resize" else 20.0)  # in the board's coordinates
+        var sy = Float64(n.y) + (h - 8 if verb == "resize" else 16.0)
         var begin = String("drag-begin")
         var update = String("drag-update")
         var end = String("drag-end")

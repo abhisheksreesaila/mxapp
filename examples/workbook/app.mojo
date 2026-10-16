@@ -32,9 +32,9 @@ comptime FORMULA = 3
 comptime ADD_ROW = 4
 comptime DELETE_ROW = 5
 comptime UNDO = 6
-comptime PIVOT_ROWS = 7
-comptime PIVOT_COLS = 8
-comptime PIVOT_VALUE = 9
+comptime PIVOT_ROWS = 160  # + object index (each pivot has its own)
+comptime PIVOT_COLS = 190  # + object index
+comptime PIVOT_VALUE = 220  # + object index
 comptime CHART_TAP = 10  # + object index
 comptime NOTE = 40  # + object index
 comptime CHART_FIELD = 70  # + object index
@@ -44,6 +44,10 @@ comptime MOVE = 102
 comptime RESIZE = 103
 comptime SAVE = 104
 comptime OPEN = 105
+comptime ADD_OBJ = 106  # the Insert… dropdown: event.number 1–4 = a new TABLE/PIVOT/CHART/NOTE_OBJ card at the bottom of the page
+comptime INSERT: List[String] = ["Insert…", "Table", "Pivot", "Chart", "Note"]
+comptime REMOVE_OBJ = 130  # + object index
+comptime MAX_OBJECTS = 30  # (the per-object message ranges above allow 30)
 
 # object kinds
 comptime TABLE = 0
@@ -121,7 +125,7 @@ struct Main(App):
         self.objects.append(obj(PIVOT, "Revenue by region and channel", 0, 396, 520, 300, a=1, b=2, c=1))
         self.objects.append(obj(CHART, "Revenue by category", 536, 396, 400, 300, a=0, c=1))
         self.objects.append(obj(CHART, "Revenue by region", 952, 396, 408, 300, a=1, c=1))
-        self.objects.append(obj(NOTE_OBJ, "Note", 0, 712, 520, 104, text="Please review this: Q4 revenue by region, then the margin column."))
+        self.objects.append(obj(NOTE_OBJ, "Note", 0, 712, 520, 136, text="Please review this: Q4 revenue by region, then the margin column."))
         self.order = List[Int]()
         self.sort_col = -1
         self.sort_desc = False
@@ -498,18 +502,18 @@ struct Main(App):
             else:
                 self.message = "Tap a cell in the column to sort by"
             self.version += 1
-        elif m == PIVOT_ROWS or m == PIVOT_COLS or m == PIVOT_VALUE:
-            for k in range(len(self.objects)):
-                if self.objects[k].kind == PIVOT:
-                    if m == PIVOT_ROWS:
-                        self.objects[k].a = event.number
-                    elif m == PIVOT_COLS:
-                        self.objects[k].b = event.number
-                    else:
-                        self.objects[k].c = event.number
-                    var vname = self.frame.name(self.value_cols()[min(self.objects[k].c, len(self.value_cols()) - 1)])
-                    self.objects[k].title = (String("Revenue") if vname == "cents" else vname.upper()) + " by " + self.dim_names()[self.objects[k].a] + " and " + self.dim_names()[self.objects[k].b]
-            self.compute()
+        elif PIVOT_ROWS <= m < PIVOT_VALUE + MAX_OBJECTS:
+            var k = (m - PIVOT_ROWS) % MAX_OBJECTS
+            if k < len(self.objects) and self.objects[k].kind == PIVOT:
+                if m < PIVOT_COLS:
+                    self.objects[k].a = event.number
+                elif m < PIVOT_VALUE:
+                    self.objects[k].b = event.number
+                else:
+                    self.objects[k].c = event.number
+                var vname = self.frame.name(self.value_cols()[min(self.objects[k].c, len(self.value_cols()) - 1)])
+                self.objects[k].title = (String("Revenue") if vname == "cents" else vname.upper()) + " by " + self.dim_names()[self.objects[k].a] + " and " + self.dim_names()[self.objects[k].b]
+                self.compute()
         elif CHART_TAP <= m < NOTE:
             var k = m - CHART_TAP
             if event.number == TAP and k < len(self.objects):
@@ -544,6 +548,36 @@ struct Main(App):
             self.load(path)
             self.compute()
             self.version += 1
+        elif m == ADD_OBJ:
+            if event.number < 1 or event.number > 4:
+                pass  # "Insert…" itself
+            elif len(self.objects) < MAX_OBJECTS:
+                var kind = event.number - 1
+                var bottom = 0
+                for o in self.objects:
+                    bottom = max(bottom, o.y + o.h)
+                var y = (bottom + 16 + SNAP - 1) // SNAP * SNAP
+                if kind == TABLE:
+                    self.objects.append(obj(TABLE, "Order lines", 0, y, 1360, 380))
+                elif kind == PIVOT:
+                    self.objects.append(obj(PIVOT, "Revenue by category and year", 0, y, 520, 300, a=0, b=4, c=1))
+                elif kind == CHART:
+                    self.objects.append(obj(CHART, "Revenue by channel", 0, y, 400, 300, a=2, c=1))
+                else:
+                    self.objects.append(obj(NOTE_OBJ, "Note", 0, y, 520, 136))
+                self.sizes.append((400.0, 300.0))
+                self.message = "Added a " + (String("table") if kind == TABLE else (String("pivot") if kind == PIVOT else (String("chart") if kind == CHART else String("note")))) + " at the bottom: drag it by its header"
+                self.compute()
+            else:
+                self.message = "This page holds " + String(MAX_OBJECTS) + " cards at most"
+                self.version += 1
+        elif REMOVE_OBJ <= m < REMOVE_OBJ + MAX_OBJECTS:
+            var k = m - REMOVE_OBJ
+            if k < len(self.objects):
+                self.message = "Removed " + self.objects[k].title
+                _ = self.objects.pop(k)
+                _ = self.sizes.pop(k)
+                self.compute()
         elif m == MOVE or m == RESIZE:
             var k = event.number
             if 0 <= k < len(self.objects):
@@ -591,8 +625,10 @@ struct Main(App):
             HStack(
                 Text(o.title, style=HEADLINE),
                 Text(columns, style=CAPTION).tag("columns"),
+                Spacer(),
+                Button("Remove", on_tap=REMOVE_OBJ + k),
                 spacing=12,
-            ).justify(BETWEEN).fill(),
+            ).fill(),
             HStack(
                 Text(cell, style=CAPTION).tag("cell"),
                 TextField(self.edit_text, placeholder="Value", on_submit=COMMIT).width(150),
@@ -604,7 +640,7 @@ struct Main(App):
                 Text(self.message, style=CAPTION).tag("message"),
                 spacing=8,
             ).fill(),
-            Canvas(k, self.version, on_gesture=GRID_GESTURE).fill().height(o.h - 128),  # (a fixed size: the same cell under a tap on every host)
+            Canvas(k, self.version, on_gesture=GRID_GESTURE).fill().height(o.h - 136),  # (a fixed size: the same cell under a tap on every host)
             spacing=8,
         )
 
@@ -623,15 +659,15 @@ struct Main(App):
                 var v = self.results[k][i * cols + j] if i * cols + j < len(self.results[k]) else 0
                 cells.append(Text(self.value_text(o.c, v)))
         return Card(
-            Text(o.title, style=HEADLINE),
+            HStack(Text(o.title, style=HEADLINE), Spacer(), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8).fill(),
             HStack(
-                Dropdown(dims, o.a, on_select=PIVOT_ROWS),
+                Dropdown(dims, o.a, on_select=PIVOT_ROWS + k),
                 Text("by", style=CAPTION),
-                Dropdown(dims, o.b, on_select=PIVOT_COLS),
-                Dropdown(self.value_names(), o.c, on_select=PIVOT_VALUE),
+                Dropdown(dims, o.b, on_select=PIVOT_COLS + k),
+                Dropdown(self.value_names(), o.c, on_select=PIVOT_VALUE + k),
                 spacing=8,
             ),
-            Scroll(Grid(cells, cols + 1, spacing=6).tag("pivot"), height=o.h - 120).fill(),
+            Scroll(Grid(cells, cols + 1, spacing=6).tag("pivot"), height=o.h - 130).fill(),
             spacing=8,
         )
 
@@ -640,9 +676,11 @@ struct Main(App):
         return Card(
             HStack(
                 Text(o.title, style=HEADLINE),
+                Spacer(),
                 Dropdown(self.dim_names(), o.a, on_select=CHART_FIELD + k),
+                Button("Remove", on_tap=REMOVE_OBJ + k),
                 spacing=8,
-            ).justify(BETWEEN).fill(),
+            ).fill(),
             Canvas(k, self.version, on_gesture=CHART_TAP + k).grow().fill(),
             spacing=8,
         )
@@ -650,8 +688,8 @@ struct Main(App):
     def note_card(self, k: Int) -> View:
         ref o = self.objects[k]
         return Card(
-            Text(o.title, style=HEADLINE),
-            TextArea(o.text, placeholder="Write a note…", on_change=NOTE + k, height=o.h - 70).fill(),
+            HStack(Text(o.title, style=HEADLINE), Spacer(), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8).fill(),
+            TextArea(o.text, placeholder="Write a note…", on_change=NOTE + k, height=o.h - 96).fill(),
             spacing=8,
         )
 
@@ -670,13 +708,14 @@ struct Main(App):
         var engine = self.gf()[].device_name()
         var bar = HStack(
             Text("Contoso Workbook", style=TITLE),
-            Text(exact_money(self.revenue) + " revenue · " + grouped(self.lines) + " order lines", style=CAPTION).tag("summary"),
+            Text(exact_money(self.revenue) + " revenue · " + grouped(self.lines) + " lines", style=CAPTION).tag("summary"),
             Text(self.filter_text(), style=CAPTION).tag("filter"),
             Button("Clear filters", on_tap=CLEAR),
             Spacer(),
+            Dropdown(materialize[INSERT](), 0, on_select=ADD_OBJ),
             Button("Save", on_tap=SAVE),
             Button("Open", on_tap=OPEN),
-            Text("Recomputed in " + fixed(self.milliseconds, 1) + " ms on " + engine, style=CAPTION),
+            Text(fixed(self.milliseconds, 1) + " ms on " + engine, style=CAPTION).tag("engine"),
             spacing=16,
         ).fill()
         return VStack(

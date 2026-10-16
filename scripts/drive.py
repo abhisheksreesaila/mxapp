@@ -40,7 +40,7 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
   if (k === 'nav') return 'NAV: ' + e.querySelector('h2').textContent + (e.dataset.back === '1' ? ' (back)' : '');
   if (k === 'date') return 'DATE: ' + e.value;
   if (k === 'board') { const list = getComputedStyle(e).display === 'flex';
-    return ['LAYOUT: ' + (list ? 'list' : 'board')].concat(list ? [] : [...e.children].map(o =>
+    return ['LAYOUT: ' + (list ? 'list' : 'board')].concat(list ? [] : [...e.querySelectorAll(":scope > .object")].map(o =>
       'BOARD: ' + o.dataset.tag + ' at ' + o.dataset.x + ',' + o.dataset.y + ' ' + o.dataset.w + 'x' + o.dataset.h)).join(String.fromCharCode(10)); }
   if (k === 'object') return '';
   if (k === 'icon') return 'ICON: ' + (e.querySelector('svg') ? e.dataset.icon : '?');
@@ -165,6 +165,7 @@ def step(page, s):
         tag, _, arg = rest.partition("=")
         dx, dy = (int(v) for v in arg.split(","))
         obj = page.locator(f"[data-kind=object][data-tag={tag!r}]").first
+        obj.scroll_into_view_if_needed()  # (as a person would: the corner may sit below the fold)
         box = obj.bounding_box()
         sx = box["x"] + (box["width"] - 8 if verb == "resize" else 20)
         sy = box["y"] + (box["height"] - 8 if verb == "resize" else 16)

@@ -64,3 +64,21 @@ FAIL  M7  goal 8 M9: goal 7 M7: goal 6 M3: 21.8 fps < 55; goal 6 M6: web canvas 
 ```
 Three real regressions surfaced once M7 could run, all fixed and committed: the test-only layout wait blocked on an unshown window (goal 6's lens runs hung); goal 8's spec and engine tests construct the analytics app without a host, so the shared data must build lazily; the apps had picked up `std.*` imports (goal 5's rule: apps import only `mojoui`). What remains are the two goal-6 lens items that predate this goal and need the owner's decision: the 55 fps bar (this machine reaches it only when idle; other projects' jobs ran all night) and the "not blank" colour count (invalidated by goal 8's PNG frames; a painted-share measure was proposed). Every other check in goals 3–8 passes.
 
+## Morning feedback (2026-10-16, after the owner's first test)
+The owner's four points: how to add a card, how to edit a cell, sort slow or crashing, jittery drags. Fixed and checked (D-91–D-94):
+
+| Point | Cause | Now |
+|---|---|---|
+| Sort slow / crashes | standard comparison sort on 20M keys with 8 distinct values (quadratic) | radix sort over the gathered column: 0.45 s (category), 0.9 s (cents), 2.1 s (formula) on 20M rows |
+| Jittery drag (GTK) | the drag gesture sat on the card it moved, measuring against itself | one gesture per Board, hit-tested; a drop is a patch (no rebuild) on both hosts |
+| Add a card | no way to | **Insert…** menu (Table, Pivot, Chart, Note) and a Remove button per card |
+| Edit a cell | not obvious | the walkthrough step says what to tap and where the value goes (no code change) |
+
+```
+PASS  M3  table, pivot, chart and note objects; edits, pivots, crossfilter, formulas, sort (18 s incl. start-up), insert and remove identical on GTK and web
+PASS  M4  Board: absolute positions, drag, resize + snap identical on GTK and web; narrow windows show a list
+PASS  M5  save → open round-trips tables, formulas, pivots, charts, notes and layout
+PASS  M6  packaged Linux app + web, launcher, morning walkthrough, gallery and README updated
+PASS  M8  20M rows loaded once per process and shared by every session (workbook and analytics)
+```
+

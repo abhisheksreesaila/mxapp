@@ -7,6 +7,7 @@ Run: scripts/check   (earlier goals' checkers: docs/goals/0N-check.py)
 import importlib.util
 import json
 import re
+import time
 import subprocess
 import sys
 from pathlib import Path
@@ -25,12 +26,16 @@ import drive  # noqa: E402
 EXAMPLES = g8.EXAMPLES + ["workbook"]
 SHOWN = r"^(LABEL|SEGMENTED|DROPDOWN|BUTTON|FIELD|TEXTAREA|BOARD): "
 TIMING = ("LABEL: Recomputed", "LABEL: Loaded")
+TIMING_RE = re.compile(r"^LABEL: \d+\.\d ms on ")  # the workbook's engine caption ("7.9 ms on NVIDIA …")
 
 # The morning walkthrough, scripted. The grid is canvas 0 of the Table object; tapat is in thousandths.
 EDIT = "tapat:0=620,300;enter:Value=7"  # tap a cell of the first table (the cents column, row 3), type 7, Enter
-PIVOT = "select:0=category;select:1=year"  # the pivot's row and column dropdowns
+PIVOT = "select:1=category;select:2=year"  # the pivot's row and column dropdowns (dropdown 0 is the bar's Insert… menu)
 CHART = "tapat:2=500,500"  # click a bar of the chart: crossfilter
 FORMULA = "enter:Formula=margin = cents - cost"  # a formula column typed as text
+SORT = "tapat:0=620,300;tap:Sort"  # a cell in the cents column, then Sort: 20M rows, largest first
+INSERT = "select:0=Note"  # the bar's Insert… menu: a second note at the bottom of the page
+REMOVE = "select:0=Note;tap:Remove@5"  # … and its Remove button (the sixth card's) takes it away again
 MOVE = "move:note=160,96"  # drag the note object by 160, 96 points on the board
 RESIZE = "resize:note=84,44"  # drag its bottom-right corner
 NARROW = (640, 900)
@@ -38,7 +43,7 @@ NARROW = (640, 900)
 
 def shown(out):
     """The widgets' state, as a sorted list: GTK and the web report the same widgets in a different order."""
-    return sorted(l for l in out.splitlines() if re.match(SHOWN, l) and not l.startswith(TIMING))
+    return sorted(l for l in out.splitlines() if re.match(SHOWN, l) and not l.startswith(TIMING) and not TIMING_RE.match(l))
 
 
 def gtk(steps, size=None, shot=None, example="workbook"):
@@ -159,7 +164,30 @@ def m3():
         return False, fm[1]
     if not re.search(r"^LABEL: .*formulas: margin = cents - cost", fm[0], re.M) or shown(fm[0]) != shown(fm[1]):
         problems.append("the formula column didn't appear identically on both hosts")
-    return not problems, "; ".join(problems) or "table, pivot, chart and note objects; edits, pivots, crossfilter and formulas identical on GTK and web"
+    t0 = time.monotonic()
+    st = both(SORT, shot_name="sorted")
+    sort_s = time.monotonic() - t0
+    if st[0] is None:
+        return False, st[1]
+    if not re.search(r"^LABEL: Sorted by cents \(largest first\)$", st[0], re.M) or shown(st[0]) != shown(st[1]):
+        problems.append("Sort didn't order the table by cents identically on both hosts")
+    if sort_s > 60:
+        problems.append(f"sorting took {sort_s:.0f} s for both hosts (start-up included)")
+    ins = both(INSERT, shot_name="inserted")
+    if ins[0] is None:
+        return False, ins[1]
+    for host, out in (("GTK", ins[0]), ("web", ins[1])):
+        if not re.search(r"^BOARD: note2 at ", out, re.M):
+            problems.append(f"Insert… didn't add a second note on {host}")
+    if shown(ins[0]) != shown(ins[1]):
+        problems.append("the inserted note differs between GTK and web")
+    rm = both(REMOVE, shot_name="removed")
+    if rm[0] is None:
+        return False, rm[1]
+    for host, out in (("GTK", rm[0]), ("web", rm[1])):
+        if re.search(r"^BOARD: note2 at ", out, re.M) or not re.search(r"^BOARD: note at ", out, re.M):
+            problems.append(f"Remove didn't take the second note away (and only it) on {host}")
+    return not problems, "; ".join(problems) or f"table, pivot, chart and note objects; edits, pivots, crossfilter, formulas, sort ({sort_s:.0f} s incl. start-up), insert and remove identical on GTK and web"
 
 
 def m4():
@@ -197,7 +225,7 @@ def m4():
         problems.append("no size reported for the note")
     else:
         w, h = map(int, re.search(r" (\d+)x(\d+)$", note_rs[0]).groups())
-        if (w, h) == (520, 104):
+        if (w, h) == (520, 136):
             problems.append("the corner drag didn't resize the note")
         if w % 8 or h % 8:
             problems.append(f"size not snapped to the 8-pt grid: {note_rs[0]}")

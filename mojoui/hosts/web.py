@@ -37,7 +37,7 @@ from PIL import Image
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE = 0, 1, 2
-SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES = 1, 2, 3, 4, 5
+SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
 JPEG_QUALITY = 85
 MAX_SESSIONS = 200  # oldest tabs are closed beyond this
 STATIC = Path(__file__).parent / "static"
@@ -114,7 +114,7 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 #mojoui-root.full > div { flex: 1 1 0; min-width: 0; }
 .canvas { position: relative; overflow: hidden; background: var(--surface); }
 .board { position: relative; flex: none; }
-.board > .object { position: absolute; box-sizing: border-box; }
+.board > .object { position: absolute; box-sizing: border-box; overflow: hidden; }  /* content never covers the resize corner */
 .board > .object > .vstack.card > :first-child { touch-action: none; cursor: move; }
 .board > .object > .vstack.card { width: 100%; height: 100%; box-sizing: border-box; }
 .board > .object::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 12px; height: 12px; cursor: nwse-resize;
@@ -133,10 +133,17 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 BOARD_JS = r"""
 // mojoui Board adapter (fixed, part of the web host). Drag an object's header to move it, its
 // bottom-right corner to resize it; the app gets one event at the end (PAN = moved, ZOOM = resized,
-// x = the object's index, dx/dy = how far) and answers with the final, snapped layout.
+// x = the object's index, dx/dy = how far) and answers with the final, snapped layout: a hidden
+// "place" marker inside the object (or the board) that this adapter applies, so nothing re-renders.
 (() => {
   const PAN = 1, ZOOM = 2;
   const shape = () => document.getElementById('mojoui-v').value;
+  function place(mark) {
+    const p = mark.parentElement, d = mark.dataset;
+    if (!p || p.classList.contains('moving')) return;  // (a drag in progress owns the position)
+    if (p.classList.contains('board')) { p.style.width = d.w + 'px'; p.style.height = d.h + 'px'; }
+    else { p.style.left = d.x + 'px'; p.style.top = d.y + 'px'; p.dataset.x = d.x; p.dataset.y = d.y; }
+  }
   function attach(board) {
     if (board.mojouiBoard) return;
     board.mojouiBoard = true;
@@ -160,6 +167,8 @@ BOARD_JS = r"""
       const up = ev => {
         obj.removeEventListener('pointermove', move); obj.removeEventListener('pointerup', up); obj.removeEventListener('pointercancel', up);
         obj.classList.remove('moving');
+        const mark = obj.querySelector(':scope > [data-kind=place]');
+        if (mark && !resizing) place(mark);  // back where the app last put it; its answer (if it moved) follows
         const dx = ev.clientX - x0, dy = ev.clientY - y0;
         htmx.ajax('POST', `/e/${board.dataset.sid}`, { values: { n: Number(board.dataset.node), number: resizing ? ZOOM : PAN,
           x: Number(obj.dataset.index), y: 0, dx, dy, zoom: 1, v: shape() }, swap: 'none', source: board });
@@ -167,7 +176,7 @@ BOARD_JS = r"""
       obj.addEventListener('pointermove', move); obj.addEventListener('pointerup', up); obj.addEventListener('pointercancel', up);
     });
   }
-  const scan = () => document.querySelectorAll('[data-kind=board]').forEach(attach);
+  const scan = () => { document.querySelectorAll('[data-kind=board]').forEach(attach); document.querySelectorAll('[data-kind=place]').forEach(place); };
   scan();
   new MutationObserver(scan).observe(document.documentElement, { childList: true, subtree: true });
 })();
@@ -366,6 +375,15 @@ JUSTIFY_CSS = {1: "flex-start", 2: "center", 3: "flex-end", 5: "space-between"} 
 SIZED_CONTROLS = (FIELD, TEXTAREA, SLIDER, PROGRESS, DROPDOWN, DATE, LAZYLIST, DIVIDER, SCROLL)
 
 
+def place_mark(s, i):
+    """The hidden marker inside node i's object (or Board) that carries where the shown view puts it;
+    BOARD_JS applies it, so a move never re-renders the object (that would restart its canvases)."""
+    n = s.nodes[i]
+    if n["kind"] == BOARD:
+        return I(hidden=True, id=f"n{i}-place", data_kind="place", data_w=str(n["spacing"]), data_h=str(n["size"]))
+    return I(hidden=True, id=f"n{i}-place", data_kind="place", data_x=str(n["x"]), data_y=str(n["y"]))
+
+
 def render(s, i, sid):
     """One mojoui node → FastHTML components, plus its layout settings as CSS flexbox
     (a direct mapping: the browser's own layout does the work)."""
@@ -481,10 +499,10 @@ def render_node(s, i, sid):
         kids = []
         for k, c in enumerate(n["children"]):
             ch = s.nodes[c]
-            kids.append(Div(render(s, c, sid), cls="object", data_kind="object", data_index=str(k), data_tag=ch["name"],
+            kids.append(Div(render(s, c, sid), place_mark(s, c), cls="object", data_kind="object", data_index=str(k), data_tag=ch["name"],
                             data_x=str(ch["x"]), data_y=str(ch["y"]), data_w=str(ch["w"]), data_h=str(ch["h"]),
                             style=f"left:{ch['x']}px;top:{ch['y']}px;width:{ch['w']}px;height:{ch['h']}px"))
-        return Div(*kids, cls="board", id=nid, data_kind="board", data_node=str(i), data_sid=sid,
+        return Div(*kids, place_mark(s, i), cls="board", id=nid, data_kind="board", data_node=str(i), data_sid=sid,
                    style=f"width:{n['spacing']}px;height:{n['size']}px")
     if kind == CANVAS:
         # Its own size only when the app's layout doesn't size it (as on the other hosts).
@@ -639,11 +657,17 @@ def make_app(module_dir):
             s.focus = None
             return out
         changed = []
+        moved = []  # SET_PLACE: the object's div is moved in place (re-rendering it would restart its canvases)
         for p in d["patches"]:
             i, op = p["node"], p["op"]
             target = s.nodes[i]
             if op == SET_IMAGE:
                 s.images[i] = s.images.get(i, 0) + 1
+            if op == SET_PLACE:
+                mark = place_mark(s, i)
+                mark.attrs["hx-swap-oob"] = "true"
+                moved.append(mark)
+                continue
             # Don't re-send the control in use if it already shows this (that would steal
             # focus or interrupt a drag); other changes to it still go out.
             echo = i == n and ((op == SET_TEXT and target["kind"] in (FIELD, TEXTAREA, DATE) and target["text"] == text)
@@ -666,6 +690,7 @@ def make_app(module_dir):
                 el = rows_div(s, i, sid, s.list_top.get(i, 0))
                 el.attrs["hx-swap-oob"] = "true"
                 out.append(el)
+        out += moved
         return tuple(out) if out else ""
 
     def merge(a, b):

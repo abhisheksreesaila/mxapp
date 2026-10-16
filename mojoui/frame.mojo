@@ -270,28 +270,28 @@ struct Range(Copyable, Movable):
     var hi: Int64
 
 
-@fieldwise_init
-struct KeyIdx(Copyable, Movable, Comparable):
-    var key: Int64
-    var idx: Int
+def radix_sort(mut keys: List[UInt64], mut idx: List[Int32], bits: Int):
+    """Sorts idx by keys (stable), 16 bits a pass, only the passes the keys' range needs."""
+    var n = len(keys)
+    var k2 = List[UInt64](length=n, fill=0)
+    var i2 = List[Int32](length=n, fill=0)
+    var shift = 0
+    while shift < bits:
+        var counts = List[Int](length=65537, fill=0)
+        for i in range(n):
+            counts[Int((keys[i] >> UInt64(shift)) & 0xFFFF) + 1] += 1
+        for d in range(65536):
+            counts[d + 1] += counts[d]
+        for i in range(n):
+            var d = Int((keys[i] >> UInt64(shift)) & 0xFFFF)
+            var at = counts[d]
+            counts[d] = at + 1
+            k2[at] = keys[i]
+            i2[at] = idx[i]
+        swap(keys, k2)
+        swap(idx, i2)
+        shift += 16
 
-    def __lt__(self, o: Self) -> Bool:
-        return self.key < o.key or (self.key == o.key and self.idx < o.idx)
-
-    def __le__(self, o: Self) -> Bool:
-        return not (o < self)
-
-    def __gt__(self, o: Self) -> Bool:
-        return o < self
-
-    def __ge__(self, o: Self) -> Bool:
-        return not (self < o)
-
-    def __eq__(self, o: Self) -> Bool:
-        return self.key == o.key and self.idx == o.idx
-
-    def __ne__(self, o: Self) -> Bool:
-        return not (self == o)
 
 
 # ---------- the expression compiler ----------
@@ -782,17 +782,63 @@ struct Frame(Movable):
                 return False
         return True
 
+    def column_values(self, col: Int) -> List[Int64]:
+        """Every row's value in column col (removed rows included), the session's overlay applied.
+        Reads the shared column straight through; only changed rows go through the overlay."""
+        var n = self.base()[].rows
+        var out = List[Int64]()
+        if col < self.stored():
+            out = self.base()[].cols[col].values.copy()
+            for i in range(len(self.added)):
+                out.append(self.added[i][col])
+            for item in self.cells.items():
+                if item.key % MAX_COLS == col:
+                    out[item.key // MAX_COLS] = item.value
+            return out^
+        var flat = self.flat_program(col - self.stored())
+        var ops = len(flat) // 2
+        out = List[Int64](capacity=self.rows())
+        var stored = self.stored()
+        for row in range(n):
+            var r = Row(0)
+            for c in range(stored):
+                r[c] = self.base()[].cols[c].values[row]
+            out.append(eval_program(flat.unsafe_ptr(), ops, r))
+        for i in range(len(self.added)):
+            out.append(eval_program(flat.unsafe_ptr(), ops, self.row_vector(n + i)))
+        for row in self.changed_rows():
+            out[row] = eval_program(flat.unsafe_ptr(), ops, self.row_vector(row))
+        return out^
+
     def permutation(self, col: Int, descending: Bool = False) -> List[Int]:
-        """Alive rows ordered by column col; the data never moves."""
-        var keys = List[KeyIdx]()
-        for row in range(self.rows()):
-            if self.alive(row):
-                var v = self.get(col, row)
-                keys.append(KeyIdx(-v if descending else v, row))
-        sort(keys)
-        var out = List[Int](capacity=len(keys))
-        for k in keys:
-            out.append(k.idx)
+        """Alive rows ordered by column col (ties keep row order); the data never moves.
+        A radix sort: linear in the rows however few distinct values the column has (a comparison
+        sort goes quadratic on 20M rows of 8 categories)."""
+        var values = self.column_values(col)
+        var rows = List[Int32](capacity=len(values))
+        for row in range(len(values)):
+            if len(self.removed) == 0 or row not in self.removed:
+                rows.append(Int32(row))
+        if len(rows) == 0:
+            return List[Int]()
+        var lo = values[Int(rows[0])]
+        var hi = lo
+        for i in rows:
+            var v = values[Int(i)]
+            lo = min(lo, v)
+            hi = max(hi, v)
+        var keys = List[UInt64](capacity=len(rows))
+        for i in rows:
+            var v = values[Int(i)]
+            keys.append(UInt64(hi - v) if descending else UInt64(v - lo))
+        var span = UInt64(hi - lo)
+        var bits = 0
+        while bits < 64 and (span >> UInt64(bits)) != 0:
+            bits += 1
+        radix_sort(keys, rows, bits)
+        var out = List[Int](capacity=len(rows))
+        for i in rows:
+            out.append(Int(i))
         return out^
 
     def group_sum(self, key: List[Int64], value: List[Int64], ranges: List[Range], groups: Int) -> Tuple[List[Int], List[Int]]:
