@@ -21,7 +21,6 @@ from mojoui.flint import FlintChart
 from mojoui.mxframe import MxFrame, GroupSums
 from mojoui.shared import put_shared, get_shared, at, count_load
 from mojoui.shared import keep as keep_shared
-from std.memory import Pointer
 
 comptime YEAR = 1
 comptime CHANNEL = 2

@@ -18,10 +18,9 @@ from mojoui.frame import Frame, Range, share, OP_COL, OP_CONST, OP_SUB, TEXT, DE
 from mojoui.frame_gpu import GpuFrame, group_sum, pivot_program
 from mojoui.contoso import generate_columns, CATEGORY, REGION, CHANNEL, PRODUCT, QUANTITY, CENTS, COST, YEAR
 from mojoui.gpu import gpu_present, GroupSums
-from mojoui.shared import put_shared, get_shared, keep, at, count_load
+from mojoui.shared import put_shared, get_shared, keep, at, count_load, environment
 from mojoui.workbook import save_workbook, open_workbook, ObjectSpec
-from std.math import log2
-from std.os import getenv
+from mojoui.maths import log2
 
 comptime SOURCE_PREFIX = "contoso:"  # + the row count: the shared table's source name (a workbook file names it instead of copying it)
 comptime SAMPLE = "examples/workbook/contoso.mxwb"
@@ -140,9 +139,9 @@ struct Main(App):
         self.sizes = List[Tuple[Float64, Float64]]()
         for _ in range(len(self.objects)):
             self.sizes.append((400.0, 300.0))
-        self.path = getenv("MOJOUI_WORKBOOK", "")
+        self.path = environment("MOJOUI_WORKBOOK")
         if self.path == "":
-            self.path = getenv("HOME", ".") + "/Documents/Contoso Workbook.mxwb"
+            self.path = environment("HOME", ".") + "/Documents/Contoso Workbook.mxwb"
         self.pan = 0
         self.load(SAMPLE, quiet=True)  # the sample workbook, when run from the repo; else the built-in page
         self.compute()

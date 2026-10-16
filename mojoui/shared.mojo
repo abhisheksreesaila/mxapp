@@ -33,6 +33,11 @@ def get_shared(slot: Int) -> Int:
         return 0
 
 
+def environment(name: String, default: String = "") -> String:
+    """An environment variable (apps import this rather than std.os, so they stay platform-free)."""
+    return getenv(name, default)
+
+
 def shared_loads() -> Int:
     """How many times init_shared() built its data in this process (hosts report it)."""
     return get_shared(99)
