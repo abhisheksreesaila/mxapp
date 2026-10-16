@@ -41,7 +41,8 @@ def shown(out):
 
 
 def gtk(steps, size=None, shot=None, example="workbook"):
-    env = {"MOJOUI_TEST": steps, "MOJOUI_SHOT": shot or str(BUILD / example / "gtk.png")}
+    env = {"MOJOUI_TEST": steps, "MOJOUI_SHOT": shot or str(BUILD / example / "gtk.png"),
+           "MOJOUI_WORKBOOK": str(BUILD / "workbook" / "check.mxwb")}  # saves never touch the person's documents
     if size:
         env["MOJOUI_WINDOW"] = f"{size[0]}x{size[1]}"
     exe = BUILD / example / "linux" / example
@@ -249,11 +250,11 @@ def m8():
         r, out = drive.web_run(BUILD / "workbook" / "web", "", tabs=2)
     except Exception as e:
         return False, f"two-tab web run crashed: {e!r}"
-    m = re.search(r"^SHARED: (\d+) loads?, (\d+) sessions", out, re.M)
-    if not m:
+    found = re.findall(r"^SHARED: (\d+) loads?, (\d+) sessions", out, re.M)
+    if not found:
         problems.append(f"the server didn't report shared loads: {out[-300:]}")
-    elif m[1] != "1" or int(m[2]) < 2:
-        problems.append(f"expected 1 load for 2 sessions, got {m[0]}")
+    elif found[-1][0] != "1" or int(found[-1][1]) < 2:  # the last line: after both tabs opened
+        problems.append(f"expected 1 load for 2 sessions, got {found[-1]}")
     return not problems, "; ".join(problems) or "20M rows loaded once per process and shared by every session (workbook and analytics)"
 
 

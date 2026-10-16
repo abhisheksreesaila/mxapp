@@ -183,8 +183,10 @@ def step(page, s):
     settle(page)
 
 
-def web_run(module_dir, steps, shot=None, viewport=(900, 900)):
-    """Returns (result, output) like a process run: result.returncode is 0 on success."""
+def web_run(module_dir, steps, shot=None, viewport=(900, 900), tabs=1):
+    """Returns (result, output) like a process run: result.returncode is 0 on success.
+    tabs > 1: that many pages open against the one server (each runs the steps); the server's own
+    log lines (e.g. SHARED: …) come after the page's state."""
     from playwright.sync_api import sync_playwright
 
     port = free_port()
@@ -207,6 +209,10 @@ def web_run(module_dir, steps, shot=None, viewport=(900, 900)):
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path=CHROMIUM, headless=True)
             page = browser.new_page(viewport={"width": viewport[0], "height": viewport[1]})
+            others = [browser.new_page(viewport={"width": viewport[0], "height": viewport[1]}) for _ in range(tabs - 1)]
+            for other in others:
+                other.goto(url)
+                settle(other)
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
             if os.environ.get("DRIVE_DEBUG"):  # every event the page posts, and the server's log, on stderr
@@ -226,6 +232,9 @@ def web_run(module_dir, steps, shot=None, viewport=(900, 900)):
             if errors:
                 out += "PAGE ERRORS: " + "; ".join(errors) + "\n"
             browser.close()
+        server.terminate()
+        log = server.stdout.read()
+        out += "".join(l + "\n" for l in log.splitlines() if l.startswith("SHARED: "))
         return SimpleNamespace(returncode=1 if errors else 0), out
     finally:
         server.terminate()

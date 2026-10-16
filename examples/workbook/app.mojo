@@ -19,7 +19,12 @@ from mojoui.frame_gpu import GpuFrame, group_sum, pivot_program
 from mojoui.contoso import generate_columns, CATEGORY, REGION, CHANNEL, PRODUCT, QUANTITY, CENTS, COST, YEAR
 from mojoui.gpu import gpu_present, GroupSums
 from mojoui.shared import put_shared, get_shared, keep, at, count_load
+from mojoui.workbook import save_workbook, open_workbook, ObjectSpec
 from std.math import log2
+from std.os import getenv
+
+comptime SOURCE = "contoso:20000000"  # the shared table's source name (a workbook file names it instead of copying it)
+comptime SAMPLE = "examples/workbook/contoso.mxwb"
 
 # messages
 comptime GRID_GESTURE = 1
@@ -94,6 +99,7 @@ struct Main(App):
     var milliseconds: Float64
     var version: Int
     var sizes: List[Tuple[Float64, Float64]]  # per object: its canvas size in points
+    var path: String  # where Save writes and Open reads (MOJOUI_WORKBOOK, or ~/Documents/Contoso Workbook.mxwb)
 
     @staticmethod
     def init_shared():
@@ -131,6 +137,9 @@ struct Main(App):
         self.sizes = List[Tuple[Float64, Float64]]()
         for _ in range(len(self.objects)):
             self.sizes.append((400.0, 300.0))
+        self.path = getenv("MOJOUI_WORKBOOK", "")
+        if self.path == "":
+            self.path = getenv("HOME", ".") + "/Documents/Contoso Workbook.mxwb"
         self.compute()
 
     def title(self) -> String:
@@ -485,6 +494,34 @@ struct Main(App):
             for k in range(len(self.objects)):
                 self.objects[k].selected = -1
             self.compute()
+        elif m == SAVE:
+            try:
+                save_workbook(self.path, self.frame, SOURCE, self.specs())
+                self.message = "Saved " + self.path
+            except e:
+                self.message = "Couldn't save: " + String(e)
+            self.version += 1
+        elif m == OPEN:
+            try:
+                var specs = List[ObjectSpec]()
+                var base_addr = 0
+                self.frame = open_workbook(self.path, SOURCE, get_shared(0), specs, base_addr)
+                if base_addr != get_shared(0):
+                    self.gf_addr = keep(GpuFrame(base_addr))  # a table of its own: on the GPU for this process
+                self.objects = List[Obj]()
+                for o in specs:
+                    self.objects.append(Obj(o.kind, o.title, o.x, o.y, o.w, o.h, o.a, o.b, o.c, o.text, o.selected))
+                self.sizes = List[Tuple[Float64, Float64]]()
+                for _ in range(len(self.objects)):
+                    self.sizes.append((400.0, 300.0))
+                self.order = List[Int]()
+                self.sort_col = -1
+                self.select_cell(-1, -1)
+                self.message = "Opened " + self.path
+                self.compute()
+            except e:
+                self.message = "Couldn't open: " + String(e)
+            self.version += 1
         elif m == MOVE or m == RESIZE:
             var k = event.number
             if 0 <= k < len(self.objects):
@@ -497,6 +534,12 @@ struct Main(App):
                     self.objects[k].w = max(200, (self.objects[k].w + dx + SNAP // 2) // SNAP * SNAP)
                     self.objects[k].h = max(120, (self.objects[k].h + dy + SNAP // 2) // SNAP * SNAP)
                 self.version += 1
+
+    def specs(self) -> List[ObjectSpec]:
+        var out = List[ObjectSpec]()
+        for o in self.objects:
+            out.append(ObjectSpec(o.kind, o.title, o.x, o.y, o.w, o.h, o.a, o.b, o.c, o.text, o.selected))
+        return out^
 
     # ---------- the screen ----------
 
@@ -609,6 +652,8 @@ struct Main(App):
             Text(self.filter_text(), style=CAPTION).tag("filter"),
             Button("Clear filters", on_tap=CLEAR),
             Spacer(),
+            Button("Save", on_tap=SAVE),
+            Button("Open", on_tap=OPEN),
             Text("Recomputed in " + fixed(self.milliseconds, 1) + " ms on " + engine, style=CAPTION),
             spacing=16,
         ).fill()

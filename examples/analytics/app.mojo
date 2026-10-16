@@ -19,6 +19,9 @@ from mojoui.text import Font
 from mojoui.charts import money, compact, grouped, fixed
 from mojoui.flint import FlintChart
 from mojoui.mxframe import MxFrame, GroupSums
+from mojoui.shared import put_shared, get_shared, at, count_load
+from mojoui.shared import keep as keep_shared
+from std.memory import Pointer
 
 comptime YEAR = 1
 comptime CHANNEL = 2
@@ -231,7 +234,7 @@ def generate(n: Int) -> Table:
 # ---------- the app ----------
 
 struct Main(App):
-    var table: Table
+    var table_addr: Int  # the 20M rows, built once per process (init_shared) and shared by every session
     var font: Font
     var year: Int  # 0 = all, 1–3 = 2023–2025
     var channel: Int  # 0 = all
@@ -257,15 +260,25 @@ struct Main(App):
     var passes: Int
     var sizes: List[Tuple[Float64, Float64]]  # each canvas's size in points, from its last draw
 
+    @staticmethod
+    def init_shared():
+        if get_shared(10) != 0:
+            return
+        put_shared(10, keep_shared(generate(20_000_000 if gpu_present() else 2_000_000)))
+        count_load()
+
+    def table(self) -> Pointer[Table, MutUntrackedOrigin]:
+        return at[Table](self.table_addr)
+
     def __init__(out self):
-        self.table = generate(20_000_000 if gpu_present() else 2_000_000)
+        self.table_addr = get_shared(10)
         self.font = Font()
         self.year = 0
         self.channel = 0
         self.category = -1
         self.region = -1
         self.month = -1
-        self.engine = 0 if self.table.on_gpu() else 1
+        self.engine = 0 if at[Table](self.table_addr)[].on_gpu() else 1
         self.mx = List[MxFrame]()
         self.version = 0
         self.month_rev = List[Int]()
@@ -326,7 +339,7 @@ struct Main(App):
         """Adds up all the rows again for every chart (GPU kernels, the same on the CPU, or MX frame)."""
         if self.engine == 2:
             if len(self.mx) == 0:
-                self.mx.append(MxFrame(self.table, ["day", "category", "region", "channel", "product", "quantity", "cents", "month"],
+                self.mx.append(MxFrame(self.table()[], ["day", "category", "region", "channel", "product", "quantity", "cents", "month"],
                                        [("bin", "cents", 5000, BINS - 1), ("year", "month", 12, 2)]))
             if self.mx[0].ready:
                 var m = self.mx_sum("month", "cents", MONTHS, "month", all_years=True)
@@ -341,13 +354,13 @@ struct Main(App):
                     return
         var f = self.filter()
         var on = self.engine == 0  # (MX frame unavailable: the CPU)
-        var m = self.table.group_sum[by_month, cents](MONTHS, f, on)
-        var c = self.table.group_sum[by_category, cents](8, f, on)
-        var r = self.table.group_sum[by_region, cents](5, f, on)
-        var p = self.table.group_sum[by_product, cents](64, f, on)
-        var s = self.table.group_sum[by_size, cents](BINS, f, on)
-        var y = self.table.group_sum[by_year, cents](3, f, on)
-        var yu = self.table.group_sum[by_year, units](3, f, on)
+        var m = self.table()[].group_sum[by_month, cents](MONTHS, f, on)
+        var c = self.table()[].group_sum[by_category, cents](8, f, on)
+        var r = self.table()[].group_sum[by_region, cents](5, f, on)
+        var p = self.table()[].group_sum[by_product, cents](64, f, on)
+        var s = self.table()[].group_sum[by_size, cents](BINS, f, on)
+        var y = self.table()[].group_sum[by_year, cents](3, f, on)
+        var yu = self.table()[].group_sum[by_year, units](3, f, on)
         self.store(m, c, r, p, s, y, yu)
 
     def store(mut self, m: GroupSums, c: GroupSums, r: GroupSums, p: GroupSums, s: GroupSums, y: GroupSums, yu: GroupSums):
@@ -414,7 +427,7 @@ struct Main(App):
             self.channel = event.number
             self.compute()
         elif event.message == ENGINE:
-            self.engine = event.number if (event.number != 0 or self.table.on_gpu()) else 1
+            self.engine = event.number if (event.number != 0 or self.table()[].on_gpu()) else 1
             self.compute()
         elif event.message == CLEAR:
             self.category = -1
@@ -567,7 +580,7 @@ struct Main(App):
         var revenue = self.total(self.year_rev)
         var orders = self.total(self.year_orders)
         var period = "2023–2025" if self.year == 0 else materialize[YEARS]()[self.year]
-        var engine = self.table.device_name() if self.engine == 0 else (String("the CPU (Mojo loops)") if self.engine == 1 else String("MX frame (CPU)"))
+        var engine = self.table()[].device_name() if self.engine == 0 else (String("the CPU (Mojo loops)") if self.engine == 1 else String("MX frame (CPU)"))
         if self.engine == 2 and len(self.mx) > 0 and not self.mx[0].ready:
             engine = "the CPU: MX frame unavailable (" + self.mx[0].problem + ")"
         var sidebar = VStack(
@@ -584,7 +597,7 @@ struct Main(App):
             Divider().fill(),
             Text("Engine", style=CAPTION),
             Segmented(["GPU", "CPU", "MX frame"], self.engine, on_select=ENGINE).fill(),
-            Text(grouped(self.table.count) + " rows, " + String(self.passes) + " passes", style=CAPTION),
+            Text(grouped(self.table()[].count) + " rows, " + String(self.passes) + " passes", style=CAPTION),
             Text("Recomputed in " + fixed(self.milliseconds, 1) + " ms on " + engine, style=CAPTION).max_width(244),
             Spacer(),
             Text("One Mojo file · mojo-ui", style=CAPTION),

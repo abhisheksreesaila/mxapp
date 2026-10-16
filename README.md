@@ -85,7 +85,26 @@ scripts/build.sh analytics linux && build/analytics/linux/analytics           # 
 scripts/build.sh analytics web && pixi run python mojoui/hosts/web.py build/analytics/web   # → http://127.0.0.1:5001
 ```
 
-Linux and the web for now. The Mac version is waiting on a Python-free MX frame API (`docs/mxframe-mojo-api.md`). On the web, each browser tab builds its own 20M rows (about 3 s, roughly 640 MB in memory and 640 MB on the GPU), so it's a demo for a few viewers, not a shared service yet.
+Linux and the web for now. The Mac version is waiting on a Python-free MX frame API (`docs/mxframe-mojo-api.md`). On the web the 20M rows are built once per server process and shared by every tab (`App.init_shared()`), so many viewers can sit on one GPU.
+
+## Showcase: the Workbook
+
+`examples/workbook/app.mojo` is a Numbers-style page over the same engine: **tables, pivots, charts and notes side by side, sharing one set of 20 million rows**. Columns, never cell addresses.
+
+![The Workbook on Linux: a table, a pivot, two charts and a note on one page](docs/gallery/img/workbook-linux.png)
+
+- **Edit a cell, add a row, delete a row, sort, undo.** Edits never copy the data: a session keeps a sparse overlay, the GPU aggregates the shared rows, and the overlay's deltas are applied exactly (`mojoui/frame.mojo`, `frame_gpu.mojo`).
+- **Formula columns** typed as text (`margin = cents - cost`, `bin = min(cents // 50, 23)`): a column-level dependency graph, evaluated inside the GPU group-by kernel, so they cost no memory.
+- **Pivots** are run-time group-bys on the GPU (rows × columns × value, about a millisecond for 20M rows); **charts** are Flint specs; tap a bar and everything else filters.
+- **Drag objects** by their header, resize by the corner, snap to an 8-point grid (`Board`, a new container); narrow windows and phones show the objects as a list.
+- **Save/Open** a workbook folder: `workbook.json` (objects, formulas, your edits) plus Parquet for tables without a reproducible source. An agent can write it.
+- **One copy per process:** `App.init_shared()` builds the rows and the GPU buffers once; every window or browser tab shares them.
+
+```bash
+scripts/workbook.sh          # the native Linux window
+scripts/workbook.sh web      # → http://127.0.0.1:5001, every tab sharing the one GPU copy
+```
+The two-minute walkthrough is in [`docs/morning.md`](docs/morning.md).
 
 ## The hybrid: native controls plus a GPU canvas
 

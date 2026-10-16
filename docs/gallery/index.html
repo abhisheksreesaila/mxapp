@@ -108,6 +108,35 @@
 <section class="show">
 
   <article class="card focal" data-kind="both">
+    <div class="head"><h2>The Workbook · tables, pivots, charts, notes on one page</h2><span class="tag both">Both shine</span>
+      <span class="src"><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/examples/workbook/app.mojo">examples/workbook/app.mojo</a></span></div>
+    <div class="body">
+      <div class="shots">
+        <figure><img src="img/workbook-linux.png" alt="The Workbook in a native Linux window: a 20M-row table, a pivot, two charts and a note" loading="lazy">
+          <figcaption>Linux: a Numbers-style page. Edit a cell, type a formula, pivot, click a chart, drag the cards around: one engine under all of it.</figcaption></figure>
+        <div class="shots two">
+          <figure><img src="img/workbook-web.png" alt="The same workbook in a browser" loading="lazy"><figcaption>The same file in the browser; every tab shares the server's one GPU copy of the rows.</figcaption></figure>
+          <figure><img src="img/workbook-filtered.png" alt="A chart bar tapped: the pivot, the other chart and the totals filter to Europe; a formula column added" loading="lazy"><figcaption>Tap "Europe": the pivot, the totals and the other chart follow. A typed formula column (ƒ margin) is in every value list.</figcaption></figure>
+        </div>
+      </div>
+      <div class="why">
+        <div class="nums">
+          <div><b>~1 ms</b><span>a run-time group-by over 20M rows (GPU)</span></div>
+          <div><b>0 copies</b><span>per session: edits are a sparse overlay, applied as exact deltas</span></div>
+          <div><b>1 file</b><span>Mojo, for the native window and the web</span></div>
+        </div>
+        <h3>Columns, never cells</h3>
+        <p>Formulas apply to columns (<code>margin = cents - cost</code>) and run inside the GPU kernel, so they cost no memory. Pivots are group-bys. Charts are Flint specs. Giving up <code>=B3*C3</code> is what makes 20 million rows feel instant.</p>
+        <h3>Where each side shines</h3>
+        <div class="split">
+          <div class="n"><b>Native</b>Your rows on your GPU, offline, saved as a folder you own (JSON + Parquet).</div>
+          <div class="w"><b>Web</b>One server process, one GPU, many tabs: the rows are loaded once and shared.</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" data-kind="both">
     <div class="head"><h2>Contoso Retail · analytics</h2><span class="tag both">Both shine</span>
       <span class="src"><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/examples/analytics/app.mojo">examples/analytics/app.mojo</a></span></div>
     <div class="body">
