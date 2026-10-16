@@ -34,8 +34,8 @@ COMPONENTS = [
 # Which examples each platform's checks actually run (docs/goals/*-check.py): GTK and the web run every
 # example; the Android checks (goal 7) drive these on the emulator; Mac and iPhone only build and sign.
 RUN_ON = {
-    "Linux (GTK)": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook"],
-    "Web": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook"],
+    "Linux (GTK)": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio"],
+    "Web": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio"],
     "Android": ["hello", "gallery", "layout", "lens", "todo"],
     "Mac (AppKit)": [],
     "iPhone (UIKit)": [],
@@ -75,6 +75,8 @@ COMPOSITES = [
 APP_LOCAL = [
     ("KPI tile", "examples/analytics", "a headline number with a sparkline (mojoui.charts.KpiTile, but placed by the app on a Canvas)"),
     ("FormulaBar", "examples/workbook", "what's selected, its value, a formula field"),
+    ("FindingCard", "examples/mxstudio", "an agent's finding: what it noticed, the rows behind it, act / show rows / look again (Report's 'Worth a look' and Docs' mismatch card need it too)"),
+    ("Inspector", "examples/mxstudio", "the side panel: Comes from, Feeds, Your edits, Undo all (lineage and the edit log as a reusable panel)"),
     ("Toolbar / StatusBar islands", "examples/workbook", "the island contents (title, Insert buttons, status) are assembled by the app"),
 ]
 

@@ -10,33 +10,33 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 
 | Component | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Proven by |
 |---|---|---|---|---|---|---|
-| `Text` | ✅ | ✅ | ✅ | 🔨 | 🔨 | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook |
-| `Button` | ✅ | ✅ | ✅ | 🔨 | 🔨 | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook |
-| `VStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics |
-| `HStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook |
-| `Spacer` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics |
-| `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics, workbook |
+| `Text` | ✅ | ✅ | ✅ | 🔨 | 🔨 | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio |
+| `Button` | ✅ | ✅ | ✅ | 🔨 | 🔨 | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio |
+| `VStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, mxstudio |
+| `HStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio |
+| `Spacer` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics, mxstudio |
+| `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics, workbook, mxstudio |
 | `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | todo |
 | `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, kitchen, expenses, lens, analytics |
-| `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses, workbook |
+| `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses, workbook, mxstudio |
 | `TextArea` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook |
 | `Toggle` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, lens |
 | `Dropdown` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, analytics, workbook |
 | `Slider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, gpu, lens |
-| `Segmented` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, lens, analytics |
+| `Segmented` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, lens, analytics, mxstudio |
 | `Radio` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen |
 | `DatePicker` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `ProgressBar` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses |
 | `Image` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, gpu |
 | `Icon` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `Alert` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
-| `Tabs` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout |
+| `Tabs` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout, mxstudio |
 | `NavBar` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `LazyList` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout |
-| `Canvas` | ✅ | ✅ | ✅ | 🔨 | 🔨 | lens, analytics, workbook |
-| `Board` | ✅ | ✅ | ❌ | ❌ | ❌ | workbook |
-| `Overlay` | ✅ | ✅ | ❌ | ❌ | ❌ | workbook |
+| `Canvas` | ✅ | ✅ | ✅ | 🔨 | 🔨 | lens, analytics, workbook, mxstudio |
+| `Board` | ✅ | ✅ | ❌ | ❌ | ❌ | workbook, mxstudio |
+| `Overlay` | ✅ | ✅ | ❌ | ❌ | ❌ | workbook, mxstudio |
 
 ## Variants, gestures, layout, design languages
 
@@ -66,9 +66,9 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Component | Module | Made of | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Used by |
 |---|---|---|---|---|---|---|---|---|
-| `DataGrid` | `mojoui/datagrid.mojo` | Canvas, Canvas: press, release, double, In-place editor, Board: drag, resize, snap | ✅ | ✅ | ❌ | ❌ | ❌ | workbook |
-| `PivotTable` | `mojoui/pivot.mojo` | Grid, Scroll, Text tones | ✅ | ✅ | ❌ | ❌ | ❌ | workbook |
-| `ChartView` | `mojoui/chartview.mojo` | Canvas, Canvas: pan, zoom, tap | ✅ | ✅ | 🔨 | 🔨 | 🔨 | workbook |
+| `DataGrid` | `mojoui/datagrid.mojo` | Canvas, Canvas: press, release, double, In-place editor, Board: drag, resize, snap | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
+| `PivotTable` | `mojoui/pivot.mojo` | Grid, Scroll, Text tones | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
+| `ChartView` | `mojoui/chartview.mojo` | Canvas, Canvas: pan, zoom, tap | ✅ | ✅ | 🔨 | 🔨 | 🔨 | mxstudio, workbook |
 
 ## Totals
 
@@ -86,6 +86,8 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 |---|---|---|
 | `KPI tile` | examples/analytics | a headline number with a sparkline (mojoui.charts.KpiTile, but placed by the app on a Canvas) |
 | `FormulaBar` | examples/workbook | what's selected, its value, a formula field |
+| `FindingCard` | examples/mxstudio | an agent's finding: what it noticed, the rows behind it, act / show rows / look again (Report's 'Worth a look' and Docs' mismatch card need it too) |
+| `Inspector` | examples/mxstudio | the side panel: Comes from, Feeds, Your edits, Undo all (lineage and the edit log as a reusable panel) |
 | `Toolbar / StatusBar islands` | examples/workbook | the island contents (title, Insert buttons, status) are assembled by the app |
 
 ## The rule
