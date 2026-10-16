@@ -80,7 +80,7 @@ def nodes(root, inside_content=True):
                 b = [int(v) for v in re.findall(r"\d+", el.get("bounds", "[0,0][0,0]"))]
                 out.append(dict(cls=el.get("class", ""), text=el.get("text", ""), desc=el.get("content-desc", ""),
                                 hint=el.get("hint", ""), checked=el.get("checked") == "true", bounds=b, el=el,
-                                parents=parents))
+                                parents=parents, package=el.get("package", "")))
             parents = parents + [el.get("class", "")]
         for c in el:
             walk(c, depth + 1, in_content, parents)
@@ -237,6 +237,13 @@ def android_run(example, steps, shot=None, landscape=False, dpi=None):
     adb("shell", "am", "force-stop", pkg)
     adb("logcat", "-c")
     adb("shell", "am", "start", "-W", "-n", f"{pkg}/dev.mojoui.MojoActivity", check=True, timeout=120)
+    # Until the app's own views are up: a fresh (cold-booted) emulator takes several seconds for
+    # the first launch (dex optimisation, the Mojo library), well past the old fixed 1.5 s.
+    deadline = time.time() + 60
+    while time.time() < deadline:  # (the app's own views: the launcher behind it has TextViews too)
+        if any(n["package"] == pkg and n["cls"].endswith((".TextView", ".Button", ".EditText")) and n["bounds"][2] > 0 for n in nodes(dump())):
+            break
+        time.sleep(1)
     time.sleep(1.5)
     scale = density()
     out, failed = "", False

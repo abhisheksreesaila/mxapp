@@ -82,4 +82,5 @@ PASS  M6  packaged Linux app + web, launcher, morning walkthrough, gallery and R
 PASS  M8  20M rows loaded once per process and shared by every session (workbook and analytics)
 ```
 Also from the morning: GTK checks now run on a headless display (D-95), so `scripts/check` opens no windows; goal 6's frame-rate check measures 60 fps there.
+The owner approved the painted-share measure (D-96): goal 6's lens canvas and goal 8's analytics page are now judged by the share of pixels away from the background on both hosts, and the 55 fps bar stays (60 fps headless once the test emulator is stopped before goal 6 runs). The goal-6 lens items that blocked M7 since goal 8 are closed.
 
