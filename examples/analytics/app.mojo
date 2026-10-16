@@ -271,6 +271,8 @@ struct Main(App):
         return at[Table](self.table_addr)
 
     def __init__(out self):
+        if get_shared(10) == 0:  # no host built the shared data (a test constructing the app directly)
+            Self.init_shared()
         self.table_addr = get_shared(10)
         self.font = Font()
         self.year = 0

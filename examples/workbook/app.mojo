@@ -112,6 +112,8 @@ struct Main(App):
         count_load()
 
     def __init__(out self):
+        if get_shared(0) == 0:  # no host built the shared data (a test constructing the app directly)
+            Self.init_shared()
         self.frame = Frame(get_shared(0))
         self.gf_addr = get_shared(1)
         self.font = Font()
