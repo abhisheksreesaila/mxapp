@@ -11,4 +11,6 @@ One line per rule that prevents a mistake that happened.
 - Never sort 20M rows with a comparison sort keyed on a few distinct values (quadratic): gather the column and radix-sort it.
 - On GTK a `Spacer()` inside a card header expands vertically too and starves the card's canvas: push header items apart with `.justify(BETWEEN)`.
 - GTK test windows go on the headless display (`scripts/headless.py`), never the desktop; a window covered by another gets no frame-clock ticks, so fps checks on a real screen are unreliable.
+- Never run benchmarks or rebuild one platform of an example while a regression check runs: GPU timings pick up the extra load and the "built from the same app.mojo" check fails when only Linux was rebuilt.
+- Look at every screenshot a check takes: a missing glyph (▲/▼ drew as a box) and a page wider than a 1280-pt window both passed the state checks.
 

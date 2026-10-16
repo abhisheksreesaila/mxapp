@@ -4,7 +4,7 @@ Mode: experiment
 Ship: direct
 Design language: Fluent 2 (owner, 2026-10-15: one design language shared by native and web)
 
-Current experiment: `GOAL.md` (goal 9: the Workbook, Linux + web; goals 1–8 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 10: the Workbook, usable; goals 1–9 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 
@@ -14,7 +14,8 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 3. `EXPERIMENTS.md`: what has actually been tried and what happened. **Trust this over the spec when they disagree.**
 
 ## Where things stand
-- **Newest (Experiment 10, 2026-10-16):** the Workbook (`examples/workbook`): tables, pivots, charts and notes on a `Board`, one GPU engine (`mojoui/frame.mojo`, `frame_gpu.mojo`), workbook files, shared data per process (`App.init_shared()`), the wasm spike (`docs/wasm.md`). Run it with `scripts/workbook.sh`; walkthrough `docs/morning.md`. Morning fixes: radix sort, Board drags without jitter (gesture on the Board, moves as patches), Insert…/Remove cards (D-91–D-94).
+- **Newest (Experiment 11, 2026-10-16, goal 10):** the Workbook made usable: a Fluent canvas theme with floating islands (`Overlay`, icon `Button` styles, Lucide icons on GTK too), a scrolling page that reveals inserted cards, a drawn grid scroll bar (`PRESS`/`RELEASE` gestures), column selection and sort, pivots that start from the selected column. Formatting planned in `docs/plans/formatting.md`.
+- **Experiment 10 (2026-10-16):** the Workbook (`examples/workbook`): tables, pivots, charts and notes on a `Board`, one GPU engine (`mojoui/frame.mojo`, `frame_gpu.mojo`), workbook files, shared data per process (`App.init_shared()`), the wasm spike (`docs/wasm.md`). Run it with `scripts/workbook.sh`; walkthrough `docs/morning.md`. Morning fixes: radix sort, Board drags without jitter (gesture on the Board, moves as patches), Insert…/Remove cards (D-91–D-94).
 - **Experiment 9 (2026-10-15):** the analytics showcase (`examples/analytics`): Flint charts drawn by mojoui, GPU group-by, MX frame engine, Fluent 2 controls; gallery at docs/gallery (GitHub Pages). See `docs/report.md`.
 - **Experiment 8 (2026-10-15):** Android: Mojo drives Android views through JNI (`mojoui/hosts/android.mojo`, one framework Java file); runs on the emulator with real input, same results as GTK. Emulator: `ANDROID_AVD_HOME=~/.config/.android/avd`, AVD `mojoui`. See `docs/goals/07-report.md`, `docs/android.md`.
 - **Experiment 7 (2026-10-15):** Canvas view + GPU PointCloud + Data Lens (`examples/lens`): 20M points, 1.5 ms/frame on the GPU, ~60 fps on GTK and streamed to the web; Mac/iPhone CPU path (builds, not run). See `docs/goals/06-report.md`.
