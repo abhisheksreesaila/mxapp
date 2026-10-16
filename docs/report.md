@@ -20,8 +20,24 @@
 
 ## Checker
 ```
-CHECKER_OUTPUT
+$ scripts/check
+PASS  M1  Fluent 2 on GTK and web; Card on every host (a VStack where cards aren't known); tests pass
+PASS  M2  Noto Sans atlas text on canvases; widths within 0.04 px of the font's metrics
+PASS  M3  charts drawn natively from Flint specs; all 9 dashboard specs compile through Flint → Vega-Lite → SVG
+PASS  M4  20M rows: 1.10 ms (5 groups), 1.04 ms (36) on the GPU, 34 ms on the CPU, exact
+PASS  M5  dashboard over 20M rows; GTK and web identical after year/channel/bar/column/line taps; fits 1440×900 and 1280×800 on both
+PASS  M6  GPU kernels, CPU and MX frame agree on all 910 results under 5 filter settings; identical dashboards on GTK and web
+PASS  M7  gallery renders cleanly, every image and link resolves, live at https://abhisheksreesaila.github.io/mxapp/gallery/
+PASS  M8  the Mojo-level MX frame API spec, from the app's call sites
+FAIL  M9  goal 7 M7: goal 6 M3: 44.2 fps < 55; goal 6 M6: web canvas looks blank (39 colours)
+PASS  M10  README shows the analytics showcase, how to run it, the gallery
 ```
+
+**About M9 (earlier goals), the one failure:** both failing sub-checks are goal 6's lens checks, and neither is a regression in this code:
+- **Lens frame rate on Linux:** 44 fps against 55. The machine was heavily loaded by another project's agents (load average about 4). Goal 7's own build, which measured 59 fps earlier today, measured 27–32 fps at the same time, and today's build 35 fps.
+- **Web lens "looks blank (39 colours)":** goal 6 counted distinct colours as its "not blank" test back when canvas frames were JPEG, whose compression noise adds thousands of colours. Still frames are now exact PNG (for crisp chart text), and that test view (rideshares at 9:36, zoomed 2×) really has about 40 colours. The map is drawn: 42% of the canvas is painted.
+
+My proposal, for you to approve: measure "not blank" by the painted share, as goal 7 already does (D-70), instead of the colour count. I haven't changed goal 6's check myself, since it's an earlier contract.
 
 ## Try it
 ```bash

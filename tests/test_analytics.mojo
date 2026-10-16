@@ -1,5 +1,6 @@
 # The analytics app's own logic, and its three engines against each other.
-# Run: pixi run mojo run -I examples/analytics -I . tests/test_analytics.mojo
+# Build it (`mojo run`'s JIT clashes with MX frame's runtime), then run:
+#   pixi run mojo build -I examples/analytics -I . tests/test_analytics.mojo -o build/test_analytics && pixi run build/test_analytics
 from std.testing import assert_equal, assert_true, assert_false
 
 from app import Main, keep, month_of, by_month, by_category, DAYS, MONTHS
@@ -73,6 +74,11 @@ def test_engines_agree_on_every_result() raises:
         var results = List[List[Int]]()
         for engine in [0, 1, 2]:
             app.update(Event(ENGINE, "", engine))
+            assert_equal(app.engine, engine)  # no quiet fallback: the engine picked is the one that ran
+            if engine == 0:
+                assert_true(app.table.on_gpu(), "the GPU engine needs a GPU")
+            if engine == 2:
+                assert_true(app.mx[0].ready, "MX frame didn't run: " + app.mx[0].problem)
             var all = List[Int]()
             for part in [app.month_rev.copy(), app.cat_rev.copy(), app.region_rev.copy(), app.product_rev.copy(),
                          app.size_orders.copy(), app.year_rev.copy(), app.year_orders.copy(), app.year_units.copy(),

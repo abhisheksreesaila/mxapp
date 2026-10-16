@@ -393,7 +393,7 @@ struct Main(App):
         if y == 0 or values[y - 1] == 0:
             return "First year of data"
         var pct = (Float64(values[y]) / Float64(values[y - 1]) - 1.0) * 100.0
-        return ("+" if pct >= 0 else "") + fixed(pct, 1) + "% vs " + String(2022 + y)
+        return (String(2023 + y) + ": " if self.year == 0 else "") + ("+" if pct >= 0 else "") + fixed(pct, 1) + "% vs " + String(2022 + y)
 
     def spark(self, values: List[Int]) -> List[Float64]:
         """The selected period's months."""
