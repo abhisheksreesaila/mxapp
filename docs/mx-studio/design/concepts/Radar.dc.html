@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Anomaly field and lens</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0}
+a{color:#9fd7ff}a:hover{color:#ffffff}
+</style>
+</helmet>
+<div style="min-height: 940px; box-sizing: border-box; background: #07090c; color: #e6edf3; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; display: flex; flex-direction: column">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 10px 28px; border-bottom: 1px solid #161c24">
+    <div style="font-weight: 600; font-size: 14px">MX Studio</div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6d7c8e">orders · 2.42B rows · 41 columns · 27 metrics derived</div>
+    <div style="flex: 1 1 200px"></div>
+    <div style="display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6d7c8e">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: {{accent}}; display: inline-block"></span>
+      the data re-scans itself every 90 s · last sweep 0.6 s
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+
+    <div style="flex: 999 1 600px; min-width: 0; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 24px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 500">What the data noticed</h1>
+        <div style="font-size: 13px; color: #a6b3c2">There is no home dashboard. This is the home: every metric, every week, scored for surprise. Hot cells are where to look.</div>
+      </div>
+
+      <div style="overflow-x: auto">
+        <div style="display: grid; grid-template-columns: 150px repeat(26, minmax(0, 1fr)); gap: 3px; min-width: 760px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; align-items: center">
+          <div></div>
+          <div style="grid-column: span 4; color: #6d7c8e">Apr</div><div style="grid-column: span 4; color: #6d7c8e">May</div><div style="grid-column: span 5; color: #6d7c8e">Jun</div><div style="grid-column: span 4; color: #6d7c8e">Jul</div><div style="grid-column: span 5; color: #6d7c8e">Aug</div><div style="grid-column: span 4; color: #6d7c8e">Sep</div>
+
+          <div style="color: #a6b3c2; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px">freight / order</div>
+          <div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #ff9f6b; border-radius: 2px; outline: 2px solid {{accent}}; outline-offset: 1px"></div><div style="height: 22px; background: #c9703f; border-radius: 2px"></div><div style="height: 22px; background: #c9703f; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div>
+
+          <div style="color: #a6b3c2; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px">discount share</div>
+          <div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #3b2a20; border-radius: 2px"></div><div style="height: 22px; background: #5c3a28; border-radius: 2px"></div><div style="height: 22px; background: #5c3a28; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #c9703f; border-radius: 2px"></div><div style="height: 22px; background: #c9703f; border-radius: 2px"></div><div style="height: 22px; background: #c9703f; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div>
+
+          <div style="color: #a6b3c2; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px">return rate</div>
+          <div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #3b2a20; border-radius: 2px"></div><div style="height: 22px; background: #5c3a28; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div>
+
+          <div style="color: #a6b3c2; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px">duplicate rows</div>
+          <div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #ff9f6b; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div>
+
+          <div style="color: #a6b3c2; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px">order latency</div>
+          <div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #3b2a20; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div>
+
+          <div style="color: #a6b3c2; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px">gross margin</div>
+          <div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #10151c; border-radius: 2px"></div><div style="height: 22px; background: #5c3a28; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #c9703f; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div><div style="height: 22px; background: #8a4d2b; border-radius: 2px"></div>
+
+          <div style="color: #6d7c8e; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px">+21 quiet metrics</div>
+          <div style="grid-column: span 26; height: 22px; border-radius: 2px; border: 1px dashed #222b36; display: flex; align-items: center; padding-left: 8px; color: #6d7c8e">folded · nothing surprising</div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; font-size: 12px; color: #a6b3c2">
+        <span>Score = how far this week sits from every other week, over all rows. Not a threshold you set.</span>
+        <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6d7c8e">full sweep · 27 metrics × 26 weeks × 2.42B rows · 0.6 s</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px">
+        <div style="font-size: 11px; color: #6d7c8e; letter-spacing: 0.08em; text-transform: uppercase">Watches you set in plain words</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <span style="font-size: 12px; padding: 7px 10px; border-radius: 6px; border: 1px solid #222b36; background: #0d1117">tell me when freight per order passes $9 for any carrier</span>
+          <span style="font-size: 12px; padding: 7px 10px; border-radius: 6px; border: 1px solid #222b36; background: #0d1117">flag any ZIP with more than 100 identical orders</span>
+          <button style="font: inherit; font-size: 12px; padding: 7px 10px; min-height: 36px; border-radius: 6px; border: 1px dashed #3a4654; background: transparent; color: #a6b3c2">+ watch</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex: 1 1 360px; max-width: 460px; border-left: 1px solid #161c24; background: #0d1117; display: flex; flex-direction: column">
+      <div style="padding: 16px 20px; border-bottom: 1px solid #161c24; display: flex; flex-direction: column; gap: 4px">
+        <div style="font-size: 11px; color: {{accent}}; letter-spacing: 0.08em; text-transform: uppercase">Lens · freight / order · week of Jul 13</div>
+        <div style="font-size: 16px; font-weight: 500; line-height: 1.35">The lens is built for this cell. Scrub inside it; the story follows your thumb.</div>
+      </div>
+
+      <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 12px">
+        <svg viewBox="0 0 400 110" width="100%" height="110" role="img" aria-label="Hourly freight per order for the week of July 13, with a step up on July 14 at 09:12 and a scrub handle there">
+          <line x1="0" y1="95" x2="400" y2="95" stroke="#161c24"/>
+          <polyline fill="none" stroke="#e6edf3" stroke-width="1.6" points="4,70 40,72 80,69 120,71 140,70 150,38 190,36 240,39 300,37 350,40 396,38"/>
+          <rect x="140" y="10" width="40" height="85" fill="#ff9f6b" opacity="0.15"/>
+          <line x1="150" y1="6" x2="150" y2="100" stroke="{{accent}}" stroke-width="2"/>
+          <text x="156" y="20" font-size="10" fill="{{accent}}" font-family="IBM Plex Mono, monospace">Jul 14 09:12</text>
+          <text x="4" y="107" font-size="9" fill="#6d7c8e" font-family="IBM Plex Mono, monospace">Mon</text>
+          <text x="380" y="107" font-size="9" fill="#6d7c8e" font-family="IBM Plex Mono, monospace">Sun</text>
+        </svg>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.5">
+          <div style="display: flex; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6d7c8e; width: 52px; flex-shrink: 0">08:40</span><span style="color: #a6b3c2">Freight is $7.90, in line with June.</span></div>
+          <div style="display: flex; gap: 10px; padding: 10px; margin: 0 -10px; border-radius: 8px; background: #141c26; border-left: 2px solid {{accent}}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: {{accent}}; width: 52px; flex-shrink: 0">09:12</span><span>Carrier A's rate table changes. Flat-rate shipping now applies above 4 kg. Within the hour, 61% of Outdoor orders pay $14.20 freight.</span></div>
+          <div style="display: flex; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6d7c8e; width: 52px; flex-shrink: 0">11:00</span><span style="color: #a6b3c2">Margin on OUT-4471 turns negative. It stays negative for the rest of the quarter.</span></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px">
+          <div style="padding: 10px 12px; border-radius: 8px; background: #10151c; border: 1px solid #161c24">
+            <div style="font-size: 11px; color: #6d7c8e">rows under the thumb</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; margin-top: 2px">1.9M</div>
+          </div>
+          <div style="padding: 10px 12px; border-radius: 8px; background: #10151c; border: 1px solid #161c24">
+            <div style="font-size: 11px; color: #6d7c8e">cost of this anomaly to date</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; margin-top: 2px; color: #ff9f6b">−$3.9M</div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px">
+          <button style="font: inherit; font-size: 13px; text-align: left; padding: 10px 12px; min-height: 44px; border-radius: 6px; border: 0; background: {{accent}}; color: #07090c; font-weight: 500">Open the rows at 09:12</button>
+          <button style="font: inherit; font-size: 13px; text-align: left; padding: 10px 12px; min-height: 44px; border-radius: 6px; border: 1px solid #222b36; background: transparent; color: #e6edf3">What if the old rate table still applied?</button>
+          <button style="font: inherit; font-size: 13px; text-align: left; padding: 10px 12px; min-height: 44px; border-radius: 6px; border: 1px solid #222b36; background: transparent; color: #e6edf3">Jump to the next hot cell</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8ef0a6","options":["#8ef0a6","#7cc4ff","#ffd166"]},"$preview":{"width":1440,"height":940}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#8ef0a6' };
+}
+}
+</script>
+</body>
+</html>

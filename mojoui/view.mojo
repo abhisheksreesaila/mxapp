@@ -56,8 +56,17 @@ comptime TITLE = 1
 comptime HEADLINE = 2
 comptime CAPTION = 3
 
+# Text tones (a Text's `value`, set with .tone()): colour from the design language
+comptime TONE_NONE = 0
+comptime TONE_WARN = 1  # needs attention (a finding)
+comptime TONE_GOOD = 2
+comptime TONE_STRONG = 3  # bold (totals)
+comptime TONE_ACCENT = 4
+
 # Container styles (on a VStack's `style`): hosts that know them draw them, others show a plain stack
 comptime CARD = 1  # a raised panel: the platform's own card look
+comptime CARD_WARN = 2  # a card that asks for attention (an agent's finding): the theme's warning tint
+comptime CARD_GOOD = 3  # a card that confirms something went right: the theme's success tint
 
 # Design languages (App.design()): how hosts style their native controls
 comptime NATIVE = 0  # each platform's own look, untouched
@@ -265,6 +274,11 @@ struct View(Copyable, Movable):
         self.nodes[0].y = v
         return self^
 
+    def tone(var self, t: Int) -> View:
+        """A Text's colour or weight: TONE_WARN, TONE_GOOD, TONE_STRONG, TONE_ACCENT."""
+        self.nodes[0].value = t
+        return self^
+
     def focused(var self) -> View:
         """A TextField that takes the keyboard when it appears, its text selected (an in-place editor)."""
         self.nodes[0].value = 1
@@ -455,13 +469,13 @@ def VStack(items: List[View], spacing: Int = 16) -> View:
     return _container(Node(VSTACK, spacing=spacing), items)
 
 
-def Card(*items: View, spacing: Int = 12) -> View:
+def Card(*items: View, spacing: Int = 12, tone: Int = CARD) -> View:
     """A raised panel holding its children top to bottom, left-aligned (padded 16). Hosts draw their own card look;
-    hosts that don't know cards show it as a plain VStack."""
+    hosts that don't know cards show it as a plain VStack. tone: CARD, CARD_WARN (a finding) or CARD_GOOD."""
     var list = List[View]()
     for item in items:
         list.append(item.copy())
-    var v = _container(Node(VSTACK, spacing=spacing, style=CARD), list)
+    var v = _container(Node(VSTACK, spacing=spacing, style=tone), list)
     return v^.padding(16).align(START)
 
 

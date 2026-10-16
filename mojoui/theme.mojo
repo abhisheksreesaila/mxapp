@@ -97,6 +97,7 @@ struct Palette(Copyable, Movable):
     var formula: UInt32  # formula columns' text
     var good: UInt32
     var bad: UInt32
+    var warn: UInt32  # findings that ask for attention
     var regular: Int  # canvas text weights (Noto Sans or JetBrains Mono)
     var medium: Int
 
@@ -105,7 +106,7 @@ struct Palette(Copyable, Movable):
         return Palette(False, rgba(245, 245, 245), rgba(255, 255, 255), rgba(250, 250, 250), rgba(36, 36, 36), rgba(97, 97, 97),
                        rgba(140, 140, 140), rgba(235, 235, 235), rgba(209, 209, 209), rgba(15, 108, 189), rgba(255, 255, 255),
                        rgba(199, 224, 244), rgba(235, 243, 252), rgba(17, 94, 163), rgba(16, 124, 16), rgba(197, 15, 31),
-                       REGULAR, MEDIUM)
+                       rgba(234, 88, 12), REGULAR, MEDIUM)
 
     @staticmethod
     def omarchy() -> Palette:
@@ -153,7 +154,8 @@ struct Palette(Copyable, Movable):
         var quiet = mix(derived(keys, vals, "dark_foreground", mix(fg, bg, 0.45)), fg, 0.5)  # captions: ≥ 4.5:1 on the card
         return Palette(dark, page, bg, raised, ink, fg, quiet, mix(bg, fg, 0.10), mix(bg, fg, 0.22),
                        accent, bg, mix(bg, accent, 0.35), mix(bg, accent, 0.16), derived(keys, vals, "magenta", mix(fg, rgba(173, 142, 230), 0.6)),
-                       derived(keys, vals, "green", rgba(158, 206, 106)), derived(keys, vals, "red", rgba(247, 118, 142)), MONO, MONO_BOLD)
+                       derived(keys, vals, "green", rgba(158, 206, 106)), derived(keys, vals, "red", rgba(247, 118, 142)),
+                       derived(keys, vals, "orange", derived(keys, vals, "yellow", rgba(255, 158, 100))), MONO, MONO_BOLD)
 
     def data(self, i: Int) -> UInt32:
         """The i-th series colour (the accent first)."""

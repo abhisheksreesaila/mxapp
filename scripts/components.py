@@ -45,6 +45,8 @@ RUN_ON = {
 # the example whose checks exercise it).
 FEATURES = [
     ("Button with an icon", "Button(icon=…)", r"node\.hint != \"\"|n\[\"hint\"\]|adw_button_content", "workbook"),
+    ("Card tones", "Card(tone=CARD_WARN / CARD_GOOD)", r"CARD_WARN|card warn|mui-warn", "workbook"),
+    ("Text tones", "Text(…).tone(TONE_WARN…)", r"mui-tone|tone-warn", "workbook"),
     ("Quiet buttons", "style=SUBTLE / ICON_ONLY", r"\bSUBTLE\b|\bICON_ONLY\b", "workbook"),
     ("Lucide icon set", "Button(icon=\"table\")…", r"lucide|mojoui-", "workbook"),
     ("In-place editor", "TextField(…).focused()", r"value == 1|cell-editor", "workbook"),
@@ -61,12 +63,16 @@ FEATURES = [
     ("Shared data per process", "App.init_shared()", r"init_shared", "workbook"),
 ]
 
+# Components built in Mojo from the ones above (drawn on a Canvas or assembled from native controls):
+# (name, module, what it's made of: component or feature names above, the constructor apps call)
+COMPOSITES = [
+    ("DataGrid", "mojoui/datagrid.mojo", ["Canvas", "Canvas: press, release, double", "In-place editor", "Board: drag, resize, snap"], "DataGrid("),
+    ("PivotTable", "mojoui/pivot.mojo", ["Grid", "Scroll", "Text tones"], "PivotTable("),
+    ("ChartView", "mojoui/chartview.mojo", ["Canvas", "Canvas: pan, zoom, tap"], "ChartView("),
+]
+
 # Built inside one app, not in mojoui yet: each should become a component before another app needs it.
 APP_LOCAL = [
-    ("DataGrid", "examples/workbook", "virtualised grid over millions of rows: scroll bar, column select, resize, fit, sideways scroll, "
-     "sort marker, in-place editor, selection; today ~400 lines of the Workbook drawing on a Canvas"),
-    ("PivotTable", "examples/workbook", "rows × columns × value pickers over a group-by, with its result grid"),
-    ("Chart", "examples/workbook, examples/analytics", "a Flint spec on a Canvas with tap-to-filter; each app wires Canvas + draw() + hit() itself"),
     ("KPI tile", "examples/analytics", "a headline number with a sparkline (mojoui.charts.KpiTile, but placed by the app on a Canvas)"),
     ("FormulaBar", "examples/workbook", "what's selected, its value, a formula field"),
     ("Toolbar / StatusBar islands", "examples/workbook", "the island contents (title, Insert buttons, status) are assembled by the app"),
@@ -128,7 +134,29 @@ def render():
     for name, api, pattern, example in FEATURES:
         row = [feature_cell(h, srcs[h], pattern, example) for h in names]
         out.append(f"| {name} | `{api}` | " + " | ".join(row) + " |")
-    totals = {h: [cell(h, srcs[h], c, k) for c, k in COMPONENTS] + [feature_cell(h, srcs[h], p, e) for _, _, p, e in FEATURES] for h in names}
+    known = {}
+    for h in names:
+        for ctor, kind in COMPONENTS:
+            known[(h, ctor)] = cell(h, srcs[h], ctor, kind)
+        for name, api, pattern, example in FEATURES:
+            known[(h, name)] = feature_cell(h, srcs[h], pattern, example)
+    out += ["", "## Composite components (Mojo, built from the ones above)", "",
+            "A composite is only as far along on a platform as the least-proven piece it's made of.", "",
+            "| Component | Module | Made of | " + " | ".join(names) + " | Used by |",
+            "|---|---|---|" + "---|" * len(names) + "---|"]
+    comp_cells = {}
+    for name, module, parts, ctor in COMPOSITES:
+        users = [e.name for e in sorted((ROOT / "examples").iterdir()) if (e / "app.mojo").exists() and ctor in (e / "app.mojo").read_text()]
+        row = []
+        for h in names:
+            states = [known[(h, part)] for part in parts]
+            state = "❌" if "❌" in states else ("🔨" if "🔨" in states else "✅")
+            if state == "✅" and not any(u in RUN_ON[h] for u in users):
+                state = "🔨"
+            row.append(state)
+            comp_cells.setdefault(h, []).append(state)
+        out.append(f"| `{name}` | `{module}` | {', '.join(parts)} | " + " | ".join(row) + f" | {', '.join(users) or '—'} |")
+    totals = {h: [cell(h, srcs[h], c, k) for c, k in COMPONENTS] + [feature_cell(h, srcs[h], p, e) for _, _, p, e in FEATURES] + comp_cells[h] for h in names}
     out += ["", "## Totals", "", "| Platform | ✅ | 🔨 | ❌ |", "|---|---|---|---|"]
     for h in names:
         t = totals[h]

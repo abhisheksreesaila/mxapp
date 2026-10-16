@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ask-first analytics</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0}
+a{color:#9fd7ff}a:hover{color:#ffffff}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: #0b0f14; color: #e6edf3; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; display: flex; flex-direction: column">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; border-bottom: 1px solid #1f2a36">
+    <div style="font-weight: 600; letter-spacing: 0.02em; font-size: 15px">MX Studio</div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8b9bb0">orders_2019_2026 · 2,418,330,116 rows · 41 columns</div>
+    <div style="flex: 1 1 200px"></div>
+    <div style="display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8b9bb0">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: {{accent}}; display: inline-block"></span>
+      GPU · M4 Max · 36 GB · idle
+    </div>
+    <button style="font: inherit; font-size: 13px; padding: 8px 14px; min-height: 44px; border-radius: 6px; border: 1px solid #2b3a4a; background: #121a23; color: #e6edf3">Load data</button>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+
+    <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 28px 32px 32px; max-width: 980px">
+
+      <div style="display: flex; gap: 12px; align-items: flex-start">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #1f2a36; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0">AB</div>
+        <div style="padding: 12px 16px; border-radius: 10px; background: #141c26; font-size: 15px; line-height: 1.45">Why did margin drop in Q3? Look across every order, not a sample.</div>
+      </div>
+
+      <div style="display: flex; gap: 12px; align-items: flex-start">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: {{accent}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b0f14" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0; flex: 1 1 auto">
+
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8b9bb0; display: flex; flex-wrap: wrap; gap: 14px">
+            <span>plan: 4 steps</span><span>scanned 2.42B rows</span><span style="color: {{accent}}">0.81 s on GPU</span><span>no sampling</span>
+          </div>
+
+          <div style="font-size: 15px; line-height: 1.5">Q3 gross margin fell 3.1 points (41.8% → 38.7%). Two things explain almost all of it. Freight cost per order rose 18% from July, and the <em>Outdoor</em> category shifted toward discounted SKUs. Together they account for 2.7 of the 3.1 points. The rest is mix.</div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+            <div style="padding: 14px 16px; border-radius: 10px; background: #121a23; border: 1px solid #1f2a36">
+              <div style="font-size: 12px; color: #8b9bb0">Gross margin, Q3</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 28px; margin-top: 4px">38.7%</div>
+              <div style="font-size: 12px; color: #ff9f6b; margin-top: 2px">−3.1 pts vs Q2</div>
+            </div>
+            <div style="padding: 14px 16px; border-radius: 10px; background: #121a23; border: 1px solid #1f2a36">
+              <div style="font-size: 12px; color: #8b9bb0">Freight / order</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 28px; margin-top: 4px">$9.42</div>
+              <div style="font-size: 12px; color: #ff9f6b; margin-top: 2px">+18% from July</div>
+            </div>
+            <div style="padding: 14px 16px; border-radius: 10px; background: #121a23; border: 1px solid #1f2a36">
+              <div style="font-size: 12px; color: #8b9bb0">Outdoor discounted share</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 28px; margin-top: 4px">47%</div>
+              <div style="font-size: 12px; color: #ff9f6b; margin-top: 2px">was 31% in Q2</div>
+            </div>
+          </div>
+
+          <div style="padding: 16px; border-radius: 10px; background: #121a23; border: 1px solid #1f2a36; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px">
+              <div style="font-weight: 500">Margin bridge, Q2 → Q3 (points)</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8b9bb0">group by cause · 2.42B rows · 0.31 s</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px">
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 150px; color: #b7c3d2">Freight</span><div style="height: 18px; width: 48%; background: #ff9f6b; border-radius: 3px"></div><span style="font-family: 'IBM Plex Mono', monospace">−1.6</span></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 150px; color: #b7c3d2">Outdoor discounting</span><div style="height: 18px; width: 33%; background: #ff9f6b; border-radius: 3px"></div><span style="font-family: 'IBM Plex Mono', monospace">−1.1</span></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 150px; color: #b7c3d2">Category mix</span><div style="height: 18px; width: 12%; background: #ff9f6b; border-radius: 3px"></div><span style="font-family: 'IBM Plex Mono', monospace">−0.4</span></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 150px; color: #b7c3d2">Pricing</span><div style="height: 18px; width: 9%; background: {{accent}}; border-radius: 3px"></div><span style="font-family: 'IBM Plex Mono', monospace">+0.3</span></div>
+              <div style="display: flex; align-items: center; gap: 10px"><span style="width: 150px; color: #b7c3d2">Everything else</span><div style="height: 18px; width: 9%; background: #3a4a5c; border-radius: 3px"></div><span style="font-family: 'IBM Plex Mono', monospace">−0.3</span></div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <button style="font: inherit; font-size: 13px; padding: 8px 12px; min-height: 44px; border-radius: 6px; border: 1px solid #2b3a4a; background: transparent; color: #e6edf3">Which carriers drove freight?</button>
+            <button style="font: inherit; font-size: 13px; padding: 8px 12px; min-height: 44px; border-radius: 6px; border: 1px solid #2b3a4a; background: transparent; color: #e6edf3">Show the discounted Outdoor SKUs</button>
+            <button style="font: inherit; font-size: 13px; padding: 8px 12px; min-height: 44px; border-radius: 6px; border: 1px solid #2b3a4a; background: transparent; color: #e6edf3">Pin to board</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex: 1 1 auto"></div>
+
+      <form style="display: flex; gap: 10px; align-items: center; padding: 10px 10px 10px 16px; border-radius: 12px; background: #121a23; border: 1px solid #2b3a4a">
+        <label for="ask" style="position: absolute; left: -9999px">Ask about your data</label>
+        <input id="ask" type="text" placeholder="Ask anything about 2.4B orders…" style="flex: 1 1 auto; min-width: 0; font: inherit; font-size: 15px; background: transparent; border: 0; color: #e6edf3; outline: none">
+        <button type="submit" style="font: inherit; font-size: 13px; font-weight: 600; padding: 0 16px; min-height: 44px; border-radius: 8px; border: 0; background: {{accent}}; color: #0b0f14">Ask</button>
+      </form>
+    </div>
+
+    <div style="flex: 1 1 320px; max-width: 420px; border-left: 1px solid #1f2a36; padding: 24px; display: flex; flex-direction: column; gap: 18px; background: #0e131a">
+      <div style="font-size: 12px; color: #8b9bb0; letter-spacing: 0.08em; text-transform: uppercase">Agent trail</div>
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px">
+        <div style="display: flex; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; color: {{accent}}">1</span><div><div>Profile margin by quarter</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8b9bb0">full scan · 0.18 s</div></div></div>
+        <div style="display: flex; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; color: {{accent}}">2</span><div><div>Decompose Q3 delta by 9 cost drivers</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8b9bb0">full scan · 0.31 s</div></div></div>
+        <div style="display: flex; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; color: {{accent}}">3</span><div><div>Test freight by month, by carrier</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8b9bb0">full scan · 0.22 s</div></div></div>
+        <div style="display: flex; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; color: {{accent}}">4</span><div><div>Check category mix shift</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8b9bb0">full scan · 0.10 s</div></div></div>
+      </div>
+      <div style="border-top: 1px solid #1f2a36; padding-top: 16px; display: flex; flex-direction: column; gap: 8px">
+        <div style="font-size: 12px; color: #8b9bb0; letter-spacing: 0.08em; text-transform: uppercase">Step 2 · Mojo</div>
+        <pre style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.5; color: #b7c3d2; white-space: pre-wrap">orders
+  .where(q == 3)
+  .group_by(driver)
+  .agg(margin_pts.sum())
+  .on(gpu)</pre>
+        <a href="#trail" style="font-size: 12px">Edit and re-run</a>
+      </div>
+      <div style="border-top: 1px solid #1f2a36; padding-top: 16px; font-size: 12px; color: #8b9bb0; line-height: 1.5">Every number above was computed over all 2,418,330,116 rows. Nothing was sampled or cached.</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8ef0a6","options":["#8ef0a6","#7cc4ff","#ffd166"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#8ef0a6' };
+}
+}
+</script>
+</body>
+</html>

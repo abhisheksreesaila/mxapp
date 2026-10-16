@@ -13,7 +13,7 @@ from std.memory.alloc import alloc, Layout
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, PAN, ZOOM, TAP,
-    START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, FLUENT, OMARCHY,
+    START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
@@ -503,6 +503,14 @@ struct GtkHost[A: App](Movable):
             elif node.style == CAPTION:
                 add_class(w, "caption")
                 add_class(w, "dim-label")
+            if node.value == 1:
+                add_class(w, "mui-tone-warn")
+            elif node.value == 2:
+                add_class(w, "mui-tone-good")
+            elif node.value == 3:
+                add_class(w, "mui-tone-strong")
+            elif node.value == 4:
+                add_class(w, "mui-tone-accent")
         elif node.kind == BUTTON:
             var t = node.text
             if node.hint != "" and node.style == ICON_ONLY:  # just the icon; the title is the tooltip
@@ -804,9 +812,13 @@ struct GtkHost[A: App](Movable):
         else:
             var orientation = VERTICAL if node.kind == VSTACK else HORIZONTAL
             w = external_call["gtk_box_new", Int](c_int(orientation), c_int(node.spacing))
-            if node.kind == VSTACK and node.style == CARD:
+            if node.kind == VSTACK and (node.style == CARD or node.style == CARD_WARN or node.style == CARD_GOOD):
                 add_class(w, "card")  # libadwaita's own card look
                 add_class(w, "mui-card")
+                if node.style == CARD_WARN:
+                    add_class(w, "mui-warn")
+                elif node.style == CARD_GOOD:
+                    add_class(w, "mui-good")
             if node.kind == HSTACK:
                 external_call["gtk_widget_set_halign", NoneType](w, c_int(ALIGN_CENTER))
             # justify: GtkBox packs from the start; invisible expanding spacers do the rest.
@@ -1992,6 +2004,10 @@ window.fluent label.caption { font-size: 12px; }
 window.fluent .mui-card { background-color: #ffffff; border-radius: 8px; padding: 12px 14px;
   box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
 /* islands: the chrome floating over the page */
+window.fluent label.mui-tone-warn { color: #C2410C; } window.fluent label.mui-tone-good { color: #0F766E; }
+window.fluent label.mui-tone-strong { font-weight: 700; } window.fluent label.mui-tone-accent { color: #0F6CBD; }
+window.fluent .mui-card.mui-warn { background-color: #FFF7ED; box-shadow: inset 0 0 0 1px #FED7AA; }
+window.fluent .mui-card.mui-good { background-color: #F0FDF4; box-shadow: inset 0 0 0 1px #BBF7D0; }
 window.fluent .mui-island { background-color: #ffffff; border-radius: 10px; padding: 6px 10px; min-height: 32px;
   box-shadow: 0 0 0 1px rgba(0,0,0,.07), 0 6px 20px rgba(0,0,0,.10); }
 /* the page: a quiet dotted canvas */
@@ -2041,6 +2057,10 @@ def omarchy_css(p: Palette) -> String:
         + "window.omarchy label.caption { font-size: 11px; color: " + ink3 + "; }\n"
         + "window.omarchy .dim-label { opacity: 1; }\n"
         + "window.omarchy .mui-card { background-color: " + card + "; border-radius: 4px; padding: 12px 14px; box-shadow: inset 0 0 0 1px " + line + "; }\n"
+        + "window.omarchy label.mui-tone-warn { color: " + hex_of(p.warn) + "; } window.omarchy label.mui-tone-good { color: " + hex_of(p.good) + "; }\n"
+        + "window.omarchy label.mui-tone-strong { color: " + ink + "; font-weight: 700; } window.omarchy label.mui-tone-accent { color: " + accent + "; }\n"
+        + "window.omarchy .mui-card.mui-warn { background-color: " + hex_of(mix(p.card, p.warn, 0.12)) + "; box-shadow: inset 0 0 0 1px " + hex_of(mix(p.card, p.warn, 0.55)) + "; }\n"
+        + "window.omarchy .mui-card.mui-good { background-color: " + hex_of(mix(p.card, p.good, 0.10)) + "; box-shadow: inset 0 0 0 1px " + hex_of(mix(p.card, p.good, 0.50)) + "; }\n"
         + "window.omarchy .mui-island { background-color: " + card + "; border-radius: 4px; padding: 6px 10px; min-height: 32px; box-shadow: inset 0 0 0 1px " + strong + ", 0 6px 18px rgba(0,0,0,.35); }\n"
         + "window.omarchy .mui-board { background-color: " + page + "; background-image: radial-gradient(circle, " + line + " 1px, transparent 1.5px); background-size: 24px 24px; }\n"
         + "window.omarchy button { border-radius: 3px; min-height: 28px; padding: 2px 10px; font-weight: 500; background: transparent; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"

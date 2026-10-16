@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Page of objects</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0a63c9}a:hover{color:#074a96}
+</style>
+</helmet>
+<div style="min-height: 1000px; box-sizing: border-box; background: #ececee; color: #1d1d1f; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 10px 20px; background: #f7f7f8; border-bottom: 1px solid #d9d9de">
+    <div style="display: flex; flex-direction: column; min-width: 160px">
+      <span style="font-weight: 600; font-size: 14px">Q3 Margin Review</span>
+      <span style="font-size: 11px; color: #6e6e73">Live · 2.42B transactions</span>
+    </div>
+    <div style="flex: 1 1 40px"></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 4px">
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; min-width: 56px; min-height: 48px; border: 0; border-radius: 8px; background: transparent; color: #1d1d1f; font-size: 11px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>Table</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; min-width: 56px; min-height: 48px; border: 0; border-radius: 8px; background: transparent; color: #1d1d1f; font-size: 11px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 20V12M10 20V6M15 20v-9M20 20V4"/></svg>Chart</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; min-width: 56px; min-height: 48px; border: 0; border-radius: 8px; background: transparent; color: #1d1d1f; font-size: 11px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><path d="M13 17h8M17 13v8"/></svg>Pivot</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; min-width: 56px; min-height: 48px; border: 0; border-radius: 8px; background: transparent; color: #1d1d1f; font-size: 11px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M12 6v13"/></svg>Text</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; min-width: 56px; min-height: 48px; border: 0; border-radius: 8px; background: transparent; color: #1d1d1f; font-size: 11px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 18 9 12l4 4 7-9"/><circle cx="20" cy="7" r="1.6" fill="currentColor"/></svg>Anomalies</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; min-width: 56px; min-height: 48px; border: 0; border-radius: 8px; background: transparent; color: #1d1d1f; font-size: 11px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Comment</button>
+    </div>
+    <div style="flex: 1 1 40px"></div>
+    <div style="display: flex; gap: 4px">
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; min-width: 56px; min-height: 48px; border: 0; border-radius: 8px; background: transparent; color: #1d1d1f; font-size: 11px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3 3-5 6-5s6 2 6 5M17 8v6M14 11h6"/></svg>Share</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; min-width: 56px; min-height: 48px; border: 0; border-radius: 8px; background: #e2e2e7; color: #1d1d1f; font-size: 11px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Format</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; min-width: 56px; min-height: 48px; border: 0; border-radius: 8px; background: transparent; color: {{accent}}; font-size: 11px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>Agent</button>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 20px; background: #f7f7f8; border-bottom: 1px solid #d9d9de">
+    <button style="font: inherit; font-size: 12px; padding: 6px 14px; min-height: 32px; border-radius: 7px; border: 0; background: #ffffff; color: #1d1d1f; font-weight: 500; box-shadow: 0 0 0 1px #d9d9de">Overview</button>
+    <button style="font: inherit; font-size: 12px; padding: 6px 14px; min-height: 32px; border-radius: 7px; border: 0; background: transparent; color: #6e6e73">Transactions</button>
+    <button style="font: inherit; font-size: 12px; padding: 6px 14px; min-height: 32px; border-radius: 7px; border: 0; background: transparent; color: #6e6e73">Carriers</button>
+    <button style="font: inherit; font-size: 12px; padding: 6px 14px; min-height: 32px; border-radius: 7px; border: 0; background: transparent; color: #6e6e73">What-ifs</button>
+    <button aria-label="Add sheet" style="font: inherit; font-size: 14px; padding: 4px 10px; min-height: 32px; border-radius: 7px; border: 0; background: transparent; color: #6e6e73">+</button>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+
+    <div style="flex: 999 1 720px; min-width: 0; padding: 28px; display: flex; justify-content: center">
+      <div style="width: 100%; max-width: 980px; background: #ffffff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.05); padding: 40px 44px; display: flex; flex-direction: column; gap: 28px">
+
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 32px; font-weight: 700; letter-spacing: -0.02em">Q3 margin fell 3.1 points</div>
+          <div style="font-size: 15px; color: #6e6e73; line-height: 1.45; max-width: 640px">Carrier A changed its rate table on July 14. Heavy items started paying flat-rate freight. Everything on this page is computed live over all 2,418,330,116 transactions.</div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start">
+
+          <div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 6px">
+            <div style="font-size: 13px; font-weight: 600">Summary</div>
+            <table style="border-collapse: collapse; width: 100%; font-size: 13px">
+              <thead><tr style="background: #f2f2f4"><th style="text-align: left; padding: 7px 10px; font-weight: 600; border-bottom: 1px solid #d2d2d7"></th><th style="text-align: right; padding: 7px 10px; font-weight: 600; border-bottom: 1px solid #d2d2d7">Q2</th><th style="text-align: right; padding: 7px 10px; font-weight: 600; border-bottom: 1px solid #d2d2d7">Q3</th></tr></thead>
+              <tbody>
+                <tr><td style="padding: 7px 10px; border-bottom: 1px solid #ececee">Gross margin</td><td style="padding: 7px 10px; text-align: right; border-bottom: 1px solid #ececee; font-variant-numeric: tabular-nums">41.8%</td><td style="padding: 7px 10px; text-align: right; border-bottom: 1px solid #ececee; color: #c2410c; font-weight: 600; font-variant-numeric: tabular-nums">38.7%</td></tr>
+                <tr><td style="padding: 7px 10px; border-bottom: 1px solid #ececee">Freight / order</td><td style="padding: 7px 10px; text-align: right; border-bottom: 1px solid #ececee; font-variant-numeric: tabular-nums">$7.98</td><td style="padding: 7px 10px; text-align: right; border-bottom: 1px solid #ececee; color: #c2410c; font-weight: 600; font-variant-numeric: tabular-nums">$9.42</td></tr>
+                <tr><td style="padding: 7px 10px; border-bottom: 1px solid #ececee">Orders</td><td style="padding: 7px 10px; text-align: right; border-bottom: 1px solid #ececee; font-variant-numeric: tabular-nums">118.2M</td><td style="padding: 7px 10px; text-align: right; border-bottom: 1px solid #ececee; font-variant-numeric: tabular-nums">121.6M</td></tr>
+                <tr><td style="padding: 7px 10px">Margin lost</td><td style="padding: 7px 10px; text-align: right"></td><td style="padding: 7px 10px; text-align: right; color: #c2410c; font-weight: 600; font-variant-numeric: tabular-nums">−$3.9M</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="flex: 2 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 6px; position: relative">
+            <div style="font-size: 13px; font-weight: 600">Margin by week, by carrier</div>
+            <svg viewBox="0 0 520 190" width="100%" height="190" role="img" aria-label="Weekly margin for three carriers; Carrier A drops sharply after July 14 while B and C stay flat">
+              <line x1="30" y1="170" x2="520" y2="170" stroke="#d2d2d7"/>
+              <line x1="30" y1="110" x2="520" y2="110" stroke="#f0f0f2"/>
+              <line x1="30" y1="50" x2="520" y2="50" stroke="#f0f0f2"/>
+              <text x="0" y="54" font-size="10" fill="#86868b">44%</text>
+              <text x="0" y="114" font-size="10" fill="#86868b">38%</text>
+              <text x="0" y="174" font-size="10" fill="#86868b">32%</text>
+              <polyline fill="none" stroke="#a1a1a6" stroke-width="2" points="40,56 120,54 200,57 280,55 330,56 400,58 460,57 510,58"/>
+              <polyline fill="none" stroke="#5e8fd6" stroke-width="2" points="40,64 120,63 200,65 280,63 330,66 400,66 460,67 510,68"/>
+              <polyline fill="none" stroke="#e8590c" stroke-width="2.6" points="40,70 120,68 200,71 280,69 330,108 400,132 460,142 510,150"/>
+              <line x1="310" y1="20" x2="310" y2="170" stroke="#e8590c" stroke-dasharray="3 3"/>
+              <circle cx="330" cy="108" r="5" fill="#ffffff" stroke="#e8590c" stroke-width="2"/>
+              <text x="40" y="186" font-size="10" fill="#86868b">Apr</text><text x="300" y="186" font-size="10" fill="#86868b">Jul</text><text x="490" y="186" font-size="10" fill="#86868b">Sep</text>
+            </svg>
+            <div style="display: flex; gap: 14px; font-size: 11px; color: #6e6e73">
+              <span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 3px; background: #e8590c; display: inline-block"></span>Carrier A</span>
+              <span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 3px; background: #5e8fd6; display: inline-block"></span>Carrier B</span>
+              <span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 3px; background: #a1a1a6; display: inline-block"></span>Carrier C</span>
+            </div>
+            <div style="position: absolute; left: 52%; top: 64px; max-width: 220px; padding: 10px 12px; border-radius: 10px; background: #fffbe6; border: 1px solid #f0d77a; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-size: 12px; line-height: 1.45">
+              <div style="font-weight: 600; margin-bottom: 2px">Agent · Jul 14, 09:12</div>
+              Rate table v7 went live. 118,400 heavy Outdoor orders now pay $14.20 freight.
+              <div style="margin-top: 6px"><a href="#rows">Show those rows</a></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px; outline: 2px solid {{accent}}; outline-offset: 6px; border-radius: 2px">
+          <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px">
+            <div style="font-size: 13px; font-weight: 600">Transactions</div>
+            <div style="font-size: 11px; color: #6e6e73">filtered: Carrier A · Outdoor · margin below 0 · 1,284,117 of 2.42B rows</div>
+          </div>
+          <div style="overflow-x: auto">
+            <table style="border-collapse: collapse; width: 100%; min-width: 640px; font-size: 12px; font-variant-numeric: tabular-nums">
+              <thead><tr style="background: #f2f2f4"><th style="text-align: left; padding: 7px 10px; font-weight: 600; border-bottom: 1px solid #d2d2d7">Date</th><th style="text-align: left; padding: 7px 10px; font-weight: 600; border-bottom: 1px solid #d2d2d7">SKU</th><th style="text-align: left; padding: 7px 10px; font-weight: 600; border-bottom: 1px solid #d2d2d7">Weight</th><th style="text-align: right; padding: 7px 10px; font-weight: 600; border-bottom: 1px solid #d2d2d7">Revenue</th><th style="text-align: right; padding: 7px 10px; font-weight: 600; border-bottom: 1px solid #d2d2d7">Freight</th><th style="text-align: right; padding: 7px 10px; font-weight: 600; border-bottom: 1px solid #d2d2d7">Margin</th></tr></thead>
+              <tbody>
+                <tr><td style="padding: 6px 10px; border-bottom: 1px solid #ececee">Jul 14</td><td style="padding: 6px 10px; border-bottom: 1px solid #ececee">OUT-4471</td><td style="padding: 6px 10px; border-bottom: 1px solid #ececee">6.2 kg</td><td style="padding: 6px 10px; text-align: right; border-bottom: 1px solid #ececee">$48.00</td><td style="padding: 6px 10px; text-align: right; border-bottom: 1px solid #ececee; background: #fff1e8; color: #c2410c">$14.20</td><td style="padding: 6px 10px; text-align: right; border-bottom: 1px solid #ececee; color: #c2410c">−6.5%</td></tr>
+                <tr><td style="padding: 6px 10px; border-bottom: 1px solid #ececee">Jul 14</td><td style="padding: 6px 10px; border-bottom: 1px solid #ececee">OUT-2210</td><td style="padding: 6px 10px; border-bottom: 1px solid #ececee">11.8 kg</td><td style="padding: 6px 10px; text-align: right; border-bottom: 1px solid #ececee">$129.00</td><td style="padding: 6px 10px; text-align: right; border-bottom: 1px solid #ececee; background: #fff1e8; color: #c2410c">$31.80</td><td style="padding: 6px 10px; text-align: right; border-bottom: 1px solid #ececee; color: #c2410c">−5.0%</td></tr>
+                <tr><td style="padding: 6px 10px; border-bottom: 1px solid #ececee">Jul 15</td><td style="padding: 6px 10px; border-bottom: 1px solid #ececee">OUT-3390</td><td style="padding: 6px 10px; border-bottom: 1px solid #ececee">4.4 kg</td><td style="padding: 6px 10px; text-align: right; border-bottom: 1px solid #ececee">$76.00</td><td style="padding: 6px 10px; text-align: right; border-bottom: 1px solid #ececee; background: #fff1e8; color: #c2410c">$19.90</td><td style="padding: 6px 10px; text-align: right; border-bottom: 1px solid #ececee; color: #c2410c">−2.3%</td></tr>
+                <tr><td style="padding: 6px 10px; color: #86868b" colspan="6">… 1,284,114 more rows. Scroll inside the table; the page stays put.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex: 1 1 280px; max-width: 320px; background: #f7f7f8; border-left: 1px solid #d9d9de; display: flex; flex-direction: column">
+      <div style="display: flex; padding: 10px 12px 0; gap: 2px">
+        <button style="font: inherit; flex: 1 1 0; font-size: 12px; padding: 7px 0; min-height: 32px; border: 0; border-radius: 7px; background: #ffffff; box-shadow: 0 0 0 1px #d9d9de; font-weight: 500; color: #1d1d1f">Table</button>
+        <button style="font: inherit; flex: 1 1 0; font-size: 12px; padding: 7px 0; min-height: 32px; border: 0; border-radius: 7px; background: transparent; color: #6e6e73">Data</button>
+        <button style="font: inherit; flex: 1 1 0; font-size: 12px; padding: 7px 0; min-height: 32px; border: 0; border-radius: 7px; background: transparent; color: #6e6e73">Organize</button>
+        <button style="font: inherit; flex: 1 1 0; font-size: 12px; padding: 7px 0; min-height: 32px; border: 0; border-radius: 7px; background: transparent; color: #6e6e73">Agent</button>
+      </div>
+
+      <div style="padding: 16px; display: flex; flex-direction: column; gap: 18px; font-size: 12px">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="font-weight: 600">Source</div>
+          <div style="padding: 10px; border-radius: 8px; background: #ffffff; border: 1px solid #e0e0e5; display: flex; flex-direction: column; gap: 3px">
+            <span>transactions · live ledger</span>
+            <span style="color: #6e6e73">2,418,330,116 rows · 41 columns</span>
+            <span style="color: #6e6e73">+1,204 rows/s · on GPU</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="font-weight: 600">Show rows where</div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="padding: 8px 10px; border-radius: 8px; background: #ffffff; border: 1px solid #e0e0e5">carrier is A</div>
+            <div style="padding: 8px 10px; border-radius: 8px; background: #ffffff; border: 1px solid #e0e0e5">category is Outdoor</div>
+            <div style="padding: 8px 10px; border-radius: 8px; background: #ffffff; border: 1px solid {{accent}}">margin is below 0 <span style="color: {{accent}}">· suggested</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="font-weight: 600">Highlight</div>
+          <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px">
+            <span>Unusual values</span>
+            <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: {{accent}}">
+          </label>
+          <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px">
+            <span>Changes since yesterday</span>
+            <input type="checkbox" style="width: 18px; height: 18px; accent-color: {{accent}}">
+          </label>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="font-weight: 600">Header</div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+            <label style="display: flex; flex-direction: column; gap: 4px"><span style="color: #6e6e73">Rows</span><select style="font: inherit; padding: 6px; min-height: 32px; border-radius: 6px; border: 1px solid #d2d2d7; background: #ffffff"><option>1</option></select></label>
+            <label style="display: flex; flex-direction: column; gap: 4px"><span style="color: #6e6e73">Columns</span><select style="font: inherit; padding: 6px; min-height: 32px; border-radius: 6px; border: 1px solid #d2d2d7; background: #ffffff"><option>0</option></select></label>
+          </div>
+        </div>
+
+        <div style="padding: 10px 12px; border-radius: 10px; background: #ffffff; border: 1px solid #e0e0e5; line-height: 1.5; color: #3a3a3c">
+          Tables here are objects on a page, not one endless grid. Each one can sit on 2B rows and still be a tidy box you drag next to a chart.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#0a63c9","options":["#0a63c9","#0f7b6c","#7a3fc4"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#0a63c9' };
+}
+}
+</script>
+</body>
+</html>

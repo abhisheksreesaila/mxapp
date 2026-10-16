@@ -12,6 +12,7 @@
 from std.collections import Dict, Set
 from std.memory import Pointer, stack_allocation
 from std.memory.alloc import alloc, Layout
+from mojoui.datagrid import GridSource
 
 comptime INT = 0
 comptime DECIMAL = 1
@@ -42,6 +43,7 @@ comptime MAX_DEPTH = 4  # stack depth (GPU kernels keep the stack in four regist
 comptime SET = 0
 comptime APPEND = 1
 comptime REMOVE = 2
+comptime MERGE = 3  # a text value folded into another (an alias): col, row = the merge's number, old = the code, new = the code it joins
 
 
 @always_inline
@@ -254,7 +256,7 @@ def base_at(addr: Int) -> Pointer[Columns, MutUntrackedOrigin]:
 
 @fieldwise_init
 struct Edit(Copyable, Movable):
-    var kind: Int  # SET, APPEND, REMOVE
+    var kind: Int  # SET, APPEND, REMOVE, MERGE
     var col: Int
     var row: Int
     var old: Int64
@@ -462,7 +464,7 @@ struct Compiler:
 
 # ---------- the frame ----------
 
-struct Frame(Movable):
+struct Frame(Movable, GridSource):
     """One session's view of shared columns: its edits, added and removed rows, and formula columns."""
 
     var base_addr: Int
@@ -472,6 +474,7 @@ struct Frame(Movable):
     var removed: Set[Int]
     var words: List[List[String]]  # per stored column: texts added by this session (codes continue after the dictionary)
     var log: List[Edit]
+    var aliases: Dict[Int, Int64]  # col * 65536 + code → the code it was merged into (a text column's spellings)
     var edits: Int  # count of edits applied (for hosts to know when to re-aggregate)
 
     def __init__(out self, base_addr: Int):
@@ -484,12 +487,49 @@ struct Frame(Movable):
         for _ in range(len(base_at(base_addr)[].cols)):
             self.words.append(List[String]())
         self.log = List[Edit]()
+        self.aliases = Dict[Int, Int64]()
         self.edits = 0
 
     def base(self) -> Pointer[Columns, MutUntrackedOrigin]:
         return base_at(self.base_addr)
 
     # ---- shape ----
+
+    # ---------- as a DataGrid's source (mojoui.datagrid) ----------
+
+    def grid_rows(self) -> Int:
+        return self.rows()
+
+    def grid_alive(self, row: Int) -> Bool:
+        return self.alive(row)
+
+    def grid_columns(self) -> Int:
+        return self.columns()
+
+    def grid_name(self, c: Int) -> String:
+        return self.name(c)
+
+    def grid_numeric(self, c: Int) -> Bool:
+        return self.kind(c) == INT or self.kind(c) == DECIMAL
+
+    def grid_editable(self, c: Int) -> Bool:
+        return c < self.stored()
+
+    def grid_text(self, c: Int, row: Int) -> String:
+        return self.display(c, row)
+
+    def grid_type_width(self, c: Int) -> Float64:
+        var kind = self.kind(c)
+        if kind == DATE:
+            return 104
+        if kind == TEXT and c < self.stored():
+            var longest = 0
+            for v in self.base()[].cols[c].dictionary:
+                longest = max(longest, v.byte_length())
+            return 190 if longest > 20 else 118  # (long names, such as products, get a wider column)
+        if kind == DECIMAL:
+            return 96
+        return 72
 
     def stored(self) -> Int:
         return len(self.base()[].cols)
@@ -580,7 +620,7 @@ struct Frame(Movable):
         var v = self.get(col, row)
         var kind = self.kind(col)
         if kind == TEXT and col < self.stored():
-            return self.text_of(col, v)
+            return self.text_of(col, self.alias(col, v))
         if kind == DATE:
             return date_text(v)
         if kind == DECIMAL:
@@ -650,12 +690,43 @@ struct Frame(Movable):
                 _ = self.cells.pop(key, 0)
             else:
                 self.cells[key] = e.old
+        elif e.kind == MERGE:  # the whole merge comes undone (its spellings share e.row)
+            _ = self.aliases.pop(e.col * 65536 + Int(e.old), 0)
+            while len(self.log) > 0 and self.log[len(self.log) - 1].kind == MERGE and self.log[len(self.log) - 1].row == e.row:
+                var more = self.log.pop()
+                _ = self.aliases.pop(more.col * 65536 + Int(more.old), 0)
         elif e.kind == APPEND:
             _ = self.added.pop()
         else:
             self.removed.discard(e.row)
         self.edits += 1
         return True
+
+    def alias(self, col: Int, code: Int64) -> Int64:
+        """The code a text value shows as (itself, or the one it was merged into)."""
+        if len(self.aliases) == 0:
+            return code
+        var hit = self.aliases.get(col * 65536 + Int(code))
+        return hit.value() if hit else code
+
+    def merge(mut self, col: Int, codes: List[Int64], into: Int64) -> Int:
+        """Folds text values `codes` of column col into `into` (e.g. three spellings of one customer): every row
+        reads as `into` from now on. One operation in the edit log (undo brings the spellings back), no matter
+        how many rows; aggregations fold the groups (alias()). Returns how many values were merged."""
+        var number = 0
+        for e in self.log:
+            if e.kind == MERGE:
+                number = max(number, e.row + 1)
+        var count = 0
+        for c in codes:
+            if c == into or (col * 65536 + Int(c)) in self.aliases:
+                continue
+            self.aliases[col * 65536 + Int(c)] = into
+            self.log.append(Edit(MERGE, col, number, c, into))
+            count += 1
+        if count > 0:
+            self.edits += 1
+        return count
 
     def changed_rows(self) -> List[Int]:
         """Rows that differ from the shared data (edited, appended or removed), each once."""

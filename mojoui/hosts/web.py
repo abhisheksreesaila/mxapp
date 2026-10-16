@@ -409,6 +409,14 @@ body.omarchy select, body.omarchy input[type=text], body.omarchy input[type=date
 body.omarchy select { padding: 2px 4px; }
 body.omarchy input[type=text]:focus, body.omarchy textarea:focus, body.omarchy select:focus { outline: none; border-color: var(--o-accent); }
 body.omarchy .vstack.card { background: var(--o-card); border-radius: 4px; padding: 12px 14px; box-sizing: border-box; box-shadow: inset 0 0 0 1px var(--o-line); }
+body.omarchy .text.tone-warn { color: var(--o-warn); } body.omarchy .text.tone-good { color: var(--o-good); }
+body.omarchy .text.tone-strong { color: var(--o-ink); font-weight: 700; } body.omarchy .text.tone-accent { color: var(--o-accent); }
+body.fluent .text.tone-warn { color: #C2410C; } body.fluent .text.tone-good { color: #0F766E; }
+body.fluent .text.tone-strong { font-weight: 700; } body.fluent .text.tone-accent { color: #0F6CBD; }
+body.omarchy .vstack.card.warn { background: color-mix(in srgb, var(--o-warn) 12%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-warn) 55%, var(--o-card)); }
+body.omarchy .vstack.card.good { background: color-mix(in srgb, var(--o-good) 10%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-good) 50%, var(--o-card)); }
+body.fluent .vstack.card.warn { background: #FFF7ED; box-shadow: inset 0 0 0 1px #FED7AA; }
+body.fluent .vstack.card.good { background: #F0FDF4; box-shadow: inset 0 0 0 1px #BBF7D0; }
 body.omarchy .island > * { background: var(--o-card); border-radius: 4px; padding: 6px 10px; min-height: 32px; align-items: center;
   box-shadow: inset 0 0 0 1px var(--o-strong), 0 6px 18px rgba(0,0,0,.35); }
 body.omarchy .board { background-color: var(--o-page); background-image: radial-gradient(circle, var(--o-line) 1px, transparent 1.5px);
@@ -516,6 +524,7 @@ def render_node(s, i, sid):
     common = dict(hx_post=post, hx_vals=vals, hx_swap="none", hx_include="#mojoui-v")
     if kind == TEXT:
         cls = {TITLE: "text title", HEADLINE: "text headline", CAPTION: "text caption"}.get(n["style"], "text")
+        cls += {1: " tone-warn", 2: " tone-good", 3: " tone-strong", 4: " tone-accent"}.get(n["value"], "")
         tag = H1 if n["style"] == TITLE else (H3 if n["style"] == HEADLINE else P)
         return tag(n["text"], cls=cls, id=nid, data_kind="label")
     if kind == BUTTON:
@@ -624,7 +633,7 @@ def render_node(s, i, sid):
     kids = [render(s, c, sid) for c in n["children"]]
     if kind == SCROLL:
         return Div(*kids, cls="scroll", id=nid, style=f"max-height:{n['size']}px")
-    cls = ("vstack card" if n["style"] == 1 else "vstack") if kind == VSTACK else "hstack"
+    cls = ({1: "vstack card", 2: "vstack card warn", 3: "vstack card good"}.get(n["style"], "vstack")) if kind == VSTACK else "hstack"
     return Div(*kids, cls=cls, id=nid, style=f"gap:{n['spacing']}px")
 
 

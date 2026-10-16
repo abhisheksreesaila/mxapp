@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MX Studio Report</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="min-height: 1000px; box-sizing: border-box; background: #e6e9ef; color: #16181d; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column; gap: 14px; padding: 14px">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 10px 14px; border-radius: 22px; background: rgba(255,255,255,0.62); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); border: 1px solid rgba(255,255,255,0.85); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(22,30,58,0.08)">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 30px; height: 30px; border-radius: 9px; background: #16181d; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">MX</div>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-weight: 600; font-size: 14px">Q3 Orders</span>
+        <span style="font-size: 11px; color: #5b616e">Report · live</span>
+      </div>
+    </div>
+    <div style="flex: 1 1 40px"></div>
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(22,24,29,0.06)">
+      <a href="Main.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Sheet</a>
+      <span style="font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 3px rgba(22,30,58,0.14)">Report</span>
+      <a href="Explore.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Explore</a>
+      <a href="Query.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Query</a>
+    </nav>
+    <div style="flex: 1 1 40px"></div>
+    <div style="display: flex; gap: 8px">
+      <button style="font: inherit; font-size: 12px; padding: 8px 14px; min-height: 36px; border-radius: 999px; border: 1px solid rgba(22,30,58,0.14); background: rgba(255,255,255,0.7); color: #16181d">Present</button>
+      <button style="font: inherit; font-size: 12px; font-weight: 600; padding: 8px 14px; min-height: 36px; border-radius: 999px; border: 0; background: {{accent}}; color: #ffffff">Share</button>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 6px">
+    <div style="display: flex; flex-wrap: wrap; gap: 4px">
+      <button style="font: inherit; font-size: 12px; font-weight: 600; padding: 7px 14px; min-height: 34px; border-radius: 999px; border: 0; background: #ffffff; color: #16181d; box-shadow: 0 1px 3px rgba(22,30,58,0.12)">Revenue</button>
+      <button style="font: inherit; font-size: 12px; padding: 7px 14px; min-height: 34px; border-radius: 999px; border: 0; background: transparent; color: #3c4250">Margin</button>
+      <button style="font: inherit; font-size: 12px; padding: 7px 14px; min-height: 34px; border-radius: 999px; border: 0; background: transparent; color: #3c4250">Customers</button>
+      <button aria-label="Add a report page" style="font: inherit; font-size: 15px; padding: 4px 12px; min-height: 34px; border-radius: 999px; border: 0; background: transparent; color: #3c4250">+</button>
+    </div>
+    <div style="flex: 1 1 20px"></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px">
+      <span style="font-size: 12px; padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,0.75); border: 1px solid rgba(22,30,58,0.08)">Quarter · Q3</span>
+      <span style="font-size: 12px; padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,0.75); border: 1px solid rgba(22,30,58,0.08)">Region · All</span>
+      <span style="font-size: 12px; padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,0.75); border: 1px solid rgba(22,30,58,0.08)">Product · All</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px">
+    <div style="padding: 16px 18px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06)">
+      <div style="font-size: 12px; color: #5b616e">Revenue</div>
+      <div style="font-size: 30px; font-weight: 650; letter-spacing: -0.02em; margin-top: 4px; font-variant-numeric: tabular-nums">$1.11B</div>
+      <div style="font-size: 12px; color: #0f766e; margin-top: 2px">+4.2% vs Q2</div>
+    </div>
+    <div style="padding: 16px 18px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06)">
+      <div style="font-size: 12px; color: #5b616e">Orders</div>
+      <div style="font-size: 30px; font-weight: 650; letter-spacing: -0.02em; margin-top: 4px; font-variant-numeric: tabular-nums">121.6M</div>
+      <div style="font-size: 12px; color: #0f766e; margin-top: 2px">+2.9% vs Q2</div>
+    </div>
+    <div style="padding: 16px 18px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06)">
+      <div style="font-size: 12px; color: #5b616e">Gross margin</div>
+      <div style="font-size: 30px; font-weight: 650; letter-spacing: -0.02em; margin-top: 4px; font-variant-numeric: tabular-nums; color: #c2410c">38.7%</div>
+      <div style="font-size: 12px; color: #c2410c; margin-top: 2px">−3.1 pts vs Q2</div>
+    </div>
+    <div style="padding: 16px 18px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06)">
+      <div style="font-size: 12px; color: #5b616e">Active customers</div>
+      <div style="font-size: 30px; font-weight: 650; letter-spacing: -0.02em; margin-top: 4px; font-variant-numeric: tabular-nums">31.6M</div>
+      <div style="font-size: 12px; color: #5b616e; margin-top: 2px">after merging 1.2M duplicate names</div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+
+    <div style="grid-column: span 2; padding: 18px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px">
+        <div style="font-size: 15px; font-weight: 600">Revenue and margin by week</div>
+        <div style="display: flex; gap: 14px; font-size: 11px; color: #3c4250">
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 3px; border-radius: 2px; background: {{accent}}; display: inline-block"></span>Revenue</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 3px; border-radius: 2px; background: #ea580c; display: inline-block"></span>Margin %</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 760 230" width="100%" height="230" role="img" aria-label="Weekly revenue rising slowly through Q3 while margin percent drops sharply after mid-July">
+        <line x1="40" y1="200" x2="760" y2="200" stroke="#dfe2e8"/>
+        <line x1="40" y1="140" x2="760" y2="140" stroke="#f0f2f5"/>
+        <line x1="40" y1="80" x2="760" y2="80" stroke="#f0f2f5"/>
+        <line x1="40" y1="20" x2="760" y2="20" stroke="#f0f2f5"/>
+        <text x="0" y="24" font-size="10" fill="#5b616e">$95M</text>
+        <text x="0" y="84" font-size="10" fill="#5b616e">$85M</text>
+        <text x="0" y="144" font-size="10" fill="#5b616e">$75M</text>
+        <polyline fill="none" stroke="{{accent}}" stroke-width="2.6" stroke-linejoin="round" points="60,118 115,112 170,116 225,106 280,102 335,104 390,96 445,92 500,94 555,86 610,82 665,80 720,74"/>
+        <polyline fill="none" stroke="#ea580c" stroke-width="2.6" stroke-linejoin="round" points="60,52 115,50 170,54 225,50 280,52 335,90 390,114 445,120 500,126 555,130 610,132 665,136 720,138"/>
+        <line x1="320" y1="14" x2="320" y2="200" stroke="#ea580c" stroke-dasharray="3 4"/>
+        <rect x="326" y="14" width="150" height="22" rx="11" fill="#fff7ed" stroke="#fed7aa"/>
+        <text x="336" y="29" font-size="11" fill="#9a3412">Jul 14 · rate table v7</text>
+        <text x="60" y="218" font-size="10" fill="#5b616e">Jul 1</text>
+        <text x="390" y="218" font-size="10" fill="#5b616e">Aug 12</text>
+        <text x="700" y="218" font-size="10" fill="#5b616e">Sep 23</text>
+      </svg>
+      <div style="font-size: 11px; color: #5b616e">orders_clean · 2,418,330,116 rows · 18 ms</div>
+    </div>
+
+    <div style="padding: 18px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <div style="font-size: 15px; font-weight: 600">Top customers</div>
+        <a href="Main.dc.html" style="font-size: 12px">Edit data</a>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px; font-variant-numeric: tabular-nums">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between"><span style="font-weight: 600">Acme Corp</span><span>$212M</span></div>
+          <div style="height: 12px; border-radius: 6px; background: #f0f2f5"><div style="height: 100%; width: 100%; border-radius: 6px; background: {{accent}}"></div></div>
+          <div style="font-size: 11px; color: #0f766e">+$38M once 3 spellings were merged</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between"><span>Northwind</span><span>$184M</span></div>
+          <div style="height: 12px; border-radius: 6px; background: #f0f2f5"><div style="height: 100%; width: 87%; border-radius: 6px; background: {{accent}}"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between"><span>Globex</span><span>$161M</span></div>
+          <div style="height: 12px; border-radius: 6px; background: #f0f2f5"><div style="height: 100%; width: 76%; border-radius: 6px; background: {{accent}}"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between"><span>Initech</span><span>$97M</span></div>
+          <div style="height: 12px; border-radius: 6px; background: #f0f2f5"><div style="height: 100%; width: 46%; border-radius: 6px; background: {{accent}}"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between"><span>Umbrella</span><span>$74M</span></div>
+          <div style="height: 12px; border-radius: 6px; background: #f0f2f5"><div style="height: 100%; width: 35%; border-radius: 6px; background: {{accent}}"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding: 18px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 12px">
+      <div style="font-size: 15px; font-weight: 600">Product mix</div>
+      <div style="display: flex; height: 20px; border-radius: 10px; overflow: hidden">
+        <div style="width: 41%; background: {{accent}}"></div>
+        <div style="width: 37%; background: #93b4f5"></div>
+        <div style="width: 22%; background: #1e3a8a"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums">
+        <div style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: {{accent}}; display: inline-block"></span>Tent 2P</span><span>41%</span></div>
+        <div style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #93b4f5; display: inline-block"></span>Trail Pack</span><span>37%</span></div>
+        <div style="display: flex; justify-content: space-between"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #1e3a8a; display: inline-block"></span>Camp Stove</span><span>22%</span></div>
+      </div>
+    </div>
+
+    <div style="padding: 18px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 10px">
+      <div style="font-size: 15px; font-weight: 600">Margin · region × product</div>
+      <div style="overflow-x: auto">
+        <table style="border-collapse: separate; border-spacing: 4px; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums">
+          <thead><tr style="color: #5b616e"><th style="text-align: left; font-weight: 500; padding: 4px"></th><th style="font-weight: 500; padding: 4px">Tent</th><th style="font-weight: 500; padding: 4px">Pack</th><th style="font-weight: 500; padding: 4px">Stove</th></tr></thead>
+          <tbody>
+            <tr><td style="padding: 6px 4px">West</td><td style="padding: 8px; text-align: center; border-radius: 8px; background: #fed7aa">31%</td><td style="padding: 8px; text-align: center; border-radius: 8px; background: #dbe6fd">40%</td><td style="padding: 8px; text-align: center; border-radius: 8px; background: #dbe6fd">39%</td></tr>
+            <tr><td style="padding: 6px 4px">East</td><td style="padding: 8px; text-align: center; border-radius: 8px; background: #dbe6fd">41%</td><td style="padding: 8px; text-align: center; border-radius: 8px; background: #c3d5fb">43%</td><td style="padding: 8px; text-align: center; border-radius: 8px; background: #dbe6fd">40%</td></tr>
+            <tr><td style="padding: 6px 4px">Central</td><td style="padding: 8px; text-align: center; border-radius: 8px; background: #ffedd5">35%</td><td style="padding: 8px; text-align: center; border-radius: 8px; background: #dbe6fd">41%</td><td style="padding: 8px; text-align: center; border-radius: 8px; background: #dbe6fd">40%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size: 11px; color: #5b616e">same pivot engine as the Sheet</div>
+    </div>
+
+    <div style="padding: 18px; border-radius: 18px; background: rgba(255,247,237,0.95); border: 1px solid #fed7aa; display: flex; flex-direction: column; gap: 10px">
+      <div style="font-size: 15px; font-weight: 600; color: #9a3412">Worth a look</div>
+      <div style="font-size: 13px; line-height: 1.5; color: #43260f">Heavy tents in the West lost 9 margin points after Jul 14. One carrier's new rate table charges flat freight above 4 kg.</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto">
+        <a href="Main.dc.html" style="font-size: 12px; font-weight: 600; padding: 9px 14px; border-radius: 999px; background: {{accent}}; color: #ffffff; text-decoration: none">Open the rows</a>
+        <a href="Explore.dc.html" style="font-size: 12px; padding: 9px 14px; border-radius: 999px; border: 1px solid #fdba74; color: #7c2d12; text-decoration: none">See the pipeline step</a>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 10px 14px; border-radius: 16px; background: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.8); font-size: 12px; color: #3c4250; display: flex; flex-wrap: wrap; gap: 6px 18px">
+    <span>Every tile reads <b style="font-weight: 600">orders_clean</b>, the same table you edit in Sheet.</span>
+    <span>Change a cell there and these tiles redraw.</span>
+    <span style="margin-left: auto; color: #5b616e">6 tiles · 2.42B rows · 41 ms total on GPU</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2563eb","options":["#2563eb","#0f766e","#7c3aed"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#2563eb' };
+}
+}
+</script>
+</body>
+</html>

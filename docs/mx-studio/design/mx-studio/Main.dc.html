@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MX Studio Sheet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="min-height: 1000px; box-sizing: border-box; background: #e6e9ef; color: #16181d; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column; gap: 14px; padding: 14px">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 10px 14px; border-radius: 22px; background: rgba(255,255,255,0.62); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); border: 1px solid rgba(255,255,255,0.85); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(22,30,58,0.08)">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 30px; height: 30px; border-radius: 9px; background: #16181d; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; letter-spacing: 0.02em">MX</div>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-weight: 600; font-size: 14px">Q3 Orders</span>
+        <span style="font-size: 11px; color: #5b616e">Saved · engine on GPU</span>
+      </div>
+    </div>
+
+    <div style="flex: 1 1 40px"></div>
+
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(22,24,29,0.06)">
+      <span style="font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 3px rgba(22,30,58,0.14)">Sheet</span>
+      <a href="Report.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Report</a>
+      <a href="Explore.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Explore</a>
+      <a href="Query.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Query</a>
+    </nav>
+
+    <div style="flex: 1 1 40px"></div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 4px">
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 10px; min-width: 52px; min-height: 44px; border: 0; border-radius: 12px; background: transparent; color: #16181d; font-size: 11px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18M9 9v11"/></svg>Table</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 10px; min-width: 52px; min-height: 44px; border: 0; border-radius: 12px; background: transparent; color: #16181d; font-size: 11px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M13 17h8M17 13v8"/></svg>Pivot</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 10px; min-width: 52px; min-height: 44px; border: 0; border-radius: 12px; background: transparent; color: #16181d; font-size: 11px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 20V12M10 20V6M15 20v-9M20 20V4"/></svg>Chart</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 10px; min-width: 52px; min-height: 44px; border: 0; border-radius: 12px; background: transparent; color: #16181d; font-size: 11px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M12 6v13"/></svg>Text</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 10px; min-width: 52px; min-height: 44px; border: 0; border-radius: 12px; background: transparent; color: #16181d; font-size: 11px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 7h7M4 12h5M4 17h7M15 6l5 12M20 6l-5 12"/></svg>Formula</button>
+      <button style="font: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 10px; min-width: 52px; min-height: 44px; border: 0; border-radius: 12px; background: rgba(37,99,235,0.1); color: {{accent}}; font-size: 11px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>Agent</button>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 0 6px">
+    <div style="display: flex; gap: 4px">
+      <button style="font: inherit; font-size: 12px; font-weight: 600; padding: 7px 14px; min-height: 34px; border-radius: 999px; border: 0; background: #ffffff; color: #16181d; box-shadow: 0 1px 3px rgba(22,30,58,0.12)">Orders</button>
+      <button style="font: inherit; font-size: 12px; padding: 7px 14px; min-height: 34px; border-radius: 999px; border: 0; background: transparent; color: #3c4250">Customers</button>
+      <button style="font: inherit; font-size: 12px; padding: 7px 14px; min-height: 34px; border-radius: 999px; border: 0; background: transparent; color: #3c4250">Products</button>
+      <button aria-label="Add a tab" style="font: inherit; font-size: 15px; padding: 4px 12px; min-height: 34px; border-radius: 999px; border: 0; background: transparent; color: #3c4250">+</button>
+    </div>
+    <div style="flex: 1 1 20px"></div>
+    <span style="font-size: 11px; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,0.7); color: #3c4250">Prototype data · 12 rows · the engine runs the same steps over billions</span>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 14px; flex: 1 1 auto; align-items: flex-start">
+
+    <div style="flex: 999 1 720px; min-width: 0; display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start">
+
+      <div style="flex: 3 1 560px; min-width: 0; padding: 16px 16px 10px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 10px; outline: 2px solid {{accent}}; outline-offset: 2px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px">
+          <div style="font-size: 15px; font-weight: 600">Transactions</div>
+          <div style="font-size: 11px; color: #5b616e">click a customer name to edit it, like any cell</div>
+        </div>
+        <div style="overflow-x: auto">
+          <table style="border-collapse: collapse; width: 100%; min-width: 620px; font-size: 12px; font-variant-numeric: tabular-nums">
+            <thead>
+              <tr style="text-align: left; color: #3c4250">
+                <th style="padding: 7px 8px; font-weight: 600; border-bottom: 1px solid #dfe2e8; background: #f5f6f8; border-radius: 8px 0 0 0">Order</th>
+                <th style="padding: 7px 8px; font-weight: 600; border-bottom: 1px solid #dfe2e8; background: #f5f6f8">Date</th>
+                <th style="padding: 7px 8px; font-weight: 600; border-bottom: 1px solid #dfe2e8; background: #f5f6f8">Customer</th>
+                <th style="padding: 7px 8px; font-weight: 600; border-bottom: 1px solid #dfe2e8; background: #f5f6f8">Region</th>
+                <th style="padding: 7px 8px; font-weight: 600; border-bottom: 1px solid #dfe2e8; background: #f5f6f8">Product</th>
+                <th style="padding: 7px 8px; font-weight: 600; border-bottom: 1px solid #dfe2e8; background: #f5f6f8; text-align: right">Qty</th>
+                <th style="padding: 7px 8px; font-weight: 600; border-bottom: 1px solid #dfe2e8; background: #f5f6f8; text-align: right; border-radius: 0 8px 0 0">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{rows}}" as="r" hint-placeholder-count="12">
+                <tr>
+                  <td style="padding: 2px 8px; border-bottom: 1px solid #eef0f3; color: #5b616e">{{r.id}}</td>
+                  <td style="padding: 2px 8px; border-bottom: 1px solid #eef0f3">{{r.date}}</td>
+                  <td style="padding: 2px 4px; border-bottom: 1px solid #eef0f3">
+                    <input type="text" value="{{r.customer}}" onChange="{{r.rename}}" aria-label="Customer for order {{r.id}}" style="{{r.inputStyle}}">
+                  </td>
+                  <td style="padding: 2px 8px; border-bottom: 1px solid #eef0f3">{{r.region}}</td>
+                  <td style="padding: 2px 8px; border-bottom: 1px solid #eef0f3">{{r.product}}</td>
+                  <td style="padding: 2px 8px; border-bottom: 1px solid #eef0f3; text-align: right">{{r.qty}}</td>
+                  <td style="padding: 2px 8px; border-bottom: 1px solid #eef0f3; text-align: right">{{r.revenueText}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 6px 2px 2px; font-size: 11px; color: #3c4250; font-variant-numeric: tabular-nums">
+          <span>Rows <b style="font-weight: 600">{{rowCount}}</b></span>
+          <span>Sum revenue <b style="font-weight: 600">{{grandTotal}}</b></span>
+          <span>Distinct customers <b style="font-weight: 600">{{customerCount}}</b></span>
+          <span style="margin-left: auto; color: #5b616e">recalculated after every keystroke</span>
+        </div>
+      </div>
+
+      <div style="flex: 2 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+
+        <sc-if value="{{hasDupes}}" hint-placeholder-val="{{ true }}">
+          <div style="padding: 14px 16px; border-radius: 18px; background: rgba(255,247,237,0.9); border: 1px solid #fed7aa; display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #9a3412">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>
+              Agent noticed
+            </div>
+            <div style="line-height: 1.5; color: #43260f">{{dupeText}}</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <button onClick="{{mergeAll}}" style="font: inherit; font-size: 13px; font-weight: 600; padding: 9px 14px; min-height: 40px; border-radius: 999px; border: 0; background: {{accent}}; color: #ffffff">Merge into “Acme Corp”</button>
+              <span style="font-size: 12px; color: #6b4a2f; align-self: center">or fix the cells by hand</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{isClean}}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 14px 16px; border-radius: 18px; background: rgba(236,253,245,0.95); border: 1px solid #a7f3d0; display: flex; flex-direction: column; gap: 6px">
+            <div style="font-weight: 600; color: #065f46">Names are clean</div>
+            <div style="line-height: 1.5; color: #0b3b2c">Pivot and chart regrouped. Your {{editCount}} edits are saved as a step in Explore, so the next refresh keeps them.</div>
+          </div>
+        </sc-if>
+
+        <div style="padding: 16px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <div style="font-size: 15px; font-weight: 600">Pivot 1</div>
+            <div style="font-size: 11px; color: #5b616e">revenue · customer × product</div>
+          </div>
+          <div style="overflow-x: auto">
+            <table style="border-collapse: collapse; width: 100%; min-width: 360px; font-size: 12px; font-variant-numeric: tabular-nums">
+              <thead>
+                <tr style="color: #3c4250">
+                  <th style="text-align: left; padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">Customer</th>
+                  <th style="text-align: right; padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">Trail Pack</th>
+                  <th style="text-align: right; padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">Tent 2P</th>
+                  <th style="text-align: right; padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">Camp Stove</th>
+                  <th style="text-align: right; padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{pivot}}" as="p" hint-placeholder-count="5">
+                  <tr style="{{p.rowStyle}}">
+                    <td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; font-weight: 500">{{p.name}}</td>
+                    <sc-for list="{{p.cells}}" as="c" hint-placeholder-count="3">
+                      <td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; text-align: right">{{c}}</td>
+                    </sc-for>
+                    <td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; text-align: right; font-weight: 600">{{p.total}}</td>
+                  </tr>
+                </sc-for>
+                <tr>
+                  <td style="padding: 7px 8px; font-weight: 600">Grand total</td>
+                  <sc-for list="{{colTotals}}" as="c" hint-placeholder-count="3">
+                    <td style="padding: 7px 8px; text-align: right; font-weight: 600">{{c}}</td>
+                  </sc-for>
+                  <td style="padding: 7px 8px; text-align: right; font-weight: 700">{{grandTotal}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="padding: 16px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <div style="font-size: 15px; font-weight: 600">Chart 1</div>
+            <div style="font-size: 11px; color: #5b616e">from Pivot 1 · revenue by customer</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 9px">
+            <sc-for list="{{bars}}" as="b" hint-placeholder-count="5">
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span style="width: 128px; flex-shrink: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{b.name}}</span>
+                <div style="flex: 1 1 auto; height: 16px; border-radius: 6px; background: #f0f2f5; overflow: hidden">
+                  <div style="{{b.barStyle}}"></div>
+                </div>
+                <span style="width: 64px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums">{{b.total}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex: 1 1 260px; max-width: 300px; padding: 14px; border-radius: 22px; background: rgba(255,255,255,0.62); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); border: 1px solid rgba(255,255,255,0.85); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(22,30,58,0.08); display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(22,24,29,0.06)">
+        <button style="font: inherit; flex: 1 1 0; font-size: 12px; font-weight: 600; padding: 6px 0; min-height: 30px; border: 0; border-radius: 999px; background: #ffffff; color: #16181d; box-shadow: 0 1px 3px rgba(22,30,58,0.12)">Table</button>
+        <button style="font: inherit; flex: 1 1 0; font-size: 12px; padding: 6px 0; min-height: 30px; border: 0; border-radius: 999px; background: transparent; color: #3c4250">Data</button>
+        <button style="font: inherit; flex: 1 1 0; font-size: 12px; padding: 6px 0; min-height: 30px; border: 0; border-radius: 999px; background: transparent; color: #3c4250">Style</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="font-size: 12px; font-weight: 600">Comes from</div>
+        <a href="Explore.dc.html" style="text-decoration: none; color: inherit; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.8); border: 1px solid rgba(22,30,58,0.08); display: flex; flex-direction: column; gap: 2px">
+          <span style="font-weight: 600">orders_clean</span>
+          <span style="font-size: 11px; color: #5b616e">output of the Explore pipeline · open it</span>
+        </a>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="font-size: 12px; font-weight: 600">Feeds</div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #3c4250">
+          <span>Pivot 1 and Chart 1, on this page</span>
+          <span>Report · 6 tiles</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <span style="font-size: 12px; font-weight: 600">Your edits</span>
+          <span style="font-size: 11px; color: #5b616e">{{editCount}} cells</span>
+        </div>
+        <sc-for list="{{editLog}}" as="e" hint-placeholder-count="2">
+          <div style="padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,0.8); border: 1px solid rgba(22,30,58,0.08); font-size: 11px; line-height: 1.45">
+            <span style="color: #5b616e">{{e.id}}</span><br>{{e.from}} → <b style="font-weight: 600">{{e.to}}</b>
+          </div>
+        </sc-for>
+        <sc-if value="{{noEdits}}" hint-placeholder-val="{{ true }}">
+          <div style="font-size: 11px; color: #5b616e; line-height: 1.45">None yet. Edits here become a "Manual edits" step in the pipeline, with who and when.</div>
+        </sc-if>
+        <button onClick="{{reset}}" style="font: inherit; font-size: 12px; padding: 8px 12px; min-height: 36px; border-radius: 999px; border: 1px solid rgba(22,30,58,0.14); background: rgba(255,255,255,0.7); color: #16181d">Undo all edits</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2563eb","options":["#2563eb","#0f766e","#7c3aed"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { rows: this.seed() };
+  }
+  seed() {
+    return [
+      { id: 'T-10241', date: 'Jul 02', customer: 'Acme Corp', region: 'West', product: 'Trail Pack', qty: 40, revenue: 4800 },
+      { id: 'T-10242', date: 'Jul 02', customer: 'Northwind', region: 'East', product: 'Camp Stove', qty: 12, revenue: 1440 },
+      { id: 'T-10243', date: 'Jul 03', customer: 'Acme Corp.', region: 'West', product: 'Tent 2P', qty: 18, revenue: 5040 },
+      { id: 'T-10244', date: 'Jul 03', customer: 'Globex', region: 'Central', product: 'Trail Pack', qty: 25, revenue: 3000 },
+      { id: 'T-10245', date: 'Jul 05', customer: 'Northwind', region: 'East', product: 'Tent 2P', qty: 9, revenue: 2520 },
+      { id: 'T-10246', date: 'Jul 06', customer: 'ACME Corporation', region: 'West', product: 'Camp Stove', qty: 30, revenue: 3600 },
+      { id: 'T-10247', date: 'Jul 08', customer: 'Globex', region: 'Central', product: 'Tent 2P', qty: 14, revenue: 3920 },
+      { id: 'T-10248', date: 'Jul 09', customer: 'Initech', region: 'West', product: 'Trail Pack', qty: 22, revenue: 2640 },
+      { id: 'T-10249', date: 'Jul 11', customer: 'Northwind', region: 'East', product: 'Trail Pack', qty: 35, revenue: 4200 },
+      { id: 'T-10250', date: 'Jul 12', customer: 'Initech', region: 'West', product: 'Camp Stove', qty: 8, revenue: 960 },
+      { id: 'T-10251', date: 'Jul 14', customer: 'Globex', region: 'Central', product: 'Camp Stove', qty: 20, revenue: 2400 },
+      { id: 'T-10252', date: 'Jul 15', customer: 'Acme Corp', region: 'West', product: 'Tent 2P', qty: 26, revenue: 7280 }
+    ];
+  }
+  keyOf(name) {
+    return String(name || '').toLowerCase().replace(/[.,]/g, ' ').replace(/\b(corp|corporation|inc|co|ltd)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  money(n) {
+    return '$' + Math.round(n).toLocaleString('en-US');
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#2563eb';
+    const seed = this.seed();
+    const rowsState = this.state.rows;
+    const products = ['Trail Pack', 'Tent 2P', 'Camp Stove'];
+
+    const namesByKey = {};
+    rowsState.forEach((r) => {
+      const k = this.keyOf(r.customer);
+      namesByKey[k] = namesByKey[k] || {};
+      namesByKey[k][r.customer] = true;
+    });
+    const dupeKeys = Object.keys(namesByKey).filter((k) => Object.keys(namesByKey[k]).length > 1);
+    const dupeNameSet = {};
+    dupeKeys.forEach((k) => Object.keys(namesByKey[k]).forEach((n) => { dupeNameSet[n] = true; }));
+
+    const map = {};
+    rowsState.forEach((r) => {
+      const name = r.customer;
+      if (!map[name]) map[name] = { name: name, by: { 'Trail Pack': 0, 'Tent 2P': 0, 'Camp Stove': 0 }, total: 0 };
+      map[name].by[r.product] = (map[name].by[r.product] || 0) + r.revenue;
+      map[name].total += r.revenue;
+    });
+    const groups = Object.keys(map).map((k) => map[k]).sort((a, b) => b.total - a.total);
+    const max = groups.length ? groups[0].total : 1;
+    const grand = rowsState.reduce((s, r) => s + r.revenue, 0);
+
+    const pivot = groups.map((g) => ({
+      name: g.name,
+      cells: products.map((p) => (g.by[p] ? this.money(g.by[p]) : '—')),
+      total: this.money(g.total),
+      rowStyle: dupeNameSet[g.name] ? 'background: #fff7ed' : ''
+    }));
+    const colTotals = products.map((p) => this.money(rowsState.filter((r) => r.product === p).reduce((s, r) => s + r.revenue, 0)));
+    const bars = groups.map((g) => ({
+      name: g.name,
+      total: this.money(g.total),
+      barStyle: 'height: 100%; border-radius: 6px; width: ' + Math.max(4, Math.round((g.total / max) * 100)) + '%; background: ' + (dupeNameSet[g.name] ? '#ea580c' : accent)
+    }));
+
+    const baseInput = 'font: inherit; font-size: 12px; width: 100%; box-sizing: border-box; padding: 6px 6px; min-height: 30px; border-radius: 7px; border: 1px solid transparent; outline: none; color: #16181d; ';
+    const rows = rowsState.map((r) => ({
+      id: r.id, date: r.date, customer: r.customer, region: r.region, product: r.product, qty: r.qty,
+      revenueText: this.money(r.revenue),
+      inputStyle: baseInput + (dupeNameSet[r.customer] ? 'background: #fff1e6; border-color: #fdba74;' : 'background: transparent;'),
+      rename: (e) => {
+        const v = e && e.target ? e.target.value : '';
+        this.setState((s) => ({ rows: s.rows.map((x) => (x.id === r.id ? Object.assign({}, x, { customer: v }) : x)) }));
+      }
+    }));
+
+    const edits = rowsState
+      .map((r, i) => ({ id: r.id, from: seed[i].customer, to: r.customer }))
+      .filter((e) => e.from !== e.to);
+
+    let dupeText = '';
+    if (dupeKeys.length) {
+      const names = Object.keys(namesByKey[dupeKeys[0]]);
+      dupeText = names.length + ' spellings of the same customer (' + names.map((n) => '“' + n + '”').join(', ') + ') split its revenue across ' + names.length + ' pivot rows. Together they are the biggest customer.';
+    }
+
+    return {
+      accent: accent,
+      rows: rows,
+      pivot: pivot,
+      colTotals: colTotals,
+      bars: bars,
+      grandTotal: this.money(grand),
+      rowCount: rowsState.length,
+      customerCount: groups.length,
+      hasDupes: dupeKeys.length > 0,
+      isClean: dupeKeys.length === 0,
+      dupeText: dupeText,
+      editCount: edits.length,
+      editLog: edits.slice(-3).reverse(),
+      noEdits: edits.length === 0,
+      mergeAll: () => {
+        this.setState((s) => ({ rows: s.rows.map((x) => (this.keyOf(x.customer) === 'acme' ? Object.assign({}, x, { customer: 'Acme Corp' }) : x)) }));
+      },
+      reset: () => { this.setState({ rows: this.seed() }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

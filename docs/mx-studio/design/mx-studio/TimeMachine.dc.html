@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Data time machine</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="min-height: 1000px; box-sizing: border-box; background: #e6e9ef; color: #16181d; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column; gap: 14px; padding: 14px">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 10px 14px; border-radius: 22px; background: rgba(255,255,255,0.62); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); border: 1px solid rgba(255,255,255,0.85); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(22,30,58,0.08)">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 30px; height: 30px; border-radius: 9px; background: #16181d; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">MX</div>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-weight: 600; font-size: 14px">Q3 Orders · history</span>
+        <span style="font-size: 11px; color: #5b616e">every import, edit and pipeline run is a version</span>
+      </div>
+    </div>
+    <div style="flex: 1 1 40px"></div>
+    <div style="display: flex; gap: 8px">
+      <button style="font: inherit; font-size: 12px; padding: 8px 14px; min-height: 36px; border-radius: 999px; border: 1px solid rgba(22,30,58,0.14); background: rgba(255,255,255,0.7); color: #16181d">Compare two versions</button>
+      <button style="font: inherit; font-size: 12px; font-weight: 600; padding: 8px 14px; min-height: 36px; border-radius: 999px; border: 0; background: {{accent}}; color: #ffffff">Branch from here</button>
+    </div>
+  </div>
+
+  <div style="padding: 18px 20px; border-radius: 20px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: baseline">
+      <label for="ver" style="font-size: 15px; font-weight: 600">Scrub through the workbook's history</label>
+      <span style="font-size: 12px; color: #3c4250">{{verLabel}}</span>
+    </div>
+    <input id="ver" type="range" min="0" max="5" step="1" value="{{idx}}" onChange="{{onVer}}" style="width: 100%; accent-color: {{accent}}">
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{ticks}}" as="t" hint-placeholder-count="6">
+        <button onClick="{{t.pick}}" style="{{t.style}}">
+          <span style="font-weight: 600">{{t.date}}</span><br><span>{{t.short}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start">
+
+    <div style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px">
+        <div style="padding: 16px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06)">
+          <div style="font-size: 12px; color: #5b616e">Rows</div>
+          <div style="font-size: 24px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums">{{v.rows}}</div>
+        </div>
+        <div style="padding: 16px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06)">
+          <div style="font-size: 12px; color: #5b616e">Gross margin</div>
+          <div style="font-size: 24px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums">{{v.margin}}</div>
+        </div>
+        <div style="padding: 16px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06)">
+          <div style="font-size: 12px; color: #5b616e">Customers</div>
+          <div style="font-size: 24px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums">{{v.customers}}</div>
+        </div>
+        <div style="padding: 16px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06)">
+          <div style="font-size: 12px; color: #5b616e">Top customer</div>
+          <div style="font-size: 24px; font-weight: 650; margin-top: 2px">{{v.top}}</div>
+        </div>
+      </div>
+
+      <div style="padding: 18px; border-radius: 20px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: baseline">
+          <div style="font-size: 15px; font-weight: 600">What changed in this version</div>
+          <div style="font-size: 11px; color: #5b616e">{{v.who}}</div>
+        </div>
+        <div style="font-size: 14px; line-height: 1.5">{{v.what}}</div>
+        <div style="overflow-x: auto">
+          <table style="border-collapse: collapse; width: 100%; min-width: 520px; font-size: 12px; font-variant-numeric: tabular-nums">
+            <thead><tr style="color: #3c4250; text-align: left"><th style="padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">Where</th><th style="padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">Before</th><th style="padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">After</th></tr></thead>
+            <tbody>
+              <sc-for list="{{v.diff}}" as="d" hint-placeholder-count="3">
+                <tr>
+                  <td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; color: #3c4250">{{d.where}}</td>
+                  <td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; color: #9a3412; text-decoration: line-through">{{d.before}}</td>
+                  <td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; color: #0f5f58; font-weight: 500">{{d.after}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex: 1 1 280px; max-width: 320px; padding: 14px; border-radius: 22px; background: rgba(255,255,255,0.62); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); border: 1px solid rgba(255,255,255,0.85); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(22,30,58,0.08); display: flex; flex-direction: column; gap: 12px">
+      <div style="font-size: 12px; font-weight: 600">Ask the history</div>
+      <div style="padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.85); font-size: 12px; line-height: 1.5">
+        <div style="color: #5b616e">You asked</div>
+        <div style="font-weight: 600">When did margin start falling, and was it us?</div>
+      </div>
+      <div style="padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.85); font-size: 12px; line-height: 1.5">
+        <div style="color: #5b616e">Answer</div>
+        <div>Jul 14, from new ledger rows, not from any edit or pipeline change. Your edits on Aug 3 moved margin by 0.0 pts.</div>
+      </div>
+      <div style="border-top: 1px solid rgba(22,30,58,0.08); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #3c4250; line-height: 1.5">
+        <div style="font-size: 12px; font-weight: 600; color: #16181d">Why it matters</div>
+        <span>Every number in Report can say which version it came from.</span>
+        <span>Undo works across Excel edits, pipeline steps and imports.</span>
+        <span>Branches let you try a what-if without touching the real data.</span>
+        <span>Versions share unchanged columns, so history is cheap on disk.</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2563eb","options":["#2563eb","#0f766e","#7c3aed"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { idx: 5 };
+  }
+  versions() {
+    return [
+      { date: 'Jul 1', short: 'Imported', rows: '2.29B', margin: '41.8%', customers: '33.1M', top: 'Northwind', who: 'Abhi · import', what: 'orders.xlsx and the ledger were loaded for the first time.', diff: [{ where: 'tables', before: 'none', after: 'orders, ledger, rate_tables' }] },
+      { date: 'Jul 14', short: 'New rate table', rows: '2.33B', margin: '40.6%', customers: '33.2M', top: 'Northwind', who: 'ledger sync · automatic', what: 'Carrier A rows started arriving with $14.20 freight on parcels over 4 kg.', diff: [{ where: 'freight, OUT-4471', before: '$6.82', after: '$14.20' }, { where: 'freight, OUT-2210', before: '$12.90', after: '$31.80' }] },
+      { date: 'Aug 3', short: 'Clean names', rows: '2.36B', margin: '39.4%', customers: '31.9M', top: 'Acme Corp', who: 'Abhi · Explore step added', what: 'The Clean names step merged 1.2M customer spellings. Acme became the top customer.', diff: [{ where: 'customer', before: 'Acme Corp.', after: 'Acme Corp' }, { where: 'customer', before: 'ACME Corporation', after: 'Acme Corp' }, { where: 'customer', before: 'Northwind Traders Inc', after: 'Northwind' }] },
+      { date: 'Aug 3', short: '2 cell edits', rows: '2.36B', margin: '39.4%', customers: '31.9M', top: 'Acme Corp', who: 'Abhi · edited in Sheet', what: 'Two cells fixed by hand in Sheet. Saved as the Manual edits step.', diff: [{ where: 'T-10243 · customer', before: 'Acme Corp.', after: 'Acme Corp' }, { where: 'T-10246 · customer', before: 'ACME Corporation', after: 'Acme Corp' }] },
+      { date: 'Sep 2', short: 'Contract PDF', rows: '2.39B', margin: '38.9%', customers: '31.6M', top: 'Acme Corp', who: 'Abhi · Docs plugin', what: 'Carrier A rate schedule v7 was read. Its effective date (Aug 1) disagrees with the ledger (Jul 14).', diff: [{ where: 'new table', before: 'none', after: 'contract_fields · 9 rows' }] },
+      { date: 'Oct 16', short: 'Now', rows: '2.42B', margin: '38.7%', customers: '31.6M', top: 'Acme Corp', who: 'latest', what: 'Current state. Everything in Sheet, Report and Query reads this version.', diff: [{ where: 'rows since Sep 2', before: '2.39B', after: '2.42B' }] }
+    ];
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#2563eb';
+    const vs = this.versions();
+    const idx = this.state.idx;
+    const v = vs[idx];
+    const ticks = vs.map((x, i) => ({
+      date: x.date,
+      short: x.short,
+      pick: () => this.setState({ idx: i }),
+      style: 'font: inherit; font-size: 11px; line-height: 1.4; text-align: left; padding: 8px 10px; min-height: 44px; border-radius: 12px; cursor: pointer; ' + (i === idx ? 'border: 2px solid ' + accent + '; background: #eef3ff; color: #16181d;' : 'border: 1px solid #e3e6ec; background: #ffffff; color: #3c4250;')
+    }));
+    return {
+      accent: accent,
+      idx: idx,
+      v: v,
+      ticks: ticks,
+      verLabel: 'Version ' + (idx + 1) + ' of 6 · ' + v.date,
+      onVer: (e) => { const n = parseInt(e && e.target ? e.target.value : '5', 10); this.setState({ idx: isNaN(n) ? 5 : n }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

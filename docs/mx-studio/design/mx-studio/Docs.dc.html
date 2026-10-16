@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Doc Intelligence plugin</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="min-height: 1000px; box-sizing: border-box; background: #e6e9ef; color: #16181d; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column; gap: 14px; padding: 14px">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 10px 14px; border-radius: 22px; background: rgba(255,255,255,0.62); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); border: 1px solid rgba(255,255,255,0.85); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(22,30,58,0.08)">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 30px; height: 30px; border-radius: 9px; background: #16181d; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">MX</div>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-weight: 600; font-size: 14px">Q3 Orders</span>
+        <span style="font-size: 11px; color: #5b616e">Plugin · Doc Intelligence</span>
+      </div>
+    </div>
+    <div style="flex: 1 1 40px"></div>
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(22,24,29,0.06)">
+      <a href="Main.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Sheet</a>
+      <a href="Report.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Report</a>
+      <a href="Explore.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Explore</a>
+      <a href="Query.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Query</a>
+      <span style="font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 3px rgba(22,30,58,0.14)">Docs</span>
+    </nav>
+    <div style="flex: 1 1 40px"></div>
+    <span style="font-size: 11px; padding: 6px 10px; border-radius: 999px; background: rgba(15,118,110,0.1); color: #0f5f58">Read on this Mac · on-device model + embeddings</span>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 14px; flex: 1 1 auto; align-items: flex-start">
+
+    <div style="flex: 1 1 240px; max-width: 270px; padding: 14px; border-radius: 22px; background: rgba(255,255,255,0.62); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); border: 1px solid rgba(255,255,255,0.85); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(22,30,58,0.08); display: flex; flex-direction: column; gap: 12px">
+      <div style="padding: 18px 12px; border-radius: 16px; border: 1.5px dashed rgba(22,30,58,0.22); background: rgba(255,255,255,0.5); text-align: center; display: flex; flex-direction: column; gap: 4px; align-items: center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3c4250" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>
+        <span style="font-weight: 600">Drop PDFs, scans, emails</span>
+        <span style="font-size: 11px; color: #5b616e">contracts · invoices · receipts</span>
+      </div>
+      <div style="font-size: 12px; font-weight: 600">In this workbook</div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div style="padding: 10px 12px; border-radius: 14px; background: #ffffff; border: 2px solid {{accent}}; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-weight: 600; font-size: 12px">carrier_A_rate_schedule_v7.pdf</span>
+          <span style="font-size: 11px; color: #5b616e">contract · 6 pages · 9 fields</span>
+        </div>
+        <div style="padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.8); border: 1px solid rgba(22,30,58,0.08); display: flex; flex-direction: column; gap: 2px">
+          <span style="font-weight: 600; font-size: 12px">Carrier A invoices, Jul–Sep</span>
+          <span style="font-size: 11px; color: #5b616e">41 PDFs · 3,280 line items</span>
+        </div>
+        <div style="padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.8); border: 1px solid rgba(22,30,58,0.08); display: flex; flex-direction: column; gap: 2px">
+          <span style="font-weight: 600; font-size: 12px">Customer emails, Q3</span>
+          <span style="font-size: 11px; color: #5b616e">612 messages · 88 mention freight</span>
+        </div>
+      </div>
+      <div style="font-size: 11px; color: #5b616e; line-height: 1.5">Every document becomes rows: fields with the page they came from, plus an embedding for matching by meaning.</div>
+    </div>
+
+    <div style="flex: 999 1 680px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+
+      <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch">
+        <div style="flex: 1 1 340px; min-width: 0; padding: 28px 30px; border-radius: 6px; background: #ffffff; box-shadow: 0 1px 3px rgba(22,30,58,0.1), 0 10px 30px rgba(22,30,58,0.08); display: flex; flex-direction: column; gap: 12px; font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif; font-size: 12px; line-height: 1.6; color: #2a2d33">
+          <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #5b616e; font-family: -apple-system, system-ui, sans-serif">Page 2 of 6</div>
+          <div style="font-size: 16px; font-weight: 700; color: #16181d">Rate Schedule v7 — Parcel Services</div>
+          <div>This schedule <span style="background: #dbe6fd; padding: 0 2px; border-radius: 3px">supersedes Rate Schedule v6</span> in its entirety and applies to all shipments tendered on or after the <span style="background: #fde68a; padding: 0 2px; border-radius: 3px">Effective Date of August 1, 2026</span>.</div>
+          <div>3.2 Weight surcharges. Parcels with an actual weight <span style="background: #fed7aa; padding: 0 2px; border-radius: 3px">greater than 4.0 kg</span> are billed at a <span style="background: #fed7aa; padding: 0 2px; border-radius: 3px">flat rate of $14.20</span> per parcel, in place of the per-kilogram rate in Table 1.</div>
+          <div>3.3 Parcels over 8.0 kg are billed per Table 2.</div>
+          <div style="height: 8px; border-radius: 4px; background: #f0f2f5; width: 92%"></div>
+          <div style="height: 8px; border-radius: 4px; background: #f0f2f5; width: 84%"></div>
+          <div style="height: 8px; border-radius: 4px; background: #f0f2f5; width: 88%"></div>
+        </div>
+
+        <div style="flex: 1 1 320px; min-width: 0; padding: 16px; border-radius: 18px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <div style="font-size: 15px; font-weight: 600">Extracted fields</div>
+            <div style="font-size: 11px; color: #5b616e">click a value to see it on the page</div>
+          </div>
+          <div style="overflow-x: auto">
+            <table style="border-collapse: collapse; width: 100%; min-width: 300px; font-size: 12px">
+              <thead><tr style="color: #3c4250; text-align: left"><th style="padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">Field</th><th style="padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">Value</th><th style="padding: 7px 8px; font-weight: 600; background: #f5f6f8; border-bottom: 1px solid #dfe2e8; text-align: right">Sure</th></tr></thead>
+              <tbody>
+                <tr><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3">carrier</td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3">A</td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; text-align: right">0.99</td></tr>
+                <tr><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3">schedule</td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3"><span style="background: #dbe6fd; padding: 1px 4px; border-radius: 4px">v7, replaces v6</span></td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; text-align: right">0.98</td></tr>
+                <tr><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3">effective_date</td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3"><span style="background: #fde68a; padding: 1px 4px; border-radius: 4px">2026-08-01</span></td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; text-align: right">0.99</td></tr>
+                <tr><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3">surcharge_over_kg</td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3"><span style="background: #fed7aa; padding: 1px 4px; border-radius: 4px">4.0</span></td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; text-align: right">0.97</td></tr>
+                <tr><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3">flat_rate</td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3"><span style="background: #fed7aa; padding: 1px 4px; border-radius: 4px">$14.20</span></td><td style="padding: 7px 8px; border-bottom: 1px solid #eef0f3; text-align: right">0.99</td></tr>
+                <tr><td style="padding: 7px 8px">payment_terms</td><td style="padding: 7px 8px">Net 30</td><td style="padding: 7px 8px; text-align: right; color: #9a3412">0.72</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="font-size: 11px; color: #5b616e">Low-confidence fields wait for you before they join anything.</div>
+        </div>
+      </div>
+
+      <div style="padding: 18px; border-radius: 20px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 14px; outline: 2px solid #fdba74; outline-offset: 2px">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline">
+          <div style="font-size: 17px; font-weight: 650">The contract and the ledger disagree</div>
+          <div style="font-size: 11px; color: #5b616e">contract fields joined to 2.42B transactions · 0.9 s</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+          <div style="padding: 14px; border-radius: 14px; background: #f5f6f8">
+            <div style="font-size: 11px; color: #5b616e">Contract says $14.20 starts</div>
+            <div style="font-size: 22px; font-weight: 650; margin-top: 2px">Aug 1</div>
+          </div>
+          <div style="padding: 14px; border-radius: 14px; background: #f5f6f8">
+            <div style="font-size: 11px; color: #5b616e">Ledger and invoices charged it from</div>
+            <div style="font-size: 22px; font-weight: 650; margin-top: 2px; color: #c2410c">Jul 14</div>
+          </div>
+          <div style="padding: 14px; border-radius: 14px; background: #fff7ed; border: 1px solid #fed7aa">
+            <div style="font-size: 11px; color: #9a3412">Billed early, Jul 14–31</div>
+            <div style="font-size: 22px; font-weight: 650; margin-top: 2px; color: #9a3412; font-variant-numeric: tabular-nums">31,312 parcels</div>
+          </div>
+        </div>
+        <div style="font-size: 13px; line-height: 1.55; color: #2a2d33; max-width: 860px">Part of the Q3 margin drop is a billing error, not a price change. Carrier A applied the new flat rate 18 days before the contract allows. The invoices match the ledger, so the error is on the carrier's side, and 88 customer emails in the same weeks complain about shipping costs.</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <a href="Query.dc.html" style="font-size: 12px; font-weight: 600; padding: 9px 14px; border-radius: 999px; background: {{accent}}; color: #ffffff; text-decoration: none">Show the 31,312 parcels</a>
+          <a href="Explore.dc.html" style="font-size: 12px; padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(22,30,58,0.14); background: rgba(255,255,255,0.7); color: #16181d; text-decoration: none">Add contract as a pipeline input</a>
+          <button style="font: inherit; font-size: 12px; padding: 9px 14px; min-height: 38px; border-radius: 999px; border: 1px solid rgba(22,30,58,0.14); background: rgba(255,255,255,0.7); color: #16181d">Draft a claim to Carrier A</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+        <div style="padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.9); display: flex; flex-direction: column; gap: 4px">
+          <span style="font-weight: 600">Matched by meaning</span>
+          <span style="font-size: 12px; color: #3c4250; line-height: 1.5">Invoice "Bill-to" ≈ customer (0.94). "Ship wt" ≈ weight_kg (0.91). No column renaming by hand.</span>
+        </div>
+        <div style="padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.9); display: flex; flex-direction: column; gap: 4px">
+          <span style="font-weight: 600">Every value has a source</span>
+          <span style="font-size: 12px; color: #3c4250; line-height: 1.5">Click any number in Sheet or Report built from a document and the page opens at the highlight.</span>
+        </div>
+        <div style="padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.9); display: flex; flex-direction: column; gap: 4px">
+          <span style="font-weight: 600">Search the text too</span>
+          <span style="font-size: 12px; color: #3c4250; line-height: 1.5">"emails complaining about shipping" finds 88 messages and joins them to the orders they mention.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2563eb","options":["#2563eb","#0f766e","#7c3aed"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#2563eb' };
+}
+}
+</script>
+</body>
+</html>

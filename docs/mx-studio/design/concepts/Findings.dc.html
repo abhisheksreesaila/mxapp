@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Findings board</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0}
+a{color:#2457a8}a:hover{color:#0f3a7a}
+</style>
+</helmet>
+<div style="min-height: 940px; box-sizing: border-box; background: #f4f5f7; color: #15202b; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; display: flex; flex-direction: column">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #ffffff; border-bottom: 1px solid #dfe3e8">
+    <div style="font-weight: 600; font-size: 15px">MX Studio</div>
+    <div style="font-size: 13px; color: #5b6b7c">Board · <strong style="color: #15202b; font-weight: 500">Q3 margin review</strong></div>
+    <div style="flex: 1 1 200px"></div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5b6b7c">2.42B rows · all live · GPU 31% busy</div>
+    <button style="font: inherit; font-size: 13px; padding: 8px 14px; min-height: 44px; border-radius: 6px; border: 1px solid #c9d1da; background: #ffffff; color: #15202b">Share board</button>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+
+    <div style="flex: 1 1 300px; max-width: 360px; background: #ffffff; border-right: 1px solid #dfe3e8; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <div style="font-size: 12px; color: #5b6b7c; letter-spacing: 0.08em; text-transform: uppercase">Agent proposals</div>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: {{accent}}; color: #ffffff">3 new</span>
+      </div>
+      <div style="font-size: 13px; color: #5b6b7c; line-height: 1.5">The agent keeps sweeping every row for things worth your attention. You decide what goes on the board.</div>
+
+      <div style="padding: 14px; border-radius: 10px; border: 1px solid #dfe3e8; display: flex; flex-direction: column; gap: 8px">
+        <div style="font-weight: 500; line-height: 1.4">Freight per order jumped 18% in July, driven by one carrier</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5b6b7c">confidence high · 2.42B rows · 0.22 s</div>
+        <div style="display: flex; gap: 8px">
+          <button style="font: inherit; font-size: 13px; padding: 6px 12px; min-height: 40px; border-radius: 6px; border: 0; background: {{accent}}; color: #ffffff">Add to board</button>
+          <button style="font: inherit; font-size: 13px; padding: 6px 12px; min-height: 40px; border-radius: 6px; border: 1px solid #c9d1da; background: #ffffff; color: #15202b">Dismiss</button>
+        </div>
+      </div>
+      <div style="padding: 14px; border-radius: 10px; border: 1px solid #dfe3e8; display: flex; flex-direction: column; gap: 8px">
+        <div style="font-weight: 500; line-height: 1.4">Outdoor category: discounted share rose from 31% to 47%</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5b6b7c">confidence high · 2.42B rows · 0.10 s</div>
+        <div style="display: flex; gap: 8px">
+          <button style="font: inherit; font-size: 13px; padding: 6px 12px; min-height: 40px; border-radius: 6px; border: 0; background: {{accent}}; color: #ffffff">Add to board</button>
+          <button style="font: inherit; font-size: 13px; padding: 6px 12px; min-height: 40px; border-radius: 6px; border: 1px solid #c9d1da; background: #ffffff; color: #15202b">Dismiss</button>
+        </div>
+      </div>
+      <div style="padding: 14px; border-radius: 10px; border: 1px solid #dfe3e8; display: flex; flex-direction: column; gap: 8px">
+        <div style="font-weight: 500; line-height: 1.4">412 orders have negative margin and the same ship-to ZIP</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5b6b7c">confidence medium · possible data issue</div>
+        <div style="display: flex; gap: 8px">
+          <button style="font: inherit; font-size: 13px; padding: 6px 12px; min-height: 40px; border-radius: 6px; border: 1px solid #c9d1da; background: #ffffff; color: #15202b">Look closer</button>
+          <button style="font: inherit; font-size: 13px; padding: 6px 12px; min-height: 40px; border-radius: 6px; border: 1px solid #c9d1da; background: #ffffff; color: #15202b">Dismiss</button>
+        </div>
+      </div>
+
+      <div style="flex: 1 1 auto"></div>
+      <form style="display: flex; gap: 8px; align-items: center">
+        <label for="askb" style="position: absolute; left: -9999px">Ask the agent</label>
+        <input id="askb" type="text" placeholder="Ask for a specific check…" style="flex: 1 1 auto; min-width: 0; font: inherit; font-size: 13px; padding: 10px 12px; min-height: 44px; box-sizing: border-box; border-radius: 8px; border: 1px solid #c9d1da; background: #ffffff; color: #15202b">
+        <button type="submit" aria-label="Send" style="width: 44px; height: 44px; border-radius: 8px; border: 0; background: {{accent}}; color: #ffffff; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+    </div>
+
+    <div style="flex: 999 1 560px; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px">
+        <h1 style="margin: 0; font-size: 22px; font-weight: 600">Q3 margin review</h1>
+        <div style="font-size: 13px; color: #5b6b7c">4 findings · curated by Abhi · each tile is a live full-table computation</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+
+        <div style="grid-column: span 2; padding: 18px; border-radius: 12px; background: #ffffff; border: 1px solid #dfe3e8; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px">
+            <div style="font-weight: 500">Gross margin by month</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5b6b7c">2.42B rows · 0.18 s</div>
+          </div>
+          <svg viewBox="0 0 560 160" width="100%" height="160" role="img" aria-label="Gross margin by month, falling from 42 percent in April to 38.7 percent in September">
+            <line x1="0" y1="150" x2="560" y2="150" stroke="#dfe3e8"/>
+            <line x1="0" y1="90" x2="560" y2="90" stroke="#eef1f4"/>
+            <line x1="0" y1="30" x2="560" y2="30" stroke="#eef1f4"/>
+            <text x="4" y="26" font-size="10" fill="#5b6b7c" font-family="IBM Plex Mono, monospace">44%</text>
+            <text x="4" y="86" font-size="10" fill="#5b6b7c" font-family="IBM Plex Mono, monospace">40%</text>
+            <text x="4" y="146" font-size="10" fill="#5b6b7c" font-family="IBM Plex Mono, monospace">36%</text>
+            <polyline points="60,52 140,48 220,44 300,58 380,92 460,112 540,118" fill="none" stroke="{{accent}}" stroke-width="2.5" stroke-linejoin="round"/>
+            <rect x="300" y="12" width="250" height="138" fill="{{accent}}" opacity="0.07"/>
+            <text x="310" y="26" font-size="10" fill="#5b6b7c" font-family="IBM Plex Mono, monospace">Q3</text>
+            <text x="52" y="162" font-size="10" fill="#5b6b7c" font-family="IBM Plex Mono, monospace">Mar</text>
+            <text x="292" y="162" font-size="10" fill="#5b6b7c" font-family="IBM Plex Mono, monospace">Jun</text>
+            <text x="532" y="162" font-size="10" fill="#5b6b7c" font-family="IBM Plex Mono, monospace">Sep</text>
+          </svg>
+          <div style="font-size: 13px; color: #5b6b7c; line-height: 1.5; padding: 10px 12px; border-radius: 8px; background: #f4f5f7"><strong style="color: #15202b; font-weight: 500">Agent note:</strong> the decline starts in July, the same month freight rose. The two series move together with r = 0.91 across all orders.</div>
+        </div>
+
+        <div style="padding: 18px; border-radius: 12px; background: #ffffff; border: 1px solid #dfe3e8; display: flex; flex-direction: column; gap: 10px">
+          <div style="font-weight: 500">Freight per order</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 34px; line-height: 1">$9.42</div>
+          <div style="font-size: 13px; color: #b23c17">+18% since July</div>
+          <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; font-size: 12px">
+            <div style="display: flex; align-items: center; gap: 8px"><span style="width: 72px; color: #5b6b7c">Carrier A</span><div style="height: 12px; width: 70%; background: #b23c17; border-radius: 2px"></div></div>
+            <div style="display: flex; align-items: center; gap: 8px"><span style="width: 72px; color: #5b6b7c">Carrier B</span><div style="height: 12px; width: 22%; background: #c9d1da; border-radius: 2px"></div></div>
+            <div style="display: flex; align-items: center; gap: 8px"><span style="width: 72px; color: #5b6b7c">Carrier C</span><div style="height: 12px; width: 18%; background: #c9d1da; border-radius: 2px"></div></div>
+          </div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5b6b7c; margin-top: auto">2.42B rows · 0.22 s</div>
+        </div>
+
+        <div style="padding: 18px; border-radius: 12px; background: #ffffff; border: 1px solid #dfe3e8; display: flex; flex-direction: column; gap: 10px">
+          <div style="font-weight: 500">Outdoor · discounted share</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 34px; line-height: 1">47%</div>
+          <div style="font-size: 13px; color: #b23c17">was 31% in Q2</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5b6b7c; margin-top: auto">2.42B rows · 0.10 s</div>
+        </div>
+
+        <div style="grid-column: span 2; padding: 18px; border-radius: 12px; background: #ffffff; border: 1px solid #dfe3e8; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px">
+            <div style="font-weight: 500">Margin bridge, Q2 → Q3</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5b6b7c">2.42B rows · 0.31 s</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px">
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 150px; color: #5b6b7c">Freight</span><div style="height: 16px; width: 48%; background: #b23c17; border-radius: 3px"></div><span style="font-family: 'IBM Plex Mono', monospace">−1.6</span></div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 150px; color: #5b6b7c">Outdoor discounting</span><div style="height: 16px; width: 33%; background: #b23c17; border-radius: 3px"></div><span style="font-family: 'IBM Plex Mono', monospace">−1.1</span></div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 150px; color: #5b6b7c">Category mix</span><div style="height: 16px; width: 12%; background: #b23c17; border-radius: 3px"></div><span style="font-family: 'IBM Plex Mono', monospace">−0.4</span></div>
+            <div style="display: flex; align-items: center; gap: 10px"><span style="width: 150px; color: #5b6b7c">Pricing</span><div style="height: 16px; width: 9%; background: {{accent}}; border-radius: 3px"></div><span style="font-family: 'IBM Plex Mono', monospace">+0.3</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; color: #5b6b7c">
+        <span>Board changes are logged:</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #15202b">17:38 Abhi added "Freight per order"</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #15202b">17:31 agent proposed 3 findings</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2457a8","options":["#2457a8","#0f7b6c","#6b3fa0"]},"$preview":{"width":1440,"height":940}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#2457a8' };
+}
+}
+</script>
+</body>
+</html>

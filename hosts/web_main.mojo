@@ -87,4 +87,4 @@ def palette() raises -> PythonObject:
     return PythonObject("dark=" + ("1" if p.dark else "0") + ";page=" + hex_of(p.page) + ";card=" + hex_of(p.card) + ";raised=" + hex_of(p.raised)
                         + ";ink=" + hex_of(p.ink) + ";ink2=" + hex_of(p.ink2) + ";ink3=" + hex_of(p.ink3) + ";line=" + hex_of(p.line)
                         + ";strong=" + hex_of(p.line_strong) + ";accent=" + hex_of(p.accent) + ";on-accent=" + hex_of(p.accent_ink)
-                        + ";wash=" + hex_of(p.accent_wash) + ";bad=" + hex_of(p.bad))
+                        + ";wash=" + hex_of(p.accent_wash) + ";bad=" + hex_of(p.bad) + ";good=" + hex_of(p.good) + ";warn=" + hex_of(p.warn))

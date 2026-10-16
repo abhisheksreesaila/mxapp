@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shared canvas with branches</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0}
+a{color:#9fd7ff}a:hover{color:#ffffff}
+</style>
+</helmet>
+<div style="min-height: 940px; box-sizing: border-box; background: #07090c; color: #e6edf3; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; display: flex; flex-direction: column">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 10px 28px; border-bottom: 1px solid #161c24">
+    <div style="font-weight: 600; font-size: 14px">MX Studio</div>
+    <div style="font-size: 13px; color: #a6b3c2">Canvas · <span style="color: #e6edf3">Q3 margin</span></div>
+    <div style="display: flex; gap: 2px; background: #10151c; border-radius: 6px; padding: 2px">
+      <button style="font: inherit; font-size: 12px; padding: 6px 12px; min-height: 36px; border-radius: 5px; border: 0; background: #222b36; color: #e6edf3">main</button>
+      <button style="font: inherit; font-size: 12px; padding: 6px 12px; min-height: 36px; border-radius: 5px; border: 0; background: transparent; color: #a6b3c2">no-duplicates</button>
+      <button style="font: inherit; font-size: 12px; padding: 6px 12px; min-height: 36px; border-radius: 5px; border: 0; background: transparent; color: #a6b3c2">old-rate-table</button>
+    </div>
+    <div style="flex: 1 1 160px"></div>
+    <div style="display: flex; align-items: center; gap: 14px; font-size: 12px; color: #a6b3c2">
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 50%; background: #7cc4ff; display: inline-block"></span>Abhi</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 50%; background: {{accent}}; display: inline-block"></span>agent · working</span>
+    </div>
+  </div>
+
+  <div style="flex: 1 1 auto; display: flex; flex-wrap: wrap">
+
+    <div style="flex: 999 1 640px; min-width: 0; position: relative; padding: 28px; display: flex; flex-direction: column; gap: 20px; background-image: radial-gradient(#161c24 1px, transparent 1px); background-size: 24px 24px">
+
+      <div style="font-size: 13px; color: #a6b3c2; max-width: 720px; line-height: 1.5">Both of you draw on the same surface. You drop a column, the agent answers with a chart. You circle a region, the agent writes beside it and spawns the detail. Nobody types a message unless they want to.</div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+        <div style="display: flex; flex-direction: column; gap: 10px; flex: 0 1 190px">
+          <div style="font-size: 11px; color: #7cc4ff; letter-spacing: 0.08em; text-transform: uppercase">Abhi dropped</div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 8px 10px; border-radius: 6px; background: #0d1117; border: 1px solid #7cc4ff">freight</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 8px 10px; border-radius: 6px; background: #0d1117; border: 1px solid #7cc4ff">margin</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 8px 10px; border-radius: 6px; background: #0d1117; border: 1px solid #7cc4ff">order_date</span>
+          </div>
+          <div style="font-size: 12px; color: #a6b3c2; line-height: 1.5">Three chips, no words.</div>
+        </div>
+
+        <div style="flex: 1 1 420px; min-width: 0; padding: 16px; border-radius: 12px; background: #0d1117; border: 1px dashed {{accent}}; display: flex; flex-direction: column; gap: 10px; position: relative">
+          <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px">
+            <div style="font-size: 11px; color: {{accent}}; letter-spacing: 0.08em; text-transform: uppercase">Agent drew · margin vs freight, by week</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6d7c8e">2.42B rows · 0.12 s</div>
+          </div>
+          <svg viewBox="0 0 520 190" width="100%" height="190" role="img" aria-label="Scatter of weekly margin against freight per order; a cluster of Q3 weeks sits at high freight and low margin, with a hand-drawn circle around it">
+            <line x1="36" y1="160" x2="510" y2="160" stroke="#161c24"/>
+            <line x1="36" y1="10" x2="36" y2="160" stroke="#161c24"/>
+            <text x="40" y="176" font-size="10" fill="#6d7c8e" font-family="IBM Plex Mono, monospace">freight / order →</text>
+            <text x="8" y="20" font-size="10" fill="#6d7c8e" font-family="IBM Plex Mono, monospace">margin ↑</text>
+            <circle cx="90" cy="48" r="4" fill="#a6b3c2"/><circle cx="104" cy="54" r="4" fill="#a6b3c2"/><circle cx="96" cy="60" r="4" fill="#a6b3c2"/><circle cx="118" cy="50" r="4" fill="#a6b3c2"/><circle cx="110" cy="42" r="4" fill="#a6b3c2"/><circle cx="130" cy="58" r="4" fill="#a6b3c2"/><circle cx="122" cy="64" r="4" fill="#a6b3c2"/><circle cx="140" cy="46" r="4" fill="#a6b3c2"/><circle cx="150" cy="56" r="4" fill="#a6b3c2"/><circle cx="160" cy="62" r="4" fill="#a6b3c2"/><circle cx="136" cy="70" r="4" fill="#a6b3c2"/><circle cx="170" cy="52" r="4" fill="#a6b3c2"/><circle cx="182" cy="66" r="4" fill="#a6b3c2"/>
+            <circle cx="360" cy="112" r="4" fill="#ff9f6b"/><circle cx="380" cy="120" r="4" fill="#ff9f6b"/><circle cx="398" cy="118" r="4" fill="#ff9f6b"/><circle cx="412" cy="128" r="4" fill="#ff9f6b"/><circle cx="430" cy="134" r="4" fill="#ff9f6b"/><circle cx="448" cy="138" r="4" fill="#ff9f6b"/><circle cx="462" cy="146" r="4" fill="#ff9f6b"/><circle cx="476" cy="142" r="4" fill="#ff9f6b"/><circle cx="390" cy="132" r="4" fill="#ff9f6b"/><circle cx="440" cy="124" r="4" fill="#ff9f6b"/>
+            <path d="M340,100 C330,140 420,170 490,150 C520,140 500,96 440,98 C400,98 350,90 340,100 Z" fill="none" stroke="#7cc4ff" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="1 0" opacity="0.95"/>
+            <text x="300" y="92" font-size="11" fill="#7cc4ff" font-family="IBM Plex Sans, sans-serif">why here?</text>
+          </svg>
+        </div>
+
+        <div style="flex: 1 1 260px; max-width: 320px; display: flex; flex-direction: column; gap: 12px">
+          <div style="padding: 14px; border-radius: 12px; background: #0d1117; border: 1px dashed {{accent}}; display: flex; flex-direction: column; gap: 8px">
+            <div style="font-size: 11px; color: {{accent}}; letter-spacing: 0.08em; text-transform: uppercase">Agent wrote, beside the circle</div>
+            <div style="font-size: 13px; line-height: 1.5">Those are the 11 weeks after Jul 14. Carrier A's rate table changed that morning. Freight went from $7.98 to $9.42 and the weeks never came back. I put the rows below.</div>
+          </div>
+          <div style="padding: 12px 14px; border-radius: 12px; background: #0d1117; border: 1px dashed {{accent}}; display: flex; flex-direction: column; gap: 8px">
+            <div style="font-size: 11px; color: {{accent}}; letter-spacing: 0.08em; text-transform: uppercase">Agent spawned · the rows</div>
+            <table style="border-collapse: collapse; width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 11px">
+              <thead><tr style="color: #6d7c8e; text-align: left"><th style="padding: 4px 0; font-weight: 500">sku</th><th style="padding: 4px 0; font-weight: 500">carrier</th><th style="padding: 4px 0; font-weight: 500; text-align: right">margin</th></tr></thead>
+              <tbody>
+                <tr><td style="padding: 4px 0">OUT-4471</td><td style="padding: 4px 0">A</td><td style="padding: 4px 0; text-align: right; color: #ff9f6b">−3.10</td></tr>
+                <tr><td style="padding: 4px 0">OUT-2210</td><td style="padding: 4px 0">A</td><td style="padding: 4px 0; text-align: right; color: #ff9f6b">−6.45</td></tr>
+                <tr><td style="padding: 4px 0">OUT-3390</td><td style="padding: 4px 0">A</td><td style="padding: 4px 0; text-align: right; color: #ff9f6b">−2.25</td></tr>
+              </tbody>
+            </table>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6d7c8e">1,284,117 rows · scroll for all</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+        <div style="flex: 1 1 300px; padding: 14px 16px; border-radius: 12px; background: #0d1117; border: 1px solid #7cc4ff; display: flex; flex-direction: column; gap: 8px">
+          <div style="font-size: 11px; color: #7cc4ff; letter-spacing: 0.08em; text-transform: uppercase">Abhi forked · no-duplicates</div>
+          <div style="font-size: 13px; color: #a6b3c2; line-height: 1.5">Dragged the 412 ZIP-94110 rows off the canvas. Every chart on that branch recomputed without them.</div>
+          <div style="display: flex; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px">
+            <span><span style="color: #6d7c8e">main</span> 38.7%</span>
+            <span><span style="color: #6d7c8e">no-dup</span> 38.9%</span>
+            <span style="color: {{accent}}">+0.2 · duplicates were not the story</span>
+          </div>
+        </div>
+        <div style="flex: 1 1 300px; padding: 14px 16px; border-radius: 12px; background: #0d1117; border: 1px dashed {{accent}}; display: flex; flex-direction: column; gap: 8px">
+          <div style="font-size: 11px; color: {{accent}}; letter-spacing: 0.08em; text-transform: uppercase">Agent forked · old-rate-table</div>
+          <div style="font-size: 13px; color: #a6b3c2; line-height: 1.5">Re-priced freight on every order after Jul 14 with the June rate table. Asking you to look, not changing main.</div>
+          <div style="display: flex; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px">
+            <span><span style="color: #6d7c8e">main</span> 38.7%</span>
+            <span><span style="color: #6d7c8e">old-rate</span> 41.4%</span>
+            <span style="color: {{accent}}">+2.7 · this is the story</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="position: absolute; left: 585px; top: 338px; display: flex; align-items: center; gap: 4px; pointer-events: none" aria-hidden="true">
+        <svg width="14" height="18" viewBox="0 0 14 18"><path d="M1 1l12 7-5 1-3 5z" fill="#7cc4ff" stroke="#07090c" stroke-width="1"/></svg>
+        <span style="font-size: 10px; padding: 2px 6px; border-radius: 3px; background: #7cc4ff; color: #07090c; font-weight: 500">Abhi</span>
+      </div>
+      <div style="position: absolute; right: 360px; bottom: 150px; display: flex; align-items: center; gap: 4px; pointer-events: none" aria-hidden="true">
+        <svg width="14" height="18" viewBox="0 0 14 18"><path d="M1 1l12 7-5 1-3 5z" fill="{{accent}}" stroke="#07090c" stroke-width="1"/></svg>
+        <span style="font-size: 10px; padding: 2px 6px; border-radius: 3px; background: {{accent}}; color: #07090c; font-weight: 500">agent</span>
+      </div>
+    </div>
+
+    <div style="flex: 1 1 260px; max-width: 300px; border-left: 1px solid #161c24; background: #0d1117; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+      <div style="font-size: 11px; color: #6d7c8e; letter-spacing: 0.08em; text-transform: uppercase">Replay the dialogue</div>
+      <div style="font-size: 12px; color: #a6b3c2; line-height: 1.5">The whole conversation is a timeline of moves, not messages. Scrub it to see the canvas at any point, or hand it to someone and let them scrub.</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px">
+        <div style="display: flex; gap: 10px; align-items: flex-start"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7cc4ff; margin-top: 4px; flex-shrink: 0"></span><span><span style="color: #e6edf3">dropped</span> freight, margin, order_date</span></div>
+        <div style="display: flex; gap: 10px; align-items: flex-start"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{accent}}; margin-top: 4px; flex-shrink: 0"></span><span><span style="color: #e6edf3">drew</span> scatter by week</span></div>
+        <div style="display: flex; gap: 10px; align-items: flex-start"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7cc4ff; margin-top: 4px; flex-shrink: 0"></span><span><span style="color: #e6edf3">circled</span> the Q3 cluster</span></div>
+        <div style="display: flex; gap: 10px; align-items: flex-start"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{accent}}; margin-top: 4px; flex-shrink: 0"></span><span><span style="color: #e6edf3">wrote</span> cause · <span style="color: #e6edf3">spawned</span> rows</span></div>
+        <div style="display: flex; gap: 10px; align-items: flex-start"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7cc4ff; margin-top: 4px; flex-shrink: 0"></span><span><span style="color: #e6edf3">forked</span> no-duplicates</span></div>
+        <div style="display: flex; gap: 10px; align-items: flex-start"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{accent}}; margin-top: 4px; flex-shrink: 0"></span><span><span style="color: #e6edf3">forked</span> old-rate-table · <span style="color: {{accent}}">now</span></span></div>
+      </div>
+      <div style="height: 6px; border-radius: 3px; background: #161c24; position: relative; margin-top: 6px"><div style="position: absolute; right: 0; top: -4px; width: 14px; height: 14px; border-radius: 50%; background: {{accent}}"></div></div>
+      <div style="display: flex; gap: 8px">
+        <button style="font: inherit; font-size: 12px; padding: 8px 12px; min-height: 40px; border-radius: 6px; border: 1px solid #222b36; background: transparent; color: #e6edf3; flex: 1 1 auto">Merge old-rate-table</button>
+        <button style="font: inherit; font-size: 12px; padding: 8px 12px; min-height: 40px; border-radius: 6px; border: 1px solid #222b36; background: transparent; color: #e6edf3; flex: 1 1 auto">Hand off</button>
+      </div>
+      <div style="margin-top: auto; font-size: 12px; color: #6d7c8e; line-height: 1.5">Every move is a Msg. The canvas is the ViewTree. Branches are copies of State. Same core as the hello app.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8ef0a6","options":["#8ef0a6","#ffd166","#f78fb3"]},"$preview":{"width":1440,"height":940}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#8ef0a6' };
+}
+}
+</script>
+</body>
+</html>

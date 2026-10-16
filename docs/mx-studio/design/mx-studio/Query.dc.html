@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MX Studio Query</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="min-height: 1000px; box-sizing: border-box; background: #e6e9ef; color: #16181d; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column; gap: 14px; padding: 14px">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 10px 14px; border-radius: 22px; background: rgba(255,255,255,0.62); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); border: 1px solid rgba(255,255,255,0.85); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(22,30,58,0.08)">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 30px; height: 30px; border-radius: 9px; background: #16181d; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">MX</div>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-weight: 600; font-size: 14px">Q3 Orders</span>
+        <span style="font-size: 11px; color: #5b616e">Query · notebook</span>
+      </div>
+    </div>
+    <div style="flex: 1 1 40px"></div>
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(22,24,29,0.06)">
+      <a href="Main.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Sheet</a>
+      <a href="Report.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Report</a>
+      <a href="Explore.dc.html" style="font-size: 13px; padding: 8px 18px; border-radius: 999px; color: #3c4250; text-decoration: none">Explore</a>
+      <span style="font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 3px rgba(22,30,58,0.14)">Query</span>
+    </nav>
+    <div style="flex: 1 1 40px"></div>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+      <span style="font-size: 11px; padding: 6px 10px; border-radius: 999px; background: rgba(15,118,110,0.1); color: #0f5f58">Running on this Mac · Apple silicon GPU</span>
+      <button onClick="{{step}}" style="font: inherit; font-size: 12px; padding: 8px 14px; min-height: 36px; border-radius: 999px; border: 1px solid rgba(22,30,58,0.14); background: rgba(255,255,255,0.7); color: #16181d">Step</button>
+      <button onClick="{{runAll}}" style="font: inherit; font-size: 12px; font-weight: 600; padding: 8px 14px; min-height: 36px; border-radius: 999px; border: 0; background: {{accent}}; color: #ffffff">Run all</button>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 14px; flex: 1 1 auto; align-items: flex-start">
+
+    <div style="flex: 1 1 230px; max-width: 260px; padding: 14px; border-radius: 22px; background: rgba(255,255,255,0.62); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); border: 1px solid rgba(255,255,255,0.85); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 30px rgba(22,30,58,0.08); display: flex; flex-direction: column; gap: 14px">
+      <div style="font-size: 12px; font-weight: 600">Tables</div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <div style="font-weight: 600; font-size: 12px">orders_clean</div>
+        <div style="font-size: 11px; color: #5b616e; line-height: 1.6; font-family: ui-monospace, 'SF Mono', Menlo, monospace">order_id · date · customer<br>region · product · qty<br>revenue · carrier</div>
+        <div style="font-size: 11px; color: #0f5f58">from the Explore pipeline</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <div style="font-weight: 600; font-size: 12px">products</div>
+        <div style="font-size: 11px; color: #5b616e; line-height: 1.6; font-family: ui-monospace, 'SF Mono', Menlo, monospace">product · weight_kg · unit_cost</div>
+        <div style="font-size: 11px; color: #5b616e">products.xlsx</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <div style="font-weight: 600; font-size: 12px">carriers</div>
+        <div style="font-size: 11px; color: #5b616e; line-height: 1.6; font-family: ui-monospace, 'SF Mono', Menlo, monospace">carrier · per_kg</div>
+        <div style="font-size: 11px; color: #5b616e">rate_tables.csv</div>
+      </div>
+      <div style="border-top: 1px solid rgba(22,30,58,0.08); padding-top: 12px; display: flex; flex-direction: column; gap: 6px">
+        <div style="font-size: 12px; font-weight: 600">Try asking</div>
+        <button onClick="{{tryA}}" style="font: inherit; font-size: 12px; text-align: left; padding: 8px 10px; min-height: 36px; border-radius: 12px; border: 1px solid rgba(22,30,58,0.1); background: rgba(255,255,255,0.8); color: #16181d">revenue by product</button>
+        <button onClick="{{tryB}}" style="font: inherit; font-size: 12px; text-align: left; padding: 8px 10px; min-height: 36px; border-radius: 12px; border: 1px solid rgba(22,30,58,0.1); background: rgba(255,255,255,0.8); color: #16181d">margin by customer in the west</button>
+        <button onClick="{{tryC}}" style="font: inherit; font-size: 12px; text-align: left; padding: 8px 10px; min-height: 36px; border-radius: 12px; border: 1px solid rgba(22,30,58,0.1); background: rgba(255,255,255,0.8); color: #16181d">top 2 regions by freight</button>
+      </div>
+      <div style="font-size: 11px; color: #5b616e; line-height: 1.5">This prototype runs simple SELECT, JOIN, WHERE, GROUP BY, ORDER BY and LIMIT over 12 sample rows. The engine runs full SQL over billions.</div>
+    </div>
+
+    <div style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+      <sc-for list="{{cells}}" as="c" hint-placeholder-count="2">
+        <div style="{{c.cardStyle}}">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px">
+            <span style="font-size: 11px; font-weight: 600; color: #5b616e; font-family: ui-monospace, 'SF Mono', Menlo, monospace; width: 44px">{{c.label}}</span>
+            <label for="ask-{{c.id}}" style="position: absolute; left: -9999px">Question for cell {{c.id}}</label>
+            <div style="flex: 1 1 360px; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 999px; background: #f4f6f9; border: 1px solid rgba(22,30,58,0.08)">
+              <input id="ask-{{c.id}}" type="text" value="{{c.ask}}" onChange="{{c.onAsk}}" placeholder="Ask in words, or hold the mic and say it" style="flex: 1 1 auto; min-width: 0; font: inherit; font-size: 14px; border: 0; background: transparent; outline: none; color: #16181d; min-height: 32px">
+              <button aria-label="Speak your question" style="width: 34px; height: 34px; border-radius: 50%; border: 0; background: #ffffff; color: #16181d; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(22,30,58,0.14)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+              </button>
+              <button onClick="{{c.write}}" style="font: inherit; font-size: 12px; font-weight: 600; padding: 7px 12px; min-height: 34px; border-radius: 999px; border: 0; background: #16181d; color: #ffffff">Write SQL</button>
+            </div>
+            <span style="font-size: 11px; color: #5b616e">{{c.statusText}}</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="sql-{{c.id}}" style="font-size: 11px; color: #5b616e">SQL · edit freely, then run</label>
+            <textarea id="sql-{{c.id}}" value="{{c.sql}}" onChange="{{c.onSql}}" rows="8" spellcheck="false" style="font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; line-height: 1.55; padding: 12px 14px; border-radius: 14px; border: 1px solid #dfe2e8; background: #fbfbfc; color: #16181d; resize: vertical; outline: none; box-sizing: border-box; width: 100%"></textarea>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <button onClick="{{c.run}}" style="font: inherit; font-size: 12px; font-weight: 600; padding: 8px 14px; min-height: 36px; border-radius: 999px; border: 0; background: {{accent}}; color: #ffffff; display: flex; align-items: center; gap: 6px"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.5v9l7-4.5z" fill="currentColor"/></svg>Run cell</button>
+              <a href="Explore.dc.html" style="font-size: 12px; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(22,30,58,0.14); background: rgba(255,255,255,0.7); color: #16181d; text-decoration: none">Save as pipeline step</a>
+              <a href="Main.dc.html" style="font-size: 12px; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(22,30,58,0.14); background: rgba(255,255,255,0.7); color: #16181d; text-decoration: none">Open result in Sheet</a>
+            </div>
+          </div>
+
+          <sc-if value="{{c.hasError}}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 10px 12px; border-radius: 12px; background: #fff7ed; border: 1px solid #fed7aa; color: #7c2d12; font-size: 12px; line-height: 1.5">{{c.error}}</div>
+          </sc-if>
+
+          <sc-if value="{{c.hasResult}}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: 11px; color: #5b616e">
+                <span>Out [{{c.id}}] · saved as q{{c.id}}</span>
+                <span>{{c.note}}</span>
+              </div>
+              <div style="overflow-x: auto">
+                <table style="border-collapse: collapse; width: 100%; min-width: 520px; font-size: 12px; font-variant-numeric: tabular-nums">
+                  <thead>
+                    <tr>
+                      <sc-for list="{{c.columns}}" as="h" hint-placeholder-count="4">
+                        <th style="text-align: left; padding: 7px 8px; font-weight: 600; color: #3c4250; background: #f5f6f8; border-bottom: 1px solid #dfe2e8">{{h}}</th>
+                      </sc-for>
+                      <th style="padding: 7px 8px; background: #f5f6f8; border-bottom: 1px solid #dfe2e8; width: 140px; text-align: left; font-weight: 600; color: #3c4250">share</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{c.rows}}" as="r" hint-placeholder-count="4">
+                      <tr>
+                        <sc-for list="{{r.cells}}" as="v" hint-placeholder-count="4">
+                          <td style="padding: 6px 8px; border-bottom: 1px solid #eef0f3">{{v}}</td>
+                        </sc-for>
+                        <td style="padding: 6px 8px; border-bottom: 1px solid #eef0f3"><div style="height: 10px; border-radius: 5px; background: #f0f2f5; overflow: hidden"><div style="{{r.barStyle}}"></div></div></td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+
+      <button onClick="{{addCell}}" style="font: inherit; font-size: 13px; padding: 12px; min-height: 48px; border-radius: 18px; border: 1.5px dashed rgba(22,30,58,0.2); background: rgba(255,255,255,0.45); color: #3c4250">+ New cell</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2563eb","options":["#2563eb","#0f766e","#7c3aed"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const a = 'revenue by customer';
+    const b = 'margin by carrier, joined with products and carriers';
+    const sa = this.gen(a);
+    this.state = {
+      next: 3,
+      cells: [
+        { id: 1, ask: a, sql: sa, result: this.exec(sa), status: 'done' },
+        { id: 2, ask: b, sql: this.gen(b), result: null, status: 'ready' }
+      ]
+    };
+  }
+  orders() {
+    return [
+      ['T-10241', 'Jul 02', 'Acme Corp', 'West', 'Trail Pack', 40, 4800, 'A'],
+      ['T-10242', 'Jul 02', 'Northwind', 'East', 'Camp Stove', 12, 1440, 'B'],
+      ['T-10243', 'Jul 03', 'Acme Corp', 'West', 'Tent 2P', 18, 5040, 'A'],
+      ['T-10244', 'Jul 03', 'Globex', 'Central', 'Trail Pack', 25, 3000, 'C'],
+      ['T-10245', 'Jul 05', 'Northwind', 'East', 'Tent 2P', 9, 2520, 'B'],
+      ['T-10246', 'Jul 06', 'Acme Corp', 'West', 'Camp Stove', 30, 3600, 'A'],
+      ['T-10247', 'Jul 08', 'Globex', 'Central', 'Tent 2P', 14, 3920, 'C'],
+      ['T-10248', 'Jul 09', 'Initech', 'West', 'Trail Pack', 22, 2640, 'A'],
+      ['T-10249', 'Jul 11', 'Northwind', 'East', 'Trail Pack', 35, 4200, 'B'],
+      ['T-10250', 'Jul 12', 'Initech', 'West', 'Camp Stove', 8, 960, 'A'],
+      ['T-10251', 'Jul 14', 'Globex', 'Central', 'Camp Stove', 20, 2400, 'C'],
+      ['T-10252', 'Jul 15', 'Acme Corp', 'West', 'Tent 2P', 26, 7280, 'A']
+    ].map((r) => {
+      const prod = { 'Trail Pack': [1.2, 62], 'Tent 2P': [4.6, 150], 'Camp Stove': [2.1, 70] }[r[4]];
+      const perKg = { A: 1.1, B: 0.75, C: 0.8 }[r[7]];
+      const freight = r[5] * prod[0] * perKg;
+      return { order_id: r[0], date: r[1], customer: r[2], region: r[3], product: r[4], qty: r[5], revenue: r[6], carrier: r[7], freight: freight, margin: r[6] - r[5] * prod[1] - freight };
+    });
+  }
+  money(n) { return (n < 0 ? '−$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US'); }
+  gen(ask) {
+    const a = String(ask || '').toLowerCase();
+    const dims = [['customer', 'customer'], ['product', 'product'], ['region', 'region'], ['carrier', 'carrier'], ['date', 'date'], ['day', 'date']];
+    let dim = null, pos = 1e9;
+    dims.forEach((d) => { const i = a.indexOf(d[0]); if (i >= 0 && i < pos) { pos = i; dim = d[1]; } });
+    const joined = /margin|freight|cost|carrier|weight|profit|join/.test(a);
+    const rm = a.match(/\b(west|east|central)\b/);
+    const tm = a.match(/top\s+(\d+)/);
+    const byMargin = joined && /margin|profit/.test(a);
+    const byFreight = joined && !byMargin && /freight/.test(a);
+    const L = [];
+    if (!dim) {
+      L.push('SELECT o.*' + (joined ? ',\n       o.qty * p.weight_kg * c.per_kg AS freight' : ''));
+    } else {
+      L.push('SELECT o.' + dim + ',');
+      L.push('       COUNT(*) AS orders,');
+      L.push('       SUM(o.revenue) AS revenue' + (joined ? ',' : ''));
+      if (joined) {
+        L.push('       SUM(o.qty * p.weight_kg * c.per_kg) AS freight,');
+        L.push('       SUM(o.revenue - o.qty * p.unit_cost');
+        L.push('           - o.qty * p.weight_kg * c.per_kg) AS margin');
+      }
+    }
+    L.push('FROM orders_clean o');
+    if (joined) {
+      L.push('JOIN products p ON p.product = o.product');
+      L.push('JOIN carriers c ON c.carrier = o.carrier');
+    }
+    if (rm) L.push("WHERE o.region = '" + rm[1].charAt(0).toUpperCase() + rm[1].slice(1) + "'");
+    if (dim) L.push('GROUP BY o.' + dim);
+    L.push('ORDER BY ' + (byMargin ? 'margin' : byFreight ? 'freight' : 'revenue') + ' DESC');
+    L.push('LIMIT ' + (tm ? tm[1] : dim ? '20' : '10') + ';');
+    return L.join('\n');
+  }
+  exec(sql) {
+    const s = String(sql || '').replace(/\s+/g, ' ').trim();
+    if (!/^select\b/i.test(s)) return { error: 'Start with SELECT. This prototype only reads data; the engine also writes.' };
+    if (/\b(update|delete|insert|drop|alter)\b/i.test(s)) return { error: 'Read-only in this prototype. Edits happen in Sheet and become a pipeline step.' };
+    const joined = /\bjoin\b/i.test(s);
+    const allowed = ['order_id', 'date', 'customer', 'region', 'product', 'qty', 'revenue', 'carrier'];
+    let rows = this.orders();
+    const wm = s.match(/where\s+(?:\w+\.)?(\w+)\s*=\s*'([^']*)'/i);
+    if (wm) {
+      const col = wm[1].toLowerCase();
+      if (allowed.indexOf(col) < 0) return { error: 'Unknown column "' + wm[1] + '" in WHERE.' };
+      rows = rows.filter((r) => String(r[col]).toLowerCase() === wm[2].toLowerCase());
+    }
+    const scanned = rows.length;
+    const gm = s.match(/group\s+by\s+(?:\w+\.)?(\w+)/i);
+    const om = s.match(/order\s+by\s+(?:\w+\.)?(\w+)(?:\s+(asc|desc))?/i);
+    const lm = s.match(/limit\s+(\d+)/i);
+    let columns, out;
+    if (gm) {
+      const dim = gm[1].toLowerCase();
+      if (allowed.indexOf(dim) < 0) return { error: 'Unknown column "' + gm[1] + '" in GROUP BY.' };
+      const map = {};
+      rows.forEach((r) => {
+        const k = r[dim];
+        if (!map[k]) map[k] = { key: k, orders: 0, revenue: 0, freight: 0, margin: 0 };
+        map[k].orders += 1; map[k].revenue += r.revenue; map[k].freight += r.freight; map[k].margin += r.margin;
+      });
+      out = Object.keys(map).map((k) => map[k]);
+      columns = [dim, 'orders', 'revenue'].concat(joined ? ['freight', 'margin', 'margin %'] : []);
+    } else {
+      out = rows.map((r) => Object.assign({ key: r.order_id }, r));
+      columns = ['order_id', 'customer', 'product', 'qty', 'revenue'].concat(joined ? ['carrier', 'freight'] : []);
+    }
+    const sortKey = om ? om[1].toLowerCase() : 'revenue';
+    const sk = ['revenue', 'freight', 'margin', 'orders', 'qty'].indexOf(sortKey) >= 0 ? sortKey : 'revenue';
+    const desc = !om || !om[2] || om[2].toLowerCase() === 'desc';
+    out.sort((x, y) => (desc ? y[sk] - x[sk] : x[sk] - y[sk]));
+    if (lm) out = out.slice(0, parseInt(lm[1], 10));
+    const max = out.reduce((m, r) => Math.max(m, r.revenue), 1);
+    const resRows = out.map((r) => {
+      const cells = gm
+        ? [String(r.key), String(r.orders), this.money(r.revenue)].concat(joined ? [this.money(r.freight), this.money(r.margin), (r.revenue ? (r.margin / r.revenue * 100).toFixed(1) : '0.0') + '%'] : [])
+        : [r.order_id, r.customer, r.product, String(r.qty), this.money(r.revenue)].concat(joined ? [r.carrier, this.money(r.freight)] : []);
+      return { cells: cells, barStyle: 'height: 100%; border-radius: 5px; background: #2563eb; width: ' + Math.max(3, Math.round(r.revenue / max * 100)) + '%' };
+    });
+    return { columns: columns, rows: resRows, note: resRows.length + ' rows · scanned ' + scanned + ' of 12' + (joined ? ' · joined 3 tables' : '') };
+  }
+  patch(id, fn) {
+    this.setState((s) => ({ cells: s.cells.map((c) => (c.id === id ? Object.assign({}, c, fn(c)) : c)) }));
+  }
+  runOne(c) { return { result: this.exec(c.sql), status: 'done' }; }
+  setAskAndRunFirstOpen(text) {
+    this.setState((s) => {
+      const cells = s.cells.slice();
+      const sql = this.gen(text);
+      cells.push({ id: s.next, ask: text, sql: sql, result: this.exec(sql), status: 'done' });
+      return { cells: cells, next: s.next + 1 };
+    });
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#2563eb';
+    const st = this.state;
+    const nextOpen = st.cells.find((c) => c.status !== 'done');
+    const cells = st.cells.map((c) => {
+      const r = c.result;
+      const isNext = nextOpen && nextOpen.id === c.id;
+      return {
+        id: c.id,
+        label: 'In [' + c.id + ']',
+        ask: c.ask,
+        sql: c.sql,
+        statusText: c.status === 'done' ? 'ran on GPU' : c.status === 'edited' ? 'edited · run to update' : 'not run yet',
+        cardStyle: 'padding: 16px; border-radius: 20px; background: #ffffff; box-shadow: 0 1px 2px rgba(22,30,58,0.06), 0 8px 24px rgba(22,30,58,0.06); display: flex; flex-direction: column; gap: 12px; position: relative; ' + (isNext ? 'outline: 2px solid ' + accent + '; outline-offset: 2px;' : ''),
+        hasError: !!(r && r.error),
+        error: r && r.error ? r.error : '',
+        hasResult: !!(r && !r.error),
+        columns: r && r.columns ? r.columns : [],
+        rows: r && r.rows ? r.rows : [],
+        note: r && r.note ? r.note : '',
+        onAsk: (e) => { const v = e && e.target ? e.target.value : ''; this.patch(c.id, () => ({ ask: v })); },
+        onSql: (e) => { const v = e && e.target ? e.target.value : ''; this.patch(c.id, (x) => ({ sql: v, status: x.status === 'done' ? 'edited' : x.status })); },
+        write: () => { this.patch(c.id, (x) => ({ sql: this.gen(x.ask), status: 'ready', result: null })); },
+        run: () => { this.patch(c.id, (x) => this.runOne(x)); }
+      };
+    });
+    return {
+      accent: accent,
+      cells: cells,
+      step: () => {
+        this.setState((s) => {
+          let done = false;
+          return { cells: s.cells.map((c) => { if (!done && c.status !== 'done') { done = true; return Object.assign({}, c, this.runOne(c)); } return c; }) };
+        });
+      },
+      runAll: () => { this.setState((s) => ({ cells: s.cells.map((c) => Object.assign({}, c, this.runOne(c))) })); },
+      addCell: () => { this.setState((s) => ({ cells: s.cells.concat([{ id: s.next, ask: '', sql: '', result: null, status: 'ready' }]), next: s.next + 1 })); },
+      tryA: () => this.setAskAndRunFirstOpen('revenue by product'),
+      tryB: () => this.setAskAndRunFirstOpen('margin by customer in the west'),
+      tryC: () => this.setAskAndRunFirstOpen('top 2 regions by freight')
+    };
+  }
+}
+</script>
+</body>
+</html>

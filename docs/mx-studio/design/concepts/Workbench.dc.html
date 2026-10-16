@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Every-row workbench</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0}
+a{color:#9fd7ff}a:hover{color:#ffffff}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: #10141a; color: #e6edf3; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 10px 20px; border-bottom: 1px solid #222b36; background: #0c1015">
+    <div style="font-weight: 600; font-size: 14px">MX Studio</div>
+    <div style="display: flex; gap: 2px; background: #161c24; border-radius: 6px; padding: 2px">
+      <button style="font: inherit; font-size: 12px; padding: 6px 12px; min-height: 36px; border-radius: 5px; border: 0; background: #2a3441; color: #e6edf3">Table</button>
+      <button style="font: inherit; font-size: 12px; padding: 6px 12px; min-height: 36px; border-radius: 5px; border: 0; background: transparent; color: #8b9bb0">Chart</button>
+      <button style="font: inherit; font-size: 12px; padding: 6px 12px; min-height: 36px; border-radius: 5px; border: 0; background: transparent; color: #8b9bb0">Pivot</button>
+      <button style="font: inherit; font-size: 12px; padding: 6px 12px; min-height: 36px; border-radius: 5px; border: 0; background: transparent; color: #8b9bb0">Map</button>
+    </div>
+    <div style="flex: 1 1 160px"></div>
+    <div style="display: flex; align-items: center; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8b9bb0">
+      <span>GPU</span>
+      <div style="width: 120px; height: 6px; background: #222b36; border-radius: 3px; overflow: hidden"><div style="width: 31%; height: 100%; background: {{accent}}"></div></div>
+      <span>31% · 2.42B rows resident · 14.1 GB</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 20px; border-bottom: 1px solid #222b36">
+    <span style="font-size: 12px; color: #8b9bb0">Filters</span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 5px 10px; border-radius: 4px; background: #1b2430; border: 1px solid #2a3441">quarter = Q3</span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 5px 10px; border-radius: 4px; background: #1b2430; border: 1px solid #2a3441">category = Outdoor</span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 5px 10px; border-radius: 4px; background: #1b2430; border: 1px solid {{accent}}">margin &lt; 0  <span style="color: {{accent}}">· agent</span></span>
+    <button style="font: inherit; font-size: 12px; padding: 5px 10px; min-height: 36px; border-radius: 4px; border: 1px dashed #3a4654; background: transparent; color: #8b9bb0">+ filter</button>
+    <div style="flex: 1 1 120px"></div>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8b9bb0">matched <strong style="color: #e6edf3; font-weight: 500">1,284,117</strong> of 2,418,330,116 rows · filter applied in 0.09 s</span>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+
+    <div style="flex: 999 1 620px; min-width: 0; display: flex; flex-direction: column">
+
+      <div style="overflow-x: auto">
+        <table style="border-collapse: collapse; width: 100%; min-width: 760px; font-family: 'IBM Plex Mono', monospace; font-size: 12px">
+          <thead>
+            <tr style="color: #8b9bb0; text-align: left">
+              <th style="padding: 10px 14px; border-bottom: 1px solid #222b36; font-weight: 500">order_id</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #222b36; font-weight: 500">date</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #222b36; font-weight: 500">sku</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #222b36; font-weight: 500">carrier</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #222b36; font-weight: 500; text-align: right">revenue</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #222b36; font-weight: 500; text-align: right">freight</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #222b36; font-weight: 500; text-align: right">margin</th>
+              <th style="padding: 10px 14px; border-bottom: 1px solid #222b36; font-weight: 500">ship_zip</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">1 883 402 118</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">2026-07-02</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">OUT-4471</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">Carrier A</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">48.00</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">14.20</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right; color: #ff9f6b">−3.10</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">94110</td></tr>
+            <tr><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">1 883 402 119</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">2026-07-02</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">OUT-4471</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">Carrier A</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">48.00</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">14.20</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right; color: #ff9f6b">−3.10</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">94110</td></tr>
+            <tr style="background: #141c26"><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">1 883 406 002</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">2026-07-03</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">OUT-2210</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">Carrier A</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">129.00</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">31.80</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right; color: #ff9f6b">−6.45</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">94110</td></tr>
+            <tr><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">1 883 411 377</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">2026-07-05</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">OUT-0192</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">Carrier B</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">22.50</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">9.10</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right; color: #ff9f6b">−0.80</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">30301</td></tr>
+            <tr><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">1 883 420 950</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">2026-07-08</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">OUT-4471</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">Carrier A</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">48.00</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">14.20</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right; color: #ff9f6b">−3.10</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">94110</td></tr>
+            <tr><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">1 883 431 204</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">2026-07-11</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">OUT-3390</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">Carrier A</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">76.00</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">19.90</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right; color: #ff9f6b">−2.25</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">10001</td></tr>
+            <tr><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">1 883 440 018</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">2026-07-14</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">OUT-4471</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">Carrier A</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">48.00</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">14.20</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right; color: #ff9f6b">−3.10</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">94110</td></tr>
+            <tr><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">1 883 452 661</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">2026-07-18</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">OUT-0192</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">Carrier C</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">22.50</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right">8.40</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c; text-align: right; color: #ff9f6b">−0.10</td><td style="padding: 8px 14px; border-bottom: 1px solid #1a222c">60601</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding: 8px 20px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8b9bb0; border-top: 1px solid #222b36">rows 1–8 of 1,284,117 · scroll is virtual; every row is on the GPU, not paged from a server</div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px 20px; border-top: 1px solid #222b36">
+        <div style="padding: 12px 14px; border-radius: 8px; background: #161c24; border: 1px solid #222b36">
+          <div style="font-size: 11px; color: #8b9bb0">Sum of margin (filtered)</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; margin-top: 4px; color: #ff9f6b">−$3.9M</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8b9bb0; margin-top: 2px">1.28M rows · 0.04 s</div>
+        </div>
+        <div style="padding: 12px 14px; border-radius: 8px; background: #161c24; border: 1px solid #222b36">
+          <div style="font-size: 11px; color: #8b9bb0">Freight share of revenue</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; margin-top: 4px">29.6%</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8b9bb0; margin-top: 2px">vs 11.8% unfiltered</div>
+        </div>
+        <div style="padding: 12px 14px; border-radius: 8px; background: #161c24; border: 1px solid #222b36">
+          <div style="font-size: 11px; color: #8b9bb0">Distinct ship_zip</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; margin-top: 4px">2,117</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8b9bb0; margin-top: 2px">94110 alone: 412 orders</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex: 1 1 320px; max-width: 400px; border-left: 1px solid #222b36; background: #0c1015; display: flex; flex-direction: column">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid #222b36">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: {{accent}}; display: inline-block"></span>
+        <span style="font-weight: 500">Agent</span>
+        <span style="font-size: 11px; color: #8b9bb0">watching this view</span>
+      </div>
+
+      <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto">
+        <div style="font-size: 13px; line-height: 1.5; color: #b7c3d2">You filtered to Outdoor in Q3. I added <span style="font-family: 'IBM Plex Mono', monospace; color: #e6edf3">margin &lt; 0</span> because 1.28M of those orders lose money. Remove it if that is not what you are after.</div>
+
+        <div style="padding: 12px 14px; border-radius: 8px; background: #161c24; border: 1px solid #222b36; display: flex; flex-direction: column; gap: 8px">
+          <div style="font-weight: 500; font-size: 13px">What stands out here</div>
+          <ul style="margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: #b7c3d2">
+            <li>Carrier A carries 71% of these orders but 44% of all Outdoor orders.</li>
+            <li>SKU OUT-4471 appears 118,400 times at the same price and freight. Looks like a flat-rate shipping rule applied to a heavy item.</li>
+            <li>412 orders share ZIP 94110 with identical values. Likely a duplicate import.</li>
+          </ul>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8b9bb0">computed over all 1,284,117 filtered rows · 0.14 s</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <button style="font: inherit; font-size: 13px; text-align: left; padding: 10px 12px; min-height: 44px; border-radius: 6px; border: 1px solid #2a3441; background: transparent; color: #e6edf3">Group by carrier and chart freight</button>
+          <button style="font: inherit; font-size: 13px; text-align: left; padding: 10px 12px; min-height: 44px; border-radius: 6px; border: 1px solid #2a3441; background: transparent; color: #e6edf3">Isolate OUT-4471 and re-price freight</button>
+          <button style="font: inherit; font-size: 13px; text-align: left; padding: 10px 12px; min-height: 44px; border-radius: 6px; border: 1px solid #2a3441; background: transparent; color: #e6edf3">Flag the 412 duplicates for review</button>
+        </div>
+
+        <div style="flex: 1 1 auto"></div>
+
+        <form style="display: flex; gap: 8px; align-items: center">
+          <label for="askw" style="position: absolute; left: -9999px">Ask about this view</label>
+          <input id="askw" type="text" placeholder="Ask about this view…" style="flex: 1 1 auto; min-width: 0; font: inherit; font-size: 13px; padding: 10px 12px; min-height: 44px; box-sizing: border-box; border-radius: 8px; border: 1px solid #2a3441; background: #161c24; color: #e6edf3">
+          <button type="submit" aria-label="Send" style="width: 44px; height: 44px; border-radius: 8px; border: 0; background: {{accent}}; color: #10141a; display: flex; align-items: center; justify-content: center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8ef0a6","options":["#8ef0a6","#7cc4ff","#ffd166"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#8ef0a6' };
+}
+}
+</script>
+</body>
+</html>

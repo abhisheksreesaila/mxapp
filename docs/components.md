@@ -16,8 +16,8 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `HStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook |
 | `Spacer` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics |
 | `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics, workbook |
-| `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | todo, workbook |
-| `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook |
+| `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | todo |
+| `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, kitchen, expenses, lens, analytics |
 | `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses, workbook |
 | `TextArea` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook |
@@ -43,6 +43,8 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | Feature | API | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) |
 |---|---|---|---|---|---|---|
 | Button with an icon | `Button(icon=…)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Card tones | `Card(tone=CARD_WARN / CARD_GOOD)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Text tones | `Text(…).tone(TONE_WARN…)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Quiet buttons | `style=SUBTLE / ICON_ONLY` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Lucide icon set | `Button(icon="table")…` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | In-place editor | `TextField(…).focused()` | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -58,23 +60,30 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | Design: Omarchy (your theme) | `design() = OMARCHY` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Shared data per process | `App.init_shared()` | ✅ | ✅ | 🔨 | 🔨 | 🔨 |
 
+## Composite components (Mojo, built from the ones above)
+
+A composite is only as far along on a platform as the least-proven piece it's made of.
+
+| Component | Module | Made of | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Used by |
+|---|---|---|---|---|---|---|---|---|
+| `DataGrid` | `mojoui/datagrid.mojo` | Canvas, Canvas: press, release, double, In-place editor, Board: drag, resize, snap | ✅ | ✅ | ❌ | ❌ | ❌ | workbook |
+| `PivotTable` | `mojoui/pivot.mojo` | Grid, Scroll, Text tones | ✅ | ✅ | ❌ | ❌ | ❌ | workbook |
+| `ChartView` | `mojoui/chartview.mojo` | Canvas, Canvas: pan, zoom, tap | ✅ | ✅ | 🔨 | 🔨 | 🔨 | workbook |
+
 ## Totals
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 42 | 0 | 0 |
-| Web | 42 | 0 | 0 |
-| Android | 19 | 10 | 13 |
-| Mac (AppKit) | 0 | 29 | 13 |
-| iPhone (UIKit) | 0 | 29 | 13 |
+| Linux (GTK) | 47 | 0 | 0 |
+| Web | 47 | 0 | 0 |
+| Android | 19 | 11 | 17 |
+| Mac (AppKit) | 0 | 30 | 17 |
+| iPhone (UIKit) | 0 | 30 | 17 |
 
 ## Inside one app, not components yet (the debt)
 
 | Should become | Lives in | What it is |
 |---|---|---|
-| `DataGrid` | examples/workbook | virtualised grid over millions of rows: scroll bar, column select, resize, fit, sideways scroll, sort marker, in-place editor, selection; today ~400 lines of the Workbook drawing on a Canvas |
-| `PivotTable` | examples/workbook | rows × columns × value pickers over a group-by, with its result grid |
-| `Chart` | examples/workbook, examples/analytics | a Flint spec on a Canvas with tap-to-filter; each app wires Canvas + draw() + hit() itself |
 | `KPI tile` | examples/analytics | a headline number with a sparkline (mojoui.charts.KpiTile, but placed by the app on a Canvas) |
 | `FormulaBar` | examples/workbook | what's selected, its value, a formula field |
 | `Toolbar / StatusBar islands` | examples/workbook | the island contents (title, Insert buttons, status) are assembled by the app |
