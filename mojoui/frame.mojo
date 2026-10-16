@@ -36,6 +36,7 @@ comptime OP_SCALE = 10  # multiply the top by arg
 comptime OP_UNSCALE = 11  # divide the top by arg
 comptime OP_NEG = 12
 comptime MAX_PROGRAM = 64  # (op, arg) pairs
+comptime MAX_DEPTH = 4  # stack depth (GPU kernels keep the stack in four registers)
 
 # edits
 comptime SET = 0
@@ -85,6 +86,20 @@ def eval_program[origin: Origin](prog: Pointer[Int64, origin], n: Int, r: Row) -
                 v = a if a > b else b
             stack[sp - 1] = v
     return stack[0] if sp > 0 else 0
+
+
+def program_depth(code: List[Int64]) -> Int:
+    """The deepest the stack gets while running the bytecode."""
+    var depth = 0
+    var sp = 0
+    for k in range(len(code) // 2):
+        var op = code[2 * k]
+        if op == OP_CONST or op == OP_COL:
+            sp += 1
+            depth = max(depth, sp)
+        elif op != OP_SCALE and op != OP_UNSCALE and op != OP_NEG:
+            sp -= 1
+    return depth
 
 
 def pow10(k: Int) -> Int64:
@@ -690,6 +705,8 @@ struct Frame(Movable):
             raise Error("unexpected '" + comp.peek() + "'")
         if len(comp.code) > 2 * MAX_PROGRAM:
             raise Error("formula too long")
+        if program_depth(comp.code) > MAX_DEPTH:
+            raise Error("formula too deeply nested: split it into two columns")
         for u in comp.used:
             if u == existing or (u >= self.stored() and self.depends(u - self.stored(), existing)):
                 raise Error("'" + String(name) + "' would depend on itself")

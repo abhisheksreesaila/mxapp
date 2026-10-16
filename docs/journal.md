@@ -122,3 +122,5 @@ Newest last. What was tried, what happened, dead ends.
 ## Goal 9: the Workbook (2026-10-15, night run)
 - Set up: goal 8 archived to docs/goals/08-*; GOAL.md M1–M10; scripts/check.py chains 08 → 07 → …; steps for the morning walkthrough fixed up front (EDIT/PIVOT/CHART/FORMULA/MOVE).
 - Owner's mid-flight input: shared read-only data across web sessions (M8) before the wasm spike; folded into the frame design (overlay + virtual formulas, D-80).
+- M1: `mojoui/frame.mojo` + `tests/test_frame.mojo` pass (built as a binary). Dead end on the way: Mojo 1.1's compiler segfaults (exit 139, no message) on a `SIMD[int64, 8]` used as an interpreter stack with a run-time index; found by bisecting with 20 probe files built in parallel; `stack_allocation[8, Int64]()` works and is GPU-safe. Noted in CLAUDE.md.
+- Semantics settled: `cents` is money (scale 2), so `cents // 50` means "bins of $50"; constants carry their own scale ("0.15" → scale 2); `/` always yields scale 2; `*` of two decimals is rescaled back to 2.
