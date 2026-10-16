@@ -84,3 +84,18 @@ PASS  M8  20M rows loaded once per process and shared by every session (workbook
 Also from the morning: GTK checks now run on a headless display (D-95), so `scripts/check` opens no windows; goal 6's frame-rate check measures 60 fps there.
 The owner approved the painted-share measure (D-96): goal 6's lens canvas and goal 8's analytics page are now judged by the share of pixels away from the background on both hosts, and the 55 fps bar stays (60 fps headless once the test emulator is stopped before goal 6 runs). The goal-6 lens items that blocked M7 since goal 8 are closed.
 
+## Full check, headless (2026-10-16 afternoon): 10/10
+```
+PASS  M1  typed columns, formulas with a dependency graph, edits, tombstones, sort permutation, undo
+PASS  M2  20,000,000 rows: GPU = CPU on 262 numbers, ≤ 1.896125 ms, patch + pivot, on NVIDIA GeForce RTX 3090
+PASS  M3  table, pivot, chart and note objects; edits, pivots, crossfilter, formulas, sort (16 s incl. start-up), insert and remove identical on GTK and web
+PASS  M4  Board: absolute positions, drag, resize + snap identical on GTK and web; narrow windows show a list
+PASS  M5  save → open round-trips tables, formulas, pivots, charts, notes and layout
+PASS  M6  packaged Linux app + web, launcher, morning walkthrough, gallery and README updated
+PASS  M7  goal 8's checks (and goals 3–7's inside them) still pass
+PASS  M8  20M rows loaded once per process and shared by every session (workbook and analytics)
+PASS  M9  wasm: 8 undefined symbols before the shim; hello, List/String and print samples run in headless Chromium
+PASS  M10 README opens picture-first (4 images) and shows the workbook
+```
+M1–M6 and M8–M10 from the full rebuild run; M7 rerun on its own after the Android driver fix (its only failure in the full run). No window opened on the desktop.
+
