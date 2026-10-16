@@ -10,7 +10,7 @@
   - about 750 ms with plain Mojo loops on one core.
 
   A test compares every result of all three engines (910 numbers under 5 filter settings): they agree **to the cent**.
-- **Every chart is a [Flint](https://microsoft.github.io/flint-chart/) spec**, Microsoft's chart language for AI agents. mojoui draws the specs natively (a Mojo backend for Flint, the same pixels on every platform), and all nine also compile through Flint's own Vega-Lite pipeline to SVG.
+- **Every chart is a [Flint](https://microsoft.github.io/flint-chart/) spec**, Microsoft's chart language for AI agents. mojoui draws the specs natively (a Mojo backend for Flint, the same pixels on every platform it runs on), and all nine also compile through Flint's own Vega-Lite pipeline to SVG.
 - **Crossfiltering:** tap a category, a region or a month and everything else filters. GTK and the browser end in the same state after the same real clicks.
 - **Fluent 2** styles the native controls on Linux and the web. The dashboard fits 1440×900 and 1280×800 with no scrolling.
 
@@ -33,9 +33,9 @@ FAIL  M9  goal 7 M7: goal 6 M3: 44.2 fps < 55; goal 6 M6: web canvas looks blank
 PASS  M10  README shows the analytics showcase, how to run it, the gallery
 ```
 
-**About M9 (earlier goals), the one failure:** both failing sub-checks are goal 6's lens checks, and neither is a regression in this code:
-- **Lens frame rate on Linux:** 44 fps against 55. The machine was heavily loaded by another project's agents (load average about 4). Goal 7's own build, which measured 59 fps earlier today, measured 27–32 fps at the same time, and today's build 35 fps.
-- **Web lens "looks blank (39 colours)":** goal 6 counted distinct colours as its "not blank" test back when canvas frames were JPEG, whose compression noise adds thousands of colours. Still frames are now exact PNG (for crisp chart text), and that test view (rideshares at 9:36, zoomed 2×) really has about 40 colours. The map is drawn: 42% of the canvas is painted.
+**About M9 (earlier goals), the one failure:** both failing sub-checks are goal 6's lens checks:
+- **Lens frame rate on Linux: not a regression.** 44 fps against 55, with the machine loaded by other projects' agents (load average about 4). Proof: goal 7's build (738db96) and this build, run alternately at the same moment, measured 34.9 / 32.7 / 29.3 fps and 25.6 / 32.0 / 32.9 fps. Same speed; goal 7's build measured 59 fps on a quiet machine.
+- **Web lens "looks blank (39 colours)": caused by this goal's switch to PNG frames, which invalidates goal 6's colour-count stand-in.** Goal 6 counted distinct colours as its "not blank" test back when canvas frames were JPEG, whose compression noise adds thousands of colours. Still frames are now exact PNG (for crisp chart text), and that test view (rideshares at 9:36, zoomed 2×) really has about 40 colours. The map is drawn: 42% of the canvas is painted.
 
 My proposal, for you to approve: measure "not blank" by the painted share, as goal 7 already does (D-70), instead of the colour count. I haven't changed goal 6's check myself, since it's an earlier contract.
 
