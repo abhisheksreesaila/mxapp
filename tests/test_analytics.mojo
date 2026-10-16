@@ -76,7 +76,7 @@ def test_engines_agree_on_every_result() raises:
             app.update(Event(ENGINE, "", engine))
             assert_equal(app.engine, engine)  # no quiet fallback: the engine picked is the one that ran
             if engine == 0:
-                assert_true(app.table.on_gpu(), "the GPU engine needs a GPU")
+                assert_true(app.table()[].on_gpu(), "the GPU engine needs a GPU")
             if engine == 2:
                 assert_true(app.mx[0].ready, "MX frame didn't run: " + app.mx[0].problem)
             var all = List[Int]()
