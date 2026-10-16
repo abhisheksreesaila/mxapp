@@ -40,6 +40,7 @@ comptime ZOOM = 2  # event.zoom: scale factor (2 = twice as big) around event.x,
 comptime TAP = 3  # event.x, y
 comptime PRESS = 4  # the pointer went down at event.x, y; a TAP or PANs follow (where a drag starts)
 comptime RELEASE = 5  # a drag (PANs) ended at event.x, y (not sent after a plain TAP)
+comptime DOUBLE = 6  # a double click / double tap at event.x, y (after the TAP of its first click)
 
 # Icon names every host understands (each maps them to its platform's own icons).
 comptime ICON_NAMES: List[String] = [
@@ -61,6 +62,7 @@ comptime CARD = 1  # a raised panel: the platform's own card look
 # Design languages (App.design()): how hosts style their native controls
 comptime NATIVE = 0  # each platform's own look, untouched
 comptime FLUENT = 1  # Fluent 2 tokens (neutral greys, brand blue, rounded panels) wherever the host can apply them
+comptime OMARCHY = 2  # the person's Omarchy theme (mojoui.theme.Palette.omarchy()): its colours, JetBrains Mono, flat controls
 
 # Button styles
 comptime PLAIN = 0
@@ -261,6 +263,11 @@ struct View(Copyable, Movable):
         """Where an Overlay island floats: h = START, CENTER or END; v = START or END."""
         self.nodes[0].x = h
         self.nodes[0].y = v
+        return self^
+
+    def focused(var self) -> View:
+        """A TextField that takes the keyboard when it appears, its text selected (an in-place editor)."""
+        self.nodes[0].value = 1
         return self^
 
     def at(var self, x: Int, y: Int) -> View:

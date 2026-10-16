@@ -16,9 +16,13 @@ A polish pass on the Workbook so a person can use it without being told how: an 
 | M7 | Engine speed kept | `tests/bench_frame.mojo` and the workbook's own timing: a group-by ≤ 2 ms on 20M rows on the GPU, a full page recompute ≤ 15 ms, a grid redraw ≤ 16 ms, sort ≤ 2.5 s; numbers in the report beside goal 9's |
 | M8 | Nothing regressed | goal 9's checks still pass (their steps follow the new UI where the owner asked for it to change; no threshold lowered) |
 | M9 | Formatting planned | `docs/plans/formatting.md`: cell and column formatting (number formats, text colour/weight, fills, conditional colours) designed column-first, with what each costs the engine (memory, GPU, redraw) and the order to build it |
+| M10 | Omarchy skin (owner, 2026-10-16: "the skin feels nineties… default it to Omarchy… JetBrains Mono and flat themes") | a design language `OMARCHY` that reads the person's current Omarchy theme (`~/.local/state/omarchy/current/theme/colors.toml`; Tokyo Night if there's none): dark surfaces, the theme's accent, JetBrains Mono, flat controls, on GTK and web and inside the canvases (grid and charts take the same palette); the Workbook uses it; screenshots checked by eye |
+| M11 | Edit in place (owner: "double click on a cell and edit") | a `DOUBLE` canvas gesture; double-clicking a cell opens a text field over that cell, focused, with its value selected; Enter writes it (the totals change) and selects the cell below; a click anywhere else closes it; GTK and web end identical |
+| M12 | Column widths (owner: "auto adjust the column width… I couldn't adjust the width") | a column is never narrower than its header, and a new formula column is fitted to its values; dragging a header's right edge resizes the column; double-clicking a header fits it; the grid scrolls sideways when columns overflow; widths survive save → open; GTK and web identical |
+| M13 | Row count | `MOJOUI_ROWS` sets how many sample rows a process generates (default 20M) so UI work can iterate on 1M; the checks run at 20M |
 
 ## Done means
-`scripts/check` prints PASS for M1–M9; `git push` after.
+`scripts/check` prints PASS for M1–M13; `git push` after.
 
 ## Out of bounds
 No deploying anything but the gallery's GitHub Pages site; push to `origin` after milestones pass; no sign-ups, secrets or licences; checks run headless (no windows on the desktop); don't touch `../mojo-ui-apple-test`; no compiler fork; nothing that slows the engine without saying so in the report.

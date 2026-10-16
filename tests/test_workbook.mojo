@@ -2,7 +2,7 @@
 # added and removed rows, objects and layout. Build it: pixi run mojo build -I . tests/test_workbook.mojo -o build/test_workbook
 from std.testing import assert_equal, assert_true
 from mojoui.frame import Column, Columns, Frame, share, INT, DECIMAL, TEXT, DATE
-from mojoui.workbook import save_workbook, open_workbook, ObjectSpec
+from mojoui.workbook import save_workbook, open_workbook, read_widths, ObjectSpec
 
 
 def main() raises:
@@ -52,7 +52,11 @@ def main() raises:
     assert_equal(specs[1].text, objects[1].text)
     assert_equal(specs[1].y, 320)
     # saved again from the opened copy: the same file
-    save_workbook("build/test_workbook2.mxwb", of, "", specs)
+    save_workbook("build/test_workbook2.mxwb", of, "", specs, [0, 140, 0, 96])
+    var ws = read_widths("build/test_workbook2.mxwb")
+    assert_equal(len(ws), 4)
+    assert_equal(ws[1], 140)
+    assert_equal(ws[3], 96)
     var specs2 = List[ObjectSpec]()
     var again = open_workbook("build/test_workbook2.mxwb", "contoso", 0, specs2, addr)
     assert_equal(again.display(2, 2), "99.50")

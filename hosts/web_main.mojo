@@ -6,6 +6,7 @@ from std.python.bindings import PythonModuleBuilder
 
 from app import Main
 from mojoui.shared import shared_loads
+from mojoui.theme import Palette, hex_of
 from mojoui.hosts.web import web_init_shared, web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design
 
 
@@ -21,7 +22,8 @@ def PyInit_mojoui_app() abi("C") -> PythonObject:
         m.def_function[image]("image", docstring="'address width height' of an image node's RGBA pixels.")
         m.def_function[rows]("rows", docstring="JSON list of a LazyList's row texts (node, first, count).")
         m.def_function[close]("close", docstring="End a session.")
-        m.def_function[design]("design", docstring="The app's design language (0 native, 1 Fluent 2).")
+        m.def_function[design]("design", docstring="The app's design language (0 native, 1 Fluent 2, 2 Omarchy).")
+        m.def_function[palette]("palette", docstring="The Omarchy palette as 'name=#rrggbb;…' (dark=1 or 0 first).")
         m.def_function[draw]("draw", docstring="Paint a canvas (node, width, height, scale); JSON with the pixels' address and what changed.")
         m.def_function[gesture]("gesture", docstring="A canvas gesture (node, kind, x, y, dx, dy, zoom); returns what changed as JSON.")
         m.def_function[frame]("frame", docstring="A display frame for a canvas (node, microseconds); returns what changed as JSON.")
@@ -78,3 +80,11 @@ def frame(handle: PythonObject, node: PythonObject, microseconds: PythonObject) 
 
 def design(handle: PythonObject) raises -> PythonObject:
     return PythonObject(web_design[Main](Int(py=handle)))
+
+
+def palette() raises -> PythonObject:
+    var p = Palette.omarchy()
+    return PythonObject("dark=" + ("1" if p.dark else "0") + ";page=" + hex_of(p.page) + ";card=" + hex_of(p.card) + ";raised=" + hex_of(p.raised)
+                        + ";ink=" + hex_of(p.ink) + ";ink2=" + hex_of(p.ink2) + ";ink3=" + hex_of(p.ink3) + ";line=" + hex_of(p.line)
+                        + ";strong=" + hex_of(p.line_strong) + ";accent=" + hex_of(p.accent) + ";on-accent=" + hex_of(p.accent_ink)
+                        + ";wash=" + hex_of(p.accent_wash) + ";bad=" + hex_of(p.bad))

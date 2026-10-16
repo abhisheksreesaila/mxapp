@@ -203,6 +203,87 @@ def m9():
     return not missing, f"formatting plan lacks: {missing}" if missing else "formatting planned column-first, with each step's cost to the engine and the build order"
 
 
+def m10():
+    problems = []
+    if "return OMARCHY" not in APP.read_text():
+        problems.append("the Workbook doesn't use the Omarchy design")
+    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tests/test_theme.mojo", "-o", str(BUILD / "test_theme")], timeout=900)
+    if b.returncode != 0:
+        return False, f"test_theme build: {(b.stdout + b.stderr)[-300:]}"
+    import os, tempfile
+    with tempfile.TemporaryDirectory() as home:  # a different Omarchy theme: its colours must come through
+        theme = Path(home) / ".local/state/omarchy/current/theme"
+        theme.mkdir(parents=True)
+        (theme / "colors.toml").write_text('mode = "light"\naccent = "#ff5500"\nbackground = "#fafafa"\nforeground = "#333333"\n')
+        t = run([str(BUILD / "test_theme")], env={"HOME": home}, timeout=120)
+        if "THEME TESTS PASSED" not in t.stdout or "dark=False accent=#ff5500 card=#fafafa" not in t.stdout:
+            problems.append(f"another theme's colours didn't come through: {t.stdout.strip()[:160]}")
+    t = run([str(BUILD / "test_theme")], env={"HOME": "/nonexistent"}, timeout=120)
+    if "accent=#7aa2f7" not in t.stdout:
+        problems.append("without a theme file it isn't Tokyo Night")
+    out = both("", shot_name="omarchy")
+    if out[0] is None:
+        return False, out[1]
+    from PIL import Image
+    for host in ("gtk", "web"):
+        img = Image.open(BUILD / "workbook" / f"omarchy-{host}.png").convert("L").resize((144, 90))
+        mean = sum(img.getdata()) / (144 * 90) / 255
+        if mean > 0.3:
+            problems.append(f"{host} isn't dark ({mean:.2f} mean brightness)")
+    for src, where in ((ROOT / "mojoui/hosts/gtk.mojo", "GTK"), (ROOT / "mojoui/hosts/web.py", "web")):
+        if "JetBrains" not in src.read_text():
+            problems.append(f"{where} skin doesn't use JetBrains Mono")
+    return not problems, "; ".join(problems) or "the person's Omarchy theme on GTK, web and the canvases (another theme's colours come through; Tokyo Night without one)"
+
+
+def m11():
+    problems = []
+    opened = both("doubletap:0=690,300", shot_name="edit-open")
+    wrote = both("doubletap:0=690,300;enter:Cell=7", shot_name="edit-write")
+    for o in (opened, wrote):
+        if o[0] is None:
+            return False, o[1]
+    for host, o in (("GTK", opened[0]), ("web", opened[1])):
+        seen = inview(o)
+        if seen is None or "cell-editor" not in seen or not re.search(r"^BOARD: cell-editor at ", o, re.M):
+            problems.append(f"{host}: a double click didn't open the editor over the cell")
+    for host, o in (("GTK", wrote[0]), ("web", wrote[1])):
+        if label(o, "Row 2: cents = 7.00") is None:
+            problems.append(f"{host}: Enter didn't write the cell")
+        if re.search(r"^BOARD: cell-editor", o, re.M):
+            problems.append(f"{host}: the editor stayed open after Enter")
+    if g9.summary(wrote[0]) == g9.summary(opened[0]):
+        problems.append("the edit didn't change the totals")
+    if shown(wrote[0]) != shown(wrote[1]) or shown(opened[0]) != shown(opened[1]):
+        problems.append("GTK and web differ")
+    return not problems, "; ".join(problems) or "double click opens a focused editor over the cell; Enter writes it (totals change), moves down; identical on both hosts"
+
+
+def m12():
+    problems = []
+    fit = both("doubletap:0=690,40", shot_name="fit")
+    if fit[0] is None:
+        return False, fit[1]
+    for host, o in (("GTK", fit[0]), ("web", fit[1])):
+        if not re.search(r"^LABEL: Column cents fitted \(\d+ pt\)$", o, re.M):
+            problems.append(f"{host}: a double click on the header didn't fit the column")
+    if shown(fit[0]) != shown(fit[1]):
+        problems.append("GTK and web fit to different widths")
+    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tests/test_workbook.mojo", "-o", str(BUILD / "test_workbook")], timeout=900)
+    t = run(["pixi", "run", str(BUILD / "test_workbook")], timeout=900) if b.returncode == 0 else b
+    if "WORKBOOK TESTS PASSED" not in t.stdout:
+        problems.append(f"widths don't survive save → open: {(t.stdout + t.stderr)[-200:]}")
+    return not problems, "; ".join(problems) or "double-click a header fits it (same width on both hosts); header edges drag (bench_workbook); widths saved with the workbook"
+
+
+def m13():
+    exe = BUILD / "workbook" / "linux" / "workbook"
+    r = run([str(exe)], env={"MOJOUI_ROWS": "1000000", "MOJOUI_TEST": "", "MOJOUI_WORKBOOK": str(BUILD / "workbook" / "rows.mxwb")}, timeout=300)
+    if not re.search(r"^LABEL: .* revenue · 1,000,000 lines", r.stdout, re.M):
+        return False, f"MOJOUI_ROWS=1000000 didn't give a million rows: {[l for l in r.stdout.splitlines() if 'revenue' in l][:1]}"
+    return True, "MOJOUI_ROWS=1000000 starts the Workbook on a million rows (default 20M; the checks run at 20M)"
+
+
 def main():
     import shutil
     import headless
@@ -222,7 +303,8 @@ def main():
                 if a.returncode != 0:
                     print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7), ("M8", m8), ("M9", m9)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7), ("M8", m8), ("M9", m9),
+                     ("M10", m10), ("M11", m11), ("M12", m12), ("M13", m13)]:
         if only and name not in only:
             continue
         try:

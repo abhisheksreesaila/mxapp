@@ -14,6 +14,7 @@
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.charts import KpiTile, BarChart, LineChart, ColumnChart, money, compact, BRAND, DATA
+from mojoui.theme import Palette
 
 
 def json_string(s: String) -> String:
@@ -53,6 +54,7 @@ struct FlintChart(Movable):
     var properties: List[String]  # "key": value pairs, already JSON
     var width: Int
     var height: Int
+    var pal: Palette  # how mojoui draws it (not part of the Flint spec)
 
     def __init__(out self, chart_type: String, title: String = "", subtitle: String = ""):
         self.chart_type = chart_type
@@ -69,6 +71,7 @@ struct FlintChart(Movable):
         self.properties = List[String]()
         self.width = 400
         self.height = 320
+        self.pal = Palette.fluent()
 
     def text(var self, name: String, values: List[String]) -> FlintChart:
         self.names.append(name)
@@ -97,6 +100,11 @@ struct FlintChart(Movable):
 
     def property(var self, key: String, json_value: String) -> FlintChart:
         self.properties.append(json_string(key) + ": " + json_value)
+        return self^
+
+    def themed(var self, pal: Palette) -> FlintChart:
+        """Draw it in another palette (Palette.omarchy()); the Flint spec is unchanged."""
+        self.pal = pal.copy()
         return self^
 
     def size(var self, width: Int, height: Int) -> FlintChart:
@@ -198,21 +206,21 @@ struct FlintChart(Movable):
             var c = self.column("trend")  # (an extra data column: the tile's sparkline)
             if c >= 0:
                 spark = self.numbers[c].copy()
-            KpiTile(metric[0] if len(metric) > 0 else "", self.label("value", value[0] if len(value) > 0 else 0), note, spark^, accent).draw(s, font)
+            KpiTile(metric[0] if len(metric) > 0 else "", self.label("value", value[0] if len(value) > 0 else 0), note, spark^, accent).themed(self.pal).draw(s, font)
         elif self.chart_type == "Area Chart" or self.chart_type == "Line Chart":
             var all = self.texts_of("x")
             var every = max((len(all) + 6) // 7, 1)  # about seven labels along the axis
             var labels = List[String]()
             for i in range(len(all)):
                 labels.append(all[i] if i % every == 0 else "")
-            LineChart(labels^, self.numbers_of("y"), selected).draw(s, font)
+            LineChart(labels^, self.numbers_of("y"), selected).themed(self.pal).draw(s, font)
         elif self.chart_type == "Bar Chart" or self.chart_type == "Bar Table":
             if self.is_text_channel("y"):  # categories down the side: horizontal bars
                 var values = self.numbers_of("x")
                 var labels = List[String]()
                 for v in values:
                     labels.append(self.label("x", v))
-                BarChart(self.texts_of("y"), values^, labels^, selected, self.chart_type == "Bar Table").draw(s, font)
+                BarChart(self.texts_of("y"), values^, labels^, selected, self.chart_type == "Bar Table").themed(self.pal).draw(s, font)
             else:  # categories along the bottom: columns
                 var values = self.numbers_of("y")
                 var tops = List[String]()
@@ -220,13 +228,13 @@ struct FlintChart(Movable):
                     tops.append(self.label("y", v) if len(values) <= 12 else "")
                 var many = len(values) > 12  # a distribution: narrow bars in the second palette colour
                 ColumnChart(self.texts_of("x"), values^, tops^, selected, 0.14 if many else 0.35,
-                            materialize[DATA]()[1] if many else BRAND).draw(s, font)
+                            self.pal.data(1) if many else self.pal.accent).themed(self.pal).draw(s, font)
 
     def hit(self, width_pt: Float64, height_pt: Float64, font: Font, x_pt: Float64, y_pt: Float64) -> Int:
         """The row a tap at (x, y) points landed on, or -1."""
         if self.chart_type == "Area Chart" or self.chart_type == "Line Chart":
             var k = 2.0  # (in points; the scale only sets label widths)
-            return LineChart(self.texts_of("x"), self.numbers_of("y"), -1).hit(width_pt * k, height_pt * k, k, font, x_pt)
+            return LineChart(self.texts_of("x"), self.numbers_of("y"), -1).themed(self.pal).hit(width_pt * k, height_pt * k, k, font, x_pt)
         if self.chart_type == "Bar Chart" or self.chart_type == "Bar Table":
             if self.is_text_channel("y"):
                 return BarChart(self.texts_of("y"), self.numbers_of("x"), List[String](), -1).hit(height_pt, y_pt)

@@ -10,6 +10,7 @@ from std.math import log10, floor
 from mojoui.canvas import Surface, rgba
 from mojoui.text import Font, REGULAR, MEDIUM, LEFT, CENTRE, RIGHT
 from mojoui.draw import rect, line, circle, hline, area, with_alpha
+from mojoui.theme import Palette
 
 # Fluent 2 tokens (light theme)
 comptime PAGE = rgba(245, 245, 245)  # neutral background 3
@@ -132,19 +133,27 @@ struct KpiTile(Movable):
     var spark: List[Float64]
     var accent: Bool
 
+    var pal: Palette  # the colours and canvas font it draws with
+
     def __init__(out self, label: String, value: String, note: String, var spark: List[Float64], accent: Bool = False):
         self.label = label
         self.value = value
         self.note = note
         self.spark = spark^
         self.accent = accent
+        self.pal = Palette.fluent()
+
+    def themed(var self, pal: Palette) -> Self:
+        """The same chart in another palette (Palette.omarchy())."""
+        self.pal = pal.copy()
+        return self^
 
     def draw(self, mut s: Surface, font: Font):
         var k = s.scale
-        s.fill(PAGE)
-        var bg = BRAND if self.accent else CARD_BG
-        var ink = CARD_BG if self.accent else INK
-        var ink2 = with_alpha(CARD_BG, 0.82) if self.accent else INK2
+        s.fill(self.pal.page)
+        var bg = self.pal.accent if self.accent else self.pal.card
+        var ink = self.pal.card if self.accent else self.pal.ink
+        var ink2 = with_alpha(self.pal.card, 0.82) if self.accent else self.pal.ink2
         var w = Float64(s.width)
         var h = Float64(s.height)
         # Fluent "shadow4": a soft drop under the tile
@@ -152,8 +161,8 @@ struct KpiTile(Movable):
         rect(s, 0.5 * k, 0.5 * k, w - 1 * k, h - 2 * k, rgba(0, 0, 0, 18), 8 * k)
         rect(s, 1 * k, 1 * k, w - 2 * k, h - 3 * k, bg, 8 * k)
         var pad = 16 * k
-        font.draw(s, self.label, pad, pad + 13 * k, 13 * k, ink2, MEDIUM)
-        font.draw(s, self.value, pad, pad + 13 * k + 38 * k, 34 * k, ink, MEDIUM)
+        font.draw(s, self.label, pad, pad + 13 * k, 13 * k, ink2, self.pal.medium)
+        font.draw(s, self.value, pad, pad + 13 * k + 38 * k, 34 * k, ink, self.pal.medium)
         font.draw(s, self.note, pad, h - 16 * k, 12 * k, ink2)
         # sparkline, bottom right
         var n = len(self.spark)
@@ -170,7 +179,7 @@ struct KpiTile(Movable):
             for i in range(n):
                 xs.append(x0 + (x1 - x0) * Float64(i) / Float64(n - 1))
                 ys.append(y1 - (y1 - y0) * (self.spark[i] / top if top > 0 else 0))
-            var line_color = CARD_BG if self.accent else BRAND
+            var line_color = self.pal.card if self.accent else self.pal.accent
             area(s, xs, ys, y1, with_alpha(line_color, 0.30), with_alpha(line_color, 0.0))
             for i in range(n - 1):
                 line(s, xs[i], ys[i], xs[i + 1], ys[i + 1], 1.75 * k, line_color)
@@ -187,6 +196,8 @@ struct BarChart(Movable):
     var selected: Int
     var table: Bool  # a table: names left, values right, a slim data bar under each row
 
+    var pal: Palette  # the colours and canvas font it draws with
+
     def __init__(out self, var names: List[String], var values: List[Float64], var labels: List[String], selected: Int = -1,
                  table: Bool = False):
         self.names = names^
@@ -194,13 +205,19 @@ struct BarChart(Movable):
         self.labels = labels^
         self.selected = selected
         self.table = table
+        self.pal = Palette.fluent()
+
+    def themed(var self, pal: Palette) -> Self:
+        """The same chart in another palette (Palette.omarchy())."""
+        self.pal = pal.copy()
+        return self^
 
     def row_height(self, s_height: Float64) -> Float64:
         return s_height / Float64(max(len(self.names), 1))
 
     def draw(self, mut s: Surface, font: Font):
         var k = s.scale
-        s.fill(CARD_BG)
+        s.fill(self.pal.card)
         var n = len(self.names)
         if n == 0:
             return
@@ -210,8 +227,8 @@ struct BarChart(Movable):
         var name_w = 0.0
         var value_w = 0.0
         for i in range(n):
-            name_w = max(name_w, font.measure(self.names[i], 13 * k))
-            value_w = max(value_w, font.measure(self.labels[i], 13 * k, MEDIUM))
+            name_w = max(name_w, font.measure(self.names[i], 13 * k, self.pal.regular))
+            value_w = max(value_w, font.measure(self.labels[i], 13 * k, self.pal.medium))
         var x0 = name_w + 12 * k
         var x1 = Float64(s.width) - value_w - 10 * k
         var top = 0.0
@@ -223,11 +240,11 @@ struct BarChart(Movable):
             var on = self.selected < 0 or self.selected == i
             var bar_w = (x1 - x0) * (self.values[i] / top if top > 0 else 0)
             var bh = min(rh * 0.62, 26 * k)
-            rect(s, x0, cy - bh / 2, x1 - x0, bh, rgba(245, 245, 245), 3 * k)  # the track
-            rect(s, x0, cy - bh / 2, max(bar_w, 2 * k), bh, BRAND if on else BRAND_TINT, 3 * k)
+            rect(s, x0, cy - bh / 2, x1 - x0, bh, self.pal.raised, 3 * k)  # the track
+            rect(s, x0, cy - bh / 2, max(bar_w, 2 * k), bh, self.pal.accent if on else self.pal.accent_tint, 3 * k)
             var base = cy + 4.5 * k
-            font.draw(s, self.names[i], x0 - 12 * k, base, 13 * k, INK if on else INK3, MEDIUM if self.selected == i else REGULAR, RIGHT)
-            font.draw(s, self.labels[i], x0 + bar_w + 8 * k, base, 13 * k, INK if on else INK3, MEDIUM)
+            font.draw(s, self.names[i], x0 - 12 * k, base, 13 * k, self.pal.ink if on else self.pal.ink3, self.pal.medium if self.selected == i else self.pal.regular, RIGHT)
+            font.draw(s, self.labels[i], x0 + bar_w + 8 * k, base, 13 * k, self.pal.ink if on else self.pal.ink3, self.pal.medium)
 
     def draw_table(self, mut s: Surface, font: Font):
         var k = s.scale
@@ -241,13 +258,13 @@ struct BarChart(Movable):
             var y = rh * Float64(i)
             var on = self.selected < 0 or self.selected == i
             var base = y + rh / 2 + 1 * k
-            font.draw(s, self.names[i], 0, base, 13 * k, INK if on else INK3, MEDIUM if self.selected == i else REGULAR)
-            font.draw(s, self.labels[i], w, base, 13 * k, INK if on else INK3, MEDIUM, RIGHT)
+            font.draw(s, self.names[i], 0, base, 13 * k, self.pal.ink if on else self.pal.ink3, self.pal.medium if self.selected == i else self.pal.regular)
+            font.draw(s, self.labels[i], w, base, 13 * k, self.pal.ink if on else self.pal.ink3, self.pal.medium, RIGHT)
             var bar = w * (self.values[i] / top if top > 0 else 0)
-            rect(s, 0, base + 6 * k, w, 3 * k, rgba(240, 240, 240), 1.5 * k)
-            rect(s, 0, base + 6 * k, bar, 3 * k, BRAND if on else BRAND_TINT, 1.5 * k)
+            rect(s, 0, base + 6 * k, w, 3 * k, self.pal.raised, 1.5 * k)
+            rect(s, 0, base + 6 * k, bar, 3 * k, self.pal.accent if on else self.pal.accent_tint, 1.5 * k)
             if i < n - 1:
-                hline(s, 0, w, y + rh - 1, GRID)
+                hline(s, 0, w, y + rh - 1, self.pal.line)
 
     def hit(self, height_pt: Float64, y_pt: Float64) -> Int:
         """The row a tap at y (points) landed on, or -1."""
@@ -265,16 +282,24 @@ struct LineChart(Movable):
     var values: List[Float64]  # in cents
     var selected: Int
 
+    var pal: Palette  # the colours and canvas font it draws with
+
     def __init__(out self, var labels: List[String], var values: List[Float64], selected: Int = -1):
         self.labels = labels^
         self.values = values^
         self.selected = selected
+        self.pal = Palette.fluent()
+
+    def themed(var self, pal: Palette) -> Self:
+        """The same chart in another palette (Palette.omarchy())."""
+        self.pal = pal.copy()
+        return self^
 
     def plot_box(self, w: Float64, h: Float64, k: Float64, font: Font) -> SIMD[DType.float64, 4]:
         """(left, top, right, bottom) of the plotting area, in pixels."""
         var step = nice_step(self.max_value())
         var top_value = step * Float64(max(Int(self.max_value() / step + 0.999), 1))
-        var axis_w = font.measure(axis_money(Int(top_value)), 12 * k) + 10 * k
+        var axis_w = font.measure(axis_money(Int(top_value)), 12 * k, self.pal.regular) + 10 * k
         return SIMD[DType.float64, 4](axis_w, 10 * k, w - 8 * k, h - 26 * k)
 
     def max_value(self) -> Float64:
@@ -285,7 +310,7 @@ struct LineChart(Movable):
 
     def draw(self, mut s: Surface, font: Font):
         var k = s.scale
-        s.fill(CARD_BG)
+        s.fill(self.pal.card)
         var n = len(self.values)
         if n < 2:
             return
@@ -299,8 +324,8 @@ struct LineChart(Movable):
         var axis_top = step * Float64(lines)
         for g in range(lines + 1):  # gridlines and y labels at round steps
             var y = bottom - (bottom - top) * Float64(g) / Float64(lines)
-            hline(s, left, right, y, GRID if g > 0 else STROKE)
-            font.draw(s, axis_money(Int(step * Float64(g))), left - 8 * k, y + 4 * k, 12 * k, INK2, REGULAR, RIGHT)
+            hline(s, left, right, y, self.pal.line if g > 0 else self.pal.line_strong)
+            font.draw(s, axis_money(Int(step * Float64(g))), left - 8 * k, y + 4 * k, 12 * k, self.pal.ink2, self.pal.regular, RIGHT)
         var xs = List[Float64]()
         var ys = List[Float64]()
         for i in range(n):
@@ -308,22 +333,22 @@ struct LineChart(Movable):
             ys.append(bottom - (bottom - top) * self.values[i] / axis_top)
         for i in range(n):  # x labels
             if self.labels[i] != "":
-                font.draw(s, self.labels[i], xs[i], bottom + 18 * k, 12 * k, INK2, REGULAR, CENTRE)
-        area(s, xs, ys, bottom, with_alpha(BRAND, 0.22), with_alpha(BRAND, 0.0))
+                font.draw(s, self.labels[i], xs[i], bottom + 18 * k, 12 * k, self.pal.ink2, self.pal.regular, CENTRE)
+        area(s, xs, ys, bottom, with_alpha(self.pal.accent, 0.22), with_alpha(self.pal.accent, 0.0))
         for i in range(n - 1):
-            line(s, xs[i], ys[i], xs[i + 1], ys[i + 1], 2.25 * k, BRAND)
+            line(s, xs[i], ys[i], xs[i + 1], ys[i + 1], 2.25 * k, self.pal.accent)
         if 0 <= self.selected < n:
             var x = xs[self.selected]
             var y = ys[self.selected]
-            line(s, x, top, x, bottom, 1 * k, with_alpha(BRAND, 0.45))
-            circle(s, x, y, 6 * k, CARD_BG)
-            circle(s, x, y, 4.5 * k, BRAND)
+            line(s, x, top, x, bottom, 1 * k, with_alpha(self.pal.accent, 0.45))
+            circle(s, x, y, 6 * k, self.pal.card)
+            circle(s, x, y, 4.5 * k, self.pal.accent)
             var tag = money(Int(self.values[self.selected]))
-            var tw = font.measure(tag, 12 * k, MEDIUM) + 16 * k
+            var tw = font.measure(tag, 12 * k, self.pal.medium) + 16 * k
             var tx = min(max(x - tw / 2, left), right - tw)
             var ty = max(y - 34 * k, top)
-            rect(s, tx, ty, tw, 22 * k, INK, 4 * k)
-            font.draw(s, tag, tx + tw / 2, ty + 15.5 * k, 12 * k, CARD_BG, MEDIUM, CENTRE)
+            rect(s, tx, ty, tw, 22 * k, self.pal.ink, 4 * k)
+            font.draw(s, tag, tx + tw / 2, ty + 15.5 * k, 12 * k, self.pal.card, self.pal.medium, CENTRE)
 
     def hit(self, width_px: Float64, height_px: Float64, scale: Float64, font: Font, x_pt: Float64) -> Int:
         """The point nearest a tap at x (points), or -1 outside the plot."""
@@ -351,6 +376,8 @@ struct ColumnChart(Movable):
     var gap: Float64
     var color: UInt32
 
+    var pal: Palette  # the colours and canvas font it draws with
+
     def __init__(out self, var labels: List[String], var values: List[Float64], var top_labels: List[String],
                  selected: Int = -1, gap: Float64 = 0.35, color: UInt32 = BRAND):
         self.labels = labels^
@@ -359,10 +386,16 @@ struct ColumnChart(Movable):
         self.selected = selected
         self.gap = gap
         self.color = color
+        self.pal = Palette.fluent()
+
+    def themed(var self, pal: Palette) -> Self:
+        """The same chart in another palette (Palette.omarchy())."""
+        self.pal = pal.copy()
+        return self^
 
     def draw(self, mut s: Surface, font: Font):
         var k = s.scale
-        s.fill(CARD_BG)
+        s.fill(self.pal.card)
         var n = len(self.values)
         if n == 0:
             return
@@ -375,22 +408,22 @@ struct ColumnChart(Movable):
             vmax = max(vmax, v)
         var slot = (right - left) / Float64(n)
         var last_label_end = -1e9
-        hline(s, left, right, bottom, STROKE)
+        hline(s, left, right, bottom, self.pal.line_strong)
         for i in range(n):
             var on = self.selected < 0 or self.selected == i
             var bh = (bottom - top) * (self.values[i] / vmax if vmax > 0 else 0)
             var bw = slot * (1 - self.gap)
             var x = left + slot * Float64(i) + (slot - bw) / 2
-            var fill = self.color if on else BRAND_TINT
+            var fill = self.color if on else self.pal.accent_tint
             rect(s, x, bottom - bh, bw, bh, fill, min(3 * k, bh / 2))
             rect(s, x, bottom - min(3 * k, bh), bw, min(3 * k, bh), fill)  # square bottoms on the axis
             if i < len(self.top_labels) and self.top_labels[i] != "":
-                font.draw(s, self.top_labels[i], x + bw / 2, bottom - bh - 7 * k, 12 * k, INK if on else INK3, MEDIUM, CENTRE)
+                font.draw(s, self.top_labels[i], x + bw / 2, bottom - bh - 7 * k, 12 * k, self.pal.ink if on else self.pal.ink3, self.pal.medium, CENTRE)
             if self.labels[i] != "":
-                var lw = font.measure(self.labels[i], 12 * k)
+                var lw = font.measure(self.labels[i], 12 * k, self.pal.regular)
                 if x + bw / 2 - lw / 2 >= last_label_end + 6 * k and x + bw / 2 + lw / 2 <= Float64(s.width) - 4 * k:  # only labels that fit
-                    font.draw(s, self.labels[i], x + bw / 2, bottom + 17 * k, 12 * k, INK2 if on else INK3,
-                              MEDIUM if self.selected == i else REGULAR, CENTRE)
+                    font.draw(s, self.labels[i], x + bw / 2, bottom + 17 * k, 12 * k, self.pal.ink2 if on else self.pal.ink3,
+                              self.pal.medium if self.selected == i else self.pal.regular, CENTRE)
                     last_label_end = x + bw / 2 + lw / 2
 
     def hit(self, width_pt: Float64, x_pt: Float64) -> Int:

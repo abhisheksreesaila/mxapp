@@ -125,6 +125,9 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .overlay > .island.v-start { top: 0; } .overlay > .island.v-end { bottom: 0; }
 .board-scroll { overflow: auto; position: relative; min-height: 0; }
 .board { position: relative; flex: none; min-width: 100%; min-height: 100%; box-sizing: border-box; }
+.board > .object[data-tag=cell-editor] { overflow: visible; z-index: 4; }
+.board > .object[data-tag=cell-editor]::after { display: none; }
+.board > .object[data-tag=cell-editor] form, .board > .object[data-tag=cell-editor] input { width: 100%; height: 100%; box-sizing: border-box; margin: 0; }
 .board > .object.revealed { animation: mojoui-revealed 1.2s ease-out; }
 @media (prefers-reduced-motion: reduce) { .board > .object.revealed { animation: none; } }
 @keyframes mojoui-revealed { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent); } to { box-shadow: 0 0 0 3px transparent; } }
@@ -220,7 +223,7 @@ CANVAS_JS = r"""
 // its version or size changes. Gestures: drag = PAN, wheel/pinch = ZOOM, click = TAP,
 // sent through htmx like any other event, so the rest of the page updates as usual.
 (() => {
-  const PAN = 1, ZOOM = 2, TAP = 3, PRESS = 4, RELEASE = 5;
+  const PAN = 1, ZOOM = 2, TAP = 3, PRESS = 4, RELEASE = 5, DOUBLE = 6;
   const shape = () => document.getElementById('mojoui-v').value;
   function attach(div) {
     if (div.mojoui) return;
@@ -316,6 +319,7 @@ CANVAS_JS = r"""
       else if (pointers.size === 0 && moved) send(RELEASE, x, y, 0, 0, 1);  // a drag ended
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    cv.addEventListener('dblclick', e => { const [x, y] = at(e); send(DOUBLE, x, y, 0, 0, 1); });
     cv.addEventListener('wheel', e => {
       e.preventDefault();
       const [x, y] = at(e), dy = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY;
@@ -376,6 +380,42 @@ body.fluent hr { border-top-color: #E0E0E0; }
 body.fluent .lazylist { border-radius: 4px; border-color: #E0E0E0; background: #fff; }
 body.fluent .lazylist .row { border-bottom-color: #F0F0F0; }
 body.fluent .canvas { background: transparent; }
+"""
+
+
+# Omarchy (design 2): the person's Omarchy theme (variables set per page from the Mojo palette),
+# JetBrains Mono, flat controls with hairline borders; the same rules as the GTK skin.
+OMARCHY_CSS = """
+body.omarchy { background: var(--o-page); color: var(--o-ink2); --accent: var(--o-accent); --line: var(--o-line); --muted: var(--o-ink3);
+  --surface: var(--o-raised); --danger: var(--o-bad);
+  font: 13px/18px "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, monospace; }
+body.omarchy .text { text-align: left; color: var(--o-ink2); }
+body.omarchy .text.title, body.omarchy .text.headline { color: var(--o-ink); font-weight: 700; letter-spacing: 0; }
+body.omarchy .text.title { font-size: 18px; line-height: 24px; } body.omarchy .text.headline { font-size: 13px; line-height: 18px; }
+body.omarchy .text.caption { font-size: 11px; line-height: 15px; color: var(--o-ink3); }
+body.omarchy button { border-radius: 3px; min-height: 28px; padding: 3px 10px; font-weight: 500; background: transparent;
+  color: var(--o-ink); border: 1px solid var(--o-strong); transition: background .1s; }
+body.omarchy button:hover { filter: none; background: var(--o-raised); }
+body.omarchy button:active { transform: none; background: var(--o-wash); }
+body.omarchy button.prominent { background: var(--o-accent); border-color: transparent; color: var(--o-on-accent); font-weight: 700; }
+body.omarchy button.subtle { border-color: transparent; color: var(--o-ink2); }
+body.omarchy button.subtle:hover { background: var(--o-raised); color: var(--o-ink); }
+body.omarchy button.icon-only { padding: 3px 5px; min-width: 28px; justify-content: center; }
+body.omarchy select, body.omarchy input[type=text], body.omarchy input[type=date], body.omarchy textarea { border-radius: 3px; min-height: 28px;
+  border: 1px solid var(--o-strong); background: var(--o-page); color: var(--o-ink); font: inherit; }
+body.omarchy select { padding: 2px 4px; }
+body.omarchy input[type=text]:focus, body.omarchy textarea:focus, body.omarchy select:focus { outline: none; border-color: var(--o-accent); }
+body.omarchy .vstack.card { background: var(--o-card); border-radius: 4px; padding: 12px 14px; box-sizing: border-box; box-shadow: inset 0 0 0 1px var(--o-line); }
+body.omarchy .island > * { background: var(--o-card); border-radius: 4px; padding: 6px 10px; min-height: 32px; align-items: center;
+  box-shadow: inset 0 0 0 1px var(--o-strong), 0 6px 18px rgba(0,0,0,.35); }
+body.omarchy .board { background-color: var(--o-page); background-image: radial-gradient(circle, var(--o-line) 1px, transparent 1.5px);
+  background-size: 24px 24px; }
+body.omarchy .board > .object::after { border-color: var(--o-strong); }
+body.omarchy .canvas { background: transparent; }
+body.omarchy hr { border-top-color: var(--o-line); }
+body.omarchy input.cell-editor, body.fluent input.cell-editor { border-radius: 0; border: 2px solid var(--o-accent); background: var(--o-card); min-height: 0; }
+body.omarchy ::-webkit-scrollbar { width: 10px; height: 10px; } body.omarchy ::-webkit-scrollbar-thumb { background: var(--o-strong); border-radius: 5px; }
+body.omarchy ::-webkit-scrollbar-track { background: transparent; }
 """
 
 
@@ -488,8 +528,10 @@ def render_node(s, i, sid):
         # the form's queue, so a fast Return can't overtake the typing it follows.
         # hx-vals is inherited from ancestors, so the input says second=0 explicitly
         # (otherwise it would pick up the form's second=1 and every keystroke would "submit").
+        editor = n["value"] == 1  # .focused(): an in-place editor takes the keyboard, its text selected
         field = Input(type="text", name="text", value=n["text"], placeholder=n["hint"], data_kind="field",
-                      autocomplete="off", autofocus=(s.focus == i), hx_trigger="input",
+                      cls="cell-editor" if editor else None, onfocus="this.select()" if editor else None,
+                      autocomplete="off", autofocus=(s.focus == i or editor), hx_trigger="input",
                       hx_sync="closest form:queue all", **dict(common, hx_vals=json.dumps({"n": i, "second": 0})))
         return Form(field, cls="field", id=nid, hx_post=post, hx_vals=json.dumps({"n": i, "second": 1}),
                     hx_swap="none", hx_include="#mojoui-v", hx_sync="this:queue all")
@@ -637,7 +679,7 @@ def make_app(module_dir):
         # inherited their list's hx-target and silently sent nothing). Note: hx-vals is still
         # merged from ancestors even so, so elements set every key they rely on themselves.
         Meta(name="htmx-config", content='{"disableInheritance": true}'),
-        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS), Style(FLUENT_CSS)))
+        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS), Style(FLUENT_CSS), Style(OMARCHY_CSS)))
     sessions = OrderedDict()  # sid → Session, oldest first
     sessions_lock = threading.Lock()
 
@@ -674,9 +716,19 @@ def make_app(module_dir):
                 with old.lock:
                     old.closed = True
                     mod.close(old.handle)
-        fluent = mod.design(s.handle) == 1
-        body_class = Script("document.body.classList.add('fluent')") if fluent else ""
-        return Title(mod.title(s.handle)), *root(s, sid), body_class
+        design = mod.design(s.handle)
+        body_class = ""
+        if design == 1:
+            body_class = Script("document.body.classList.add('fluent')")
+        elif design == 2:  # Omarchy: the person's theme colours as CSS variables (read by the Mojo module)
+            pal = dict(kv.split("=", 1) for kv in mod.palette().split(";"))
+            css_vars = "body.omarchy {" + "".join(f"--o-{k}: {v};" for k, v in pal.items() if k != "dark") + \
+                       ("color-scheme: dark;" if pal.get("dark") == "1" else "color-scheme: light;") + "}"
+            body_class = (Style(css_vars), Script("document.body.classList.add('omarchy')"))
+        else:
+            body_class = ()
+        extra = body_class if isinstance(body_class, tuple) else (body_class,)
+        return Title(mod.title(s.handle)), *root(s, sid), *extra
 
     @app.get("/img/{sid}/{n}")
     def image(sid: str, n: int):

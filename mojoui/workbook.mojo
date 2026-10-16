@@ -135,7 +135,7 @@ def table_json(frame: Frame, source: String, parquet: String) raises -> String:
     return out + "]}"
 
 
-def save_workbook(path: String, frame: Frame, source: String, objects: List[ObjectSpec]) raises:
+def save_workbook(path: String, frame: Frame, source: String, objects: List[ObjectSpec], widths: List[Int] = []) raises:
     """Writes `path` (a folder ending in .mxwb). Tables with a source name aren't copied: the JSON
     says how to rebuild them; others get a Parquet file beside the JSON."""
     var bridge = Bridge()
@@ -149,7 +149,10 @@ def save_workbook(path: String, frame: Frame, source: String, objects: List[Obje
             addresses.append(PythonObject(Int(base.cols[c].values.unsafe_ptr())))
         _ = bridge.py.write_text(path + "/workbook.json", "")  # (makes the folder)
         _ = bridge.py.write_parquet(path + "/" + parquet, names, addresses, base.rows)
-    var out = String('{"mojoui_workbook": 1, "tables": [') + table_json(frame, source, parquet) + '], "objects": ['
+    var out = String('{"mojoui_workbook": 1, "tables": [') + table_json(frame, source, parquet) + '], "widths": ['
+    for k in range(len(widths)):  # the grid's column widths in points (0 = the default for its type)
+        out += ("," if k > 0 else "") + String(widths[k])
+    out += '], "objects": ['
     for k in range(len(objects)):
         out += ("," if k > 0 else "") + objects[k].to_json()
     out += "]}\n"
@@ -233,3 +236,16 @@ def open_workbook(path: String, shared_source: String, shared_addr: Int, mut obj
                                   Int(py=o["a"]), Int(py=o["b"]), Int(py=o["c"]), py_str(o["text"]), Int(py=o["selected"])))
     base_addr = addr
     return frame^
+
+
+def read_widths(path: String) raises -> List[Int]:
+    """The grid's column widths saved with the workbook (empty if it has none: older files)."""
+    var bridge = Bridge()
+    var doc = bridge.py.read_json(path + "/workbook.json")
+    var out = List[Int]()
+    if Bool(py=doc.__contains__("widths")):
+        var w = doc["widths"]
+        for k in range(Int(py=w.__len__())):
+            out.append(max(0, min(Int(py=w[k]), 2000)))
+    return out^
+

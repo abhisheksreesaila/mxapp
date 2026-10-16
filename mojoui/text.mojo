@@ -9,11 +9,15 @@ from mojoui.canvas import Surface
 from mojoui.font_data import (
     REGULAR_SIZE, REGULAR_ASCENT, REGULAR_DESCENT, REGULAR_WIDTH, REGULAR_HEIGHT, REGULAR_TABLE, REGULAR_ATLAS,
     MEDIUM_SIZE, MEDIUM_ASCENT, MEDIUM_DESCENT, MEDIUM_WIDTH, MEDIUM_HEIGHT, MEDIUM_TABLE, MEDIUM_ATLAS,
+    MONO_SIZE, MONO_ASCENT, MONO_DESCENT, MONO_WIDTH, MONO_HEIGHT, MONO_TABLE, MONO_ATLAS,
+    MONO_BOLD_SIZE, MONO_BOLD_ASCENT, MONO_BOLD_DESCENT, MONO_BOLD_WIDTH, MONO_BOLD_HEIGHT, MONO_BOLD_TABLE, MONO_BOLD_ATLAS,
     DISPLAY_SIZE, DISPLAY_ASCENT, DISPLAY_DESCENT, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_TABLE, DISPLAY_ATLAS,
 )
 
 comptime REGULAR = 0
 comptime MEDIUM = 1
+comptime MONO = 2  # JetBrains Mono (the Omarchy look)
+comptime MONO_BOLD = 3
 comptime LEFT = 0
 comptime CENTRE = 1
 comptime RIGHT = 2
@@ -172,19 +176,28 @@ struct Face(Movable):
 
 
 struct Font(Movable):
-    """Noto Sans: Regular and Medium for labels, a large Medium for big numbers."""
+    """Noto Sans: Regular and Medium for labels, a large Medium for big numbers; JetBrains Mono regular and bold."""
 
     var regular: Face
     var medium: Face
     var display: Face
+    var mono: Face
+    var mono_bold: Face
 
     def __init__(out self):
         self.regular = Face(REGULAR_SIZE, REGULAR_ASCENT, REGULAR_DESCENT, REGULAR_WIDTH, REGULAR_TABLE, REGULAR_ATLAS)
         self.medium = Face(MEDIUM_SIZE, MEDIUM_ASCENT, MEDIUM_DESCENT, MEDIUM_WIDTH, MEDIUM_TABLE, MEDIUM_ATLAS)
         self.display = Face(DISPLAY_SIZE, DISPLAY_ASCENT, DISPLAY_DESCENT, DISPLAY_WIDTH, DISPLAY_TABLE, DISPLAY_ATLAS)
+        self.mono = Face(MONO_SIZE, MONO_ASCENT, MONO_DESCENT, MONO_WIDTH, MONO_TABLE, MONO_ATLAS)
+        self.mono_bold = Face(MONO_BOLD_SIZE, MONO_BOLD_ASCENT, MONO_BOLD_DESCENT, MONO_BOLD_WIDTH, MONO_BOLD_TABLE, MONO_BOLD_ATLAS)
 
     def pick(self, weight: Int, size: Float64, text: String) -> Int:
-        """Which face draws `text` at `size` px: 2 = the big one (large numbers, if it has every glyph)."""
+        """Which face draws `text` at `size` px: 2 = the big one (large numbers, if it has every glyph);
+        3, 4 = JetBrains Mono regular and bold."""
+        if weight == MONO:
+            return 3
+        if weight == MONO_BOLD:
+            return 4
         if weight == MEDIUM and size > 34:
             var all_there = True
             for c in text.codepoints():
@@ -199,6 +212,10 @@ struct Font(Movable):
         var k = self.pick(weight, size, text)
         if k == 2:
             return self.display.measure(text, size)
+        if k == 3:
+            return self.mono.measure(text, size)
+        if k == 4:
+            return self.mono_bold.measure(text, size)
         return self.medium.measure(text, size) if k == 1 else self.regular.measure(text, size)
 
     def ascent(self, size: Float64) -> Float64:
@@ -216,6 +233,10 @@ struct Font(Movable):
         var k = self.pick(weight, size, text)
         if k == 2:
             self.display.draw(surface, text, pen, baseline, size, color)
+        elif k == 3:
+            self.mono.draw(surface, text, pen, baseline, size, color)
+        elif k == 4:
+            self.mono_bold.draw(surface, text, pen, baseline, size, color)
         elif k == 1:
             self.medium.draw(surface, text, pen, baseline, size, color)
         else:

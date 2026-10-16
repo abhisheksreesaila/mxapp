@@ -8,7 +8,7 @@
 
 from mojoui.view import (View, Text, Button, TextField, Dropdown, TextArea, Canvas, Board, Overlay, VStack, HStack, Card, Grid, Spacer,
                          Divider, Scroll, TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, START, CENTER, END,
-                         BETWEEN, TAP, PAN, ZOOM, PRESS, RELEASE, FLUENT, NO_MSG)
+                         BETWEEN, TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE, FLUENT, OMARCHY, NO_MSG)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface, rgba
 from mojoui.text import Font, REGULAR, MEDIUM, LEFT, RIGHT, CENTRE
@@ -20,8 +20,9 @@ from mojoui.frame_gpu import GpuFrame, group_sum, pivot_program
 from mojoui.contoso import generate_columns, CATEGORY, REGION, CHANNEL, PRODUCT, QUANTITY, CENTS, COST, YEAR
 from mojoui.gpu import gpu_present, GroupSums
 from mojoui.shared import put_shared, get_shared, keep, at, count_load, environment
-from mojoui.workbook import save_workbook, open_workbook, ObjectSpec
+from mojoui.workbook import save_workbook, open_workbook, read_widths, ObjectSpec
 from mojoui.maths import log2
+from mojoui.theme import Palette
 
 comptime SOURCE_PREFIX = "contoso:"  # + the row count: the shared table's source name (a workbook file names it instead of copying it)
 comptime SAMPLE = "examples/workbook/contoso.mxwb"
@@ -61,6 +62,9 @@ comptime PAGE_X = 24  # where the objects start on the page (clear of the island
 comptime PAGE_Y = 80
 comptime PAGE_W = 1232  # the objects' width (the page is PAGE_X wider each side: 1280 pt in all, a 13" laptop)
 comptime BAR_W = 14.0  # the grid's scroll bar
+comptime CARD_PAD_X = 14  # a card's padding (both hosts' CSS) and where its grid starts inside it:
+comptime GRID_TOP = 96  # padding 12 + header row 32 + gap 10 + formula bar 32 + gap 10
+comptime CELL_COMMIT = 280  # the in-place editor's Enter
 
 comptime HEADER_H = 30.0
 comptime ROW_H = 26.0
@@ -90,6 +94,7 @@ struct Main(App):
     var frame: Frame
     var gf_addr: Int
     var font: Font
+    var pal: Palette  # the person's Omarchy theme: the grid and the charts draw in it
     var objects: List[Obj]
     var order: List[Int]  # the table sorted (a permutation of alive rows), or empty: natural order
     var sort_col: Int
@@ -111,6 +116,12 @@ struct Main(App):
     var bar_drag: Bool  # the grid's current drag started on its scroll bar
     var bar_grab: Float64  # where on the thumb it was grabbed (points from the thumb's top)
     var grid_k: Int  # the table card the last grid gesture came from (its size drives the scroll bar)
+    var widths: List[Float64]  # per column: its width in points (0 = the default for its type)
+    var left: Float64  # the grid scrolled sideways (points)
+    var resize_col: Int  # a header edge being dragged, or -1
+    var resize_x0: Float64
+    var resize_w0: Float64
+    var editing: Bool  # the in-place editor is open over the selected cell
     var reveal_k: Int  # the object the page should scroll to (the one just inserted), or -1
     var reveal_count: Int
 
@@ -118,7 +129,14 @@ struct Main(App):
     def init_shared():
         if get_shared(0) != 0:
             return
-        var addr = share(generate_columns(20_000_000 if gpu_present() else 2_000_000))
+        var rows = 20_000_000 if gpu_present() else 2_000_000
+        var asked = environment("MOJOUI_ROWS")  # e.g. 1000000 while iterating on the UI
+        if asked != "":
+            try:
+                rows = max(Int(asked), 1000)
+            except:
+                pass
+        var addr = share(generate_columns(rows))
         put_shared(0, addr)
         put_shared(1, keep(GpuFrame(addr)))
         count_load()
@@ -129,6 +147,7 @@ struct Main(App):
         self.frame = Frame(get_shared(0))
         self.gf_addr = get_shared(1)
         self.font = Font()
+        self.pal = Palette.omarchy()
         self.objects = List[Obj]()
         self.objects.append(obj(TABLE, "Order lines", 0, 0, 1232, 380))
         self.objects.append(obj(PIVOT, "Revenue by region and channel", 0, 396, 480, 300, a=1, b=2, c=1))
@@ -159,6 +178,12 @@ struct Main(App):
         self.bar_drag = False
         self.bar_grab = 0
         self.grid_k = 0
+        self.widths = List[Float64]()
+        self.left = 0
+        self.resize_col = -1
+        self.resize_x0 = 0
+        self.resize_w0 = 0
+        self.editing = False
         self.reveal_k = -1
         self.reveal_count = 0
         self.load(SAMPLE, quiet=True)  # the sample workbook, when run from the repo; else the built-in page
@@ -183,6 +208,11 @@ struct Main(App):
             self.order = List[Int]()
             self.sort_col = -1
             self.select_cell(-1, -1)
+            self.widths = List[Float64]()
+            for wd in read_widths(path):
+                self.widths.append(Float64(wd))
+            self.left = 0
+            self.editing = False
             self.message = "Opened " + path
         except e:
             if not quiet:
@@ -195,7 +225,7 @@ struct Main(App):
         return (1440, 900)
 
     def design(self) -> Int:
-        return FLUENT
+        return OMARCHY
 
     def gf(self) -> Pointer[GpuFrame, MutUntrackedOrigin]:
         return at[GpuFrame](self.gf_addr)
@@ -295,6 +325,15 @@ struct Main(App):
     # ---------- the grid ----------
 
     def col_width(self, c: Int) -> Float64:
+        if c < len(self.widths) and self.widths[c] > 0:
+            return self.widths[c]
+        return self.default_width(c)
+
+    def default_width(self, c: Int) -> Float64:
+        """Its type's width, or its header's if that's wider."""
+        return max(self.type_width(c), self.font.measure(self.frame.name(c), 12.5, self.pal.medium) + 26)
+
+    def type_width(self, c: Int) -> Float64:
         var kind = self.frame.kind(c)
         if c == PRODUCT:
             return 190
@@ -307,16 +346,109 @@ struct Main(App):
         return 72
 
     def col_left(self, c: Int) -> Float64:
-        var x = GUTTER
+        """Where column c starts in the grid (points), the sideways scroll applied."""
+        var x = GUTTER - self.left
         for k in range(c):
             x += self.col_width(k)
         return x
+
+    def columns_width(self) -> Float64:
+        var x = GUTTER
+        for c in range(self.frame.columns()):
+            x += self.col_width(c)
+        return x
+
+    def set_width(mut self, c: Int, w: Float64):
+        while len(self.widths) <= c:
+            self.widths.append(0)
+        self.widths[c] = min(max(w, 40.0), 600.0)
+        self.version += 1
+
+    def fit(mut self, c: Int):
+        """Column c as wide as its header and the values around what's on screen (200 rows)."""
+        var w = self.font.measure(self.frame.name(c) + ("ƒ " if c >= self.frame.stored() else ""), 12.5, self.pal.medium) + 34
+        var i = max(self.top - 100, 0)
+        var seen = 0
+        while seen < 200:
+            var row = self.shown_row(i)
+            if row < 0:
+                break
+            i += 1
+            if self.frame.alive(row):
+                w = max(w, self.font.measure(self.frame.display(c, row), 13, self.pal.regular) + 18)
+                seen += 1
+        self.set_width(c, w)
+
+    def scroll_sideways(mut self, dx: Float64):
+        var view = (self.sizes[self.grid_k][0] if self.grid_k < len(self.sizes) else 1200.0) - BAR_W
+        var most = max(self.columns_width() - view, 0.0)
+        var left = min(max(self.left - dx, 0.0), most)
+        if left != self.left:
+            self.left = left
+            self.version += 1
+
+    def edge_hit(self, x_pt: Float64, y_pt: Float64) -> Int:
+        """The column whose header's right edge is under (x, y) (5 pt either side), or -1."""
+        if y_pt >= HEADER_H:
+            return -1
+        for c in range(self.frame.columns()):
+            var edge = self.col_left(c) + self.col_width(c)
+            if abs(x_pt - edge) <= 5 and edge > GUTTER:
+                return c
+        return -1
+
+    def clip(self, text: String, room: Float64, size: Float64, weight: Int) -> String:
+        """text, cut with … to fit `room` pixels."""
+        if self.font.measure(text, size, weight) <= room:
+            return text
+        var out = String("")
+        for ch in text.codepoint_slices():
+            if self.font.measure(out + String(ch) + "…", size, weight) > room:
+                break
+            out += String(ch)
+        return out + "…"
 
     def shown_row(self, i: Int) -> Int:
         """The row number shown at display index i (sorted or natural order), or -1."""
         if len(self.order) > 0:
             return self.order[i] if 0 <= i < len(self.order) else -1
         return i if 0 <= i < self.frame.rows() else -1
+
+    def display_index(self, row: Int) -> Int:
+        """Where `row` sits in the shown order (sorted or natural), or -1."""
+        if len(self.order) == 0:
+            return row if 0 <= row < self.frame.rows() else -1
+        for i in range(len(self.order)):
+            if self.order[i] == row:
+                return i
+        return -1
+
+    def editor_place(self) -> Tuple[Int, Int, Int]:
+        """Where the in-place editor goes on the page: (x, y, width) over the selected cell, or width 0
+        when it's closed or its cell isn't on screen."""
+        var k = self.grid_k if 0 <= self.grid_k < len(self.objects) and self.objects[self.grid_k].kind == TABLE else self.table_index()
+        if not self.editing or k < 0 or self.cur_row < 0 or self.cur_col < 0:
+            return (0, 0, 0)
+        var line = -1
+        var i = self.top
+        var seen = 0
+        while seen < self.rows_in(self.sizes[k][1]):
+            var row = self.shown_row(i)
+            if row < 0:
+                break
+            i += 1
+            if not self.frame.alive(row):
+                continue
+            if row == self.cur_row:
+                line = seen
+                break
+            seen += 1
+        var x = self.col_left(self.cur_col)
+        if line < 0 or x < GUTTER:
+            return (0, 0, 0)
+        ref o = self.objects[k]
+        var w = min(self.col_width(self.cur_col), self.sizes[k][0] - BAR_W - x)
+        return (o.x + PAGE_X + CARD_PAD_X + Int(x), o.y + PAGE_Y + GRID_TOP + 30 + line * 26 - 2, Int(max(w, 60.0)))
 
     def shown_count(self) -> Int:
         return len(self.order) if len(self.order) > 0 else self.frame.rows()
@@ -359,37 +491,44 @@ struct Main(App):
     def draw_grid(mut self, mut s: Surface):
         var k = s.scale
         ref font = self.font
-        s.fill(CARD_BG)
+        ref p = self.pal
+        s.fill(p.card)
         var w = Float64(s.width)
         var h = Float64(s.height)
         var right = w - BAR_W * k  # the columns stop where the scroll bar starts
+        var gut = GUTTER * k
         var col_pick = self.cur_col if self.cur_row < 0 else -1  # a whole column selected
         # header
-        rect(s, 0, 0, w, HEADER_H * k, HEADER_BG)
+        rect(s, 0, 0, w, HEADER_H * k, p.raised)
         for c in range(self.frame.columns()):
             var x = self.col_left(c) * k
             var cw = self.col_width(c) * k
             if x >= right:
                 break
+            if x + cw <= gut:
+                continue
             cw = min(cw, right - x)
             if c == col_pick:
-                rect(s, x, 0, cw, h, BRAND_WASH)  # the column, tinted top to bottom
-                rect(s, x, 0, cw, HEADER_H * k, SELECTED_HEADER)
+                rect(s, x, 0, cw, h, p.accent_wash)  # the column, tinted top to bottom
+                rect(s, x, 0, cw, HEADER_H * k, p.accent)
             var name = self.frame.name(c)
             if c >= self.frame.stored():
                 name = "ƒ " + name
-            var ink = CARD_BG if c == col_pick else (BRAND if c == self.sort_col else INK2)
-            font.draw(s, name, x + 8 * k, 20 * k, 12.5 * k, ink, MEDIUM)
+            var ink = p.accent_ink if c == col_pick else (p.accent if c == self.sort_col else p.ink2)
+            font.draw(s, self.clip(name, cw - 26 * k, 12.5 * k, p.medium), x + 8 * k, 20 * k, 12.5 * k, ink, p.medium)
             if c == self.sort_col:  # a small triangle (the font has no arrows): ▼ largest first, ▲ smallest first
                 var ax = x + cw - 14 * k
                 var ay = 15 * k
-                var tint = CARD_BG if c == col_pick else BRAND
+                var tint = p.accent_ink if c == col_pick else p.accent
                 for r in range(Int(5 * k)):
                     var half = Float64(r) * 0.9
                     var yy = ay + (2.5 * k - Float64(r) if self.sort_desc else Float64(r) - 2.5 * k)  # widest row on top: ▼
                     rect(s, ax - half, yy, 2 * half + 1, 1, tint)
-            line(s, x, 0, x, h, 1, GRID)
-        hline(s, 0, w, HEADER_H * k, GRID_DARK)
+            line(s, x + cw, 0, x + cw, h, 1, p.line)
+            if c == self.resize_col:
+                line(s, x + cw - 1, 0, x + cw - 1, h, 2, p.accent)  # the edge being dragged
+        rect(s, 0, 0, gut, HEADER_H * k, p.raised)  # (the gutter stays put when the grid scrolls sideways)
+        hline(s, 0, w, HEADER_H * k, p.line_strong)
         # rows
         var y = HEADER_H * k
         var i = self.top
@@ -403,32 +542,36 @@ struct Main(App):
                 continue
             var base = y + 18 * k
             if row == self.cur_row:
-                rect(s, 0, y, right, ROW_H * k, BRAND_WASH)
-            font.draw(s, grouped(row + 1), (GUTTER - 10) * k, base, 12 * k, INK3, REGULAR, RIGHT)
+                rect(s, 0, y, right, ROW_H * k, p.accent_wash)
             for c in range(self.frame.columns()):
                 var x = self.col_left(c) * k
                 var cw = self.col_width(c) * k
                 if x >= right:
                     break
+                if x + cw <= gut:
+                    continue
                 cw = min(cw, right - x)
                 var kind = self.frame.kind(c)
-                var text = self.frame.display(c, row)
+                var text = self.clip(self.frame.display(c, row), cw - 16 * k, 13 * k, p.regular)
                 var numeric = kind == INT or kind == DECIMAL
-                var color = INK if c < self.frame.stored() else BRAND_DARK_INK
+                var color = p.ink if c < self.frame.stored() else p.formula
                 if row == self.cur_row and c == self.cur_col:
-                    rect(s, x, y, cw, ROW_H * k, BRAND)
-                    rect(s, x + 2 * k, y + 2 * k, cw - 4 * k, ROW_H * k - 4 * k, CARD_BG)
+                    rect(s, x, y, cw, ROW_H * k, p.accent)
+                    rect(s, x + 2 * k, y + 2 * k, cw - 4 * k, ROW_H * k - 4 * k, p.card)
                 if numeric:
-                    font.draw(s, text, x + cw - 8 * k, base, 13 * k, color, REGULAR, RIGHT)
+                    font.draw(s, text, x + cw - 8 * k, base, 13 * k, color, p.regular, RIGHT)
                 else:
-                    font.draw(s, text, x + 8 * k, base, 13 * k, color)
+                    font.draw(s, text, x + 8 * k, base, 13 * k, color, p.regular)
+            rect(s, 0, y, gut, ROW_H * k, p.accent_wash if row == self.cur_row else p.card)
+            font.draw(s, grouped(row + 1), (GUTTER - 10) * k, base, 12 * k, p.ink3, p.regular, RIGHT)
             y += ROW_H * k
-            hline(s, 0, right, y, GRID)
+            hline(s, 0, right, y, p.line)
             shown += 1
+        line(s, gut, 0, gut, h, 1, p.line)
         # the scroll bar: a thin track, a thumb sized to the share of rows on screen
         var t = self.thumb(h / k)
-        rect(s, right, HEADER_H * k, BAR_W * k, h - HEADER_H * k, BAR_TRACK)
-        rect(s, right + 3 * k, t[0] * k + 2 * k, (BAR_W - 6) * k, t[1] * k - 4 * k, BAR_THUMB_ACTIVE if self.bar_drag else BAR_THUMB)
+        rect(s, right, HEADER_H * k, BAR_W * k, h - HEADER_H * k, p.card)
+        rect(s, right + 3 * k, t[0] * k + 2 * k, (BAR_W - 6) * k, t[1] * k - 4 * k, p.ink3 if self.bar_drag else p.line_strong)
 
     def on_bar(self, x_pt: Float64, y_pt: Float64) -> Bool:
         """Whether (x, y) is on the scroll bar of the last-used table (below its header)."""
@@ -483,7 +626,8 @@ struct Main(App):
         var vname = self.frame.name(vc)
         var semantic = String("Price") if self.frame.kind(vc) == DECIMAL else String("Count")
         return (FlintChart("Bar Chart", o.title).text("name", labels).number(vname, values)
-                .semantic("name", "Category").semantic(vname, semantic).encode("x", vname).encode("y", "name").size(o.w, o.h - 60))
+                .semantic("name", "Category").semantic(vname, semantic).encode("x", vname).encode("y", "name").size(o.w, o.h - 60)
+                .themed(self.pal))
 
     def draw(mut self, canvas: Int, mut surface: Surface):
         if canvas >= len(self.objects):
@@ -504,10 +648,20 @@ struct Main(App):
 
     def update(mut self, event: Event):
         var m = event.message
+        if m != CELL_COMMIT and self.editing:  # anything else closes the in-place editor (its edit isn't written)
+            self.editing = False
+            self.version += 1
         if GRID_GESTURE <= m < GRID_GESTURE + MAX_OBJECTS:
             self.grid_k = m - GRID_GESTURE
             var h = self.sizes[self.grid_k][1] if self.grid_k < len(self.sizes) else 380.0
-            if event.number == PRESS:  # a drag or tap starts: on the scroll bar it grabs (or jumps) the thumb
+            if event.number == PRESS and self.edge_hit(event.x, event.y) >= 0:  # a header's edge: resize that column
+                self.resize_col = self.edge_hit(event.x, event.y)
+                self.resize_x0 = event.x
+                self.resize_w0 = self.col_width(self.resize_col)
+                self.bar_drag = False
+                self.version += 1
+            elif event.number == PRESS:  # a drag or tap starts: on the scroll bar it grabs (or jumps) the thumb
+                self.resize_col = -1
                 var was = self.bar_drag
                 self.bar_drag = self.on_bar(event.x, event.y)
                 if self.bar_drag:
@@ -520,10 +674,32 @@ struct Main(App):
                     self.version += 1
                 elif was:
                     self.version += 1
-            elif event.number == RELEASE:  # a drag ended: the thumb lets go
+            elif event.number == RELEASE:  # a drag ended: the thumb (or a column edge) lets go
+                if self.resize_col >= 0:
+                    self.message = "Column " + self.frame.name(self.resize_col) + " is " + String(Int(self.col_width(self.resize_col))) + " pt wide"
+                    self.resize_col = -1
+                    self.version += 1
                 if self.bar_drag:
                     self.bar_drag = False
                     self.version += 1
+            elif event.number == DOUBLE:
+                if event.y < HEADER_H:  # a header: fit the column to what's in it
+                    var c = self.header_hit(event.x, event.y)
+                    if c < 0:
+                        c = self.edge_hit(event.x, event.y)
+                    if c >= 0:
+                        self.fit(c)
+                        self.message = "Column " + self.frame.name(c) + " fitted (" + String(Int(self.col_width(c))) + " pt)"
+                elif not self.on_bar(event.x, event.y):  # a cell: edit it in place
+                    var hit = self.grid_hit(event.x, event.y)
+                    if hit[0] >= 0 and hit[1] >= 0:
+                        self.select_cell(hit[0], hit[1])
+                        if hit[1] < self.frame.stored():
+                            self.editing = True
+                            self.message = "Editing row " + grouped(hit[0] + 1) + " · " + self.frame.name(hit[1]) + ": Enter writes it"
+                        else:
+                            self.message = "ƒ " + self.frame.name(hit[1]) + " is a formula: edit the columns it uses"
+                        self.version += 1
             elif event.number == TAP:
                 if self.on_bar(event.x, event.y):
                     self.bar_drag = False
@@ -537,9 +713,13 @@ struct Main(App):
                     var hit = self.grid_hit(event.x, event.y)
                     if hit[0] >= 0 and hit[1] >= 0:
                         self.select_cell(hit[0], hit[1])
+            elif event.number == PAN and self.resize_col >= 0:
+                self.set_width(self.resize_col, self.resize_w0 + event.x - self.resize_x0)
             elif event.number == PAN and self.bar_drag:
                 self.scroll_to_thumb(event.y - self.bar_grab, h)
             elif event.number == PAN:
+                if event.dx != 0:
+                    self.scroll_sideways(event.dx)
                 self.pan -= event.dy / ROW_H
                 var rows = Int(self.pan)  # whole rows; the remainder waits for the next motion
                 self.pan -= Float64(rows)
@@ -547,6 +727,24 @@ struct Main(App):
                     self.scroll_rows(rows)
             elif event.number == ZOOM and event.zoom > 0:
                 self.scroll_rows(Int(-log2(event.zoom) * 12.0))
+        elif m == CELL_COMMIT:  # the in-place editor's Enter: write the cell, then select the one below (as a spreadsheet does)
+            if self.cur_row >= 0 and self.cur_col >= 0:
+                try:
+                    self.frame.set_text(self.cur_col, self.cur_row, event.text)
+                    self.message = "Row " + grouped(self.cur_row + 1) + ": " + self.frame.name(self.cur_col) + " = " + self.frame.display(self.cur_col, self.cur_row)
+                    var col = self.cur_col
+                    var i = self.display_index(self.cur_row)
+                    var below = self.shown_row(i + 1) if i >= 0 else -1
+                    while below >= 0 and not self.frame.alive(below):
+                        i += 1
+                        below = self.shown_row(i + 1)
+                    self.editing = False
+                    self.select_cell(below if below >= 0 else self.cur_row, col)
+                    self.compute()
+                except e:
+                    self.message = String(e)
+                    self.editing = False
+            self.version += 1
         elif m == COMMIT:
             if self.cur_row >= 0 and self.cur_col >= 0:
                 try:
@@ -562,6 +760,7 @@ struct Main(App):
         elif m == FORMULA:
             try:
                 var c = self.frame.formula(event.text)
+                self.fit(c)
                 self.message = "Formula column " + self.frame.name(c) + " added"
                 self.compute()
             except e:
@@ -647,7 +846,10 @@ struct Main(App):
             self.compute()
         elif m == SAVE:
             try:
-                save_workbook(self.path, self.frame, self.source(), self.specs())
+                var ws = List[Int]()
+                for wd in self.widths:
+                    ws.append(Int(wd))
+                save_workbook(self.path, self.frame, self.source(), self.specs(), ws)
                 self.message = "Saved " + self.path
             except e:
                 self.message = "Couldn't save: " + String(e)
@@ -776,7 +978,7 @@ struct Main(App):
         """A card's header row: its title (and what goes beside it) on the left, its actions and a
         quiet Remove on the right. The header is also where the card is dragged from."""
         return HStack(title^, HStack(extra^, Button("Remove", on_tap=REMOVE_OBJ + k, style=ICON_ONLY, icon="close"), spacing=4),
-                      spacing=12).justify(BETWEEN).fill()
+                      spacing=12).justify(BETWEEN).fill().height(32)  # (fixed heights: the in-place editor knows where the grid starts)
 
     def table_card(self, k: Int) -> View:
         ref o = self.objects[k]
@@ -807,7 +1009,7 @@ struct Main(App):
                 Text("ƒ", style=HEADLINE),
                 TextField("", placeholder="Formula", on_submit=FORMULA).width(320),
                 spacing=8,
-            ).fill(),
+            ).fill().height(32),
             Canvas(k, self.version, on_gesture=GRID_GESTURE + k).fill().height(o.h - 124),  # (a fixed size: the same cell under a tap on every host)
             spacing=10,
         )
@@ -869,6 +1071,10 @@ struct Main(App):
             seen[o.kind] += 1
             items.append(card^.at(o.x + PAGE_X, o.y + PAGE_Y).width(o.w).height(o.h).tag(name))
             board_h = max(board_h, o.y + o.h)
+        var ed = self.editor_place()
+        if ed[2] > 0:  # the in-place editor floats on the page over its cell (last: drawn on top)
+            items.append(TextField(self.frame.display(self.cur_col, self.cur_row), placeholder="Cell", on_submit=CELL_COMMIT).focused()
+                         .at(ed[0], ed[1]).width(ed[2]).height(30).tag("cell-editor"))  # (a row, 26 pt, and its 2-pt ring each side)
         var engine = self.gf()[].device_name()
         # The chrome floats over the page in islands; the page scrolls underneath.
         var title = HStack(Text("Contoso Workbook", style=HEADLINE), spacing=12)

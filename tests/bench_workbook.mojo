@@ -3,8 +3,8 @@
 #   pixi run mojo build -I examples/workbook -I . tests/bench_workbook.mojo -o build/bench_workbook && pixi run build/bench_workbook
 from std.testing import assert_equal, assert_true
 
-from app import Main, GRID_GESTURE, ADD_OBJ, TABLE, PIVOT, CHART, HEADER_H, SORT
-from mojoui import Event, TAP, PAN, PRESS, RELEASE
+from app import Main, GRID_GESTURE, ADD_OBJ, TABLE, PIVOT, CHART, HEADER_H, SORT, CELL_COMMIT, CENTS
+from mojoui import Event, TAP, PAN, PRESS, RELEASE, DOUBLE
 from mojoui.canvas import Surface
 from mojoui.clock import now_ns
 
@@ -60,5 +60,24 @@ def main() raises:
     assert_equal(app.frame.name(app.sort_col), "cents")
     assert_true(app.sort_desc, "money sorts largest first")
     assert_true(app.frame.get(app.cur_col, app.order[0]) >= app.frame.get(app.cur_col, app.order[1]), "sorted")
+    # a column's header edge dragged 40 pt right widens it by 40; a double click on the header fits it again
+    var c = CENTS
+    var edge = app.col_left(c) + app.col_width(c)
+    var before = app.col_width(c)
+    app.update(Event(GRID_GESTURE, "", PRESS, edge - 1, 12))
+    app.update(Event(GRID_GESTURE, "", PAN, edge + 39, 12, 40, 0))
+    app.update(Event(GRID_GESTURE, "", RELEASE, edge + 39, 12))
+    assert_true(abs(app.col_width(c) - (before + 40)) < 0.01, "dragging the header edge resizes the column by the drag")
+    app.update(Event(GRID_GESTURE, "", DOUBLE, app.col_left(c) + 10, 12))
+    assert_true(app.col_width(c) < before + 40, "a double click on the header fits the column to its values")
+    # a double click on a cell opens the editor over it; Enter writes the value and moves down a row
+    app.update(Event(GRID_GESTURE, "", DOUBLE, app.col_left(c) + 10, HEADER_H + 26 + 5))  # (row 2 on screen)
+    assert_true(app.editing, "a double click on a cell opens the in-place editor")
+    var row = app.cur_row
+    assert_true(app.editor_place()[2] > 0, "the editor is placed over the cell")
+    app.update(Event(CELL_COMMIT, "7", 0))
+    assert_equal(app.frame.display(c, row), "7.00")
+    assert_true(not app.editing)
+    assert_true(app.cur_row != row, "the selection moved to the next row")
     print("WORKBOOK: recompute " + String(worst_compute) + " ms, grid redraw " + String(worst_draw) + " ms (worst of 10 / 20)")
     print("WORKBOOK TESTS PASSED")

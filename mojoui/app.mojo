@@ -76,7 +76,7 @@ trait App(Movable, Deinitable):
         return (480, 560)
 
     def design(self) -> Int:
-        """The design language hosts style native controls with: NATIVE (default) or FLUENT."""
+        """The design language hosts style native controls with: NATIVE (default), FLUENT or OMARCHY."""
         return 0
 
 

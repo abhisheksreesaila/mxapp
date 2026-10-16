@@ -13,13 +13,14 @@ from std.memory.alloc import alloc, Layout
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, PAN, ZOOM, TAP,
-    START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, FLUENT,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, SUBTLE, ICON_ONLY,
+    START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, FLUENT, OMARCHY,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.app import App, Event, Runtime
 from mojoui.canvas import Surface
 from mojoui.icons_data import LUCIDE_NAMES, lucide_svg
+from mojoui.theme import Palette, hex_of, mix
 from std.math import log2
 from std.time import perf_counter_ns
 
@@ -174,15 +175,18 @@ def gtk_icon(name: String) -> String:
     return "image-missing-symbolic"
 
 
-def install_icons():
+def install_icons(themed: Bool = False):
     """Writes the Lucide icons as SVG files (Fluent's neutral foreground, and white for filled
     buttons) to a cache folder and adds it to the display's icon theme: icons named
     "mojoui-<name>" and "mojoui-<name>-light"."""
-    var base = c_str(external_call["g_get_user_cache_dir", Int]()) + "/mojoui/icons-1"
+    var base = c_str(external_call["g_get_user_cache_dir", Int]()) + ("/mojoui/icons-omarchy" if themed else "/mojoui/icons-1")
     _ = external_call["g_mkdir_with_parents", c_int](base.as_c_string_span(), c_int(0o755))
+    var pal = Palette.omarchy()
+    var ink = hex_of(pal.ink2) if themed else String("#424242")
+    var on_accent = hex_of(pal.accent_ink) if themed else String("#ffffff")
     for n in materialize[LUCIDE_NAMES]():
         var svg = lucide_svg(n)
-        for variant in [("", "#424242"), ("-light", "#ffffff")]:
+        for variant in [("", ink), ("-light", on_accent)]:
             var path = base + "/mojoui-" + n + variant[0] + ".svg"
             try:
                 with open(path, "w") as f:
@@ -525,6 +529,8 @@ struct GtkHost[A: App](Movable):
             connect(w, "clicked", on_clicked[Self.A], self_addr)
         elif node.kind == FIELD:
             w = external_call["gtk_entry_new", Int]()
+            if node.value == 1:
+                add_class(w, "mui-cell-editor")
             var t = node.text
             var h = node.hint
             external_call["gtk_editable_set_text", NoneType](w, t.as_c_string_span())
@@ -851,6 +857,11 @@ struct GtkHost[A: App](Movable):
             _ = external_call["gtk_widget_add_tick_callback", c_uint](root, on_reveal_tick[Self.A], self_addr, 0)
         if self.dialog != 0 and (getenv("MOJOUI_TEST") == "" or getenv("MOJOUI_SHOT") != ""):  # plain tests drive it unseen
             external_call["adw_dialog_present", NoneType](self.dialog, self.window)
+        for k in range(len(self.rt.shown.nodes)):  # an in-place editor (.focused()) takes the keyboard, its text selected
+            if self.rt.shown.nodes[k].kind == FIELD and self.rt.shown.nodes[k].value == 1 and self.widgets[k] != 0:
+                _ = external_call["gtk_widget_grab_focus", c_int](self.widgets[k])
+                external_call["gtk_editable_select_region", NoneType](self.widgets[k], c_int(0), c_int(-1))
+                self.focus = -1
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
         self.focus = -1
@@ -1260,7 +1271,7 @@ def on_click_released[A: App](click: Int, presses: c_int, x: Float64, y: Float64
     var ci = get_index(click)
     if ci < 0 or ci >= len(host[].canvases) or host[].canvases[ci].moved:
         return
-    host[].canvas_send(ci, TAP, x, y, 0, 0, 1, host_addr)
+    host[].canvas_send(ci, DOUBLE if presses == 2 else TAP, x, y, 0, 0, 1, host_addr)  # (the first click of a double was a TAP)
 
 
 def board_object[A: App](host: Pointer[GtkHost[A], MutUntrackedOrigin], drag: Int) -> Int:
@@ -1290,6 +1301,9 @@ def on_board_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: In
         var lx = x - Float64(n.x)
         var ly = y - Float64(n.y)
         if 0.0 <= lx and lx < w and 0.0 <= ly and ly < h:
+            if n.kind == FIELD:  # an in-place editor floating on the page: it's typed in, never dragged
+                external_call["gtk_gesture_set_state", c_int](drag, c_int(2))
+                return
             host[].boards[bi].resizing = lx > w - 24 and ly > h - 24
             host[].boards[bi].active = host[].boards[bi].resizing or ly < 44  # the header moves it; the rest is the object's own
             if not host[].boards[bi].active:
@@ -1665,7 +1679,7 @@ def run_step[A: App](host_addr: Int, step: String):
         else:
             var s = String("activate")
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span(), c_uint(position))
-    elif verb == "drag" or verb == "dragat" or verb == "zoom" or verb == "frames" or verb == "tapat":
+    elif verb == "drag" or verb == "dragat" or verb == "doubletap" or verb == "zoom" or verb == "frames" or verb == "tapat":
         var kv = split_at(rest, "=")
         var node = find(host[], CANVAS, "", to_int(kv[0]))
         var ci = -1
@@ -1691,6 +1705,17 @@ def run_step[A: App](host_addr: Int, step: String):
             host[].canvases[ci].moved = False
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].click, released.as_c_string_span(), c_int(1),
                 Float64(to_int(xy[0])) / 1000.0 * cw, Float64(to_int(xy[1])) / 1000.0 * chh)
+        elif verb == "doubletap":  # a double click at (x, y) thousandths: press, click 1, press, click 2
+            var xy = split_at(kv[1], ",")
+            var px = Float64(to_int(xy[0])) / 1000.0 * Float64(Int(external_call["gtk_widget_get_width", c_int](host[].canvases[ci].widget)))
+            var py = Float64(to_int(xy[1])) / 1000.0 * Float64(Int(external_call["gtk_widget_get_height", c_int](host[].canvases[ci].widget)))
+            var released = String("released")
+            var pressed = String("drag-begin")
+            for n_press in range(1, 3):
+                external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].drag, pressed.as_c_string_span(), px, py)
+                host[].canvases[ci].moved = False
+                external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].click, released.as_c_string_span(), c_int(n_press), px, py)
+                settle()
         elif verb == "drag" or verb == "dragat":  # the drag gesture's own signals, as a real drag sends them
             var sx = 10.0
             var sy = 10.0
@@ -1992,6 +2017,49 @@ window.fluent scrollbar slider { min-width: 8px; min-height: 8px; background-col
 """
 
 
+def omarchy_css(p: Palette) -> String:
+    """The Omarchy skin for GTK, from the person's theme colours: flat, hairline borders, JetBrains Mono."""
+    var page = hex_of(p.page)
+    var card = hex_of(p.card)
+    var raised = hex_of(p.raised)
+    var ink = hex_of(p.ink)
+    var ink2 = hex_of(p.ink2)
+    var ink3 = hex_of(p.ink3)
+    var line = hex_of(p.line)
+    var strong = hex_of(p.line_strong)
+    var accent = hex_of(p.accent)
+    var wash = hex_of(p.accent_wash)
+    var on_accent = hex_of(p.accent_ink)
+    return (
+        ":root { --accent-bg-color: " + accent + "; --accent-color: " + accent + "; --accent-fg-color: " + on_accent + "; }\n"
+        + "window.omarchy { background-color: " + page + "; color: " + ink2 + "; font-family: 'JetBrainsMono Nerd Font', 'JetBrains Mono', monospace; font-size: 13px; }\n"
+        + "window.omarchy label { color: " + ink2 + "; }\n"
+        + "window.omarchy label.title-1, window.omarchy label.title-4 { color: " + ink + "; font-weight: 700; }\n"
+        + "window.omarchy label.title-1 { font-size: 18px; } window.omarchy label.title-4 { font-size: 13px; }\n"
+        + "window.omarchy label.caption { font-size: 11px; color: " + ink3 + "; }\n"
+        + "window.omarchy .dim-label { opacity: 1; }\n"
+        + "window.omarchy .mui-card { background-color: " + card + "; border-radius: 4px; padding: 12px 14px; box-shadow: inset 0 0 0 1px " + line + "; }\n"
+        + "window.omarchy .mui-island { background-color: " + card + "; border-radius: 4px; padding: 6px 10px; min-height: 32px; box-shadow: inset 0 0 0 1px " + strong + ", 0 6px 18px rgba(0,0,0,.35); }\n"
+        + "window.omarchy .mui-board { background-color: " + page + "; background-image: radial-gradient(circle, " + line + " 1px, transparent 1.5px); background-size: 24px 24px; }\n"
+        + "window.omarchy button { border-radius: 3px; min-height: 28px; padding: 2px 10px; font-weight: 500; background: transparent; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"
+        + "window.omarchy button:hover { background: " + raised + "; }\n"
+        + "window.omarchy button:active { background: " + wash + "; }\n"
+        + "window.omarchy button.flat { box-shadow: none; color: " + ink2 + "; }\n"
+        + "window.omarchy button.flat:hover { background: " + raised + "; color: " + ink + "; }\n"
+        + "window.omarchy button.image-button { min-width: 28px; padding: 2px 6px; }\n"
+        + "window.omarchy button label, window.omarchy button image { color: inherit; }\n"
+        + "window.omarchy button.suggested-action { background: " + accent + "; color: " + on_accent + "; box-shadow: none; font-weight: 700; }\n"
+        + "window.omarchy button.suggested-action:hover { background: " + hex_of(mix(p.accent, p.ink, 0.2)) + "; }\n"
+        + "window.omarchy entry, window.omarchy textview, window.omarchy dropdown > button { border-radius: 3px; background: " + page + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"
+        + "window.omarchy entry:focus-within { box-shadow: inset 0 0 0 1px " + accent + "; outline: none; }\n"
+        + "window.omarchy textview text { background: " + page + "; color: " + ink + "; }\n"
+        + "window.omarchy dropdown > button { min-height: 28px; padding: 2px 8px; }\n"
+        + "window.omarchy popover > contents { background: " + card + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"
+        + "window.omarchy scrollbar slider { min-width: 6px; min-height: 6px; background-color: " + strong + "; border-radius: 3px; }\n"
+        + "window.omarchy entry.mui-cell-editor { border-radius: 0; box-shadow: inset 0 0 0 2px " + accent + "; background: " + card + "; }\n"
+    )
+
+
 def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     var host = host_at[A](host_addr)
     host[].window = external_call["gtk_application_window_new", Int](gapp)
@@ -2006,7 +2074,17 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
         var display = external_call["gdk_display_get_default", Int]()
         external_call["gtk_style_context_add_provider_for_display", NoneType](display, provider, c_uint(801))
         add_class(host[].window, "fluent")
-    install_icons()
+    elif host[].rt.app.design() == OMARCHY:  # the person's Omarchy theme: its colours, JetBrains Mono, flat
+        var pal = Palette.omarchy()
+        var manager = external_call["adw_style_manager_get_default", Int]()
+        external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if pal.dark else 1))  # FORCE_DARK / FORCE_LIGHT
+        var provider = external_call["gtk_css_provider_new", Int]()
+        var rules = omarchy_css(pal)
+        external_call["gtk_css_provider_load_from_string", NoneType](provider, rules.as_c_string_span())
+        var display = external_call["gdk_display_get_default", Int]()
+        external_call["gtk_style_context_add_provider_for_display", NoneType](display, provider, c_uint(801))
+        add_class(host[].window, "omarchy")
+    install_icons(host[].rt.app.design() == OMARCHY)
     var size = host[].rt.app.window_size()
     var forced = getenv("MOJOUI_WINDOW")  # tests: "1280x800" checks a smaller laptop screen
     if forced != "":
