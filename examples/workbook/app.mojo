@@ -623,12 +623,10 @@ struct Main(App):
         var columns = String(self.frame.stored()) + " columns · " + grouped(self.frame.rows()) + " rows" + formulas
         return Card(
             HStack(
-                Text(o.title, style=HEADLINE),
-                Text(columns, style=CAPTION).tag("columns"),
-                Spacer(),
+                HStack(Text(o.title, style=HEADLINE), Text(columns, style=CAPTION).tag("columns"), spacing=12),
                 Button("Remove", on_tap=REMOVE_OBJ + k),
                 spacing=12,
-            ).fill(),
+            ).justify(BETWEEN).fill(),  # (justify, not a Spacer: a Spacer would also take the card's height from the canvas on GTK)
             HStack(
                 Text(cell, style=CAPTION).tag("cell"),
                 TextField(self.edit_text, placeholder="Value", on_submit=COMMIT).width(150),
@@ -659,7 +657,7 @@ struct Main(App):
                 var v = self.results[k][i * cols + j] if i * cols + j < len(self.results[k]) else 0
                 cells.append(Text(self.value_text(o.c, v)))
         return Card(
-            HStack(Text(o.title, style=HEADLINE), Spacer(), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8).fill(),
+            HStack(Text(o.title, style=HEADLINE), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8).justify(BETWEEN).fill(),
             HStack(
                 Dropdown(dims, o.a, on_select=PIVOT_ROWS + k),
                 Text("by", style=CAPTION),
@@ -676,11 +674,9 @@ struct Main(App):
         return Card(
             HStack(
                 Text(o.title, style=HEADLINE),
-                Spacer(),
-                Dropdown(self.dim_names(), o.a, on_select=CHART_FIELD + k),
-                Button("Remove", on_tap=REMOVE_OBJ + k),
+                HStack(Dropdown(self.dim_names(), o.a, on_select=CHART_FIELD + k), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8),
                 spacing=8,
-            ).fill(),
+            ).justify(BETWEEN).fill(),
             Canvas(k, self.version, on_gesture=CHART_TAP + k).grow().fill(),
             spacing=8,
         )
@@ -688,7 +684,7 @@ struct Main(App):
     def note_card(self, k: Int) -> View:
         ref o = self.objects[k]
         return Card(
-            HStack(Text(o.title, style=HEADLINE), Spacer(), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8).fill(),
+            HStack(Text(o.title, style=HEADLINE), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8).justify(BETWEEN).fill(),
             TextArea(o.text, placeholder="Write a note…", on_change=NOTE + k, height=o.h - 96).fill(),
             spacing=8,
         )

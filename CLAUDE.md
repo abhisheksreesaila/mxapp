@@ -28,7 +28,7 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 
 ## How to work
 - **One milestone (or less) per session.** Stop when its acceptance checks pass, show the result, and ask before starting the next.
-- **Verify by running, not by reasoning.** Build it, run it, show the output (or a screenshot for UI).
+- **Verify by running, not by reasoning.** Build it, run it, show the output (or a screenshot for UI). GTK checks run on a headless Xvfb display (`scripts/headless.py`, used by `scripts/check`): no windows on the owner's desktop; `MOJOUI_HEADLESS=0` to watch them.
 - **Log every session** at the top of `EXPERIMENTS.md`: date, setup, what worked, what broke and how it was fixed, what it means, next small step.
 - **Explain plainly.** Short sentences, no unexplained jargon. When there are trade-offs, list the cons.
 - **Keep the repo honest:** mark anything unverified as unverified.

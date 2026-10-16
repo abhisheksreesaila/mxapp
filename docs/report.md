@@ -81,4 +81,5 @@ PASS  M5  save → open round-trips tables, formulas, pivots, charts, notes and 
 PASS  M6  packaged Linux app + web, launcher, morning walkthrough, gallery and README updated
 PASS  M8  20M rows loaded once per process and shared by every session (workbook and analytics)
 ```
+Also from the morning: GTK checks now run on a headless display (D-95), so `scripts/check` opens no windows; goal 6's frame-rate check measures 60 fps there.
 

@@ -356,6 +356,8 @@ def m10():
 
 def main():
     import shutil
+    import headless  # scripts/headless.py: GTK test windows on an Xvfb display, not the desktop
+    headless.ensure()
     only = sys.argv[1:]  # scripts/check M3 M4: just those (no rebuild of everything)
     if not only:
         for ex in EXAMPLES:

@@ -22,3 +22,7 @@ mojo = ">=1.1, <1.2"
 playwright = ">=1.64.0, <2"
 max = ">=26.6.0, <27"
 mxframe = "==0.6.0"
+
+[target.linux-glibc-234.dependencies]
+xorg-xvfb-server = ">=21.1.25,<22"
+xkeyboard-config = ">=2.48,<3"

@@ -9,4 +9,6 @@ One line per rule that prevents a mistake that happened.
 - A GTK drag gesture reports coordinates relative to the widget it's attached to: never attach it to the widget it moves (jitter); attach it to the container and hit-test.
 - Under htmx with `swap: 'none'`, a `<script>` in the response is not executed: send a hidden element with data attributes and let the page's adapter apply it.
 - Never sort 20M rows with a comparison sort keyed on a few distinct values (quadratic): gather the column and radix-sort it.
+- On GTK a `Spacer()` inside a card header expands vertically too and starves the card's canvas: push header items apart with `.justify(BETWEEN)`.
+- GTK test windows go on the headless display (`scripts/headless.py`), never the desktop; a window covered by another gets no frame-clock ticks, so fps checks on a real screen are unreliable.
 
