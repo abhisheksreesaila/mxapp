@@ -2,7 +2,7 @@
 
 Mode: experiment
 Ship: direct
-Design language: Fluent 2 (owner, 2026-10-15: one design language shared by native and web)
+Design language: Omarchy for the Workbook (the person's current Omarchy theme, JetBrains Mono, flat; owner 2026-10-16), Fluent 2 for the analytics showcase
 
 Current experiment: `GOAL.md` (goal 10: the Workbook, usable; goals 1–9 in `docs/goals/`). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
@@ -26,6 +26,13 @@ You are helping build **mojo-ui**: a long-term, experimental side project to wri
 - **Done:** M0 (Mojo ↔ C both directions, Mojo keeps state across calls from C) and M5 steps 1–2 (Mojo compiles to iPhone objects; the app needs only two Mojo runtime functions, covered by `spike/kgen_shim.c`).
 - **Next, main track (Linux):** M1, the real `core/` (`State`, `Msg`, `update`, `view`, `ViewTree`) with tests. See SPEC §5 and §9.
 - **Next, side track (iPhone):** M5 step 3 via xtool, using `ios-xtool/`. Needs the owner's machine, an iPhone, and Xcode.xip downloaded from Apple. See `ios-xtool/README.md`.
+
+## Components first (owner, 2026-10-16)
+The Workbook is a showcase, but the product is the component library. Before building any feature:
+1. List the components it needs and look them up in `docs/components.md` (✅ run by a check / 🔨 built, never run / ❌ missing, per platform). Show that list to the owner when they ask for something.
+2. Build or extend the component in `mojoui/` first, with its own test, on every host it can reach; then build the app from it.
+3. Never leave something another app would need inside an app: if it happens, it goes in the matrix's "debt" table until it's extracted.
+4. Regenerate the matrix (`pixi run python scripts/components.py`); `scripts/check` fails when it's stale.
 
 ## How to work
 - **One milestone (or less) per session.** Stop when its acceptance checks pass, show the result, and ask before starting the next.

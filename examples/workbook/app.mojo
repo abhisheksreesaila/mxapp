@@ -11,7 +11,7 @@ from mojoui.view import (View, Text, Button, TextField, Dropdown, TextArea, Canv
                          BETWEEN, TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE, FLUENT, OMARCHY, NO_MSG)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface, rgba
-from mojoui.text import Font, REGULAR, MEDIUM, LEFT, RIGHT, CENTRE
+from mojoui.text import Font, REGULAR, MEDIUM, MONO, LEFT, RIGHT, CENTRE
 from mojoui.draw import rect, hline, line
 from mojoui.charts import money, grouped, fixed, INK, INK2, INK3, BRAND, BRAND_TINT, BRAND_WASH, CARD_BG, GRID
 from mojoui.flint import FlintChart
@@ -399,6 +399,8 @@ struct Main(App):
 
     def clip(self, text: String, room: Float64, size: Float64, weight: Int) -> String:
         """text, cut with … to fit `room` pixels."""
+        if weight == self.pal.regular and self.pal.regular == MONO and Float64(text.byte_length()) * 0.6 * size <= room:
+            return text  # (JetBrains Mono: every glyph is 0.6 em wide, so short text fits without measuring)
         if self.font.measure(text, size, weight) <= room:
             return text
         var out = String("")
@@ -498,11 +500,25 @@ struct Main(App):
         var right = w - BAR_W * k  # the columns stop where the scroll bar starts
         var gut = GUTTER * k
         var col_pick = self.cur_col if self.cur_row < 0 else -1  # a whole column selected
+        # every column's left edge and width, once per frame (pixels)
+        var ncols = self.frame.columns()
+        var lefts = List[Float64](capacity=ncols)
+        var widths = List[Float64](capacity=ncols)
+        var names = List[String](capacity=ncols)
+        var numeric_col = List[Bool](capacity=ncols)
+        var xpos = (GUTTER - self.left) * k
+        for c in range(ncols):
+            var cw = self.col_width(c) * k
+            lefts.append(xpos)
+            widths.append(cw)
+            names.append(self.frame.name(c))
+            numeric_col.append(self.frame.kind(c) == INT or self.frame.kind(c) == DECIMAL)
+            xpos += cw
         # header
         rect(s, 0, 0, w, HEADER_H * k, p.raised)
-        for c in range(self.frame.columns()):
-            var x = self.col_left(c) * k
-            var cw = self.col_width(c) * k
+        for c in range(ncols):
+            var x = lefts[c]
+            var cw = widths[c]
             if x >= right:
                 break
             if x + cw <= gut:
@@ -511,7 +527,7 @@ struct Main(App):
             if c == col_pick:
                 rect(s, x, 0, cw, h, p.accent_wash)  # the column, tinted top to bottom
                 rect(s, x, 0, cw, HEADER_H * k, p.accent)
-            var name = self.frame.name(c)
+            var name = names[c]
             if c >= self.frame.stored():
                 name = "ƒ " + name
             var ink = p.accent_ink if c == col_pick else (p.accent if c == self.sort_col else p.ink2)
@@ -543,17 +559,16 @@ struct Main(App):
             var base = y + 18 * k
             if row == self.cur_row:
                 rect(s, 0, y, right, ROW_H * k, p.accent_wash)
-            for c in range(self.frame.columns()):
-                var x = self.col_left(c) * k
-                var cw = self.col_width(c) * k
+            for c in range(ncols):
+                var x = lefts[c]
+                var cw = widths[c]
                 if x >= right:
                     break
                 if x + cw <= gut:
                     continue
                 cw = min(cw, right - x)
-                var kind = self.frame.kind(c)
                 var text = self.clip(self.frame.display(c, row), cw - 16 * k, 13 * k, p.regular)
-                var numeric = kind == INT or kind == DECIMAL
+                var numeric = numeric_col[c]
                 var color = p.ink if c < self.frame.stored() else p.formula
                 if row == self.cur_row and c == self.cur_col:
                     rect(s, x, y, cw, ROW_H * k, p.accent)
@@ -578,9 +593,15 @@ struct Main(App):
         var t = self.grid_k
         return 0 <= t < len(self.sizes) and x_pt >= self.sizes[t][0] - BAR_W and y_pt >= HEADER_H
 
+    def in_columns(self, x_pt: Float64) -> Bool:
+        """Whether x is over the columns (not the row numbers' gutter or the scroll bar)."""
+        var t = self.grid_k
+        var right = self.sizes[t][0] - BAR_W if 0 <= t < len(self.sizes) else 1e9
+        return GUTTER <= x_pt < right
+
     def header_hit(self, x_pt: Float64, y_pt: Float64) -> Int:
         """The column whose header is under (x, y) in points, or -1."""
-        if y_pt >= HEADER_H:
+        if y_pt >= HEADER_H or not self.in_columns(x_pt):
             return -1
         for c in range(self.frame.columns()):
             if self.col_left(c) <= x_pt < self.col_left(c) + self.col_width(c):
@@ -589,7 +610,7 @@ struct Main(App):
 
     def grid_hit(self, x_pt: Float64, y_pt: Float64) -> Tuple[Int, Int]:
         """(row, column) under a tap in points, or (-1, -1)."""
-        if y_pt < HEADER_H:
+        if y_pt < HEADER_H or not self.in_columns(x_pt):
             return (-1, -1)
         var i = self.top
         var y = HEADER_H
@@ -696,11 +717,15 @@ struct Main(App):
                         self.select_cell(hit[0], hit[1])
                         if hit[1] < self.frame.stored():
                             self.editing = True
+                            self.edit_text = self.frame.display(hit[1], hit[0])
                             self.message = "Editing row " + grouped(hit[0] + 1) + " · " + self.frame.name(hit[1]) + ": Enter writes it"
                         else:
                             self.message = "ƒ " + self.frame.name(hit[1]) + " is a formula: edit the columns it uses"
                         self.version += 1
             elif event.number == TAP:
+                if self.resize_col >= 0:  # a click on an edge without a drag: nothing to resize
+                    self.resize_col = -1
+                    self.version += 1
                 if self.on_bar(event.x, event.y):
                     self.bar_drag = False
                     self.version += 1
@@ -728,7 +753,7 @@ struct Main(App):
             elif event.number == ZOOM and event.zoom > 0:
                 self.scroll_rows(Int(-log2(event.zoom) * 12.0))
         elif m == CELL_COMMIT:  # the in-place editor's Enter: write the cell, then select the one below (as a spreadsheet does)
-            if self.cur_row >= 0 and self.cur_col >= 0:
+            if self.editing and self.cur_row >= 0 and self.cur_col >= 0:  # (a second Enter after it closed writes nothing)
                 try:
                     self.frame.set_text(self.cur_col, self.cur_row, event.text)
                     self.message = "Row " + grouped(self.cur_row + 1) + ": " + self.frame.name(self.cur_col) + " = " + self.frame.display(self.cur_col, self.cur_row)
@@ -742,8 +767,8 @@ struct Main(App):
                     self.select_cell(below if below >= 0 else self.cur_row, col)
                     self.compute()
                 except e:
-                    self.message = String(e)
-                    self.editing = False
+                    self.edit_text = event.text
+                    self.message = String(e) + " (fix it and press Enter)"  # the editor stays open with what was typed
             self.version += 1
         elif m == COMMIT:
             if self.cur_row >= 0 and self.cur_col >= 0:
@@ -1073,7 +1098,7 @@ struct Main(App):
             board_h = max(board_h, o.y + o.h)
         var ed = self.editor_place()
         if ed[2] > 0:  # the in-place editor floats on the page over its cell (last: drawn on top)
-            items.append(TextField(self.frame.display(self.cur_col, self.cur_row), placeholder="Cell", on_submit=CELL_COMMIT).focused()
+            items.append(TextField(self.edit_text, placeholder="Cell", on_submit=CELL_COMMIT).focused()
                          .at(ed[0], ed[1]).width(ed[2]).height(30).tag("cell-editor"))  # (a row, 26 pt, and its 2-pt ring each side)
         var engine = self.gf()[].device_name()
         # The chrome floats over the page in islands; the page scrolls underneath.

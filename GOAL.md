@@ -20,9 +20,10 @@ A polish pass on the Workbook so a person can use it without being told how: an 
 | M11 | Edit in place (owner: "double click on a cell and edit") | a `DOUBLE` canvas gesture; double-clicking a cell opens a text field over that cell, focused, with its value selected; Enter writes it (the totals change) and selects the cell below; a click anywhere else closes it; GTK and web end identical |
 | M12 | Column widths (owner: "auto adjust the column width… I couldn't adjust the width") | a column is never narrower than its header, and a new formula column is fitted to its values; dragging a header's right edge resizes the column; double-clicking a header fits it; the grid scrolls sideways when columns overflow; widths survive save → open; GTK and web identical |
 | M13 | Row count | `MOJOUI_ROWS` sets how many sample rows a process generates (default 20M) so UI work can iterate on 1M; the checks run at 20M |
+| M14 | Component matrix (owner, 2026-10-16: "show me what component I have on all platforms… a check mark and no check mark keeps us honest") | `docs/components.md`, generated from the host code and the checks by `scripts/components.py`: every component and feature × Linux, web, Android, Mac, iPhone as ✅ run by a check / 🔨 built, never run / ❌ missing, plus the app-local pieces that must become components; the check fails when the file is stale |
 
 ## Done means
-`scripts/check` prints PASS for M1–M13; `git push` after.
+`scripts/check` prints PASS for M1–M14; `git push` after.
 
 ## Out of bounds
 No deploying anything but the gallery's GitHub Pages site; push to `origin` after milestones pass; no sign-ups, secrets or licences; checks run headless (no windows on the desktop); don't touch `../mojo-ui-apple-test`; no compiler fork; nothing that slows the engine without saying so in the report.

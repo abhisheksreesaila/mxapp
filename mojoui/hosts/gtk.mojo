@@ -767,6 +767,8 @@ struct GtkHost[A: App](Movable):
                 self.board_list = True
                 inner = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(16))
                 for c in node.children:
+                    if self.rt.shown.nodes[c].kind == FIELD and self.rt.shown.nodes[c].value == 1:
+                        continue  # an in-place editor has no cell to sit over in the list
                     var child = self.build(c, self_addr)
                     external_call["gtk_widget_set_halign", NoneType](child, c_int(0))  # fill the width
                     external_call["gtk_widget_set_hexpand", NoneType](child, c_int(1))

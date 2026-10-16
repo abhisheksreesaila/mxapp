@@ -63,6 +63,22 @@ def lookup(keys: List[String], vals: List[String], name: String, fallback: Strin
     return hex_rgba(fallback, 0)
 
 
+def derived(keys: List[String], vals: List[String], name: String, otherwise: UInt32) -> UInt32:
+    """The theme's colour for `name`, or `otherwise` (derived from its background and foreground)."""
+    for i in range(len(keys)):
+        if keys[i] == name:
+            return hex_rgba(vals[i], otherwise)
+    return otherwise
+
+
+def luminance(c: UInt32) -> Float64:
+    """Relative brightness 0–1 (rough: for light vs dark)."""
+    var r = Float64(Int(c & 255))
+    var g = Float64(Int((c >> 8) & 255))
+    var b = Float64(Int((c >> 16) & 255))
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
+
+
 @fieldwise_init
 struct Palette(Copyable, Movable):
     var dark: Bool
@@ -99,28 +115,45 @@ struct Palette(Copyable, Movable):
         try:
             with open(environment("HOME", ".") + OMARCHY_COLORS, "r") as f:
                 for line in f.read().split("\n"):
-                    var kv = line.split("=")
-                    if len(kv) == 2:
-                        keys.append(String(kv[0].strip()))
-                        vals.append(String(kv[1].strip()).replace('"', ""))
+                    var text = String(line.strip())
+                    var eq = text.find("=")
+                    if text.startswith("#") or eq < 0:
+                        continue
+                    # the value: a quoted string, or the first word (either way a trailing # comment is dropped)
+                    var value = String(String(text[byte=eq + 1:]).strip())
+                    if value.startswith('"') or value.startswith("'"):
+                        var quote = String(value[byte=0:1])
+                        var end = value.find(quote, 1)
+                        var inner = String(value[byte=1:end]) if end > 0 else String(value[byte=1:])
+                        value = inner
+                    else:
+                        var space = value.find(" ")
+                        if space > 0:
+                            var word = String(value[byte=0:space])
+                            value = word
+                    keys.append(String(String(text[byte=0:eq]).strip()))
+                    vals.append(value)
         except:
             pass
 
-        var mode = String("dark")
+        # Missing keys are derived from the two every theme has (background, foreground), so a partial theme
+        # still reads well; light or dark comes from `mode`, else from how bright the background is.
+        var bg = lookup(keys, vals, "background", "#1a1b26")
+        var fg = lookup(keys, vals, "foreground", "#a9b1d6")
+        var dark = luminance(bg) < 0.5
         for i in range(len(keys)):
             if keys[i] == "mode":
-                mode = vals[i]
-        var dark = mode != "light"
-        var bg = lookup(keys, vals, "background", "#1a1b26")
-        var card = lookup(keys, vals, "lighter_background", "#24283b")
-        var page = lookup(keys, vals, "dark_background", "#13141c")
-        var fg = lookup(keys, vals, "foreground", "#a9b1d6")
-        var accent = lookup(keys, vals, "accent", "#7aa2f7")
-        var bright = lookup(keys, vals, "bright_foreground", "#c0caf5")
-        var quiet = mix(lookup(keys, vals, "dark_foreground", "#565f89"), fg, 0.35)  # a step brighter than the theme's comment colour: readable captions
-        return Palette(dark, page, bg, card, bright, fg, quiet, mix(bg, fg, 0.10), mix(bg, fg, 0.22),
-                       accent, bg, mix(bg, accent, 0.35), mix(bg, accent, 0.16), lookup(keys, vals, "magenta", "#ad8ee6"),
-                       lookup(keys, vals, "green", "#9ece6a"), lookup(keys, vals, "red", "#f7768e"), MONO, MONO_BOLD)
+                dark = vals[i] != "light"
+        var toward = rgba(0, 0, 0) if dark else rgba(255, 255, 255)
+        var away = rgba(255, 255, 255) if dark else rgba(0, 0, 0)
+        var page = derived(keys, vals, "dark_background", mix(bg, toward, 0.25))
+        var raised = derived(keys, vals, "lighter_background", mix(bg, fg, 0.08))
+        var ink = derived(keys, vals, "bright_foreground", mix(fg, away, 0.25))
+        var accent = derived(keys, vals, "accent", derived(keys, vals, "blue", mix(fg, rgba(64, 128, 255), 0.6)))
+        var quiet = mix(derived(keys, vals, "dark_foreground", mix(fg, bg, 0.45)), fg, 0.5)  # captions: ≥ 4.5:1 on the card
+        return Palette(dark, page, bg, raised, ink, fg, quiet, mix(bg, fg, 0.10), mix(bg, fg, 0.22),
+                       accent, bg, mix(bg, accent, 0.35), mix(bg, accent, 0.16), derived(keys, vals, "magenta", mix(fg, rgba(173, 142, 230), 0.6)),
+                       derived(keys, vals, "green", rgba(158, 206, 106)), derived(keys, vals, "red", rgba(247, 118, 142)), MONO, MONO_BOLD)
 
     def data(self, i: Int) -> UInt32:
         """The i-th series colour (the accent first)."""

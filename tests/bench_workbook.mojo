@@ -18,11 +18,15 @@ def main() raises:
     var s = Surface(Int(px.unsafe_ptr()), w, h, 2.0)
     app.draw(0, s)  # (first draw: sizes known)
     var worst_draw = 0.0
+    var draws = List[Float64]()
     for i in range(20):
         app.update(Event(GRID_GESTURE, "", PAN, 600, 120, 0, -26 * 7))  # scroll 7 rows
         var t0 = now_ns()
         app.draw(0, s)
-        worst_draw = max(worst_draw, Float64(now_ns() - t0) / 1e6)
+        draws.append(Float64(now_ns() - t0) / 1e6)
+        worst_draw = max(worst_draw, draws[len(draws) - 1])
+    sort(draws)
+    print("GRID: redraw median " + String(draws[10]) + " ms, best " + String(draws[0]) + " ms")
     _ = len(px)
     var worst_compute = 0.0
     for _ in range(10):
@@ -78,6 +82,19 @@ def main() raises:
     app.update(Event(CELL_COMMIT, "7", 0))
     assert_equal(app.frame.display(c, row), "7.00")
     assert_true(not app.editing)
-    assert_true(app.cur_row != row, "the selection moved to the next row")
+    assert_equal(app.cur_row, app.shown_row(app.display_index(row) + 1), "the selection moved to the next row")
+    app.update(Event(CELL_COMMIT, "8", 0))  # a second Enter after the editor closed writes nothing
+    assert_equal(app.frame.display(c, app.cur_row) != "8.00", True)
+    # a click anywhere else closes the editor without writing
+    app.update(Event(GRID_GESTURE, "", DOUBLE, app.col_left(c) + 10, HEADER_H + 26 * 3 + 5))
+    assert_true(app.editing)
+    var open_row = app.cur_row
+    var was = app.frame.display(c, open_row)
+    app.update(Event(GRID_GESTURE, "", PRESS, app.col_left(c) + 10, HEADER_H + 26 * 5 + 5))
+    assert_true(not app.editing, "a click elsewhere closes the editor")
+    assert_equal(app.frame.display(c, open_row), was)
+    # the row-number gutter never selects a column (even scrolled sideways)
+    app.update(Event(GRID_GESTURE, "", TAP, 20, HEADER_H + 5))
+    assert_true(app.cur_col == c, "a tap on a row number doesn't pick a hidden column")
     print("WORKBOOK: recompute " + String(worst_compute) + " ms, grid redraw " + String(worst_draw) + " ms (worst of 10 / 20)")
     print("WORKBOOK TESTS PASSED")

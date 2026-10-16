@@ -140,7 +140,8 @@ button svg { flex: none; }
 .board > .object::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 12px; height: 12px; cursor: nwse-resize;
   border-right: 2px solid var(--line); border-bottom: 2px solid var(--line); border-radius: 0 0 4px 0; }
 .board > .object.moving { opacity: .92; box-shadow: 0 12px 32px rgba(0,0,0,.18); z-index: 2; }
-@media (max-width: 719px) { .board { width: auto !important; height: auto !important; display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 719px) { .board > .object[data-tag=cell-editor] { display: none !important; }  /* (no place over a cell in the list) */
+  .board { width: auto !important; height: auto !important; display: flex; flex-direction: column; gap: 16px; }
   .board > .object { position: static !important; width: auto !important; left: auto; top: auto; } .board > .object::after { display: none; }
   .board > .object > .vstack.card > :first-child { touch-action: auto; cursor: default; } }
 .canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
@@ -315,7 +316,9 @@ CANVAS_JS = r"""
       if (!pointers.has(e.pointerId)) return;
       const [x, y] = at(e);
       pointers.delete(e.pointerId);
-      if (pointers.size === 0 && !moved && e.type === 'pointerup') send(TAP, x, y, 0, 0, 1);
+      // a second click within the double-click time is the DOUBLE that 'dblclick' sends, not another TAP (as on GTK)
+      const now = performance.now(), second = st.lastTap && now - st.lastTap.t < 500 && Math.abs(x - st.lastTap.x) + Math.abs(y - st.lastTap.y) < 6;
+      if (pointers.size === 0 && !moved && e.type === 'pointerup') { if (second) st.lastTap = null; else { st.lastTap = { t: now, x, y }; send(TAP, x, y, 0, 0, 1); } }
       else if (pointers.size === 0 && moved) send(RELEASE, x, y, 0, 0, 1);  // a drag ended
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);

@@ -214,7 +214,7 @@ def m10():
     with tempfile.TemporaryDirectory() as home:  # a different Omarchy theme: its colours must come through
         theme = Path(home) / ".local/state/omarchy/current/theme"
         theme.mkdir(parents=True)
-        (theme / "colors.toml").write_text('mode = "light"\naccent = "#ff5500"\nbackground = "#fafafa"\nforeground = "#333333"\n')
+        (theme / "colors.toml").write_text('# a partial light theme\naccent = "#ff5500"  # orange\nbackground = #fafafa\nforeground = "#333333"\n')
         t = run([str(BUILD / "test_theme")], env={"HOME": home}, timeout=120)
         if "THEME TESTS PASSED" not in t.stdout or "dark=False accent=#ff5500 card=#fafafa" not in t.stdout:
             problems.append(f"another theme's colours didn't come through: {t.stdout.strip()[:160]}")
@@ -284,6 +284,11 @@ def m13():
     return True, "MOJOUI_ROWS=1000000 starts the Workbook on a million rows (default 20M; the checks run at 20M)"
 
 
+def m14():
+    r = run(["pixi", "run", "python", "scripts/components.py", "--check"], timeout=120)
+    return r.returncode == 0, (r.stdout.strip() or r.stderr.strip())[:200]
+
+
 def main():
     import shutil
     import headless
@@ -304,7 +309,7 @@ def main():
                     print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
     for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M7", m7), ("M8", m8), ("M9", m9),
-                     ("M10", m10), ("M11", m11), ("M12", m12), ("M13", m13)]:
+                     ("M10", m10), ("M11", m11), ("M12", m12), ("M13", m13), ("M14", m14)]:
         if only and name not in only:
             continue
         try:
