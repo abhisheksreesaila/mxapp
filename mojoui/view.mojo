@@ -31,17 +31,21 @@ comptime ICON = 21  # text = icon name (see ICON_NAMES); size = points
 comptime GRID = 22  # children in rows of `value` columns; spacing = gap
 comptime LAZYLIST = 23  # value = row count, msg2 = list id, size = height, spacing = row height
 comptime CANVAS = 24  # drawn by the app's draw(): style = canvas id, value = version, msg = on_gesture, msg2 = on_frame
-comptime BOARD = 25  # children at absolute positions (.at(x, y), sized with .width/.height): msg = on_move, msg2 = on_resize; spacing = width, size = height
+comptime BOARD = 25  # children at absolute positions (.at(x, y), sized with .width/.height): msg = on_move, msg2 = on_resize; spacing = width, size = height; value = reveal (see Board)
+comptime OVERLAY = 26  # first child fills it; the others float over it, pinned to an edge or corner (.pin(h, v): x = h, y = v)
 
 # Canvas gestures (event.number)
 comptime PAN = 1  # event.dx, dy: movement in points; event.x, y: where the pointer is
 comptime ZOOM = 2  # event.zoom: scale factor (2 = twice as big) around event.x, y
 comptime TAP = 3  # event.x, y
+comptime PRESS = 4  # the pointer went down at event.x, y; a TAP or PANs follow (where a drag starts)
 
 # Icon names every host understands (each maps them to its platform's own icons).
 comptime ICON_NAMES: List[String] = [
     "star", "trash", "gear", "plus", "check", "calendar", "search", "heart", "home", "person",
     "travel", "food", "fun", "chart",
+    # Lucide icons drawn the same on every host (GTK loads the same SVGs)
+    "table", "pivot", "chart-bar", "note", "undo", "save", "open", "close", "sort", "filter-off", "row-plus", "row-minus",
 ]
 
 # Text styles (each platform maps them to its own type scale)
@@ -61,6 +65,8 @@ comptime FLUENT = 1  # Fluent 2 tokens (neutral greys, brand blue, rounded panel
 comptime PLAIN = 0
 comptime PROMINENT = 1
 comptime DESTRUCTIVE = 2
+comptime SUBTLE = 3  # quiet: no fill until hovered (toolbars, card actions)
+comptime ICON_ONLY = 4  # quiet and only its icon shows; the title is its tooltip and accessible name
 
 comptime NO_MSG = 0
 
@@ -250,6 +256,12 @@ struct View(Copyable, Movable):
         self.nodes[0].name = name
         return self^
 
+    def pin(var self, h: Int, v: Int) -> View:
+        """Where an Overlay island floats: h = START, CENTER or END; v = START or END."""
+        self.nodes[0].x = h
+        self.nodes[0].y = v
+        return self^
+
     def at(var self, x: Int, y: Int) -> View:
         """Where the view sits inside a Board (points from its top-left)."""
         self.nodes[0].x = x
@@ -270,9 +282,10 @@ def Text(text: String, style: Int = BODY) -> View:
     return _one(Node(TEXT, text, style=style))
 
 
-def Button(title: String, on_tap: Int, style: Int = PLAIN) -> View:
-    """Sends `on_tap` when tapped. Styles: PLAIN, PROMINENT, DESTRUCTIVE."""
-    return _one(Node(BUTTON, title, on_tap, style=style))
+def Button(title: String, on_tap: Int, style: Int = PLAIN, icon: String = "") -> View:
+    """Sends `on_tap` when tapped. Styles: PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY.
+    `icon`: one of ICON_NAMES, shown before the title (or alone, with ICON_ONLY)."""
+    return _one(Node(BUTTON, title, on_tap, style=style, hint=icon))
 
 
 def TextField(value: String, placeholder: String = "", on_change: Int = NO_MSG, on_submit: Int = NO_MSG) -> View:
@@ -396,12 +409,28 @@ def _container(var root: Node, items: List[View]) -> View:
     return View(nodes^)
 
 
-def Board(items: List[View], width: Int, height: Int, on_move: Int = NO_MSG, on_resize: Int = NO_MSG) -> View:
+def Overlay(base: View, *islands: View) -> View:
+    """`base` fills the overlay; each island floats over it where its .pin(h, v) says
+    (h: START, CENTER or END; v: START or END), a small margin in from the edge. For canvas apps:
+    the page scrolls underneath, the chrome stays put."""
+    var items = List[View]()
+    items.append(base.copy())
+    for item in islands:
+        items.append(item.copy())
+    var v = _container(Node(OVERLAY), items)
+    return v^
+
+
+def Board(items: List[View], width: Int, height: Int, on_move: Int = NO_MSG, on_resize: Int = NO_MSG,
+          reveal: Int = -1, reveal_count: Int = 0) -> View:
     """A page: children sit where their .at(x, y) says, sized by .width/.height (a Numbers-style
     free-flow layout). Dragging a child's edge area moves it (on_move: event.number = child index,
     event.dx/dy = how far); dragging its bottom-right corner resizes it (on_resize, the same fields).
-    Hosts narrower than 720 points show the children as a full-width list instead."""
-    var v = _container(Node(BOARD, msg=on_move, msg2=on_resize, spacing=width, size=height), items)
+    Hosts narrower than 720 points show the children as a full-width list instead.
+    The Board scrolls when it's bigger than the space it's given (grow/fill it to give it the space).
+    reveal: a child to scroll into view, done once per new reveal_count (count up each time)."""
+    var v = _container(Node(BOARD, msg=on_move, msg2=on_resize, spacing=width, size=height,
+                            value=reveal_count * 64 + reveal + 1 if 0 <= reveal < 63 else 0), items)
     return v^
 
 

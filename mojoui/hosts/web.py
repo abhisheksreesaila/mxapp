@@ -16,6 +16,7 @@ import ctypes
 import importlib
 import io
 import json
+import re
 import time
 import struct
 import sys
@@ -33,15 +34,17 @@ from PIL import Image
 
 # Mirrors mojoui/view.mojo and mojoui/diff.mojo.
 (TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
- SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD) = range(1, 26)
+ SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY) = range(1, 27)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
-PLAIN, PROMINENT, DESTRUCTIVE = 0, 1, 2
+PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY = 0, 1, 2, 3, 4
+START, CENTER, END = 1, 2, 3
 SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
 JPEG_QUALITY = 85
 MAX_SESSIONS = 200  # oldest tabs are closed beyond this
 STATIC = Path(__file__).parent / "static"
-ICONS = {p.stem: p.read_text().split("-->", 1)[-1].strip() for p in (STATIC / "icons").glob("*.svg")}  # Lucide (ISC)
+ICONS = {p.stem: re.sub(r">\s+<", "><", re.sub(r"\s+", " ", p.read_text().split("-->", 1)[-1].strip()))
+         for p in (STATIC / "icons").glob("*.svg")}  # Lucide (ISC)
 LIST_WINDOW = 30  # rows sent around the visible part of a LazyList
 
 CSS = """
@@ -113,7 +116,20 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 #mojoui-root.full { max-width: none; padding: 0; height: 100dvh; align-items: stretch; }
 #mojoui-root.full > div { flex: 1 1 0; min-width: 0; }
 .canvas { position: relative; overflow: hidden; background: var(--surface); }
-.board { position: relative; flex: none; }
+.overlay { position: relative; min-height: 0; overflow: hidden; }
+.overlay > .overlay-base { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.overlay > .overlay-base > * { flex: 1 1 0; min-height: 0; }
+.overlay > .island { position: absolute; z-index: 5; margin: 12px; }
+.overlay > .island.h-start { left: 0; } .overlay > .island.h-end { right: 0; }
+.overlay > .island.h-center { left: 50%; transform: translateX(-50%); }
+.overlay > .island.v-start { top: 0; } .overlay > .island.v-end { bottom: 0; }
+.board-scroll { overflow: auto; position: relative; min-height: 0; }
+.board { position: relative; flex: none; min-width: 100%; min-height: 100%; box-sizing: border-box; }
+.board > .object.revealed { animation: mojoui-revealed 1.2s ease-out; }
+@keyframes mojoui-revealed { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent); } to { box-shadow: 0 0 0 3px transparent; } }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+button.with-icon, button.icon-only { display: inline-flex; align-items: center; gap: 6px; }
+button svg { flex: none; }
 .board > .object { position: absolute; box-sizing: border-box; overflow: hidden; }  /* content never covers the resize corner */
 .board > .object > .vstack.card > :first-child { touch-action: none; cursor: move; }
 .board > .object > .vstack.card { width: 100%; height: 100%; box-sizing: border-box; }
@@ -138,10 +154,24 @@ BOARD_JS = r"""
 (() => {
   const PAN = 1, ZOOM = 2;
   const shape = () => document.getElementById('mojoui-v').value;
+  const revealed = window.mojouiRevealed = window.mojouiRevealed || {};
+  function reveal(board, token) {
+    // Scrolls the board's scroller so object (token % 64 - 1) shows, clear of the islands, then marks it briefly.
+    const k = token % 64 - 1, obj = board.querySelectorAll(':scope > .object')[k], sc = board.parentElement;
+    if (!obj || !sc) return;
+    const top = obj.offsetTop, left = obj.offsetLeft, page = sc.clientHeight, wide = sc.clientWidth;
+    if (top < sc.scrollTop + 72 || top + Math.min(obj.offsetHeight, page - 160) > sc.scrollTop + page - 56) sc.scrollTop = Math.max(top - 88, 0);
+    if (left < sc.scrollLeft || left + Math.min(obj.offsetWidth, wide - 48) > sc.scrollLeft + wide) sc.scrollLeft = Math.max(left - 24, 0);
+    obj.classList.remove('revealed'); void obj.offsetWidth; obj.classList.add('revealed');
+  }
   function place(mark) {
     const p = mark.parentElement, d = mark.dataset;
     if (!p || p.classList.contains('moving')) return;  // (a drag in progress owns the position)
-    if (p.classList.contains('board')) { p.style.width = d.w + 'px'; p.style.height = d.h + 'px'; }
+    if (p.classList.contains('board')) {
+      p.style.width = d.w + 'px'; p.style.height = d.h + 'px';
+      const key = p.dataset.sid + '/' + p.dataset.node, token = Number(d.reveal || 0);
+      if (token && revealed[key] !== token) { revealed[key] = token; requestAnimationFrame(() => reveal(p, token)); }
+    }
     else { p.style.left = d.x + 'px'; p.style.top = d.y + 'px'; p.dataset.x = d.x; p.dataset.y = d.y; }
   }
   function attach(board) {
@@ -189,7 +219,7 @@ CANVAS_JS = r"""
 // its version or size changes. Gestures: drag = PAN, wheel/pinch = ZOOM, click = TAP,
 // sent through htmx like any other event, so the rest of the page updates as usual.
 (() => {
-  const PAN = 1, ZOOM = 2, TAP = 3;
+  const PAN = 1, ZOOM = 2, TAP = 3, PRESS = 4;
   const shape = () => document.getElementById('mojoui-v').value;
   function attach(div) {
     if (div.mojoui) return;
@@ -262,7 +292,7 @@ CANVAS_JS = r"""
     const distance = () => { const [a, b] = [...pointers.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
     cv.addEventListener('pointerdown', e => {
       cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, at(e));
-      if (pointers.size === 1) moved = false;
+      if (pointers.size === 1) { moved = false; const [x, y] = at(e); send(PRESS, x, y, 0, 0, 1); }  // where a drag (or tap) starts
       if (pointers.size === 2) spread = distance();
     });
     cv.addEventListener('pointermove', e => {
@@ -309,26 +339,37 @@ CANVAS_JS = r"""
 # the brand blue, 4/8 px corners, the Segoe type ramp, soft elevation. Light theme.
 FLUENT_CSS = """
 body.fluent { color-scheme: light; --accent: #0F6CBD; --danger: #C50F1F; --muted: #616161; --surface: #F0F0F0;
-  --line: #E0E0E0; background: #F5F5F5; color: #242424;
-  font: 14px/20px "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif; }
+  --line: #E0E0E0; background: #F7F7F8; color: #242424;
+  font: 14px/20px "Segoe UI Variable", "Segoe UI", "Adwaita Sans", Inter, system-ui, -apple-system, "Noto Sans", sans-serif; }
 body.fluent .text.title { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: 0; }
 body.fluent .text.headline { font-size: 16px; line-height: 22px; font-weight: 600; }
 body.fluent .text.caption { font-size: 12px; line-height: 16px; color: #616161; }
 body.fluent .text { text-align: left; }
-body.fluent button { border-radius: 4px; min-height: 32px; padding: 5px 12px; font-weight: 600; background: #fff;
+body.fluent button { border-radius: 6px; min-height: 32px; padding: 5px 12px; font-weight: 600; background: #fff;
   border: 1px solid #D1D1D1; transition: background .1s; }
 body.fluent button:hover { filter: none; background: #F5F5F5; }
 body.fluent button:active { transform: none; background: #E0E0E0; }
 body.fluent button.prominent { background: #0F6CBD; border-color: transparent; color: #fff; }
 body.fluent button.prominent:hover { background: #115EA3; }
-body.fluent select, body.fluent input[type=text], body.fluent input[type=date] { border-radius: 4px; min-height: 32px;
-  border: 1px solid #D1D1D1; border-bottom-color: #616161; background: #fff; }
+body.fluent button.subtle { background: transparent; border-color: transparent; font-weight: 500; color: #424242; }
+body.fluent button.subtle:hover { background: rgba(0,0,0,.05); }
+body.fluent button.subtle:active { background: rgba(0,0,0,.09); }
+body.fluent button.icon-only { padding: 5px 6px; min-width: 32px; justify-content: center; }
+body.fluent select, body.fluent input[type=text], body.fluent input[type=date], body.fluent textarea { border-radius: 6px; min-height: 32px;
+  border: 1px solid #D1D1D1; border-bottom-color: #8A8A8A; background: #fff; }
+body.fluent input[type=text]:focus, body.fluent textarea:focus { outline: none; border-bottom: 2px solid #0F6CBD; }
 body.fluent label.toggle { min-height: 32px; }
 body.fluent .segmented, body.fluent .tabs { background: transparent; padding: 0; gap: 4px; }
 body.fluent .segmented span, body.fluent .tabs span { min-height: 32px; padding: 0 12px; border-radius: 4px; font-weight: 400; color: #424242; }
 body.fluent .segmented input:checked + span, body.fluent .tabs input:checked + span { background: #EBF3FC; color: #0F6CBD;
   box-shadow: inset 0 0 0 1px #B4D6FA; font-weight: 600; }
-body.fluent .vstack.card { background: #fff; border-radius: 8px; box-shadow: 0 0 2px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.14); }
+body.fluent .vstack.card { background: #fff; border-radius: 8px; padding: 12px 14px; box-sizing: border-box;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+body.fluent .island > * { background: #fff; border-radius: 10px; padding: 6px 10px; min-height: 32px; align-items: center;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.07), 0 6px 20px rgba(0,0,0,.10); }
+.island .hstack { flex-wrap: nowrap; white-space: nowrap; }
+body.fluent .board { background-color: #F7F7F8; background-image: radial-gradient(circle, #D6D6DA 1px, transparent 1.5px);
+  background-size: 24px 24px; }
 body.fluent hr { border-top-color: #E0E0E0; }
 body.fluent .lazylist { border-radius: 4px; border-color: #E0E0E0; background: #fff; }
 body.fluent .lazylist .row { border-bottom-color: #F0F0F0; }
@@ -380,7 +421,8 @@ def place_mark(s, i):
     BOARD_JS applies it, so a move never re-renders the object (that would restart its canvases)."""
     n = s.nodes[i]
     if n["kind"] == BOARD:
-        return I(hidden=True, id=f"n{i}-place", data_kind="place", data_w=str(n["spacing"]), data_h=str(n["size"]))
+        return I(hidden=True, id=f"n{i}-place", data_kind="place", data_w=str(n["spacing"]), data_h=str(n["size"]),
+                 data_reveal=str(n["value"]))
     return I(hidden=True, id=f"n{i}-place", data_kind="place", data_x=str(n["x"]), data_y=str(n["y"]))
 
 
@@ -432,8 +474,13 @@ def render_node(s, i, sid):
         tag = H1 if n["style"] == TITLE else (H3 if n["style"] == HEADLINE else P)
         return tag(n["text"], cls=cls, id=nid, data_kind="label")
     if kind == BUTTON:
-        cls = {PROMINENT: "prominent", DESTRUCTIVE: "destructive"}.get(n["style"], "")
-        return Button(n["text"], id=nid, cls=cls, data_kind="button", **common)
+        cls = {PROMINENT: "prominent", DESTRUCTIVE: "destructive", SUBTLE: "subtle", ICON_ONLY: "subtle icon-only"}.get(n["style"], "")
+        if not n["hint"]:
+            return Button(n["text"], id=nid, cls=cls, data_kind="button", **common)
+        svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"'))
+        if n["style"] == ICON_ONLY:  # the title stays in the text (screen readers, tests), only the icon shows
+            return Button(svg, Span(n["text"], cls="sr-only"), id=nid, cls=cls, title=n["text"], data_kind="button", **common)
+        return Button(svg, Span(n["text"]), id=nid, cls=cls + " with-icon", data_kind="button", **common)
     if kind == FIELD:
         # The form makes Return submit (on_submit); typing posts on_change. Both go through
         # the form's queue, so a fast Return can't overtake the typing it follows.
@@ -502,8 +549,20 @@ def render_node(s, i, sid):
             kids.append(Div(render(s, c, sid), place_mark(s, c), cls="object", data_kind="object", data_index=str(k), data_tag=ch["name"],
                             data_x=str(ch["x"]), data_y=str(ch["y"]), data_w=str(ch["w"]), data_h=str(ch["h"]),
                             style=f"left:{ch['x']}px;top:{ch['y']}px;width:{ch['w']}px;height:{ch['h']}px"))
-        return Div(*kids, place_mark(s, i), cls="board", id=nid, data_kind="board", data_node=str(i), data_sid=sid,
-                   style=f"width:{n['spacing']}px;height:{n['size']}px")
+        board = Div(*kids, place_mark(s, i), cls="board", id=f"{nid}-board", data_kind="board", data_node=str(i), data_sid=sid,
+                    style=f"width:{n['spacing']}px;height:{n['size']}px")
+        return Div(board, cls="board-scroll", id=nid)  # the page scrolls when it's bigger than its room
+    if kind == OVERLAY:
+        kids = []
+        for k, c in enumerate(n["children"]):
+            if k == 0:
+                kids.append(Div(render(s, c, sid), cls="overlay-base"))
+            else:
+                ch = s.nodes[c]
+                h = {START: "start", END: "end"}.get(ch["x"], "center")
+                v = "end" if ch["y"] == END else "start"
+                kids.append(Div(render(s, c, sid), cls=f"island h-{h} v-{v}"))
+        return Div(*kids, cls="overlay", id=nid, data_kind="overlay")
     if kind == CANVAS:
         # Its own size only when the app's layout doesn't size it (as on the other hosts).
         sized_w = n["w"] or (n["width_from_parent"] if "width_from_parent" in n else n["grows"] or n["fills"])
@@ -663,7 +722,7 @@ def make_app(module_dir):
             target = s.nodes[i]
             if op == SET_IMAGE:
                 s.images[i] = s.images.get(i, 0) + 1
-            if op == SET_PLACE:
+            if op == SET_PLACE or (op == SET_VALUE and target["kind"] == BOARD):  # (a Board's value: what to reveal)
                 mark = place_mark(s, i)
                 mark.attrs["hx-swap-oob"] = "true"
                 moved.append(mark)

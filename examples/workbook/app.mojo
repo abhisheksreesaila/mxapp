@@ -6,8 +6,9 @@
 # Columns, never cell addresses. The data is shared by every session of the process (init_shared);
 # a session's edits are a sparse overlay applied as exact deltas to the GPU totals.
 
-from mojoui.view import (View, Text, Button, TextField, Dropdown, TextArea, Canvas, Board, VStack, HStack, Card, Grid, Spacer, Divider,
-                         Scroll, TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, START, CENTER, BETWEEN, TAP, PAN, ZOOM, FLUENT, NO_MSG)
+from mojoui.view import (View, Text, Button, TextField, Dropdown, TextArea, Canvas, Board, Overlay, VStack, HStack, Card, Grid, Spacer,
+                         Divider, Scroll, TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, START, CENTER, END,
+                         BETWEEN, TAP, PAN, ZOOM, PRESS, FLUENT, NO_MSG)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface, rgba
 from mojoui.text import Font, REGULAR, MEDIUM, LEFT, RIGHT, CENTRE
@@ -44,8 +45,7 @@ comptime MOVE = 102
 comptime RESIZE = 103
 comptime SAVE = 104
 comptime OPEN = 105
-comptime ADD_OBJ = 106  # the Insert… dropdown: event.number 1–4 = a new TABLE/PIVOT/CHART/NOTE_OBJ card at the bottom of the page
-comptime INSERT: List[String] = ["Insert…", "Table", "Pivot", "Chart", "Note"]
+comptime ADD_OBJ = 106  # + the kind (TABLE, PIVOT, CHART, NOTE_OBJ): the toolbar's Insert buttons
 comptime REMOVE_OBJ = 130  # + object index
 comptime MAX_OBJECTS = 30  # (the per-object message ranges above allow 30)
 
@@ -57,6 +57,10 @@ comptime NOTE_OBJ = 3
 
 comptime DIMS: List[Int] = [CATEGORY, REGION, CHANNEL, PRODUCT, YEAR]  # what pivots and charts group by
 comptime SNAP = 8
+comptime PAGE_X = 24  # where the objects start on the page (clear of the islands floating over it)
+comptime PAGE_Y = 80
+comptime PAGE_W = 1232  # the objects' width (the page is PAGE_X wider each side: 1280 pt in all, a 13" laptop)
+comptime BAR_W = 14.0  # the grid's scroll bar
 
 comptime HEADER_H = 30.0
 comptime ROW_H = 26.0
@@ -104,6 +108,10 @@ struct Main(App):
     var sizes: List[Tuple[Float64, Float64]]  # per object: its canvas size in points
     var path: String  # where Save writes and Open reads (MOJOUI_WORKBOOK, or ~/Documents/Contoso Workbook.mxwb)
     var pan: Float64  # a drag's leftover below one row, carried to the next motion event
+    var bar_drag: Bool  # the grid's current drag started on its scroll bar
+    var bar_grab: Float64  # where on the thumb it was grabbed (points from the thumb's top)
+    var reveal_k: Int  # the object the page should scroll to (the one just inserted), or -1
+    var reveal_count: Int
 
     @staticmethod
     def init_shared():
@@ -121,11 +129,11 @@ struct Main(App):
         self.gf_addr = get_shared(1)
         self.font = Font()
         self.objects = List[Obj]()
-        self.objects.append(obj(TABLE, "Order lines", 0, 0, 1360, 380))
-        self.objects.append(obj(PIVOT, "Revenue by region and channel", 0, 396, 520, 300, a=1, b=2, c=1))
-        self.objects.append(obj(CHART, "Revenue by category", 536, 396, 400, 300, a=0, c=1))
-        self.objects.append(obj(CHART, "Revenue by region", 952, 396, 408, 300, a=1, c=1))
-        self.objects.append(obj(NOTE_OBJ, "Note", 0, 712, 520, 136, text="Please review this: Q4 revenue by region, then the margin column."))
+        self.objects.append(obj(TABLE, "Order lines", 0, 0, 1232, 380))
+        self.objects.append(obj(PIVOT, "Revenue by region and channel", 0, 396, 480, 300, a=1, b=2, c=1))
+        self.objects.append(obj(CHART, "Revenue by category", 496, 396, 360, 300, a=0, c=1))
+        self.objects.append(obj(CHART, "Revenue by region", 872, 396, 360, 300, a=1, c=1))
+        self.objects.append(obj(NOTE_OBJ, "Note", 0, 712, 480, 136, text="Please review this: Q4 revenue by region, then the margin column."))
         self.order = List[Int]()
         self.sort_col = -1
         self.sort_desc = False
@@ -147,6 +155,10 @@ struct Main(App):
         if self.path == "":
             self.path = environment("HOME", ".") + "/Documents/Contoso Workbook.mxwb"
         self.pan = 0
+        self.bar_drag = False
+        self.bar_grab = 0
+        self.reveal_k = -1
+        self.reveal_count = 0
         self.load(SAMPLE, quiet=True)  # the sample workbook, when run from the repo; else the built-in page
         self.compute()
 
@@ -307,27 +319,71 @@ struct Main(App):
     def shown_count(self) -> Int:
         return len(self.order) if len(self.order) > 0 else self.frame.rows()
 
+    def grid_rows(self) -> Int:
+        """Whole rows the grid shows (from its last drawn size)."""
+        var h = self.sizes[self.table_index()][1] if self.table_index() >= 0 else 380.0
+        return max(Int((h - HEADER_H) / ROW_H), 1)
+
+    def table_index(self) -> Int:
+        for k in range(len(self.objects)):
+            if self.objects[k].kind == TABLE:
+                return k
+        return -1
+
+    def thumb(self, h: Float64) -> Tuple[Float64, Float64]:
+        """The scroll bar's thumb (top, height) in points for a grid h points tall."""
+        var track = h - HEADER_H
+        var count = max(self.shown_count(), 1)
+        var visible = min(self.grid_rows(), count)
+        var size = max(track * Float64(visible) / Float64(count), 28.0)
+        var span = max(count - visible, 1)
+        return (HEADER_H + (track - size) * Float64(min(self.top, span)) / Float64(span), size)
+
+    def scroll_to_thumb(mut self, thumb_top: Float64, h: Float64):
+        """Moves the grid so the thumb's top sits at thumb_top (points)."""
+        var t = self.thumb(h)
+        var room = max(h - HEADER_H - t[1], 1.0)
+        var span = max(self.shown_count() - min(self.grid_rows(), self.shown_count()), 0)
+        var f = min(max((thumb_top - HEADER_H) / room, 0.0), 1.0)
+        var top = Int(f * Float64(span) + 0.5)
+        if top != self.top:
+            self.top = top
+            self.version += 1
+
     def draw_grid(mut self, mut s: Surface):
         var k = s.scale
         ref font = self.font
         s.fill(CARD_BG)
         var w = Float64(s.width)
         var h = Float64(s.height)
+        var right = w - BAR_W * k  # the columns stop where the scroll bar starts
+        var col_pick = self.cur_col if self.cur_row < 0 else -1  # a whole column selected
         # header
-        rect(s, 0, 0, w, HEADER_H * k, BRAND_WASH)
+        rect(s, 0, 0, w, HEADER_H * k, HEADER_BG)
         for c in range(self.frame.columns()):
             var x = self.col_left(c) * k
             var cw = self.col_width(c) * k
-            if x > w:
+            if x >= right:
                 break
+            cw = min(cw, right - x)
+            if c == col_pick:
+                rect(s, x, 0, cw, h, BRAND_WASH)  # the column, tinted top to bottom
+                rect(s, x, 0, cw, HEADER_H * k, SELECTED_HEADER)
             var name = self.frame.name(c)
             if c >= self.frame.stored():
                 name = "ƒ " + name
-            font.draw(s, name, x + 8 * k, 20 * k, 13 * k, INK if c != self.sort_col else BRAND, MEDIUM)
-            if c == self.sort_col:
-                font.draw(s, "▼" if self.sort_desc else "▲", x + cw - 8 * k, 20 * k, 10 * k, BRAND, REGULAR, RIGHT)
+            var ink = CARD_BG if c == col_pick else (BRAND if c == self.sort_col else INK2)
+            font.draw(s, name, x + 8 * k, 20 * k, 12.5 * k, ink, MEDIUM)
+            if c == self.sort_col:  # a small triangle (the font has no arrows): ▼ largest first, ▲ smallest first
+                var ax = x + cw - 14 * k
+                var ay = 15 * k
+                var tint = CARD_BG if c == col_pick else BRAND
+                for r in range(Int(5 * k)):
+                    var half = Float64(r) * 0.9
+                    var yy = ay + (2.5 * k - Float64(r) if self.sort_desc else Float64(r) - 2.5 * k)  # widest row on top: ▼
+                    rect(s, ax - half, yy, 2 * half + 1, 1, tint)
             line(s, x, 0, x, h, 1, GRID)
-        hline(s, 0, w, HEADER_H * k, GRID)
+        hline(s, 0, w, HEADER_H * k, GRID_DARK)
         # rows
         var y = HEADER_H * k
         var i = self.top
@@ -341,19 +397,19 @@ struct Main(App):
                 continue
             var base = y + 18 * k
             if row == self.cur_row:
-                rect(s, 0, y, w, ROW_H * k, BRAND_WASH)
+                rect(s, 0, y, right, ROW_H * k, BRAND_WASH)
             font.draw(s, grouped(row + 1), (GUTTER - 10) * k, base, 12 * k, INK3, REGULAR, RIGHT)
             for c in range(self.frame.columns()):
                 var x = self.col_left(c) * k
                 var cw = self.col_width(c) * k
-                if x > w:
+                if x >= right:
                     break
+                cw = min(cw, right - x)
                 var kind = self.frame.kind(c)
                 var text = self.frame.display(c, row)
                 var numeric = kind == INT or kind == DECIMAL
                 var color = INK if c < self.frame.stored() else BRAND_DARK_INK
                 if row == self.cur_row and c == self.cur_col:
-                    rect(s, x + 1, y + 1, cw - 2, ROW_H * k - 2, CARD_BG)
                     rect(s, x, y, cw, ROW_H * k, BRAND)
                     rect(s, x + 2 * k, y + 2 * k, cw - 4 * k, ROW_H * k - 4 * k, CARD_BG)
                 if numeric:
@@ -361,8 +417,25 @@ struct Main(App):
                 else:
                     font.draw(s, text, x + 8 * k, base, 13 * k, color)
             y += ROW_H * k
-            hline(s, 0, w, y, GRID)
+            hline(s, 0, right, y, GRID)
             shown += 1
+        # the scroll bar: a thin track, a thumb sized to the share of rows on screen
+        var t = self.thumb(h / k)
+        rect(s, right, HEADER_H * k, BAR_W * k, h - HEADER_H * k, BAR_TRACK)
+        rect(s, right + 3 * k, t[0] * k + 2 * k, (BAR_W - 6) * k, t[1] * k - 4 * k, BAR_THUMB_ACTIVE if self.bar_drag else BAR_THUMB)
+
+    def on_bar(self, x_pt: Float64) -> Bool:
+        var t = self.table_index()
+        return t >= 0 and x_pt >= self.sizes[t][0] - BAR_W
+
+    def header_hit(self, x_pt: Float64, y_pt: Float64) -> Int:
+        """The column whose header is under (x, y) in points, or -1."""
+        if y_pt >= HEADER_H:
+            return -1
+        for c in range(self.frame.columns()):
+            if self.col_left(c) <= x_pt < self.col_left(c) + self.col_width(c):
+                return c
+        return -1
 
     def grid_hit(self, x_pt: Float64, y_pt: Float64) -> Tuple[Int, Int]:
         """(row, column) under a tap in points, or (-1, -1)."""
@@ -419,16 +492,41 @@ struct Main(App):
     def select_cell(mut self, row: Int, col: Int):
         self.cur_row = row
         self.cur_col = col
-        self.edit_text = self.frame.display(col, row) if row >= 0 and col >= 0 else ""
+        self.edit_text = self.frame.display(col, row) if row >= 0 and col >= 0 else ""  # (row -1: a whole column)
         self.version += 1
 
     def update(mut self, event: Event):
         var m = event.message
         if m == GRID_GESTURE:
-            if event.number == TAP:
-                var hit = self.grid_hit(event.x, event.y)
-                if hit[0] >= 0 and hit[1] >= 0:
-                    self.select_cell(hit[0], hit[1])
+            var h = self.sizes[self.table_index()][1] if self.table_index() >= 0 else 380.0
+            if event.number == PRESS:  # a drag or tap starts: on the scroll bar it grabs (or jumps) the thumb
+                var was = self.bar_drag
+                self.bar_drag = self.on_bar(event.x)
+                if self.bar_drag:
+                    var t = self.thumb(h)
+                    if t[0] <= event.y < t[0] + t[1]:
+                        self.bar_grab = event.y - t[0]
+                    else:  # the track: the thumb jumps there, centred on the pointer
+                        self.bar_grab = t[1] / 2
+                        self.scroll_to_thumb(event.y - self.bar_grab, h)
+                    self.version += 1
+                elif was:
+                    self.version += 1
+            elif event.number == TAP:
+                if self.on_bar(event.x):
+                    self.bar_drag = False
+                    self.version += 1
+                elif event.y < HEADER_H:
+                    var c = self.header_hit(event.x, event.y)
+                    if c >= 0:  # a header: the whole column (what Sort will sort)
+                        self.select_cell(-1, c)
+                        self.message = "Column " + self.frame.name(c) + " selected: Sort orders the table by it"
+                else:
+                    var hit = self.grid_hit(event.x, event.y)
+                    if hit[0] >= 0 and hit[1] >= 0:
+                        self.select_cell(hit[0], hit[1])
+            elif event.number == PAN and self.bar_drag:
+                self.scroll_to_thumb(event.y - self.bar_grab, h)
             elif event.number == PAN:
                 self.pan -= event.dy / ROW_H
                 var rows = Int(self.pan)  # whole rows; the remainder waits for the next motion
@@ -500,7 +598,7 @@ struct Main(App):
                 self.top = 0
                 self.message = "Sorted by " + self.frame.name(self.sort_col) + (" (largest first)" if self.sort_desc else "")
             else:
-                self.message = "Tap a cell in the column to sort by"
+                self.message = "Tap a column header (or a cell) to choose what to sort by"
             self.version += 1
         elif PIVOT_ROWS <= m < PIVOT_VALUE + MAX_OBJECTS:
             var k = (m - PIVOT_ROWS) % MAX_OBJECTS
@@ -511,8 +609,7 @@ struct Main(App):
                     self.objects[k].b = event.number
                 else:
                     self.objects[k].c = event.number
-                var vname = self.frame.name(self.value_cols()[min(self.objects[k].c, len(self.value_cols()) - 1)])
-                self.objects[k].title = (String("Revenue") if vname == "cents" else vname.upper()) + " by " + self.dim_names()[self.objects[k].a] + " and " + self.dim_names()[self.objects[k].b]
+                self.objects[k].title = self.pivot_title(self.objects[k])
                 self.compute()
         elif CHART_TAP <= m < NOTE:
             var k = m - CHART_TAP
@@ -548,26 +645,9 @@ struct Main(App):
             self.load(path)
             self.compute()
             self.version += 1
-        elif m == ADD_OBJ:
-            if event.number < 1 or event.number > 4:
-                pass  # "Insert…" itself
-            elif len(self.objects) < MAX_OBJECTS:
-                var kind = event.number - 1
-                var bottom = 0
-                for o in self.objects:
-                    bottom = max(bottom, o.y + o.h)
-                var y = (bottom + 16 + SNAP - 1) // SNAP * SNAP
-                if kind == TABLE:
-                    self.objects.append(obj(TABLE, "Order lines", 0, y, 1360, 380))
-                elif kind == PIVOT:
-                    self.objects.append(obj(PIVOT, "Revenue by category and year", 0, y, 520, 300, a=0, b=4, c=1))
-                elif kind == CHART:
-                    self.objects.append(obj(CHART, "Revenue by channel", 0, y, 400, 300, a=2, c=1))
-                else:
-                    self.objects.append(obj(NOTE_OBJ, "Note", 0, y, 520, 136))
-                self.sizes.append((400.0, 300.0))
-                self.message = "Added a " + (String("table") if kind == TABLE else (String("pivot") if kind == PIVOT else (String("chart") if kind == CHART else String("note")))) + " at the bottom: drag it by its header"
-                self.compute()
+        elif ADD_OBJ <= m < ADD_OBJ + 4:
+            if len(self.objects) < MAX_OBJECTS:
+                self.insert(m - ADD_OBJ)
             else:
                 self.message = "This page holds " + String(MAX_OBJECTS) + " cards at most"
                 self.version += 1
@@ -577,6 +657,7 @@ struct Main(App):
                 self.message = "Removed " + self.objects[k].title
                 _ = self.objects.pop(k)
                 _ = self.sizes.pop(k)
+                self.reveal_k = -1
                 self.compute()
         elif m == MOVE or m == RESIZE:
             var k = event.number
@@ -590,6 +671,73 @@ struct Main(App):
                     self.objects[k].w = max(200, (self.objects[k].w + dx + SNAP // 2) // SNAP * SNAP)
                     self.objects[k].h = max(120, (self.objects[k].h + dy + SNAP // 2) // SNAP * SNAP)
                 self.version += 1
+
+    def value_label(self, c: Int) -> String:
+        var vname = self.frame.name(self.value_cols()[min(c, len(self.value_cols()) - 1)])
+        if vname == "cents":
+            return "Revenue"
+        if vname == "quantity":
+            return "Units"
+        return String(vname[byte=0:1]).upper() + String(vname[byte=1:])
+
+    def pivot_title(self, o: Obj) -> String:
+        return self.value_label(o.c) + " by " + self.dim_names()[o.a] + " and " + self.dim_names()[o.b]
+
+    def free_spot(self, w: Int, h: Int) -> Tuple[Int, Int]:
+        """The first place on the page (top to bottom, left to right, 16-pt steps) where a w×h card
+        overlaps nothing, with a 16-pt gap."""
+        var y = 0
+        while y < 20000:
+            var x = 0
+            while x + w <= PAGE_W:
+                var clear = True
+                for o in self.objects:
+                    if x < o.x + o.w + 16 and o.x < x + w + 16 and y < o.y + o.h + 16 and o.y < y + h + 16:
+                        clear = False
+                        break
+                if clear:
+                    return (x, y)
+                x += 16
+            y += 16
+        return (0, y)
+
+    def insert(mut self, kind: Int):
+        """A new card in the first free spot; the page scrolls to it. Pivots and charts start from the
+        selection: a selected text column (or year) becomes what they group by, a number column their value."""
+        var dim = -1
+        var value = 1  # cents
+        if self.cur_col >= 0:
+            var dims = materialize[DIMS]()
+            for d in range(len(dims)):
+                if dims[d] == self.cur_col:
+                    dim = d
+            var vcols = self.value_cols()
+            for v in range(len(vcols)):
+                if vcols[v] == self.cur_col:
+                    value = v
+        var o: Obj
+        if kind == TABLE:
+            o = obj(TABLE, "Order lines", 0, 0, PAGE_W, 380)
+        elif kind == PIVOT:
+            var rows = dim if dim >= 0 else 0
+            var cols = 4 if rows != 4 else 2  # by year (or, for a year pivot, by channel)
+            o = obj(PIVOT, "", 0, 0, 480, 300, a=rows, b=cols, c=value)
+            o.title = self.pivot_title(o)
+        elif kind == CHART:
+            var by = dim if dim >= 0 else 2
+            o = obj(CHART, self.value_label(value) + " by " + self.dim_names()[by], 0, 0, 360, 300, a=by, c=value)
+        else:
+            o = obj(NOTE_OBJ, "Note", 0, 0, 480, 136)
+        var at = self.free_spot(o.w, o.h)
+        o.x = at[0]
+        o.y = at[1]
+        self.objects.append(o^)
+        self.sizes.append((400.0, 300.0))
+        self.reveal_k = len(self.objects) - 1
+        self.reveal_count += 1
+        var names: List[String] = ["table", "pivot", "chart", "note"]
+        self.message = "Added a " + names[kind] + ": " + self.objects[self.reveal_k].title + " (drag it by its header)"
+        self.compute()
 
     def specs(self) -> List[ObjectSpec]:
         var out = List[ObjectSpec]()
@@ -606,40 +754,50 @@ struct Main(App):
             if o.kind == CHART and o.selected >= 0:
                 parts.append(self.dim_label(o.a, o.selected))
         if len(parts) == 0:
-            return "No filter: tap a bar in a chart"
+            return "Tap a bar to filter"
         var out = String("Filtered to ")
         for i in range(len(parts)):
             out += (" · " if i > 0 else "") + parts[i]
         return out
 
+    def card_header(self, k: Int, var title: View, var extra: View) -> View:
+        """A card's header row: its title (and what goes beside it) on the left, its actions and a
+        quiet Remove on the right. The header is also where the card is dragged from."""
+        return HStack(title^, HStack(extra^, Button("Remove", on_tap=REMOVE_OBJ + k, style=ICON_ONLY, icon="close"), spacing=4),
+                      spacing=12).justify(BETWEEN).fill()
+
     def table_card(self, k: Int) -> View:
         ref o = self.objects[k]
-        var cell = String("Tap a cell to edit it")
+        var cell = String("Select a cell")
         if self.cur_row >= 0 and self.cur_col >= 0:
             cell = "Row " + grouped(self.cur_row + 1) + " · " + self.frame.name(self.cur_col)
+        elif self.cur_col >= 0:
+            cell = "Column " + self.frame.name(self.cur_col)
         var formulas = String("")
         for c in range(self.frame.stored(), self.frame.columns()):
             formulas += (", " if formulas != "" else " · formulas: ") + self.frame.name(c) + " = " + self.frame.formulas[c - self.frame.stored()].formula
         var columns = String(self.frame.stored()) + " columns · " + grouped(self.frame.rows()) + " rows" + formulas
+        var first = min(self.top + 1, self.shown_count())
+        var position = "Rows " + grouped(first) + "–" + grouped(min(self.top + self.grid_rows(), self.shown_count())) + " of " + grouped(self.shown_count())
         return Card(
-            HStack(
-                HStack(Text(o.title, style=HEADLINE), Text(columns, style=CAPTION).tag("columns"), spacing=12),
-                Button("Remove", on_tap=REMOVE_OBJ + k),
-                spacing=12,
-            ).justify(BETWEEN).fill(),  # (justify, not a Spacer: a Spacer would also take the card's height from the canvas on GTK)
-            HStack(
-                Text(cell, style=CAPTION).tag("cell"),
-                TextField(self.edit_text, placeholder="Value", on_submit=COMMIT).width(150),
-                Button("Add row", on_tap=ADD_ROW),
-                Button("Delete row", on_tap=DELETE_ROW),
-                Button("Sort", on_tap=SORT),
-                Button("Undo", on_tap=UNDO),
-                TextField("", placeholder="Formula", on_submit=FORMULA).width(260),
-                Text(self.message, style=CAPTION).tag("message"),
+            self.card_header(k,
+                HStack(Text(o.title, style=HEADLINE), Text(columns, style=CAPTION).tag("columns"),
+                       Text(position, style=CAPTION).tag("position"), spacing=12),
+                HStack(
+                    Button("Add row", on_tap=ADD_ROW, style=SUBTLE, icon="row-plus"),
+                    Button("Delete row", on_tap=DELETE_ROW, style=SUBTLE, icon="row-minus"),
+                    Button("Sort", on_tap=SORT, style=SUBTLE, icon="sort"),
+                    spacing=2,
+                )),
+            HStack(  # the formula bar: what's selected, its value, and a new formula column
+                Text(cell, style=CAPTION).tag("cell").width(150),
+                TextField(self.edit_text, placeholder="Value", on_submit=COMMIT).grow(),
+                Text("ƒ", style=HEADLINE),
+                TextField("", placeholder="Formula", on_submit=FORMULA).width(320),
                 spacing=8,
             ).fill(),
-            Canvas(k, self.version, on_gesture=GRID_GESTURE).fill().height(o.h - 136),  # (a fixed size: the same cell under a tap on every host)
-            spacing=8,
+            Canvas(k, self.version, on_gesture=GRID_GESTURE).fill().height(o.h - 124),  # (a fixed size: the same cell under a tap on every host)
+            spacing=10,
         )
 
     def pivot_card(self, k: Int) -> View:
@@ -657,26 +815,24 @@ struct Main(App):
                 var v = self.results[k][i * cols + j] if i * cols + j < len(self.results[k]) else 0
                 cells.append(Text(self.value_text(o.c, v)))
         return Card(
-            HStack(Text(o.title, style=HEADLINE), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8).justify(BETWEEN).fill(),
+            self.card_header(k, Text(o.title, style=HEADLINE), HStack()),
             HStack(
+                Text("Rows", style=CAPTION),
                 Dropdown(dims, o.a, on_select=PIVOT_ROWS + k),
-                Text("by", style=CAPTION),
+                Text("Columns", style=CAPTION),
                 Dropdown(dims, o.b, on_select=PIVOT_COLS + k),
+                Text("Value", style=CAPTION),
                 Dropdown(self.value_names(), o.c, on_select=PIVOT_VALUE + k),
-                spacing=8,
+                spacing=6,
             ),
-            Scroll(Grid(cells, cols + 1, spacing=6).tag("pivot"), height=o.h - 130).fill(),
-            spacing=8,
+            Scroll(Grid(cells, cols + 1, spacing=6).tag("pivot"), height=o.h - 120).fill(),
+            spacing=10,
         )
 
     def chart_card(self, k: Int) -> View:
         ref o = self.objects[k]
         return Card(
-            HStack(
-                Text(o.title, style=HEADLINE),
-                HStack(Dropdown(self.dim_names(), o.a, on_select=CHART_FIELD + k), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8),
-                spacing=8,
-            ).justify(BETWEEN).fill(),
+            self.card_header(k, Text(o.title, style=HEADLINE), Dropdown(self.dim_names(), o.a, on_select=CHART_FIELD + k)),
             Canvas(k, self.version, on_gesture=CHART_TAP + k).grow().fill(),
             spacing=8,
         )
@@ -684,8 +840,8 @@ struct Main(App):
     def note_card(self, k: Int) -> View:
         ref o = self.objects[k]
         return Card(
-            HStack(Text(o.title, style=HEADLINE), Button("Remove", on_tap=REMOVE_OBJ + k), spacing=8).justify(BETWEEN).fill(),
-            TextArea(o.text, placeholder="Write a note…", on_change=NOTE + k, height=o.h - 96).fill(),
+            self.card_header(k, Text(o.title, style=HEADLINE), HStack()),
+            TextArea(o.text, placeholder="Write a note…", on_change=NOTE + k, height=o.h - 92).fill(),
             spacing=8,
         )
 
@@ -699,29 +855,50 @@ struct Main(App):
             var card = self.table_card(k) if o.kind == TABLE else (self.pivot_card(k) if o.kind == PIVOT else (self.chart_card(k) if o.kind == CHART else self.note_card(k)))
             var name = names[o.kind] + ("" if seen[o.kind] == 0 else String(seen[o.kind] + 1))
             seen[o.kind] += 1
-            items.append(card^.at(o.x, o.y).width(o.w).height(o.h).tag(name))
+            items.append(card^.at(o.x + PAGE_X, o.y + PAGE_Y).width(o.w).height(o.h).tag(name))
             board_h = max(board_h, o.y + o.h)
         var engine = self.gf()[].device_name()
-        var bar = HStack(
-            Text("Contoso Workbook", style=TITLE),
+        # The chrome floats over the page in islands; the page scrolls underneath.
+        var title = HStack(Text("Contoso Workbook", style=HEADLINE), spacing=12)
+        var tools = HStack(
+            Button("Table", on_tap=ADD_OBJ + TABLE, style=SUBTLE, icon="table"),
+            Button("Pivot", on_tap=ADD_OBJ + PIVOT, style=SUBTLE, icon="pivot"),
+            Button("Chart", on_tap=ADD_OBJ + CHART, style=SUBTLE, icon="chart-bar"),
+            Button("Note", on_tap=ADD_OBJ + NOTE_OBJ, style=SUBTLE, icon="note"),
+            Button("Undo", on_tap=UNDO, style=SUBTLE, icon="undo"),
+            spacing=2,
+        )
+        var file = HStack(
+            Button("Open", on_tap=OPEN, style=SUBTLE, icon="open"),
+            Button("Save", on_tap=SAVE, style=PROMINENT, icon="save"),
+            spacing=6,
+        )
+        var status = HStack(
             Text(exact_money(self.revenue) + " revenue · " + grouped(self.lines) + " lines", style=CAPTION).tag("summary"),
             Text(self.filter_text(), style=CAPTION).tag("filter"),
-            Button("Clear filters", on_tap=CLEAR),
-            Spacer(),
-            Dropdown(materialize[INSERT](), 0, on_select=ADD_OBJ),
-            Button("Save", on_tap=SAVE),
-            Button("Open", on_tap=OPEN),
-            Text(fixed(self.milliseconds, 1) + " ms on " + engine, style=CAPTION).tag("engine"),
-            spacing=16,
-        ).fill()
-        return VStack(
-            bar,
-            Board(items, 1360, board_h + 16, on_move=MOVE, on_resize=RESIZE).tag("board"),
-            spacing=12,
-        ).padding(16, 24).align(START).fill().grow()
+            Button("Clear filters", on_tap=CLEAR, style=SUBTLE, icon="filter-off"),
+            Text(self.message, style=CAPTION).tag("message"),
+            spacing=10,
+        )
+        var engine_island = Text(fixed(self.milliseconds, 1) + " ms on " + engine, style=CAPTION).tag("engine")
+        return Overlay(
+            Board(items, PAGE_W + 2 * PAGE_X, board_h + PAGE_Y + 72, on_move=MOVE, on_resize=RESIZE,
+                  reveal=self.reveal_k, reveal_count=self.reveal_count).tag("board").grow().fill(),
+            title^.pin(START, START),
+            tools^.pin(CENTER, START),
+            file^.pin(END, START),
+            status^.pin(START, END),
+            engine_island^.pin(END, END),
+        ).grow().fill()
 
 
 comptime BRAND_DARK_INK = rgba(17, 94, 163)
+comptime HEADER_BG = rgba(250, 250, 250)
+comptime SELECTED_HEADER = rgba(15, 108, 189)  # (Fluent's brand blue: a selected column's header)
+comptime GRID_DARK = rgba(209, 209, 209)
+comptime BAR_TRACK = rgba(250, 250, 250)
+comptime BAR_THUMB = rgba(194, 194, 194)
+comptime BAR_THUMB_ACTIVE = rgba(138, 138, 138)
 
 
 def exact_money(cents: Int) -> String:

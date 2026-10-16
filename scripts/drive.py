@@ -40,8 +40,12 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
   if (k === 'nav') return 'NAV: ' + e.querySelector('h2').textContent + (e.dataset.back === '1' ? ' (back)' : '');
   if (k === 'date') return 'DATE: ' + e.value;
   if (k === 'board') { const list = getComputedStyle(e).display === 'flex';
-    return ['LAYOUT: ' + (list ? 'list' : 'board')].concat(list ? [] : [...e.querySelectorAll(":scope > .object")].map(o =>
-      'BOARD: ' + o.dataset.tag + ' at ' + o.dataset.x + ',' + o.dataset.y + ' ' + o.dataset.w + 'x' + o.dataset.h)).join(String.fromCharCode(10)); }
+    const sc = e.parentElement, objs = [...e.querySelectorAll(":scope > .object")];
+    const seen = objs.filter(o => o.offsetTop >= sc.scrollTop - 1 && o.offsetTop + 44 <= sc.scrollTop + sc.clientHeight + 1
+      && o.offsetLeft >= sc.scrollLeft - 1 && o.offsetLeft + 44 <= sc.scrollLeft + sc.clientWidth + 1).map(o => o.dataset.tag).sort();
+    return ['LAYOUT: ' + (list ? 'list' : 'board')].concat(list ? [] : objs.map(o =>
+      'BOARD: ' + o.dataset.tag + ' at ' + o.dataset.x + ',' + o.dataset.y + ' ' + o.dataset.w + 'x' + o.dataset.h))
+      .concat(list ? [] : ['INVIEW: ' + seen.join(', ')]).join(String.fromCharCode(10)); }
   if (k === 'object') return '';
   if (k === 'icon') return 'ICON: ' + (e.querySelector('svg') ? e.dataset.icon : '?');
   if (k === 'grid') return 'GRID: ' + e.dataset.columns + ' columns, ' + e.children.length + ' items';
@@ -137,7 +141,7 @@ def step(page, s):
     elif verb == "row":
         k, _, row = rest.partition("=")
         page.locator("[data-kind=list]").nth(int(k)).locator(f'[data-row="{int(row)}"]').click()
-    elif verb in ("drag", "zoom", "frames", "tapat"):  # canvas steps: real mouse input on the canvas
+    elif verb in ("drag", "dragat", "zoom", "frames", "tapat"):  # canvas steps: real mouse input on the canvas
         k, _, arg = rest.partition("=")
         canvas = page.locator("[data-kind=canvas]").nth(int(k))
         box = canvas.bounding_box()
@@ -145,6 +149,14 @@ def step(page, s):
         if verb == "tapat":  # a click at (x, y) thousandths of the canvas
             fx, fy = (int(v) / 1000 for v in arg.split(","))
             page.mouse.click(box["x"] + fx * box["width"], box["y"] + fy * box["height"])
+        elif verb == "dragat":  # start at (fx, fy) thousandths of the canvas, move (dx, dy) points
+            fx, fy, dx, dy = (int(v) for v in arg.split(","))
+            sx, sy = box["x"] + fx / 1000 * box["width"], box["y"] + fy / 1000 * box["height"]
+            page.mouse.move(sx, sy)
+            page.mouse.down()
+            page.mouse.move(sx + dx / 2, sy + dy / 2)
+            page.mouse.move(sx + dx, sy + dy)
+            page.mouse.up()
         elif verb == "drag":
             dx, dy = (int(v) for v in arg.split(","))
             page.mouse.move(cx, cy)

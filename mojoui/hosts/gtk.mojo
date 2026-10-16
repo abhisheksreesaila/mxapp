@@ -14,11 +14,12 @@ from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, FLUENT,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, SUBTLE, ICON_ONLY,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.app import App, Event, Runtime
 from mojoui.canvas import Surface
+from mojoui.icons_data import LUCIDE_NAMES, lucide_svg
 from std.math import log2
 from std.time import perf_counter_ns
 
@@ -167,10 +168,35 @@ def gtk_icon(name: String) -> String:
     if name == "food": return "emoji-food-symbolic"
     if name == "fun": return "emoji-activities-symbolic"
     if name == "chart": return "x-office-spreadsheet-symbolic"
+    for n in materialize[LUCIDE_NAMES]():
+        if n == name:
+            return "mojoui-" + name  # the same Lucide SVG as the web (written by install_icons)
     return "image-missing-symbolic"
 
 
+def install_icons():
+    """Writes the Lucide icons as SVG files (Fluent's neutral foreground, and white for filled
+    buttons) to a cache folder and adds it to the display's icon theme: icons named
+    "mojoui-<name>" and "mojoui-<name>-light"."""
+    var base = c_str(external_call["g_get_user_cache_dir", Int]()) + "/mojoui/icons-1"
+    _ = external_call["g_mkdir_with_parents", c_int](base.as_c_string_span(), c_int(0o755))
+    for n in materialize[LUCIDE_NAMES]():
+        var svg = lucide_svg(n)
+        for variant in [("", "#424242"), ("-light", "#ffffff")]:
+            var path = base + "/mojoui-" + n + variant[0] + ".svg"
+            try:
+                with open(path, "w") as f:
+                    f.write(svg.replace("currentColor", variant[1]))
+            except:
+                pass
+    var display = external_call["gdk_display_get_default", Int]()
+    var theme = external_call["gtk_icon_theme_get_for_display", Int](display)
+    external_call["gtk_icon_theme_add_search_path", NoneType](theme, base.as_c_string_span())
+
+
 def mojo_icon(gtk_name: String) -> String:
+    if gtk_name.startswith("mojoui-"):
+        return String(gtk_name[byte=7:])
     for n in ["star", "trash", "gear", "plus", "check", "calendar", "search", "heart", "home", "person", "travel", "food", "fun", "chart"]:
         if gtk_icon(n) == gtk_name:
             return n
@@ -306,6 +332,8 @@ struct GtkCanvas(Copyable, Movable):
     var last_us: Int
     var drag_x: Float64  # the drag's offset so far
     var drag_y: Float64
+    var start_x: Float64  # where the drag started (canvas points)
+    var start_y: Float64
     var ptr_x: Float64  # where the pointer is (-1: unknown)
     var ptr_y: Float64
     var pinch: Float64  # the pinch's scale so far
@@ -330,6 +358,8 @@ struct GtkCanvas(Copyable, Movable):
         self.last_us = 0
         self.drag_x = 0
         self.drag_y = 0
+        self.start_x = 0
+        self.start_y = 0
         self.ptr_x = -1
         self.ptr_y = -1
         self.pinch = 1
@@ -367,6 +397,9 @@ struct GtkHost[A: App](Movable):
     var boards: List[BoardChild]
     var window_w: Int  # the window's width in points (boards narrower than 720 become lists)
     var board_list: Bool  # the last build showed boards as lists
+    var board_scrollers: List[Tuple[Int, Int]]  # (Board node, its GtkScrolledWindow)
+    var revealed: Int  # the last Board reveal token scrolled to (Board's value)
+    var reveal_pending: Int  # a Board node waiting for its layout to scroll a child into view, or -1
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
     var dialog: Int  # the open alert dialog, if any
@@ -380,6 +413,9 @@ struct GtkHost[A: App](Movable):
         self.boards = List[BoardChild]()
         self.window_w = 0
         self.board_list = False
+        self.board_scrollers = List[Tuple[Int, Int]]()
+        self.revealed = 0
+        self.reveal_pending = -1
         self.window = 0
         self.widgets = List[Int]()
         self.dialog = 0
@@ -465,12 +501,27 @@ struct GtkHost[A: App](Movable):
                 add_class(w, "dim-label")
         elif node.kind == BUTTON:
             var t = node.text
-            w = external_call["gtk_button_new_with_label", Int](t.as_c_string_span())
+            if node.hint != "" and node.style == ICON_ONLY:  # just the icon; the title is the tooltip
+                var icon = gtk_icon(node.hint)
+                w = external_call["gtk_button_new_from_icon_name", Int](icon.as_c_string_span())
+                external_call["gtk_widget_set_tooltip_text", NoneType](w, t.as_c_string_span())
+            elif node.hint != "":  # icon + title
+                w = external_call["gtk_button_new", Int]()
+                var content = external_call["adw_button_content_new", Int]()
+                var icon = gtk_icon(node.hint) + ("-light" if node.style == PROMINENT and node.hint != "" else "")
+                external_call["adw_button_content_set_icon_name", NoneType](content, icon.as_c_string_span())
+                external_call["adw_button_content_set_label", NoneType](content, t.as_c_string_span())
+                external_call["gtk_button_set_child", NoneType](w, content)
+            else:
+                w = external_call["gtk_button_new_with_label", Int](t.as_c_string_span())
             if node.style == PROMINENT:
                 add_class(w, "suggested-action")
-                add_class(w, "pill")
+                if node.hint == "":
+                    add_class(w, "pill")
             elif node.style == DESTRUCTIVE:
                 add_class(w, "destructive-action")
+            elif node.style == SUBTLE or node.style == ICON_ONLY:
+                add_class(w, "flat")
             connect(w, "clicked", on_clicked[Self.A], self_addr)
         elif node.kind == FIELD:
             w = external_call["gtk_entry_new", Int]()
@@ -684,19 +735,40 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_scrolled_window_set_propagate_natural_width", NoneType](w, c_int(1))
             for c in node.children:
                 external_call["gtk_scrolled_window_set_child", NoneType](w, self.build(c, self_addr))
+        elif node.kind == OVERLAY:
+            w = external_call["gtk_overlay_new", Int]()
+            for k in range(len(node.children)):
+                var c = node.children[k]
+                var child = self.build(c, self_addr)
+                if k == 0:
+                    external_call["gtk_widget_set_hexpand", NoneType](child, c_int(1))
+                    external_call["gtk_widget_set_vexpand", NoneType](child, c_int(1))
+                    external_call["gtk_overlay_set_child", NoneType](w, child)
+                else:  # an island: pinned to an edge, 12 pt in, its natural size
+                    ref pin = self.rt.shown.nodes[c]
+                    external_call["gtk_widget_set_halign", NoneType](child, c_int(1 if pin.x == START else (2 if pin.x == END else ALIGN_CENTER)))
+                    external_call["gtk_widget_set_valign", NoneType](child, c_int(2 if pin.y == END else 1))
+                    external_call["gtk_widget_set_margin_top", NoneType](child, c_int(12))
+                    external_call["gtk_widget_set_margin_bottom", NoneType](child, c_int(12))
+                    external_call["gtk_widget_set_margin_start", NoneType](child, c_int(12))
+                    external_call["gtk_widget_set_margin_end", NoneType](child, c_int(12))
+                    add_class(child, "mui-island")
+                    external_call["gtk_overlay_add_overlay", NoneType](w, child)
         elif node.kind == BOARD:
+            var inner: Int
             if self.window_w != 0 and self.window_w < 720:  # a phone-width window: the objects as a list
                 self.board_list = True
-                w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(16))
+                inner = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(16))
                 for c in node.children:
                     var child = self.build(c, self_addr)
                     external_call["gtk_widget_set_halign", NoneType](child, c_int(0))  # fill the width
                     external_call["gtk_widget_set_hexpand", NoneType](child, c_int(1))
-                    external_call["gtk_box_append", NoneType](w, child)
+                    external_call["gtk_box_append", NoneType](inner, child)
             else:
-                w = external_call["gtk_fixed_new", Int]()
-                external_call["gtk_widget_set_size_request", NoneType](w, c_int(node.spacing), c_int(node.size))
-                external_call["gtk_widget_set_halign", NoneType](w, c_int(1))  # start: positions are absolute
+                inner = external_call["gtk_fixed_new", Int]()
+                external_call["gtk_widget_set_size_request", NoneType](inner, c_int(node.spacing), c_int(node.size))
+                external_call["gtk_widget_set_hexpand", NoneType](inner, c_int(1))  # at least the visible page (its dotted
+                external_call["gtk_widget_set_vexpand", NoneType](inner, c_int(1))  # background); positions stay absolute
                 # One drag gesture on the board itself (never on the object it moves: a gesture
                 # measures from the widget it's attached to, so a moving widget would measure
                 # against itself and jitter); drag-begin finds the object under the pointer.
@@ -705,12 +777,21 @@ struct GtkHost[A: App](Movable):
                 connect_any(drag, "drag-begin", on_board_drag_begin[Self.A], self_addr)
                 connect_any(drag, "drag-update", on_board_drag_update[Self.A], self_addr)
                 connect_any(drag, "drag-end", on_board_drag_end[Self.A], self_addr)
-                external_call["gtk_widget_add_controller", NoneType](w, drag)
+                external_call["gtk_widget_add_controller", NoneType](inner, drag)
                 for k in range(len(node.children)):
                     var c = node.children[k]
                     var child = self.build(c, self_addr)
-                    external_call["gtk_fixed_put", NoneType](w, child, Float64(self.rt.shown.nodes[c].x), Float64(self.rt.shown.nodes[c].y))
-                    self.boards.append(BoardChild(i, c, k, child, w, drag))
+                    external_call["gtk_fixed_put", NoneType](inner, child, Float64(self.rt.shown.nodes[c].x), Float64(self.rt.shown.nodes[c].y))
+                    self.boards.append(BoardChild(i, c, k, child, inner, drag))
+            # The page scrolls when it's bigger than the room it's given (both ways).
+            w = external_call["gtk_scrolled_window_new", Int]()
+            external_call["gtk_scrolled_window_set_policy", NoneType](w, c_int(1), c_int(1))  # automatic, automatic
+            external_call["gtk_scrolled_window_set_child", NoneType](w, inner)
+            add_class(inner, "mui-board")
+            self.widgets[i] = inner  # patches move and size the board's own widget
+            self.board_scrollers.append((i, w))
+            if node.value != 0 and node.value != self.revealed:
+                self.reveal_pending = i
         else:
             var orientation = VERTICAL if node.kind == VSTACK else HORIZONTAL
             w = external_call["gtk_box_new", Int](c_int(orientation), c_int(node.spacing))
@@ -753,6 +834,7 @@ struct GtkHost[A: App](Movable):
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
         self.canvases = List[GtkCanvas]()
         self.boards = List[BoardChild]()
+        self.board_scrollers = List[Tuple[Int, Int]]()
         var root = self.build(0, self_addr)
         if self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills:  # the screen fills the window
             external_call["gtk_widget_set_valign", NoneType](root, c_int(0))
@@ -764,12 +846,70 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_widget_set_margin_start", NoneType](root, c_int(32))
             external_call["gtk_widget_set_margin_end", NoneType](root, c_int(32))
         external_call["gtk_window_set_child", NoneType](self.window, root)
+        if self.reveal_pending >= 0:
+            _ = external_call["gtk_widget_add_tick_callback", c_uint](root, on_reveal_tick[Self.A], self_addr, 0)
         if self.dialog != 0 and (getenv("MOJOUI_TEST") == "" or getenv("MOJOUI_SHOT") != ""):  # plain tests drive it unseen
             external_call["adw_dialog_present", NoneType](self.dialog, self.window)
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
         self.focus = -1
         set_busy(False)
+
+    def scroller_of(self, board: Int) -> Int:
+        for bs in self.board_scrollers:
+            if bs[0] == board:
+                return bs[1]
+        return 0
+
+    def reveal(mut self) -> Bool:
+        """Scrolls the pending Board so its reveal child shows (clear of the islands). Returns
+        False while the page isn't laid out yet (try again next frame)."""
+        var i = self.reveal_pending
+        if i < 0 or i >= len(self.rt.shown.nodes) or self.rt.shown.nodes[i].kind != BOARD:
+            self.reveal_pending = -1
+            return True
+        ref b = self.rt.shown.nodes[i]
+        var k = b.value % 64 - 1
+        var sw = self.scroller_of(i)
+        if sw == 0 or k < 0 or k >= len(b.children):
+            self.reveal_pending = -1
+            return True
+        var vadj = external_call["gtk_scrolled_window_get_vadjustment", Int](sw)
+        var hadj = external_call["gtk_scrolled_window_get_hadjustment", Int](sw)
+        var page = external_call["gtk_adjustment_get_page_size", Float64](vadj)
+        var upper = external_call["gtk_adjustment_get_upper", Float64](vadj)
+        if page <= 0 or upper < Float64(b.size):
+            return False
+        ref c = self.rt.shown.nodes[b.children[k]]
+        var v = external_call["gtk_adjustment_get_value", Float64](vadj)
+        if Float64(c.y) < v + 72 or Float64(c.y + min(c.h, Int(page) - 160)) > v + page - 56:  # (clear of the top and bottom islands)
+            external_call["gtk_adjustment_set_value", NoneType](vadj, max(Float64(c.y) - 88, 0.0))
+        var hv = external_call["gtk_adjustment_get_value", Float64](hadj)
+        var hpage = external_call["gtk_adjustment_get_page_size", Float64](hadj)
+        if Float64(c.x) < hv or Float64(c.x + min(c.w, Int(hpage) - 48)) > hv + hpage:
+            external_call["gtk_adjustment_set_value", NoneType](hadj, max(Float64(c.x) - 24, 0.0))
+        self.revealed = b.value
+        self.reveal_pending = -1
+        return True
+
+    def in_view(self, board: Int) -> List[String]:
+        """Tags of the Board's children whose header (top-left 44 pt) is inside the visible page."""
+        var out = List[String]()
+        var sw = self.scroller_of(board)
+        if sw == 0:
+            return out^
+        var vadj = external_call["gtk_scrolled_window_get_vadjustment", Int](sw)
+        var hadj = external_call["gtk_scrolled_window_get_hadjustment", Int](sw)
+        var v = external_call["gtk_adjustment_get_value", Float64](vadj)
+        var vp = external_call["gtk_adjustment_get_page_size", Float64](vadj)
+        var h = external_call["gtk_adjustment_get_value", Float64](hadj)
+        var hp = external_call["gtk_adjustment_get_page_size", Float64](hadj)
+        for c in self.rt.shown.nodes[board].children:
+            ref n = self.rt.shown.nodes[c]
+            if Float64(n.y) >= v - 1 and Float64(n.y + 44) <= v + vp + 1 and Float64(n.x) >= h - 1 and Float64(n.x + 44) <= h + hp + 1:
+                out.append(n.name)
+        sort(out)
+        return out^
 
     def apply(mut self, d: Diff, self_addr: Int):
         if d.rebuild:
@@ -786,6 +926,11 @@ struct GtkHost[A: App](Movable):
                 var t = p.text
                 if kind == TEXT:
                     external_call["gtk_label_set_text", NoneType](w, t.as_c_string_span())
+                elif kind == BUTTON and self.rt.shown.nodes[p.node].hint != "":
+                    if self.rt.shown.nodes[p.node].style == ICON_ONLY:
+                        external_call["gtk_widget_set_tooltip_text", NoneType](w, t.as_c_string_span())
+                    else:
+                        external_call["adw_button_content_set_label", NoneType](external_call["gtk_button_get_child", Int](w), t.as_c_string_span())
                 elif kind == BUTTON or kind == TOGGLE:
                     external_call["gtk_button_set_label", NoneType](w, t.as_c_string_span()) if kind == BUTTON else external_call["gtk_check_button_set_label", NoneType](w, t.as_c_string_span())
                 elif kind == FIELD:
@@ -812,6 +957,11 @@ struct GtkHost[A: App](Movable):
                     external_call["gtk_check_button_set_active", NoneType](b, c_int(1 if j == p.number else 0))
                     b = external_call["gtk_widget_get_next_sibling", Int](b)
                     j += 1
+            elif p.op == SET_VALUE and kind == BOARD:
+                var token = self.rt.shown.nodes[p.node].value
+                if token != 0 and token != self.revealed:
+                    self.reveal_pending = p.node
+                    _ = external_call["gtk_widget_add_tick_callback", c_uint](self.window, on_reveal_tick[Self.A], self_addr, 0)
             elif p.op == SET_VALUE and kind == LAZYLIST:
                 pass  # the refresh below hands it a model of the new length
             elif p.op == SET_VALUE:
@@ -977,6 +1127,11 @@ def settle():
     while external_call["g_main_context_pending", c_int](0) != 0:
         _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
 
+def on_reveal_tick[A: App](widget: Int, clock: Int, host_addr: Int) abi("C") -> c_int:
+    """Each frame until the Board is laid out: scroll its reveal child into view, then stop."""
+    return 0 if host_at[A](host_addr)[].reveal() else 1
+
+
 def on_tick[A: App](widget: Int, clock: Int, host_addr: Int) abi("C") -> c_int:
     if busy():
         return 1  # G_SOURCE_CONTINUE: try again next frame
@@ -1006,7 +1161,11 @@ def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi
         return
     host[].canvases[ci].drag_x = 0
     host[].canvases[ci].drag_y = 0
+    host[].canvases[ci].start_x = x
+    host[].canvases[ci].start_y = y
     host[].canvases[ci].moved = False
+    if not busy():
+        host[].canvas_send(ci, PRESS, x, y, 0, 0, 1, host_addr)  # where a drag (or a tap) starts
 
 
 def on_drag_update[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr: Int) abi("C"):
@@ -1022,8 +1181,8 @@ def on_drag_update[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr:
     host[].canvases[ci].drag_y = off_y
     if abs(off_x) + abs(off_y) > 3:
         host[].canvases[ci].moved = True
-    var at = host[].pointer(ci)
-    host[].canvas_send(ci, PAN, at[0], at[1], dx, dy, 1, host_addr)
+    # where the pointer is now: the drag's start plus its offset (exact, and the same in test runs)
+    host[].canvas_send(ci, PAN, host[].canvases[ci].start_x + off_x, host[].canvases[ci].start_y + off_y, dx, dy, 1, host_addr)
 
 
 def on_scroll[A: App](scroll: Int, dx: Float64, dy: Float64, host_addr: Int) abi("C") -> c_int:
@@ -1486,7 +1645,7 @@ def run_step[A: App](host_addr: Int, step: String):
         else:
             var s = String("activate")
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span(), c_uint(position))
-    elif verb == "drag" or verb == "zoom" or verb == "frames" or verb == "tapat":
+    elif verb == "drag" or verb == "dragat" or verb == "zoom" or verb == "frames" or verb == "tapat":
         var kv = split_at(rest, "=")
         var node = find(host[], CANVAS, "", to_int(kv[0]))
         var ci = -1
@@ -1506,16 +1665,28 @@ def run_step[A: App](host_addr: Int, step: String):
             var cw = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].canvases[ci].widget)))
             var chh = Float64(Int(external_call["gtk_widget_get_height", c_int](host[].canvases[ci].widget)))
             var released = String("released")
+            var pressed = String("drag-begin")  # a real click presses first (the drag gesture begins: PRESS)
+            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].drag, pressed.as_c_string_span(),
+                Float64(to_int(xy[0])) / 1000.0 * cw, Float64(to_int(xy[1])) / 1000.0 * chh)
             host[].canvases[ci].moved = False
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].click, released.as_c_string_span(), c_int(1),
                 Float64(to_int(xy[0])) / 1000.0 * cw, Float64(to_int(xy[1])) / 1000.0 * chh)
-        elif verb == "drag":  # the drag gesture's own signals, as a real drag sends them
-            var xy = split_at(kv[1], ",")
+        elif verb == "drag" or verb == "dragat":  # the drag gesture's own signals, as a real drag sends them
+            var sx = 10.0
+            var sy = 10.0
+            var rest2 = kv[1]
+            if verb == "dragat":  # dragat:K=fx,fy,dx,dy: start at (fx, fy) thousandths of the canvas
+                var a = split_at(rest2, ",")
+                var b = split_at(a[1], ",")
+                sx = Float64(to_int(a[0])) / 1000.0 * Float64(Int(external_call["gtk_widget_get_width", c_int](host[].canvases[ci].widget)))
+                sy = Float64(to_int(b[0])) / 1000.0 * Float64(Int(external_call["gtk_widget_get_height", c_int](host[].canvases[ci].widget)))
+                rest2 = b[1]
+            var xy = split_at(rest2, ",")
             var dx = Float64(to_int(xy[0]))
             var dy = Float64(to_int(xy[1]))
             var begin = String("drag-begin")
             var update = String("drag-update")
-            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].drag, begin.as_c_string_span(), Float64(10), Float64(10))
+            external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].drag, begin.as_c_string_span(), sx, sy)
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].drag, update.as_c_string_span(), dx / 2, dy / 2)
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].drag, update.as_c_string_span(), dx, dy)
         elif verb == "zoom":  # the scroll controller's signal: 4 notches up = 2×
@@ -1603,6 +1774,12 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
                 ref ch = host[].rt.shown.nodes[c]
                 if not host[].board_list:
                     print("BOARD: " + ch.name + " at " + String(ch.x) + "," + String(ch.y) + " " + String(ch.w) + "x" + String(ch.h))
+            if not host[].board_list and getenv("MOJOUI_SHOT") != "":  # (only a shown window has a visible part)
+                var seen = host[].in_view(i)
+                var line = String("INVIEW: ")
+                for k in range(len(seen)):
+                    line += (", " if k > 0 else "") + seen[k]
+                print(line)
     for i in range(len(host[].rt.shown.nodes)):
         ref n = host[].rt.shown.nodes[i]
         var w = host[].widgets[i]
@@ -1611,7 +1788,12 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
         if n.kind == TEXT:
             print("LABEL: " + c_str(external_call["gtk_label_get_text", Int](w)))
         elif n.kind == BUTTON:
-            print("BUTTON: " + c_str(external_call["gtk_button_get_label", Int](w)))
+            if n.hint != "" and n.style == ICON_ONLY:
+                print("BUTTON: " + c_str(external_call["gtk_widget_get_tooltip_text", Int](w)))
+            elif n.hint != "":
+                print("BUTTON: " + c_str(external_call["adw_button_content_get_label", Int](external_call["gtk_button_get_child", Int](w))))
+            else:
+                print("BUTTON: " + c_str(external_call["gtk_button_get_label", Int](w)))
         elif n.kind == FIELD:
             print("FIELD: " + c_str(external_call["gtk_editable_get_text", Int](w)))
         elif n.kind == TOGGLE:
@@ -1755,12 +1937,38 @@ def save_png(window: Int, path: String):
 # 4/8 px corners. Light theme. (Colours GTK can't take from CSS stay libadwaita's.)
 comptime FLUENT_CSS = """
 :root { --accent-bg-color: #0F6CBD; --accent-color: #0F6CBD; --accent-fg-color: #ffffff; }
-window.fluent { background-color: #F5F5F5; color: #242424; }
-window.fluent .mui-card { background-color: #ffffff; border-radius: 8px;
-  box-shadow: 0 0 2px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.14); }
-window.fluent button { border-radius: 4px; }
-window.fluent button.suggested-action { background-color: #0F6CBD; color: #ffffff; }
-window.fluent entry, window.fluent dropdown > button { border-radius: 4px; }
+window.fluent { background-color: #F7F7F8; color: #242424; font-size: 14px; }
+window.fluent label.title-1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+window.fluent label.title-4 { font-size: 14px; font-weight: 600; }
+window.fluent label.caption { font-size: 12px; }
+/* cards: white panels with a hairline and a soft lift */
+window.fluent .mui-card { background-color: #ffffff; border-radius: 8px; padding: 12px 14px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+/* islands: the chrome floating over the page */
+window.fluent .mui-island { background-color: #ffffff; border-radius: 10px; padding: 6px 10px; min-height: 32px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.07), 0 6px 20px rgba(0,0,0,.10); }
+/* the page: a quiet dotted canvas */
+window.fluent .mui-board { background-color: #F7F7F8;
+  background-image: radial-gradient(circle, #D6D6DA 1px, transparent 1.5px); background-size: 24px 24px; }
+/* buttons: white with a hairline, semibold, 32 px; quiet ones have no fill until hovered */
+window.fluent button { border-radius: 6px; min-height: 30px; padding: 2px 12px; font-weight: 600;
+  background: #ffffff; color: #242424; box-shadow: inset 0 0 0 1px #D1D1D1; }
+window.fluent button:hover { background: #F5F5F5; }
+window.fluent button:active { background: #E0E0E0; }
+window.fluent button.flat { background: transparent; box-shadow: none; font-weight: 500; color: #424242; }
+window.fluent button.flat:hover { background: rgba(0,0,0,.05); }
+window.fluent button.flat:active { background: rgba(0,0,0,.09); }
+window.fluent button.image-button { min-width: 30px; padding: 2px 6px; }
+window.fluent button.suggested-action { background: #0F6CBD; color: #ffffff; box-shadow: none; }
+window.fluent button.suggested-action:hover { background: #115EA3; }
+/* fields: white, hairline, Fluent's underline that turns blue on focus */
+window.fluent entry, window.fluent textview, window.fluent dropdown > button { border-radius: 6px; background: #ffffff;
+  box-shadow: inset 0 0 0 1px #D1D1D1, inset 0 -1px 0 0 #8A8A8A; font-weight: 400; }
+window.fluent entry:focus-within { box-shadow: inset 0 0 0 1px #D1D1D1, inset 0 -2px 0 0 #0F6CBD; outline: none; }
+window.fluent textview text { background: #ffffff; }
+window.fluent dropdown > button { min-height: 30px; padding: 2px 10px; }
+window.fluent dropdown > button:hover { background: #FAFAFA; }
+window.fluent scrollbar slider { min-width: 8px; min-height: 8px; background-color: rgba(0,0,0,.28); }
 """
 
 
@@ -1778,6 +1986,7 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
         var display = external_call["gdk_display_get_default", Int]()
         external_call["gtk_style_context_add_provider_for_display", NoneType](display, provider, c_uint(801))
         add_class(host[].window, "fluent")
+    install_icons()
     var size = host[].rt.app.window_size()
     var forced = getenv("MOJOUI_WINDOW")  # tests: "1280x800" checks a smaller laptop screen
     if forced != "":
@@ -1817,6 +2026,9 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
             settle()
             if shot != "":
                 wait_frame(host[].window)
+                var by = perf_counter_ns() + 1_000_000_000
+                while host[].reveal_pending >= 0 and perf_counter_ns() < by:  # a scroll into view waits for layout
+                    _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
         if shot != "" and len(host[].canvases) > 0:  # on screen: let canvases draw what they show now
             var deadline = perf_counter_ns() + 5_000_000_000
             while not host[].canvases_drawn() and perf_counter_ns() < deadline:
