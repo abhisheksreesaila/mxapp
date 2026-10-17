@@ -1,4 +1,4 @@
-"""Milestone checker for GOAL.md (goal 14: omxplorer from scratch; goal 13's checks run as M6, earlier goals' inside them).
+"""Milestone checker for goal 14 (archived: docs/goals/14-omxplorer.md: omxplorer from scratch; goal 13's checks run as M6, earlier goals' inside them).
 Rebuilds from scratch, prints PASS/FAIL per milestone. GTK runs headless; the web runs in Chromium with a real file upload.
 
 Run: scripts/check   (a subset without rebuilding: scripts/check M2 M3; earlier goals: through docs/goals/NN-check.py)
@@ -12,7 +12,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pixi.toml").exists())  # (archived in docs/goals/)
 sys.path.insert(0, str(ROOT / "scripts"))
 
 _spec = importlib.util.spec_from_file_location("goal13", ROOT / "docs/goals/13-check.py")

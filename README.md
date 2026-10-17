@@ -75,7 +75,7 @@ Measured on this machine: a page recompute in ~8 ms, a grid redraw in ~6 ms, a G
 
 **What's left to get there:**
 1. 🧪 MX Studio's other modes: Explore, Query and the agent's tools (most wait for MX frame: `docs/plans/needs-mxframe.md`).
-2. 🤖 🍎 📱 Bring Board, Overlay, the new gestures, keys and themes to Android, then run Mac and iPhone on real hardware (keys run on Linux and the web: [docs/report.md](docs/report.md)).
+2. 🤖 🍎 📱 Bring Board, Overlay, the new gestures, keys and themes to Android, then run Mac and iPhone on real hardware (keys run on Linux and the web: [goal 13](docs/goals/13-report.md)).
 3. 🎨 Cell formatting, column-first (`docs/plans/formatting.md`).
 4. ⚡ Apple and phone GPUs; Mojo in WebAssembly.
 

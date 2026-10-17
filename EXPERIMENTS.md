@@ -4,6 +4,29 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-17 · Experiment 14: omxplorer, the data app from scratch (autopilot, night)
+
+**Goal (owner's words):** "I should be able to install this Linux app, load some data from CSV… use it from scratch"; "follow [Stitch], the classic design"; "this product will be called [omxplorer]… all small case"; "load one million… then try 10, 50, 100 million". Contract: `docs/goals/14-omxplorer.md` once archived. Report: `docs/report.md`.
+
+**What worked:**
+- **The flow:** omxplorer (`examples/omxplorer`) goes Start → choose a CSV → review its columns → a Numbers-classic sheet. The sheet has a toolbar, sheet tabs, formula bar, grid, format inspector and status bar. Formats are currency, percent, compact and dates, with decimals, separators and negatives. You can add formula columns and rows, sort, and save and open `.omx` files (one Parquet file).
+- **New omxapp components:** TOOL buttons, FilePicker, Inspector, sheet chrome, number formats, the CSV reader, `.omx` files and `mojoui.files`.
+- **Scale:** 100M rows: import 106 s on a loaded machine, sort 3.7 s, format change 54 ms, GPU sum 19 ms.
+
+**What broke and how it was fixed:**
+- **Mojo 1.1 gaps:** there's no `memcpy` (libc's is used), and its `mkdir` declaration clashes with the stdlib's (`std.os.makedirs` is used).
+- **Layout:** a `Board` needs its own height, or the grid doesn't show.
+- **A formula column's GPU sum read garbage** until `Frame.flatten` inlined formulas into stored-column steps.
+- **Memory at 50M+ rows:** custom date parsers and numpy temporaries thrashed memory (the owner's other work had 32 GB in swap). The fix: default parsers, Arrow kernels, and one column at a time.
+- **Three review rounds** made weak checks real and validated `.omx` files before they reach memory. They also fixed averages, formatting edges, upload and dialog hygiene, and a failed open that left the sheet on freed memory.
+- **A stuck System UI dialog on the emulator** is now closed by the Android driver.
+
+**What it means:** the component library carries a real product. The app is wiring, and the next screens (charts, pivots, Report) reuse what's there.
+
+**Next:** goal 15. Insert a chart and a pivot onto the sheet (Stitch 05), and build a Report page from scratch (Stitch 06).
+
+---
+
 ## 2026-10-16 · Experiments 11–13: MX Studio's Sheet and Report, and spreadsheet keys (autopilot, night)
 
 **Goal (owner's words):** "the killer app is the data transformation app… primarily focused on Linux and Web"; "ask yourself, okay, what component do I need, then build the component… then go back and build the app"; "go for it and make me proud". Contracts: `docs/goals/11-mxstudio-sheet.md`, `12-mxstudio-report.md`, `GOAL.md` (13). Reports: `docs/goals/11-report.md`, `12-report.md`, `docs/report.md`.
