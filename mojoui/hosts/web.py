@@ -971,7 +971,7 @@ def make_app(module_dir):
         s = sessions.get(sid)
         if s is None:
             return Main(P("This page expired: reload it.", cls="text caption"), id="mojoui-root", hx_swap_oob="true")
-        folder = Path.home() / ".cache" / "omxapp" / "uploads"
+        folder = Path(os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxapp" / "uploads"))
         folder.mkdir(parents=True, exist_ok=True)
         path = folder / Path(file.filename or "upload").name
         with open(path, "wb") as out:

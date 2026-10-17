@@ -18,6 +18,7 @@ from mojoui.frame import Frame, Column, Columns, Range, share, decimal_text, dat
 from mojoui.frame_gpu import GpuFrame, group_sum
 from mojoui.shared import keep, at, environment, make_dir
 from mojoui.csvio import read_csv, CsvImport, CsvColumn, kind_name
+from mojoui.omxfile import save_omx, open_omx
 from mojoui.numformat import (ColumnFormat, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
                               NUMBER_STYLES, DATE_STYLES)
 from mojoui.inspector import Inspector, Section, Row, Stepper
@@ -53,6 +54,7 @@ comptime FORMULA_SUBMIT = 19
 comptime SORT = 20
 comptime UNDO = 21
 comptime TOGGLE_INSPECTOR = 22
+comptime SAVE = 24
 comptime IMPORT_COLUMN = 23  # Import: the column whose details show
 comptime RECENT = 40  # + index: open a recent file
 
@@ -138,7 +140,21 @@ struct Main(App):
     # ---------- data in ----------
 
     def open_path(mut self, path: String):
-        """A CSV file → the Import step (its columns as read)."""
+        """A CSV file → the Import step (its columns as read); an .omx document → straight to its sheet."""
+        if path.endswith(".omx"):
+            try:
+                self.frame = open_omx(path)
+                self.gf_addr = keep(GpuFrame(self.frame.base_addr))
+                self.source = path
+                self.name = file_stem(path)
+                self.has_table = True
+                remember(path, self.recent)
+                self.to_sheet()
+                self.message = "Opened " + file_name(path) + " · " + grouped(self.frame.rows()) + " rows"
+            except e:
+                self.message = String(e)
+            self.version += 1
+            return
         try:
             self.imp = read_csv(path)
             self.frame = Frame(self.imp.base_addr)
@@ -242,7 +258,7 @@ struct Main(App):
         var key = List[Int64]()
         key.append(0)  # OP_CONST 0: one group
         key.append(0)
-        var r = group_sum(self.frame, self.gf()[], key, col_program(col), List[Range](), 1)
+        var r = group_sum(self.frame, self.gf()[], key, self.frame.flatten(col_program(col)), List[Range](), 1)  # (a formula: its stored-column steps)
         self.sum = r.sums[0]
         self.count = r.counts[0]
         self.milliseconds = r.milliseconds
@@ -410,6 +426,18 @@ struct Main(App):
                 self.grid.set_order(self.frame.permutation(col, desc), col, desc)
                 self.message = "Sorted by " + self.frame.name(col) + (" (largest first)" if desc else "")
             self.version += 1
+        elif m == SAVE:
+            var folder = environment("OMX_DOCUMENTS", environment("HOME", ".") + "/Documents/omxplorer")
+            make_dir(folder)
+            var path = folder + "/" + self.name + ".omx"
+            try:
+                save_omx(path, self.frame)
+                self.source = path
+                remember(path, self.recent)
+                self.message = "Saved " + path
+            except e:
+                self.message = "Couldn't save: " + String(e)
+            self.version += 1
         elif m == UNDO:
             if self.frame.undo():
                 self.grid.redraw()
@@ -446,7 +474,7 @@ struct Main(App):
             Card(Text("Blank sheet", HEADLINE), Text("An empty table to type into", CAPTION), Spacer(),
                  Button("New blank sheet", BLANK, icon="grid"), spacing=8).width(316).height(170),
             Card(Text("Import a file", HEADLINE), Text("CSV now · Parquet, Excel, JSON next", CAPTION), Spacer(),
-                 FilePicker("Choose a file…", PICK, icon="import", accept=".csv,.tsv,.txt"), spacing=8).width(316).height(170),
+                 FilePicker("Choose a file…", PICK, icon="import", accept=".csv,.tsv,.txt,.omx"), spacing=8).width(316).height(170),
             Card(Text("Connect a database", HEADLINE), Text("Postgres · DuckDB · SQLite (with MX frame)", CAPTION), Spacer(),
                  Text("Coming next", CAPTION), spacing=8).width(316).height(170),
             Card(Text("Sample · 1M orders", HEADLINE), Text("A year of orders with a story in them", CAPTION), Spacer(),
@@ -456,7 +484,7 @@ struct Main(App):
         var drop = Card(
             Text("Drop a CSV file here, or choose one", HEADLINE),
             Text("It opens as a table you can sort, format, add formulas to and report on, on your GPU.", CAPTION),
-            FilePicker("Choose a CSV file", PICK, style=PROMINENT, icon="import", accept=".csv,.tsv,.txt"),
+            FilePicker("Choose a CSV file", PICK, style=PROMINENT, icon="import", accept=".csv,.tsv,.txt,.omx"),
             spacing=12,
         ).fill().height(200).align(CENTER).justify(CENTER)
         var recent = List[View]()
@@ -511,12 +539,12 @@ struct Main(App):
         return VStack(dialog, spacing=0).padding(24, 48).fill().grow()
 
     def toolbar(self) -> View:
-        var left: List[Tool] = [Tool("View", "view", TOGGLE_INSPECTOR, False), Tool("Undo", "undo", UNDO, False)]
+        var left: List[Tool] = [Tool("Save", "save", SAVE, False), Tool("Undo", "undo", UNDO, False)]
         var middle: List[Tool] = [Tool("Add row", "row-plus", ADD_ROW, False), Tool("Formula", "formula", NEW_FORMULA, self.formula_open),
                                   Tool("Sort", "sort", SORT, self.grid.sort_col >= 0)]
         var right: List[Tool] = [Tool("Format", "format", TOGGLE_INSPECTOR, self.inspector_open)]
         var extra = List[View]()
-        extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt"))
+        extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt,.omx"))
         return Toolbar(left, middle, right, extra)
 
     def inspector(self) -> View:
@@ -580,7 +608,7 @@ struct Main(App):
     def sheet_screen(self) -> View:
         var width = W - 40 - (INSPECTOR_W + 16 if self.inspector_open else 0)
         var cell = (self.frame.name(self.grid.cur_col) if self.grid.cur_col >= 0 else "") + (" " + String(self.grid.cur_row + 1) if self.grid.cur_row >= 0 else "")
-        var fx = FormulaBar("New column", "", FORMULA_SUBMIT) if self.formula_open else FormulaBar(cell, self.edit_text, FX_COMMIT, CELL_CANCEL)
+        var fx = FormulaBar("New column", "", FORMULA_SUBMIT, placeholder="A new column: its name, then its formula") if self.formula_open else FormulaBar(cell, self.edit_text, FX_COMMIT, CELL_CANCEL)
         var items = List[View]()
         items.append(Canvas(0, self.version + self.grid.version, on_gesture=GRID, keys=True).at(0, 0).width(width).height(GRID_H).tag("table"))
         var ed = self.grid.editor_place(self.frame)
@@ -624,8 +652,12 @@ def raw_text(frame: Frame, col: Int, row: Int) -> String:
     return String(v)
 
 
+def config_dir() -> String:
+    return environment("OMX_CONFIG", environment("HOME", ".") + "/.config/omxapp")
+
+
 def recent_path() -> String:
-    return environment("HOME", ".") + "/.config/omxapp/recent.txt"
+    return config_dir() + "/recent.txt"
 
 
 def read_recent() -> List[String]:
@@ -649,7 +681,7 @@ def remember(path: String, mut recent: List[String]):
             out.append(p)
     recent = out^
     try:
-        make_dir(environment("HOME", ".") + "/.config/omxapp")
+        make_dir(config_dir())
         with open(recent_path(), "w") as f:
             for p in recent:
                 f.write(p + "\n")

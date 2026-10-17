@@ -34,8 +34,8 @@ COMPONENTS = [
 # Which examples each platform's checks actually run (docs/goals/*-check.py): GTK and the web run every
 # example; the Android checks (goal 7) drive these on the emulator; Mac and iPhone only build and sign.
 RUN_ON = {
-    "Linux (GTK)": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio"],
-    "Web": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio"],
+    "Linux (GTK)": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer"],
+    "Web": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer"],
     "Android": ["hello", "gallery", "layout", "lens", "todo"],
     "Mac (AppKit)": [],
     "iPhone (UIKit)": [],
@@ -64,6 +64,8 @@ FEATURES = [
     ("Design: Fluent 2", "design() = FLUENT", r"\bFLUENT\b|fluent", "analytics"),
     ("Design: Omarchy (your theme)", "design() = OMARCHY", r"\bOMARCHY\b|omarchy", "workbook"),
     ("Shared data per process", "App.init_shared()", r"init_shared", "workbook"),
+    ("Toolbar button (icon over label)", "Button(style=TOOL / TOOL_ON)", r"mui-tool|button\.tool", "omxplorer"),
+    ("File picker", "FilePicker(title, on_pick)", r"gtk_file_dialog_open|/upload/", "omxplorer"),
 ]
 
 # Components built in Mojo from the ones above (drawn on a Canvas or assembled from native controls):
@@ -74,6 +76,9 @@ COMPOSITES = [
     ("ChartView", "mojoui/chartview.mojo", ["Canvas", "Canvas: pan, zoom, tap"], "ChartView"),
     ("KpiView", "mojoui/kpi.mojo", ["Card tones", "Text tones", "Canvas"], "KpiView("),
     ("FindingCard", "mojoui/finding.mojo", ["Card tones", "Text tones", "Quiet buttons"], "FindingCard("),
+    ("Inspector", "mojoui/inspector.mojo", ["Segmented", "Dropdown", "Toggle", "Card", "Quiet buttons"], "Inspector("),
+    ("Toolbar · FormulaBar · StatusBar", "mojoui/sheetchrome.mojo", ["Toolbar button (icon over label)", "TextField", "Text"], "Toolbar("),
+    ("Column number formats", "mojoui/numformat.mojo", ["Canvas", "Text"], "set_format("),
 ]
 
 # Built inside one app, not in mojoui yet: each should become a component before another app needs it.

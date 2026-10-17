@@ -43,10 +43,10 @@ def SheetTabs(names: List[String], selected: Int, on_select: Int, on_add: Int) -
                   spacing=4).fill().align(CENTER).padding(0, 12).tag("sheet-tabs")
 
 
-def FormulaBar(cell: String, text: String, on_submit: Int, on_cancel: Int = NO_MSG) -> View:
+def FormulaBar(cell: String, text: String, on_submit: Int, on_cancel: Int = NO_MSG, placeholder: String = "Value or =formula") -> View:
     """ƒx, the selected cell's name, and its value or formula (Enter writes it, Escape puts it back)."""
     return HStack(Text("ƒx").tone(4), Text(cell, CAPTION).width(72),
-                  TextField(text, placeholder="Value or =formula", on_submit=on_submit, on_cancel=on_cancel).grow(),
+                  TextField(text, placeholder=placeholder, on_submit=on_submit, on_cancel=on_cancel).grow(),
                   spacing=10).fill().align(CENTER).padding(4, 12).tag("formula-bar")
 
 
