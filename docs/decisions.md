@@ -146,3 +146,5 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-124 · KpiView takes its note's tone from the app (good / warning / none) instead of reading the sign of the text · a rising cost is bad news with a "+" · yes
 - D-125 · the weekly chart's month ticks are approximate (w × 7 ÷ 30) in the app for now; a date axis belongs in LineChart (listed for the next chart pass) · small, cosmetic, flagged by the review · yes
 
+- D-126 · moved MX Studio's ledger and operations into the framework (`mojoui/orders.mojo`, `orders_ops.mojo`, `orders_report.mojo`, like `contoso.mojo`) over inlining them into app.mojo or relaxing goal 3's "apps import only mojoui" check · the archived checks are the contract, and a second app (or an agent's tools) can reuse them · reversible? yes
+- D-127 · `Palette.omarchy()` uses Tokyo Night's blue (#7aa2f7) when there is no theme file; a partial file still derives its accent · goal 10 M10 requires Tokyo Night without a file · reversible? yes

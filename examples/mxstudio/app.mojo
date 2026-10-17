@@ -23,9 +23,9 @@ from mojoui.frame import Frame, share, MERGE, SET
 from mojoui.frame_gpu import GpuFrame, group_sum
 from mojoui.gpu import gpu_present
 from mojoui.shared import put_shared, get_shared, keep, at, count_load, environment
-from orders import order_columns, CUSTOMER, PRODUCT, REGION, CARRIER, REVENUE, COST, FREIGHT, ORDER, DAY, ZIP, WEIGHT, YEAR_START, RATE_CHANGE, REGIONS, PRODUCTS
-from ops import (col_program, totals_by, fold, find_duplicate_names, customer_product, histogram, rows_with, text_groups, Finding, Totals, Pivot)
-from report_ops import (kpis, weekly, margin_heatmap, shares, worst_margin_fall, quarter_range, quarter_days, shares_by_region_product, Kpis, Weekly, Grid2, Anomaly, WEEKS)
+from mojoui.orders import order_columns, CUSTOMER, PRODUCT, REGION, CARRIER, REVENUE, COST, FREIGHT, ORDER, DAY, ZIP, WEIGHT, YEAR_START, RATE_CHANGE, REGIONS, PRODUCTS
+from mojoui.orders_ops import (col_program, totals_by, fold, find_duplicate_names, customer_product, histogram, rows_with, text_groups, Finding, Totals, Pivot)
+from mojoui.orders_report import (kpis, weekly, margin_heatmap, shares, worst_margin_fall, quarter_range, quarter_days, shares_by_region_product, Kpis, Weekly, Grid2, Anomaly, WEEKS)
 from mojoui.view import TextArea
 
 # messages

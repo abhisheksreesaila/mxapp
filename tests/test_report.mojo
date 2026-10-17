@@ -1,9 +1,9 @@
 # The Report's anomaly finder and KPIs on the GPU, checked against the same numbers computed here on the CPU.
-#   pixi run mojo build -I examples/mxstudio -I . tests/test_report.mojo -o build/test_report && build/test_report
+#   pixi run mojo build -I . tests/test_report.mojo -o build/test_report && build/test_report
 from std.testing import assert_equal, assert_true
 
-from orders import order_columns, DAY, REGION, PRODUCT, REVENUE, COST, FREIGHT, WEIGHT, CARRIER, YEAR_START, RATE_CHANGE, CUSTOMER
-from report_ops import worst_margin_fall, kpis, quarter_range, quarter_days, weekly, margin_heatmap, shares, WEEKS
+from mojoui.orders import order_columns, DAY, REGION, PRODUCT, REVENUE, COST, FREIGHT, WEIGHT, CARRIER, YEAR_START, RATE_CHANGE, CUSTOMER
+from mojoui.orders_report import worst_margin_fall, kpis, quarter_range, quarter_days, weekly, margin_heatmap, shares, WEEKS
 from mojoui.frame import share, Frame, Range
 from mojoui.frame_gpu import GpuFrame
 

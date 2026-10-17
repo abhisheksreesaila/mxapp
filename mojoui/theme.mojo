@@ -150,7 +150,9 @@ struct Palette(Copyable, Movable):
         var page = derived(keys, vals, "dark_background", mix(bg, toward, 0.25))
         var raised = derived(keys, vals, "lighter_background", mix(bg, fg, 0.08))
         var ink = derived(keys, vals, "bright_foreground", mix(fg, away, 0.25))
-        var accent = derived(keys, vals, "accent", derived(keys, vals, "blue", mix(fg, rgba(64, 128, 255), 0.6)))
+        # no theme file at all: Tokyo Night's own blue (a partial file still derives its accent from its colours)
+        var fallback_accent = rgba(122, 162, 247) if len(keys) == 0 else mix(fg, rgba(64, 128, 255), 0.6)
+        var accent = derived(keys, vals, "accent", derived(keys, vals, "blue", fallback_accent))
         var quiet = mix(derived(keys, vals, "dark_foreground", mix(fg, bg, 0.45)), fg, 0.5)  # captions: ≥ 4.5:1 on the card
         return Palette(dark, page, bg, raised, ink, fg, quiet, mix(bg, fg, 0.10), mix(bg, fg, 0.22),
                        accent, bg, mix(bg, accent, 0.35), mix(bg, accent, 0.16), derived(keys, vals, "magenta", mix(fg, rgba(173, 142, 230), 0.6)),

@@ -1,12 +1,12 @@
 # The planted-story orders data: every planted problem is there, with exact counts.
-#   pixi run mojo build -I examples/mxstudio -I . tests/test_orders.mojo -o build/test_orders && build/test_orders
+#   pixi run mojo build -I . tests/test_orders.mojo -o build/test_orders && build/test_orders
 from std.testing import assert_equal, assert_true
 
-from orders import (order_columns, ORDER, DAY, CUSTOMER, PRODUCT, CARRIER, ZIP, WEIGHT, REVENUE, COST, FREIGHT,
+from mojoui.orders import (order_columns, ORDER, DAY, CUSTOMER, PRODUCT, CARRIER, ZIP, WEIGHT, REVENUE, COST, FREIGHT,
                     YEAR_START, RATE_CHANGE, DUPLICATES, DUP_ZIP, FLAT_FREIGHT)
 from mojoui.frame import share, Frame
 from mojoui.frame_gpu import GpuFrame
-from ops import histogram
+from mojoui.orders_ops import histogram
 from std.collections import Dict
 
 

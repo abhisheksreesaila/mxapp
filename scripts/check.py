@@ -116,7 +116,7 @@ def m1():
 
 
 def m2():
-    ok, out = built_test("tests/test_report.mojo", "test_report", "REPORT TESTS PASSED", ("examples/mxstudio", "."))
+    ok, out = built_test("tests/test_report.mojo", "test_report", "REPORT TESTS PASSED", (".",))
     if not ok:
         return False, f"test_report: {out}"
     m = re.search(r"REPORT: .*", out)

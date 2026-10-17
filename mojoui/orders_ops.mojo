@@ -3,7 +3,7 @@
 
 from mojoui.frame import Frame, Range, OP_COL, OP_CONST, OP_SUB, OP_FLOORDIV, OP_MIN, OP_MAX, TEXT, INT, DECIMAL, DATE
 from mojoui.frame_gpu import GpuFrame, group_sum, pivot_program
-from orders import CUSTOMER, PRODUCT, REVENUE
+from mojoui.orders import CUSTOMER, PRODUCT, REVENUE
 
 comptime BINS = 16
 

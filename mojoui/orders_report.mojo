@@ -3,8 +3,8 @@
 
 from mojoui.frame import Frame, Range, OP_COL, OP_CONST, OP_SUB, OP_ADD, OP_MUL, OP_FLOORDIV, OP_MIN, OP_MAX
 from mojoui.frame_gpu import GpuFrame, group_sum, pivot_program
-from orders import (DAY, CUSTOMER, REGION, PRODUCT, REVENUE, COST, FREIGHT, WEIGHT, CARRIER, YEAR_START, RATE_CHANGE, DAYS)
-from ops import col_program, text_groups, fold
+from mojoui.orders import (DAY, CUSTOMER, REGION, PRODUCT, REVENUE, COST, FREIGHT, WEIGHT, CARRIER, YEAR_START, RATE_CHANGE, DAYS)
+from mojoui.orders_ops import col_program, text_groups, fold
 
 comptime WEEKS = 41  # Jan 1 … Oct 14: whole weeks only (a part week would look like a fall)
 comptime QUARTER_START: List[Int] = [0, 90, 181, 273, 365]  # days of 2025

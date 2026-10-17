@@ -41,7 +41,7 @@ Every ✅ below is run by `scripts/check` on that platform; 🔨 builds but hasn
 |---|---|---|---|---|
 | 🐧 **Linux** (GTK 4) | 42 | 0 | 0 | every component, gesture and theme; your Omarchy theme |
 | 🌐 **Web** (FastHTML) | 42 | 0 | 0 | the same results as Linux, checked in Chromium |
-| 🤖 **Android** (views over JNI) | 19 | 10 | 13 | the classic controls on the emulator; the Workbook's new components not yet |
+| 🤖 **Android** (views over JNI) | 19 | 10 | 13 | runs the classic controls on the emulator; the Workbook's new components not yet |
 | 🍎 **Mac** (AppKit) | 0 | 29 | 13 | builds and signs; not run on a Mac yet |
 | 📱 **iPhone** (UIKit) | 0 | 29 | 13 | builds and signs; not run on an iPhone yet |
 | ⚡ **GPU** | NVIDIA | | | Apple and phone GPUs use the CPU path for now |
