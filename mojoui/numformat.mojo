@@ -31,9 +31,15 @@ struct ColumnFormat(Copyable, Movable):
     def is_auto(self) -> Bool:
         return self.style == AUTO
 
+    def valid(self) -> Bool:
+        """A format read from a file is one this code can draw."""
+        return AUTO <= self.style <= DATE_ISO and -1 <= self.decimals <= 9 and self.symbol.byte_length() <= 8
+
     def summary(self) -> String:
         """What it does, in words (the inspector, tests)."""
         var names = materialize[NUMBER_STYLES]()
+        if self.style < AUTO or self.style > DATE_ISO:
+            return "Automatic"
         if self.style >= DATE_LONG:
             return "Date " + materialize[DATE_STYLES]()[self.style - DATE_LONG + 1]
         return names[self.style] + (", " + String(self.decimals) + " decimals" if self.decimals >= 0 else "")
@@ -59,7 +65,9 @@ def group_digits(digits: String) -> String:
 def fixed(v: Int64, scale: Int, decimals: Int, thousands: Bool) -> String:
     """|v| / 10^scale with `decimals` digits (rounded half away from zero), no sign."""
     var a = v if v >= 0 else -v
-    var d = decimals if decimals >= 0 else scale
+    var d = min(decimals if decimals >= 0 else scale, 9)
+    while d > scale and a > Int64(9_000_000_000_000_000_000) // pow10(d - scale):  # (more places would overflow: fewer)
+        d -= 1
     var scaled: Int64
     if d >= scale:
         scaled = a * pow10(d - scale)
@@ -102,6 +110,14 @@ def compact_text(v: Int64, scale: Int, decimals: Int) -> String:
         unit = "K"
     var d = decimals if decimals >= 0 else (1 if unit != "" else 0)
     var tenth = Int64(x * Float64(pow10(d)) + 0.5)
+    if tenth >= 1000 * pow10(d) and unit != "B":  # 999,950 → 1,000.0K reads as 1.0M (the rounding carries)
+        var units: List[String] = ["", "K", "M", "B"]
+        var next = 1
+        for k in range(len(units)):
+            if units[k] == unit:
+                next = k + 1
+        tenth = (tenth + 500) // 1000
+        unit = units[next]
     return fixed(tenth, d, d, True) + unit
 
 
@@ -125,7 +141,7 @@ def format_number(v: Int64, scale: Int, f: ColumnFormat) -> String:
     if f.style == PERCENT:
         var d = f.decimals if f.decimals >= 0 else max(scale - 2, 0)
         var text = fixed(v, scale - 2, d, f.thousands) if scale >= 2 else fixed(v * pow10(2 - scale), 0, d, f.thousands)
-        return signed(text, neg, f.parens) + "%"
+        return signed(text + "%", neg, f.parens)
     if f.style == COMPACT:
         return signed(compact_text(v, scale, f.decimals), neg, f.parens)
     if f.style == CURRENCY:

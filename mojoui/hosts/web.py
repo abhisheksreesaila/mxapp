@@ -411,10 +411,17 @@ CANVAS_JS = r"""
     pump();
   }
   const scan = () => document.querySelectorAll('[data-kind=canvas]').forEach(attach);
-  document.addEventListener('DOMContentLoaded', scan);
+  // nothing has the keyboard: the first canvas that takes keys (the grid) gets it, so arrows work at once
+  function focusFirst() {
+    if (window.mojouiKeyCanvas !== undefined || (document.activeElement && document.activeElement !== document.body)) return;
+    const first = document.querySelector('[data-kind=canvas][data-keys="1"]');
+    if (first) { if (!first.mojoui) attach(first); first.querySelector('canvas').focus({ preventScroll: true }); }
+  }
+  document.addEventListener('DOMContentLoaded', () => { scan(); focusFirst(); });
   document.addEventListener('htmx:afterSettle', () => {
     scan();
     release();
+    focusFirst();
     const kdiv = document.querySelector(`[data-kind=canvas][data-node="${window.mojouiKeyCanvas}"]`);
     // an in-place editor closed: the keyboard goes back to the canvas it came from
     const back = kdiv && kdiv.querySelector('canvas');
@@ -832,10 +839,12 @@ def make_app(module_dir):
         with sessions_lock:
             sessions[sid] = s
             while len(sessions) > MAX_SESSIONS:
-                _, old = sessions.popitem(last=False)
+                old_sid, old = sessions.popitem(last=False)
                 with old.lock:
                     old.closed = True
                     mod.close(old.handle)
+                import shutil  # (its uploads go with it)
+                shutil.rmtree(Path(os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxapp" / "uploads")) / old_sid, ignore_errors=True)
         design = mod.design(s.handle)
         body_class = ""
         if design == 1:
@@ -971,14 +980,29 @@ def make_app(module_dir):
         s = sessions.get(sid)
         if s is None:
             return Main(P("This page expired: reload it.", cls="text caption"), id="mojoui-root", hx_swap_oob="true")
-        folder = Path(os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxapp" / "uploads"))
+        with s.lock:  # (from this screen, to a picker: checked before anything is written)
+            if v != s.shape or not 0 <= n < len(s.nodes) or not s.nodes[n]["msg2"]:
+                return ""
+        # each page its own folder; only a plain file name (no folders, no "..")
+        folder = Path(os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxapp" / "uploads")) / sid
         folder.mkdir(parents=True, exist_ok=True)
-        path = folder / Path(file.filename or "upload").name
+        name = Path(file.filename or "").name
+        if name in ("", ".", ".."):
+            name = "upload"
+        path = folder / name
+        limit = int(os.environ.get("OMXAPP_UPLOAD_MAX", str(32 << 30)))  # (32 GB by default: a 100M-row CSV is ~10 GB)
+        size = 0
         with open(path, "wb") as out:
             while chunk := await file.read(1 << 20):
+                size += len(chunk)
+                if size > limit:
+                    out.close()
+                    path.unlink(missing_ok=True)
+                    return ""
                 out.write(chunk)
         with s.lock:
             if v != s.shape or not 0 <= n < len(s.nodes) or not s.nodes[n]["msg2"]:
+                path.unlink(missing_ok=True)
                 return ""
             d = json.loads(mod.event(s.handle, n, 1, str(path), 0))
             if d.get("ignored"):

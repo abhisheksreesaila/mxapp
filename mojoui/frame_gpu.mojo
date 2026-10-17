@@ -170,6 +170,11 @@ struct GpuFrame(Movable):
     def on_gpu(self) -> Bool:
         return Bool(self.device)
 
+    def release(mut self):
+        """Gives the GPU memory back (the table it mirrors is being closed); sums then run on the CPU."""
+        self.device = None
+        self.rows = 0
+
     def device_name(self) -> String:
         return self.gpu.name if self.on_gpu() else String("CPU")
 

@@ -90,10 +90,6 @@ def done():
     COLUMNS.clear()
 
 
-def release(i):
-    \"\"\"Column i is copied: its array can go (so a 100M-row file never holds two copies of every column).\"\"\"
-    KEEP[i] = None
-
 
 def count_rows(path):
     \"\"\"An independent count and two sums (tests): plain Python csv, no pyarrow.\"\"\"
@@ -132,8 +128,8 @@ struct CsvImport(Movable):
     var columns: List[CsvColumn]
     var skipped: List[String]  # columns past the engine's limit (MAX_COLS)
     var seconds: Float64  # read + convert + copy
-    var base_addr: Int
-    var parse_seconds: Float64  # of which: the file read and typed (pyarrow)  # the shared columns (mojoui.frame.share); Frame(base_addr) is the table
+    var base_addr: Int  # the shared columns (mojoui.frame.share); Frame(base_addr) is the table
+    var parse_seconds: Float64  # of which: the file read and typed (pyarrow)
 
 
 def kind_name(kind: Int) -> String:

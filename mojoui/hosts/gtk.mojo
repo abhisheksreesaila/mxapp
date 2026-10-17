@@ -950,6 +950,15 @@ struct GtkHost[A: App](Movable):
                     if c.node == self.key_node:
                         _ = external_call["gtk_widget_grab_focus", c_int](c.widget)
         self.editor_open = editor
+        if not editor and self.focus < 0:  # no text field has the keyboard: a canvas that takes keys gets it (arrows work at once)
+            var root_focus = external_call["gtk_root_get_focus", Int](self.window) if self.window != 0 else 0
+            var typing = root_focus != 0 and Int(external_call["g_type_check_instance_is_a", c_int](root_focus, external_call["gtk_editable_get_type", Int]())) != 0
+            if not typing:
+                for c in self.canvases:
+                    if c.keys != 0:
+                        _ = external_call["gtk_widget_grab_focus", c_int](c.widget)
+                        self.key_node = c.node
+                        break
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
         self.focus = -1
@@ -1528,6 +1537,17 @@ def on_clicked[A: App](button: Int, host_addr: Int) abi("C"):
         var dialog = external_call["gtk_file_dialog_new", Int]()
         var title = host[].rt.shown.nodes[node].text
         external_call["gtk_file_dialog_set_title", NoneType](dialog, title.as_c_string_span())
+        var accept = host[].rt.shown.nodes[node].options[0] if len(host[].rt.shown.nodes[node].options) > 0 else String("")
+        if accept != "":  # the picker's file types (".csv,.omx") as the dialog's filter
+            var filter = external_call["gtk_file_filter_new", Int]()
+            var name = String("Files it opens (") + accept + ")"
+            external_call["gtk_file_filter_set_name", NoneType](filter, name.as_c_string_span())
+            for ext in accept.split(","):
+                var suffix = String(String(ext).strip().lstrip("."))
+                if suffix != "":
+                    external_call["gtk_file_filter_add_suffix", NoneType](filter, suffix.as_c_string_span())
+            external_call["gtk_file_dialog_set_default_filter", NoneType](dialog, filter)
+            external_call["g_object_unref", NoneType](filter)
         external_call["gtk_file_dialog_open", NoneType](dialog, host[].window, 0, on_file_picked[A], host_addr)
         return
     host[].send(node, False, "", 0, host_addr)
@@ -1538,10 +1558,15 @@ def on_file_picked[A: App](dialog: Int, result: Int, host_addr: Int) abi("C"):
     var host = host_at[A](host_addr)
     var err = List[Int](length=1, fill=0)
     var file = external_call["gtk_file_dialog_open_finish", Int](dialog, result, Int(err.unsafe_ptr()))
-    _ = len(err)
+    if err[0] != 0:
+        external_call["g_error_free", NoneType](err[0])  # (cancelled, or the dialog failed)
+    external_call["g_object_unref", NoneType](dialog)
     if file == 0:
         return
-    var path = c_str(external_call["g_file_get_path", Int](file))
+    var raw = external_call["g_file_get_path", Int](file)
+    var path = c_str(raw)
+    external_call["g_free", NoneType](raw)
+    external_call["g_object_unref", NoneType](file)
     var node = host[].picker_node
     if path != "" and 0 <= node < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[node].msg2 != 0:
         host[].send(node, True, path, 0, host_addr)

@@ -7,6 +7,7 @@ from mojoui import View, Button, FilePicker, Toggle, Dropdown, TOOL, TOOL_ON, BU
 from mojoui.numformat import (ColumnFormat, format_number, format_date, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT,
                               DATE_LONG, DATE_MONTH, DATE_ISO)
 from mojoui.inspector import Inspector, Section, Row, Stepper
+from mojoui.frame import parse_decimal
 from mojoui.sheetchrome import Tool, Toolbar, SheetTabs, FormulaBar, StatusBar
 
 
@@ -49,6 +50,23 @@ def main() raises:
     assert_equal(format_date(20370, ColumnFormat(DATE_MONTH, -1, True, False, "")), "Oct 2025")
     assert_equal(format_date(20370, ColumnFormat(DATE_ISO, -1, True, False, "")), "2025-10-09")
     assert_true(ColumnFormat.auto().is_auto())
+    # edges the review found: compact rounding carries to the next unit; percent negatives keep the % inside the
+    # parentheses; values too big for the asked decimals fall back to fewer places instead of overflowing
+    assert_equal(format_number(999950, 0, ColumnFormat(COMPACT, -1, True, False, "$")), "1.0M")
+    assert_equal(format_number(999949, 0, ColumnFormat(COMPACT, -1, True, False, "$")), "999.9K")
+    assert_equal(format_number(-364, 3, ColumnFormat(PERCENT, 1, True, True, "$")), "(36.4%)")
+    assert_true(not format_number(Int64(9_000_000_000_000_000_000), 0, ColumnFormat(NUMBER, 6, True, False, "$")).startswith("-"),
+                "no overflow into a negative")
+    assert_true(not ColumnFormat(12, 2, True, False, "$").valid(), "a style from a bad file is refused")
+    assert_equal(ColumnFormat(12, 2, True, False, "$").summary(), "Automatic")
+    # what the formats print, the parser reads back
+    assert_equal(parse_decimal("$1,214.50", 2), 121450)
+    assert_equal(parse_decimal("−$1,214.50", 2), -121450)
+    assert_equal(parse_decimal("($1,214.50)", 2), -121450)
+    assert_equal(parse_decimal("€9", 2), 900)
+    assert_equal(parse_decimal("36.4%", 3), 364)
+    assert_equal(parse_decimal("(36.4%)", 3), -364)
+    assert_equal(parse_decimal("-3.0", 1), -30)
 
     # ---- tool buttons and the file picker ----
     var tool = Button("Table", 7, TOOL, icon="table")

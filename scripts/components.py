@@ -65,7 +65,7 @@ FEATURES = [
     ("Design: Omarchy (your theme)", "design() = OMARCHY", r"\bOMARCHY\b|omarchy", "workbook"),
     ("Shared data per process", "App.init_shared()", r"init_shared", "workbook"),
     ("Toolbar button (icon over label)", "Button(style=TOOL / TOOL_ON)", r"mui-tool|button\.tool", "omxplorer"),
-    ("File picker", "FilePicker(title, on_pick)", r"gtk_file_dialog_open|/upload/", "omxplorer"),
+    ("File picker", "FilePicker(title, on_pick)", r"gtk_file_dialog_open|/upload/", "omxplorer"),  # (GTK: built, but checks use the pick: step, not the dialog: UNPROVEN)
 ]
 
 # Components built in Mojo from the ones above (drawn on a Canvas or assembled from native controls):
@@ -83,9 +83,11 @@ COMPOSITES = [
 
 # Built inside one app, not in mojoui yet: each should become a component before another app needs it.
 APP_LOCAL = [
-    ("FormulaBar", "examples/workbook", "what's selected, its value, a formula field"),
-    ("Inspector", "examples/mxstudio", "the side panel: Comes from, Feeds, Your edits, Undo all (lineage and the edit log as a reusable panel)"),
-    ("Toolbar / StatusBar islands", "examples/workbook", "the island contents (title, Insert buttons, status) are assembled by the app"),
+    ("FormulaBar", "examples/workbook", "what's selected, its value, a formula field; migrate to mojoui.sheetchrome.FormulaBar"),
+    ("Inspector", "examples/mxstudio", "the side panel: Comes from, Feeds, Your edits, Undo all (lineage and the edit log); migrate to mojoui.inspector"),
+    ("Toolbar / StatusBar islands", "examples/workbook", "the island contents (title, Insert buttons, status) are assembled by the app; migrate to mojoui.sheetchrome"),
+    ("Selection totals (sum, average of a column on the GPU)", "examples/omxplorer", "the status bar's numbers: a group-by with one group, formatted by the column"),
+    ("Import review (columns, types, empties, first rows)", "examples/omxplorer", "the Import step's table; a component once a second app imports files"),
 ]
 
 
@@ -113,9 +115,15 @@ def cell(host, src, ctor, kind):
     return "✅" if proof else "🔨"
 
 
-def feature_cell(host, src, pattern, example):
+# Features a host implements but no check runs there (a stand-in drives it instead): 🔨 until one does.
+UNPROVEN = {("Linux (GTK)", "File picker"): "the checks hand the path in with the pick: step; GTK's own dialog isn't driven"}
+
+
+def feature_cell(host, src, pattern, example, name=""):
     if not re.search(pattern, src):
         return "❌"
+    if (host, name) in UNPROVEN:
+        return "🔨"
     return "✅" if example in RUN_ON[host] else "🔨"
 
 
@@ -142,14 +150,14 @@ def render():
             "| Feature | API | " + " | ".join(names) + " |",
             "|---|---|" + "---|" * len(names)]
     for name, api, pattern, example in FEATURES:
-        row = [feature_cell(h, srcs[h], pattern, example) for h in names]
+        row = [feature_cell(h, srcs[h], pattern, example, name) for h in names]
         out.append(f"| {name} | `{api}` | " + " | ".join(row) + " |")
     known = {}
     for h in names:
         for ctor, kind in COMPONENTS:
             known[(h, ctor)] = cell(h, srcs[h], ctor, kind)
         for name, api, pattern, example in FEATURES:
-            known[(h, name)] = feature_cell(h, srcs[h], pattern, example)
+            known[(h, name)] = feature_cell(h, srcs[h], pattern, example, name)
     out += ["", "## Composite components (Mojo, built from the ones above)", "",
             "A composite is only as far along on a platform as the least-proven piece it's made of.", "",
             "| Component | Module | Made of | " + " | ".join(names) + " | Used by |",
@@ -166,7 +174,7 @@ def render():
             row.append(state)
             comp_cells.setdefault(h, []).append(state)
         out.append(f"| `{name}` | `{module}` | {', '.join(parts)} | " + " | ".join(row) + f" | {', '.join(users) or '—'} |")
-    totals = {h: [cell(h, srcs[h], c, k) for c, k in COMPONENTS] + [feature_cell(h, srcs[h], p, e) for _, _, p, e in FEATURES] + comp_cells[h] for h in names}
+    totals = {h: [cell(h, srcs[h], c, k) for c, k in COMPONENTS] + [feature_cell(h, srcs[h], p, e, n) for n, _, p, e in FEATURES] + comp_cells[h] for h in names}
     out += ["", "## Totals", "", "| Platform | ✅ | 🔨 | ❌ |", "|---|---|---|---|"]
     for h in names:
         t = totals[h]

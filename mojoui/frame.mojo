@@ -163,12 +163,30 @@ def parse_date(text: String) raises -> Int64:
 
 
 def parse_decimal(text: String, scale: Int) raises -> Int64:
-    """"12.5" with scale 2 → 1250; rounds extra digits away."""
-    var t = text.strip().replace(",", "").replace("$", "")
-    var neg = t.startswith("-")
-    if neg:
+    """"12.5" with scale 2 → 1250; rounds extra digits away. Reads what the formats print back: "$1,234.50",
+    "−3.0" (a real minus sign), "(1,234)" (negative), "€9", "36.4%" (0.364)."""
+    var t = String(text.strip())
+    for sym in ["$", "€", "£", "₹", ",", " "]:
+        t = t.replace(sym, "")
+    t = t.replace("−", "-")
+    var neg = False
+    if t.startswith("(") and t.endswith(")"):
+        var inner = String(t[byte = 1 : t.byte_length() - 1])
+        t = inner
+        neg = True
+    var percent = t.endswith("%")
+    if percent:
+        var number = String(t[byte = : t.byte_length() - 1])
+        t = number
+    if t.startswith("-"):
+        neg = not neg
         var rest = String(t[byte=1:])
         t = rest
+    if percent:  # 36.4% is 0.364: two more places, then shift
+        var scaled = parse_decimal(t, scale + 2)  # (36.4 at scale+2 places, ÷ 10^4 = 0.364 at scale places)
+        var div = pow10(4)
+        var v = (scaled + div // 2) // div
+        return -v if neg else v
     var dot = t.find(".")
     var whole = t if dot < 0 else String(t[byte=:dot])
     var frac = String("") if dot < 0 else String(t[byte=dot + 1:])
@@ -250,6 +268,14 @@ def share(var columns: Columns) -> Int:
     var p = alloc(Layout[Columns].single()).unsafe_leak()
     p.unsafe_write(columns^)
     return Int(p)
+
+
+def release_columns(addr: Int):
+    """Empties shared columns nobody reads any more (a closed document): their memory goes back; the small
+    header stays, so a stale address reads as an empty table rather than freed memory."""
+    var p = base_at(addr)
+    p[].cols = List[Column]()
+    p[].rows = 0
 
 
 def base_at(addr: Int) -> Pointer[Columns, MutUntrackedOrigin]:
@@ -644,6 +670,18 @@ struct Frame(Movable, GridSource):
         if f.is_auto():
             return decimal_text(v, self.scale(col)) if kind == DECIMAL else String(v)
         return format_number(v, self.scale(col) if kind == DECIMAL else 0, f)
+
+    def plain_text(self, col: Int, row: Int) -> String:
+        """The value as typed, without its column's format ($, separators, %): what an editor starts from."""
+        var v = self.get(col, row)
+        var kind = self.kind(col)
+        if kind == TEXT and col < self.stored():
+            return self.text_of(col, self.alias(col, v))
+        if kind == DATE:
+            return date_text(v)
+        if kind == DECIMAL:
+            return decimal_text(v, self.scale(col))
+        return String(v)
 
     def display(self, col: Int, row: Int) -> String:
         var v = self.get(col, row)

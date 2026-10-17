@@ -31,7 +31,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `Image` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, gpu |
 | `Icon` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `Alert` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
-| `Tabs` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout, mxstudio, omxplorer |
+| `Tabs` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout, mxstudio |
 | `NavBar` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `LazyList` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout |
 | `Canvas` | ✅ | ✅ | ✅ | 🔨 | 🔨 | lens, analytics, workbook, mxstudio, omxplorer |
@@ -63,7 +63,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | Design: Omarchy (your theme) | `design() = OMARCHY` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Shared data per process | `App.init_shared()` | ✅ | ✅ | 🔨 | 🔨 | 🔨 |
 | Toolbar button (icon over label) | `Button(style=TOOL / TOOL_ON)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| File picker | `FilePicker(title, on_pick)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| File picker | `FilePicker(title, on_pick)` | 🔨 | ✅ | ❌ | ❌ | ❌ |
 
 ## Composite components (Mojo, built from the ones above)
 
@@ -84,7 +84,7 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 57 | 0 | 0 |
+| Linux (GTK) | 56 | 1 | 0 |
 | Web | 57 | 0 | 0 |
 | Android | 19 | 12 | 26 |
 | Mac (AppKit) | 0 | 31 | 26 |
@@ -94,9 +94,11 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Should become | Lives in | What it is |
 |---|---|---|
-| `FormulaBar` | examples/workbook | what's selected, its value, a formula field |
-| `Inspector` | examples/mxstudio | the side panel: Comes from, Feeds, Your edits, Undo all (lineage and the edit log as a reusable panel) |
-| `Toolbar / StatusBar islands` | examples/workbook | the island contents (title, Insert buttons, status) are assembled by the app |
+| `FormulaBar` | examples/workbook | what's selected, its value, a formula field; migrate to mojoui.sheetchrome.FormulaBar |
+| `Inspector` | examples/mxstudio | the side panel: Comes from, Feeds, Your edits, Undo all (lineage and the edit log); migrate to mojoui.inspector |
+| `Toolbar / StatusBar islands` | examples/workbook | the island contents (title, Insert buttons, status) are assembled by the app; migrate to mojoui.sheetchrome |
+| `Selection totals (sum, average of a column on the GPU)` | examples/omxplorer | the status bar's numbers: a group-by with one group, formatted by the column |
+| `Import review (columns, types, empties, first rows)` | examples/omxplorer | the Import step's table; a component once a second app imports files |
 
 ## The rule
 

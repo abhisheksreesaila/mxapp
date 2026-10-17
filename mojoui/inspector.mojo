@@ -7,7 +7,7 @@
 #                               Row("Thousands", Toggle("", on, ON_THOUSANDS))]),
 #   ])
 
-from mojoui.view import (View, Text, Button, Segmented, HStack, VStack, Spacer, Divider, Card, CAPTION, HEADLINE, SUBTLE,
+from mojoui.view import (View, Text, Button, Segmented, HStack, VStack, Spacer, Divider, Card, Scroll, CAPTION, HEADLINE, SUBTLE,
                          ICON_ONLY, CENTER, STRETCH, START)
 
 
@@ -30,12 +30,15 @@ def Stepper(value: String, on_less: Int, on_more: Int) -> View:
     return HStack(Button("−", on_less, SUBTLE), Text(value), Button("+", on_more, SUBTLE), spacing=4).align(CENTER)
 
 
-def Inspector(tabs: List[String], selected: Int, on_tab: Int, sections: List[View], width: Int = 300) -> View:
-    """The panel: tabs across the top (Table · Cell · Text · Arrange), then sections divided by hairlines."""
-    var all = List[View]()
-    all.append(Segmented(tabs, selected, on_tab).fill())
+def Inspector(tabs: List[String], selected: Int, on_tab: Int, sections: List[View], width: Int = 300, height: Int = 600) -> View:
+    """The panel: tabs across the top (Table · Cell · Text · Arrange), then sections divided by hairlines; the
+    sections scroll when they're taller than `height` (a table with many columns)."""
+    var body = List[View]()
     for k in range(len(sections)):
         if k > 0:
-            all.append(Divider())
-        all.append(sections[k].copy())
+            body.append(Divider())
+        body.append(sections[k].copy())
+    var all = List[View]()
+    all.append(Segmented(tabs, selected, on_tab).fill())
+    all.append(Scroll(VStack(body^, spacing=14).fill(), height=height).fill())
     return Card(all^, spacing=14).width(width).grow()

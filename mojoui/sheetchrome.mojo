@@ -37,10 +37,14 @@ def Toolbar(left: List[Tool], middle: List[Tool], right: List[Tool], extra: List
     return HStack(items^, spacing=2).fill().align(CENTER).padding(4, 10).tag("toolbar")
 
 
-def SheetTabs(names: List[String], selected: Int, on_select: Int, on_add: Int) -> View:
-    """The sheets of a document, with + to add one."""
-    return HStack(Tabs(names, selected, on_select), Button("Add sheet", on_add, ICON_ONLY, icon="plus"), Spacer(),
-                  spacing=4).fill().align(CENTER).padding(0, 12).tag("sheet-tabs")
+def SheetTabs(names: List[String], selected: Int, on_select: Int, on_add: Int = NO_MSG) -> View:
+    """The sheets of a document, with + to add one (no + when on_add is NO_MSG)."""
+    var items = List[View]()
+    items.append(Tabs(names, selected, on_select))
+    if on_add != NO_MSG:
+        items.append(Button("Add sheet", on_add, ICON_ONLY, icon="plus"))
+    items.append(Spacer())
+    return HStack(items^, spacing=4).fill().align(CENTER).tag("sheet-tabs")
 
 
 def FormulaBar(cell: String, text: String, on_submit: Int, on_cancel: Int = NO_MSG, placeholder: String = "Value or =formula") -> View:

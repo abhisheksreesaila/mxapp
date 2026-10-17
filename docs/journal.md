@@ -185,3 +185,12 @@ Newest last. What was tried, what happened, dead ends.
 - Review round 4 (NEEDS WORK): the matrix's "caret after the text" ✅ rested on code nothing ran after D-132 (removed; the row is now the echo editor, D-134, GOAL.md wording changed for the owner to see); GTK rerouted keys from any editor without focus (only echo editors now); Tab/arrows while typing now behave as in Excel (D-135).
 - Review round 5: PASS on the code. Small fixes after the full run: the move after a refused write is forgotten on close; the Shift+Tab test starts where it can fail.
 - The full run's only failure was goal 7's Android install in the worktree: the emulator held hello signed with the main checkout's debug key (build/android-debug.keystore is per checkout). The worktree uses the main checkout's key; goal 7 M2 passes.
+
+## Goal 14: omxplorer (2026-10-16/17 night, owner asleep)
+- The owner chose Stitch's classic design and named the product omxplorer (lowercase; framework omxapp). New app beside MX Studio (D-137).
+- Components first: TOOL buttons, FilePicker (GTK dialog / web upload), Inspector/Section/Row/Stepper, Toolbar/FormulaBar/StatusBar, column number formats, CSV reader (pyarrow SHIM), .omx files (one Parquet file, D-138).
+- Mojo 1.1 has no `std.memory.memcpy`; libc's through external_call works. `mkdir` clashes with the stdlib's own declaration: `std.os.makedirs` instead.
+- First sheet screenshot: the grid didn't show (a Board inside a VStack needs its own height) and the toolbar stretched to 141 pt (explicit heights).
+- A formula column's GPU sum read column 12 of a 12-wide row (garbage): Frame.flatten inlines formulas into stored-column steps.
+- Scale: 10M imported in 15 s while a check ran, 3 s alone. At 50M the custom date parsers doubled pyarrow's read and numpy temporaries thrashed memory (32 GB of the owner's other work in swap): default parsers, Arrow kernels, one column at a time. 100M: 106 s import, 26 GB peak, sort 3.7 s, format change 54 ms (docs/scale.md).
+- Review round 1 (NEEDS WORK, 16 items): checks that could pass while broken (prefix label matches and truncated money; no qty; Save without edits; M5 read only a document); the matrix over-claimed GTK's file dialog; a crafted .omx could reach raw memory (now validated in the reader: column count, names, kinds, nulls, text codes, formats); an integer average; formatting edges (compact carry, percent in parentheses, overflow, the parser rejecting what the formats print); dialog and upload leaks; tables never released; app-local helpers. All fixed or logged (D-141–D-143).

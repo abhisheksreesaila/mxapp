@@ -28,13 +28,36 @@ def write(path, rows, names, addresses, meta):
     pq.write_table(table, path)
 
 
-def read(path):
+def read(path, max_cols):
+    \"\"\"The file's columns in the metadata's order, refused unless every column is what the metadata says it is
+    (a file from somewhere else, or edited by hand, must not reach the engine's raw memory).\"\"\"
     t = pq.read_table(path)
-    meta = json.loads((t.schema.metadata or {}).get(b"omx", b"{}"))
+    try:
+        meta = json.loads((t.schema.metadata or {}).get(b"omx", b"{}"))
+    except ValueError:
+        raise ValueError("its omx metadata isn't JSON")
+    if meta.get("omx") != 1:
+        raise ValueError("it isn't an omxplorer document")
+    specs = meta.get("columns", [])
+    if not 1 <= len(specs) <= max_cols:
+        raise ValueError(f"it has {len(specs)} columns (1 to {max_cols} can be opened)")
     KEEP.clear()
-    arrays = [np.ascontiguousarray(t.column(n).to_numpy().astype(np.int64)) for n in t.column_names]
-    KEEP.extend(arrays)
-    return {"rows": t.num_rows, "names": list(t.column_names), "addresses": [a.ctypes.data for a in arrays], "meta": meta}
+    for spec in specs:
+        name, kind = spec.get("name"), spec.get("kind")
+        if name not in t.column_names:
+            raise ValueError(f"column {name!r} is described but not stored")
+        if kind not in (0, 1, 2, 3) or not 0 <= int(spec.get("scale", 0)) <= 6:
+            raise ValueError(f"column {name!r} has an unknown type")
+        col = t.column(name)
+        if col.null_count:
+            raise ValueError(f"column {name!r} has empty values")
+        if not pa.types.is_integer(col.type):
+            raise ValueError(f"column {name!r} isn't stored as integers")
+        arr = np.ascontiguousarray(col.to_numpy().astype(np.int64))
+        if kind == 2 and len(arr) and (arr.min() < 0 or arr.max() >= len(spec.get("dictionary", []))):
+            raise ValueError(f"column {name!r} names texts it doesn't have")
+        KEEP.append(arr)
+    return {"rows": t.num_rows, "addresses": [a.ctypes.data for a in KEEP], "meta": meta}
 
 
 def done():
@@ -116,16 +139,20 @@ def save_omx(path: String, frame: Frame) raises:
 
 
 def format_from(o: PythonObject) raises -> ColumnFormat:
-    return ColumnFormat(Int(py=o["style"]), Int(py=o["decimals"]), Bool(py=o["thousands"]), Bool(py=o["parens"]), String(py=o["symbol"]))
+    """A saved format, or Automatic if it isn't one this code can draw."""
+    var f = ColumnFormat(Int(py=o["style"]), Int(py=o["decimals"]), Bool(py=o["thousands"]), Bool(py=o["parens"]), String(py=o["symbol"]))
+    return f^ if f.valid() else ColumnFormat.auto()
 
 
 def open_omx(path: String) raises -> Frame:
     """Reads `path` (.omx): the table, its formula columns and every column's format."""
     var py = bridge()
-    var read = py.read(path)
+    var read: PythonObject
+    try:
+        read = py.read(path, MAX_COLS)
+    except e:
+        raise Error("can't open " + path + ": " + String(e))
     var meta = read["meta"]
-    if Int(py=meta.get("omx", 0)) != 1:
-        raise Error(path + " isn't an omxplorer document")
     var rows = Int(py=read["rows"])
     var cols = Columns()
     var specs = meta["columns"]

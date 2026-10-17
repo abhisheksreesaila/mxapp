@@ -48,19 +48,29 @@ def labels(out):
 
 
 def label(out, start):
+    """The first label that starts with `start` (to read a value); use has() to assert an exact one."""
     return next((l for l in labels(out) if l.startswith(start)), None)
 
 
-def both(steps, name, extra=None, web=True):
-    e = env_for(name)
-    e.update(extra or {})
-    exe = BUILD / "omxplorer" / "linux" / "omxplorer"
-    r = run([str(exe)], env=dict(e, MOJOUI_TEST=steps, MOJOUI_SHOT=str(BUILD / "omxplorer" / f"{name}-gtk.png")), timeout=900)
-    og = r.stdout + r.stderr
-    if r.returncode != 0 or "CRITICAL" in og or "TEST: " in og:
-        return None, f"GTK run failed (exit {r.returncode}): {og[-400:]}"
+def has(out, text):
+    return text in labels(out)
+
+
+def both(steps, name, extra=None, web=True, gtk=True, split=False):
+    """Runs the steps on GTK and in Chromium. split: each host gets its own documents folder (env_for(name + '-gtk'/-web))."""
+    og, ow = None, None
+    if gtk:
+        e = env_for(name + ("-gtk" if split else ""))
+        e.update(extra or {})
+        exe = BUILD / "omxplorer" / "linux" / "omxplorer"
+        r = run([str(exe)], env=dict(e, MOJOUI_TEST=steps, MOJOUI_SHOT=str(BUILD / "omxplorer" / f"{name}-gtk.png")), timeout=900)
+        og = r.stdout + r.stderr
+        if r.returncode != 0 or "CRITICAL" in og or "TEST: " in og:
+            return None, f"GTK run failed (exit {r.returncode}): {og[-400:]}"
     if not web:
         return og, None
+    e = env_for(name + ("-web" if split else ""))
+    e.update(extra or {})
     saved = {k: os.environ.get(k) for k in e}
     os.environ.update(e)
     try:
@@ -75,12 +85,13 @@ def both(steps, name, extra=None, web=True):
                 os.environ[k] = v
     if rw.returncode != 0:
         return None, f"web: {ow[-400:]}"
-    return og, ow
+    return (og if gtk else ow), ow
 
 
 def oracle(path):
-    """An independent pass over the CSV (Python's csv module): rows, and sums of revenue, qty and the margin."""
-    rows, revenue, qty, margin = 0, 0, 0, 0
+    """An independent pass over the CSV (Python's csv module): rows; sums of revenue, qty, the margin and the loss
+    (cost − revenue); the first row's revenue and customer."""
+    rows, revenue, qty, margin, first = 0, 0, 0, 0, None
     with open(path, newline="") as f:
         for rec in csv.DictReader(f):
             rows += 1
@@ -88,13 +99,35 @@ def oracle(path):
             revenue += cents
             qty += int(rec["qty"])
             margin += cents - round(float(rec["cost"]) * 100) - round(float(rec["freight"]) * 100)
-    return rows, revenue, qty, margin
+            if first is None:
+                first = (cents, rec["customer"])
+    return {"rows": rows, "revenue": revenue, "qty": qty, "margin": margin, "first": first}
 
 
-def money(cents, symbol="", places=2):
-    whole = f"{abs(cents) // 100:,}"
-    text = f"{symbol}{whole}" + (f".{abs(cents) % 100:02d}" if places == 2 else (f".{(abs(cents) % 100) // 10}" if places == 1 else ""))
+def money(cents, symbol="", places=2, parens=False):
+    """cents as the app shows them: rounded half away from zero to `places`, thousands separators."""
+    neg = cents < 0
+    a = abs(cents)
+    if places < 2:
+        div = 10 ** (2 - places)
+        a = (a + div // 2) // div
+        whole, frac = divmod(a, 10 ** places)
+    else:
+        whole, frac = divmod(a, 100)
+    text = f"{symbol}{whole:,}" + (f".{frac:0{places}d}" if places > 0 else "")
+    if neg:
+        return f"({text})" if parens else f"−{text}"
     return text
+
+
+def average(total, count, places=2):
+    """total / count rounded half away from zero, at `places` decimals, with separators (the status bar)."""
+    scaled = abs(total) * 10 ** places
+    q, r = divmod(scaled, count)
+    if 2 * r >= count:
+        q += 1
+    whole, frac = divmod(q, 10 ** places)
+    return ("−" if total < 0 else "") + f"{whole:,}" + (f".{frac:0{places}d}" if places else "")
 
 
 def ensure_csv():
@@ -114,21 +147,35 @@ def m1():
                       ("mojoui/csvio.mojo", "SHIM"), ("mojoui/hosts/gtk.mojo", "gtk_file_dialog_open"), ("mojoui/hosts/web.py", '@app.post("/upload/{sid}")')):
         if needle not in (ROOT / f).read_text():
             problems.append(f"{f} lacks {needle}")
-    for src, name, marker in (("tests/test_omx_components.mojo", "test_omx_components", "OMX COMPONENT TESTS PASSED"),):
+    ok, msg = ensure_csv()
+    if not ok:
+        return False, msg
+    for src, name, marker, args in (("tests/test_omx_components.mojo", "test_omx_components", "OMX COMPONENT TESTS PASSED", []),
+                                    ("tests/test_csvio.mojo", "test_csvio", "CSVIO TESTS PASSED", [str(CSV_1M)])):
         b = run(["pixi", "run", "mojo", "build", "-I", ".", src, "-o", str(BUILD / name)], timeout=900)
-        t = run(["pixi", "run", str(BUILD / name)], timeout=300) if b.returncode == 0 else b
+        t = run(["pixi", "run", str(BUILD / name)] + args, timeout=600) if b.returncode == 0 else b
         if marker not in t.stdout:
             problems.append(f"{name}: {(t.stdout + t.stderr)[-300:]}")
     r = run(["pixi", "run", "python", "scripts/components.py", "--check"], timeout=120)
     if r.returncode != 0:
         problems.append("docs/components.md is stale")
     doc = (ROOT / "docs/components.md").read_text()
-    for name in ("Toolbar button (icon over label)", "File picker", "`Inspector`", "`Toolbar · FormulaBar · StatusBar`", "`Column number formats`"):
+    want = {"Toolbar button (icon over label)": ["✅", "✅"], "File picker": ["🔨", "✅"],  # (GTK's dialog isn't driven by a check)
+            "`Inspector`": ["✅", "✅"], "`Toolbar · FormulaBar · StatusBar`": ["✅", "✅"], "`Column number formats`": ["✅", "✅"]}
+    for name, cells in want.items():
         row = next((l for l in doc.splitlines() if l.startswith(f"| {name}")), "")
         states = [c.strip() for c in row.split("|") if c.strip() in ("✅", "🔨", "❌")]
-        if states[:2] != ["✅", "✅"]:  # (the first two platform columns: Linux, then Web)
-            problems.append(f"the matrix doesn't show {name} ✅ on Linux and web")
-    return not problems, "; ".join(problems) or "TOOL buttons, FilePicker, Inspector/Section/Row/Stepper, Toolbar/FormulaBar/StatusBar, column formats and the CSV reader in mojoui with tests; ✅ on Linux and web in the matrix"
+        if states[:2] != cells:
+            problems.append(f"the matrix shows {name} as {states[:2]} on Linux and web (want {cells})")
+    return not problems, "; ".join(problems) or "TOOL buttons, FilePicker, Inspector/Section/Row/Stepper, Toolbar/FormulaBar/StatusBar, column formats and the CSV reader in mojoui, with tests (formats, parser, CSV against Python's csv); the matrix: ✅ on Linux and web, GTK's file dialog 🔨"
+
+
+def compact(cents):
+    x = abs(cents) / 100.0
+    for unit, size in (("B", 1e9), ("M", 1e6), ("K", 1e3)):
+        if x >= size:
+            return f"{int(x / size * 10 + 0.5) / 10:.1f}{unit}"
+    return f"{int(x + 0.5)}"
 
 
 def m2():
@@ -136,30 +183,33 @@ def m2():
     if not ok:
         return False, msg
     problems = []
-    rows, revenue, qty, _ = oracle(CSV_1M)
+    o = oracle(CSV_1M)
+    rows = o["rows"]
     imp = both(f"pick:Choose a CSV file={CSV_1M}", "import")
     sheet = both(f"pick:Choose a CSV file={CSV_1M};tap:Create table", "import-sheet")
+    qty = both(f"pick:Choose a CSV file={CSV_1M};tap:Create table;key:0=ArrowLeft", "import-qty")
     start = both("", "start")
-    for o in (imp, sheet, start):
-        if o[0] is None:
-            return False, o[1]
+    for r in (imp, sheet, qty, start):
+        if r[0] is None:
+            return False, r[1]
     for host, k in (("GTK", 0), ("web", 1)):
-        if "omxplorer" not in labels(start[k]) or label(start[k], "Drop a CSV file") is None:
+        if not has(start[k], "omxplorer") or not has(start[k], "Open a CSV file"):
             problems.append(f"{host}: no Start screen")
-        if label(imp[k], "Import orders_1m.csv") is None or label(imp[k], f"{rows:,} rows · 12 columns") is None:
-            problems.append(f"{host}: the Import step doesn't show the file ({label(imp[k], 'Import')}, {label(imp[k], '1,0')})")
+        if not has(imp[k], "Import orders_1m.csv") or label(imp[k], f"{rows:,} rows · 12 columns · read in ") is None:
+            problems.append(f"{host}: the Import step doesn't show the file")
         kinds = [l for l in labels(imp[k]) if l in ("Integer", "Decimal", "Date", "Text")]
         if kinds[:12] != ["Integer", "Date", "Text", "Text", "Text", "Integer", "Decimal", "Decimal", "Decimal", "Text", "Integer", "Integer"]:
             problems.append(f"{host}: inferred types {kinds[:12]}")
-        if label(sheet[k], f"Rows {rows:,}") is None:
-            problems.append(f"{host}: the table doesn't have {rows:,} rows")
-        if label(sheet[k], "Sum " + money(revenue)) is None:
-            problems.append(f"{host}: revenue's sum isn't the file's {money(revenue)} ({label(sheet[k], 'Sum')})")
-    for name, o in (("start", start), ("import", imp), ("sheet", sheet)):
-        if shown(o[0]) != shown(o[1]):
-            problems.append(f"{name}: GTK and web differ: {sorted(set(shown(o[0])) ^ set(shown(o[1])))[:4]}")
-    _ = qty
-    return not problems, "; ".join(problems) or f"Start → choose orders_1m.csv → the Import step ({rows:,} rows, 12 columns, types inferred) → a table whose revenue sums to the file's {money(revenue)}; identical on GTK and web"
+        if not has(sheet[k], f"Rows {rows:,}") or not has(sheet[k], "Columns 12"):
+            problems.append(f"{host}: the table isn't {rows:,} rows × 12 columns")
+        if not has(sheet[k], "Sum " + money(o["revenue"])) or not has(sheet[k], "Average " + average(o["revenue"], rows * 100)):
+            problems.append(f"{host}: revenue's sum/average aren't the file's ({label(sheet[k], 'Sum')}, {label(sheet[k], 'Average')})")
+        if not has(qty[k], f"Sum {o['qty']:,}") or not has(qty[k], "Average " + average(o["qty"], rows)):
+            problems.append(f"{host}: qty's sum/average aren't the file's ({label(qty[k], 'Sum')}, {label(qty[k], 'Average')} vs {o['qty']:,}, {average(o['qty'], rows)})")
+    for name, r in (("start", start), ("import", imp), ("sheet", sheet), ("qty", qty)):
+        if shown(r[0]) != shown(r[1]):
+            problems.append(f"{name}: GTK and web differ: {sorted(set(shown(r[0])) ^ set(shown(r[1])))[:4]}")
+    return not problems, "; ".join(problems) or f"Start → choose orders_1m.csv → the Import step ({rows:,} rows, 12 columns, types inferred) → a table whose revenue ({money(o['revenue'])}) and qty ({o['qty']:,}) sums and averages equal an independent pass over the file; identical on GTK and web"
 
 
 def m3():
@@ -167,37 +217,49 @@ def m3():
     if not ok:
         return False, msg
     problems = []
-    rows, revenue, _, margin = oracle(CSV_1M)
+    o = oracle(CSV_1M)
+    rows = o["rows"]
+    loss = -o["margin"] - 0  # (cost + freight − revenue, as the loss formula below reads it)
     pick = f"pick:Choose a CSV file={CSV_1M};tap:Create table"
     fmt = both(pick + ";select:0=Currency;tap:−;segment:1=(1,234)", "format")
-    pct = both(pick + ";select:0=Compact (1.2M)", "compact")
+    cpt = both(pick + ";select:0=Compact (1.2M)", "compact")
+    neg = both(pick + f";tap:Formula;enter:{FX}=loss = cost + freight - revenue;select:0=Currency;segment:1=(1,234)", "negatives")
     ops = both(pick + f";tap:Formula;enter:{FX}={MARGIN}", "formula")
     sort = both(pick + f";tap:Formula;enter:{FX}={MARGIN};tap:Sort", "sort")
     add = both(pick + ";tap:Add row", "add-row")
-    for o in (fmt, pct, ops, sort, add):
-        if o[0] is None:
-            return False, o[1]
+    for r in (fmt, cpt, neg, ops, sort, add):
+        if r[0] is None:
+            return False, r[1]
+    first = o["first"][0]
     for host, k in (("GTK", 0), ("web", 1)):
-        want = "Sum " + money(revenue, "$", 1)
-        if label(fmt[k], want) is None:
-            problems.append(f"{host}: Currency, 1 decimal didn't reach the total ({label(fmt[k], 'Sum')} vs {want})")
+        if not has(fmt[k], "Sum " + money(o["revenue"], "$", 1)):
+            problems.append(f"{host}: Currency with 1 decimal didn't reach the total ({label(fmt[k], 'Sum')} vs {money(o['revenue'], '$', 1)})")
+        if not has(fmt[k], "Selection revenue · row 1 · " + money(first, "$", 1)):
+            problems.append(f"{host}: the cell doesn't show the format ({label(fmt[k], 'Selection')})")
         if "DROPDOWN: Currency" not in fmt[k] or "SEGMENTED: (1,234)" not in fmt[k]:
             problems.append(f"{host}: the inspector doesn't show the format it applied")
-        if label(pct[k], "Sum 114.0M") is None and label(pct[k], f"Sum {revenue / 1e8:.1f}M") is None:
-            problems.append(f"{host}: Compact didn't reach the total ({label(pct[k], 'Sum')})")
-        if label(ops[k], "Sum " + money(margin)) is None or label(ops[k], "New column margin") is None:
-            problems.append(f"{host}: the formula column's sum isn't the file's {money(margin)} ({label(ops[k], 'Sum')})")
-        if label(sort[k], "Sorted by margin (largest first)") is None:
+        if not has(cpt[k], "Sum " + compact(o["revenue"])):
+            problems.append(f"{host}: Compact didn't reach the total ({label(cpt[k], 'Sum')} vs {compact(o['revenue'])})")
+        if not has(neg[k], "Sum " + money(loss, "$", 2, parens=True)):
+            problems.append(f"{host}: a negative total isn't in parentheses ({label(neg[k], 'Sum')} vs {money(loss, '$', 2, parens=True)})")
+        if not has(ops[k], "Sum " + money(o["margin"])) or label(ops[k], "New column margin") is None:
+            problems.append(f"{host}: the formula column's sum isn't the file's {money(o['margin'])} ({label(ops[k], 'Sum')})")
+        if not has(sort[k], "Sorted by margin (largest first)") or not has(sort[k], "sorted by margin ↓"):
             problems.append(f"{host}: Sort didn't sort by the new column")
-        if label(add[k], f"Rows {rows + 1:,}") is None:
+        if not has(add[k], f"Rows {rows + 1:,}"):
             problems.append(f"{host}: Add row didn't add a row ({label(add[k], 'Rows')})")
         for tool in ("Save", "Undo", "Add row", "Formula", "Sort", "Format", "Open"):
             if f"BUTTON: {tool}" not in add[k]:
                 problems.append(f"{host}: no {tool} in the toolbar")
-    for name, o in (("format", fmt), ("compact", pct), ("formula", ops), ("sort", sort), ("add", add)):
-        if shown(o[0]) != shown(o[1]):
-            problems.append(f"{name}: GTK and web differ: {sorted(set(shown(o[0])) ^ set(shown(o[1])))[:4]}")
-    return not problems, "; ".join(problems) or f"the sheet on both hosts: Currency / decimals / parentheses / Compact change the column and its totals; a formula column sums to the file's {money(margin)}; Sort; Add row; identical on GTK and web"
+    for name, r in (("format", fmt), ("compact", cpt), ("negatives", neg), ("formula", ops), ("sort", sort), ("add", add)):
+        if shown(r[0]) != shown(r[1]):
+            problems.append(f"{name}: GTK and web differ: {sorted(set(shown(r[0])) ^ set(shown(r[1])))[:4]}")
+    return not problems, "; ".join(problems) or f"the sheet on both hosts: Currency, decimals, parentheses (a negative total), Compact reach the cells and the totals; a formula column sums to the file's {money(o['margin'])}; Sort; Add row; identical on GTK and web"
+
+
+EDITS = (f"pick:Choose a CSV file={CSV_1M};tap:Create table;select:0=Currency;typekeys:0=99999⏎;key:0=ArrowUp;"
+         "key:0=ArrowLeft;key:0=ArrowLeft;key:0=ArrowLeft;key:0=ArrowLeft;typekeys:0=Zed Co⏎;tap:Add row;"
+         f"tap:Formula;enter:{FX}={MARGIN};tap:Save")
 
 
 def m4():
@@ -205,31 +267,37 @@ def m4():
     if not ok:
         return False, msg
     problems = []
-    tag = env_for("save")
-    saved = both(f"pick:Choose a CSV file={CSV_1M};tap:Create table;select:0=Currency;tap:Formula;enter:{FX}={MARGIN};tap:Save", "save", web=False)
+    o = oracle(CSV_1M)
+    rows = o["rows"]
+    saved = both(EDITS, "save", split=True)  # GTK and web each edit and save their own copy
     if saved[0] is None:
         return False, saved[1]
-    doc = Path(tag["OMX_DOCUMENTS"]) / "orders_1m.omx"
-    if not doc.exists():
-        return False, f"Save didn't write {doc}"
-    rows, revenue, _, margin = oracle(CSV_1M)
-    opened = both("segment:0=Table", "open", extra={"OMX_OPEN": str(doc)})
-    if opened[0] is None:
-        return False, opened[1]
-    for host, k in (("GTK", 0), ("web", 1)):
-        out = opened[k]
-        if label(out, "Opened orders_1m.omx") is None:
-            problems.append(f"{host}: the document didn't open")
-        if label(out, f"Rows {rows:,}") is None:
-            problems.append(f"{host}: rows after opening: {label(out, 'Rows')}")
-        if "LABEL: margin" not in out or label(out, "Decimal · Currency") is None:
-            problems.append(f"{host}: the formula column or the format didn't come back")
-        if label(out, "Sum " + money(revenue, "$")) is None:
-            problems.append(f"{host}: revenue after opening: {label(out, 'Sum')} (want {money(revenue, '$')})")
-    if shown(opened[0]) != shown(opened[1]):
-        problems.append(f"GTK and web differ: {sorted(set(shown(opened[0])) ^ set(shown(opened[1])))[:4]}")
-    _ = margin
-    return not problems, "; ".join(problems) or f"Save writes orders_1m.omx ({doc.stat().st_size // 1_000_000} MB, one Parquet file); opening it brings back the rows, the formula column and the Currency format on both hosts"
+    sizes = []
+    for host in ("gtk", "web"):
+        doc = Path(env_for(f"save-{host}")["OMX_DOCUMENTS"]) / "orders_1m.omx"
+        if not doc.exists():
+            problems.append(f"{host}: Save didn't write {doc}")
+            continue
+        sizes.append(doc.stat().st_size)
+        revenue_after = o["revenue"] - o["first"][0] + 9_999_900
+        top = both("", f"open-{host}", extra={"OMX_OPEN": str(doc)})
+        cust = both("key:0=ArrowLeft;key:0=ArrowLeft;key:0=ArrowLeft;key:0=ArrowLeft;segment:0=Table", f"open-{host}-cust", extra={"OMX_OPEN": str(doc)})
+        for r in (top, cust):
+            if r[0] is None:
+                return False, r[1]
+        for viewer, k in (("GTK", 0), ("web", 1)):
+            where = f"{host}'s file on {viewer}"
+            if not has(top[k], f"Opened orders_1m.omx · {rows + 1:,} rows") or not has(top[k], f"Rows {rows + 1:,}"):
+                problems.append(f"{where}: the added row didn't come back ({label(top[k], 'Rows')})")
+            if not has(top[k], "Sum " + money(revenue_after, "$")) or not has(top[k], "Selection revenue · row 1 · $99,999.00"):
+                problems.append(f"{where}: the edited revenue or its format didn't come back ({label(top[k], 'Selection')}, {label(top[k], 'Sum')})")
+            if not has(cust[k], "Selection customer · row 1 · Zed Co"):
+                problems.append(f"{where}: the new customer name didn't come back ({label(cust[k], 'Selection')})")
+            if not has(cust[k], "margin") or label(cust[k], "Decimal · Currency") is None:
+                problems.append(f"{where}: the formula column or the Currency format didn't come back")
+        if shown(top[0]) != shown(top[1]) or shown(cust[0]) != shown(cust[1]):
+            problems.append(f"{host}'s file: GTK and web differ: {sorted(set(shown(top[0])) ^ set(shown(top[1])))[:4]}")
+    return not problems, "; ".join(problems) or f"GTK and the web each edit (a number, a new name), add a row and a formula column, and Save one .omx file ({max(sizes) // 1_000_000} MB); both files reopen on both hosts with the edits, the row, the formula and the format"
 
 
 def m5():
@@ -239,14 +307,20 @@ def m5():
     text = path.read_text()
     problems = []
     for size in ("1M", "10M", "50M", "100M"):
-        if not re.search(rf"^\| {size} \|", text, re.M):
-            problems.append(f"no {size} row")
-    m = re.search(r"^\| 1M \| ([\d.]+) s \| ([\d.]+) s \| ([\d.]+) ms \|", text, re.M)
+        row = re.search(rf"^\| {size} \|(.*)$", text, re.M)
+        if not row or row.group(1).count("|") != 7:
+            problems.append(f"docs/scale.md: no full {size} row")
+    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tools/scale.mojo", "-o", str(BUILD / "scale")], timeout=900)
+    if b.returncode != 0:
+        return False, f"tools/scale.mojo build: {(b.stdout + b.stderr)[-300:]}"
+    r = run(["pixi", "run", str(BUILD / "scale"), str(CSV_1M)], timeout=900)
+    m = re.search(r"^\| 1M \| ([\d.]+) s \| ([\d.]+) s \| ([\d.]+) ms \|", r.stdout, re.M)
     if not m:
-        problems.append("the 1M row isn't 'import s | sort s | format ms'")
-    elif float(m.group(1)) >= 5 or float(m.group(2)) >= 1 or float(m.group(3)) >= 50:
-        problems.append(f"1M misses its budget: import {m.group(1)} s, sort {m.group(2)} s, format {m.group(3)} ms")
-    return not problems, "; ".join(problems) or "measured at 1M, 10M, 50M and 100M rows (docs/scale.md); 1M within budget"
+        return False, f"the 1M measurement didn't run: {(r.stdout + r.stderr)[-300:]}"
+    imp, srt, fmt = float(m.group(1)), float(m.group(2)), float(m.group(3))
+    if imp >= 5 or srt >= 1 or fmt >= 50:
+        problems.append(f"1M misses its budget now: import {imp} s, sort {srt} s, format {fmt} ms")
+    return not problems, "; ".join(problems) or f"1M measured now: import {imp} s, sort {srt} s, format {fmt} ms (budgets 5 s, 1 s, 50 ms); 10M, 50M and 100M recorded in docs/scale.md"
 
 
 def m6():

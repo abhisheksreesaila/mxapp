@@ -5,7 +5,7 @@
 #   Sheet  → toolbar, sheet tabs, formula bar, the table, the format inspector, the status bar
 
 from mojoui.view import (View, Text, Button, FilePicker, TextField, Canvas, Board, VStack, HStack, Card, Spacer, Divider,
-                         Dropdown, Segmented, Toggle, Tabs, Grid, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
+                         Dropdown, Segmented, Toggle, Tabs, Grid, Scroll, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
                          BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, TOOL)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface
@@ -14,15 +14,16 @@ from mojoui.theme import Palette
 from mojoui.charts import grouped, fixed
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
-from mojoui.frame import Frame, Column, Columns, Range, share, decimal_text, date_text, INT, DECIMAL, TEXT, DATE
+from mojoui.frame import Frame, Column, Columns, Range, share, release_columns, INT, DECIMAL, TEXT, DATE
 from mojoui.frame_gpu import GpuFrame, group_sum
 from mojoui.shared import keep, at, environment, make_dir
+from mojoui.files import file_name, file_stem, read_recent, remember
 from mojoui.csvio import read_csv, CsvImport, CsvColumn, kind_name
 from mojoui.omxfile import save_omx, open_omx
-from mojoui.numformat import (ColumnFormat, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
+from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
                               NUMBER_STYLES, DATE_STYLES)
 from mojoui.inspector import Inspector, Section, Row, Stepper
-from mojoui.sheetchrome import Tool, Toolbar, FormulaBar, StatusBar
+from mojoui.sheetchrome import Tool, Toolbar, FormulaBar, StatusBar, SheetTabs
 from mojoui.orders import order_columns
 from mojoui.orders_ops import col_program, histogram
 
@@ -58,9 +59,10 @@ comptime SAVE = 24
 comptime IMPORT_COLUMN = 23  # Import: the column whose details show
 comptime RECENT = 40  # + index: open a recent file
 
+comptime APP = "omxapp"  # (settings live in ~/.config/omxapp)
 comptime W = 1440  # the window (Stitch's artboards; the web check's viewport)
 comptime INSPECTOR_W = 300
-comptime GRID_H = 676
+comptime GRID_H = 642
 comptime SYMBOLS: List[String] = ["$", "€", "£", "₹"]
 comptime NEGATIVE_STYLES: List[String] = ["−1,234", "(1,234)"]
 
@@ -115,7 +117,7 @@ struct Main(App):
         self.sum = 0
         self.count = 0
         self.milliseconds = 0
-        self.recent = read_recent()
+        self.recent = read_recent(APP)
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -139,8 +141,17 @@ struct Main(App):
 
     # ---------- data in ----------
 
+    def close_table(mut self):
+        """Gives the open table's memory back (CPU and GPU) before another is opened: at 100M rows that's ~26 GB."""
+        if self.gf_addr != 0:
+            self.gf()[].release()
+        if self.has_table:
+            release_columns(self.frame.base_addr)
+        self.has_table = False
+
     def open_path(mut self, path: String):
         """A CSV file → the Import step (its columns as read); an .omx document → straight to its sheet."""
+        self.close_table()
         if path.endswith(".omx"):
             try:
                 self.frame = open_omx(path)
@@ -148,7 +159,7 @@ struct Main(App):
                 self.source = path
                 self.name = file_stem(path)
                 self.has_table = True
-                remember(path, self.recent)
+                remember(APP, path, self.recent)
                 self.to_sheet()
                 self.message = "Opened " + file_name(path) + " · " + grouped(self.frame.rows()) + " rows"
             except e:
@@ -169,7 +180,7 @@ struct Main(App):
             self.import_col = 0
             self.screen = IMPORT
             self.message = ""
-            remember(path, self.recent)
+            remember(APP, path, self.recent)
         except e:
             self.message = String(e)
         self.version += 1
@@ -187,6 +198,7 @@ struct Main(App):
         return histogram(self.frame, self.gf()[], c, lo, hi)
 
     def open_sample(mut self):
+        self.close_table()
         var rows = 1_000_000
         var asked = environment("OMX_ROWS")
         if asked != "":
@@ -203,6 +215,7 @@ struct Main(App):
         self.to_sheet()
 
     def open_blank(mut self):
+        self.close_table()
         var cols = Columns()
         var names: List[String] = ["Item", "Amount", "Date"]
         var kinds: List[Int] = [TEXT, DECIMAL, DATE]
@@ -242,9 +255,7 @@ struct Main(App):
     # ---------- the selection and its totals ----------
 
     def select_cell(mut self, row: Int, col: Int):
-        self.edit_text = self.frame.grid_text(col, row) if row >= 0 and col >= 0 else ""
-        if row >= 0 and col >= 0 and self.frame.kind(col) != TEXT:
-            self.edit_text = raw_text(self.frame, col, row)
+        self.edit_text = self.frame.plain_text(col, row) if row >= 0 and col >= 0 else ""
         self.totals()
         self.version += 1
 
@@ -262,6 +273,19 @@ struct Main(App):
         self.sum = r.sums[0]
         self.count = r.counts[0]
         self.milliseconds = r.milliseconds
+
+    def average_text(self, col: Int) -> String:
+        """sum ÷ count as the column's format shows it, rounded (not cut), with two more places to work in:
+        qty's 4.8 reads 4.80, not 4."""
+        var scale = self.frame.scale(col) if self.frame.kind(col) == DECIMAL else 0
+        var f = self.frame.format_of(col)
+        if f.is_auto():
+            f = ColumnFormat(NUMBER, -1, True, False, "$")
+        if f.decimals < 0:
+            f.decimals = scale if scale > 0 else 2
+        var exact = Float64(self.sum) * 100.0 / Float64(max(self.count, 1))  # (at scale + 2)
+        var v = Int64(exact + (0.5 if exact >= 0 else -0.5))
+        return format_number(v, scale + 2, f)
 
     def column_format(self) -> ColumnFormat:
         return self.frame.format_of(self.grid.cur_col) if self.grid.cur_col >= 0 else ColumnFormat.auto()
@@ -433,7 +457,7 @@ struct Main(App):
             try:
                 save_omx(path, self.frame)
                 self.source = path
-                remember(path, self.recent)
+                remember(APP, path, self.recent)
                 self.message = "Saved " + path
             except e:
                 self.message = "Couldn't save: " + String(e)
@@ -482,7 +506,7 @@ struct Main(App):
             spacing=16,
         )
         var drop = Card(
-            Text("Drop a CSV file here, or choose one", HEADLINE),
+            Text("Open a CSV file", HEADLINE),
             Text("It opens as a table you can sort, format, add formulas to and report on, on your GPU.", CAPTION),
             FilePicker("Choose a CSV file", PICK, style=PROMINENT, icon="import", accept=".csv,.tsv,.txt,.omx"),
             spacing=12,
@@ -504,7 +528,7 @@ struct Main(App):
             Text(self.message, CAPTION).tone(TONE_WARN) if self.message != "" else Spacer(),
             spacing=18,
         ).padding(28, 48).fill()
-        return VStack(body, Spacer(), StatusBar(["Choose a file, drop one on the button, or open the sample"], "omxplorer · omxapp"), spacing=0).fill().grow()
+        return VStack(body, Spacer(), StatusBar(["Choose a file, or open the sample"], "omxplorer · omxapp"), spacing=0).fill().grow()
 
     def import_screen(self) -> View:
         var cols = List[View]()
@@ -529,8 +553,8 @@ struct Main(App):
                           Text(grouped(self.imp.rows) + " rows · " + String(len(self.imp.columns)) + " columns · read in "
                                + fixed(self.imp.seconds, 2) + " s", CAPTION).tone(TONE_GOOD), spacing=2).align(START),
                    Spacer(), Text("1 File  ›  2 Columns  ›  3 Table", CAPTION), spacing=12).fill().align(CENTER),
-            Canvas(1, self.version + self.preview.version, on_gesture=NO_MSG).fill().height(330),
-            Grid(cols^, 5, spacing=6).align(START),
+            Canvas(1, self.version + self.preview.version, on_gesture=NO_MSG).fill().height(300),
+            Scroll(Grid(cols^, 5, spacing=6).align(START), height=280).fill(),
             Text(skipped, CAPTION).tone(TONE_WARN) if skipped != "" else Spacer(),
             HStack(Button("Back", BACK), Spacer(), Button("Create table", CREATE, style=PROMINENT, icon="table"),
                    spacing=10).fill(),
@@ -594,13 +618,14 @@ struct Main(App):
         var items = List[String]()
         var col = self.grid.cur_col
         if col >= 0 and self.grid.cur_row >= 0:
-            items.append("Selection " + self.frame.name(col) + " · row " + grouped(self.grid.cur_row + 1))
+            items.append("Selection " + self.frame.name(col) + " · row " + grouped(self.grid.cur_row + 1) + " · " + self.frame.display(col, self.grid.cur_row))
         elif col >= 0:
             items.append("Selection column " + self.frame.name(col))
         items.append("Rows " + grouped(self.frame.rows()))
-        if col >= 0 and self.frame.kind(col) != TEXT:
+        items.append("Columns " + String(self.frame.columns()))
+        if col >= 0 and (self.frame.kind(col) == INT or self.frame.kind(col) == DECIMAL):
             items.append("Sum " + self.frame.format_value(col, Int64(self.sum), total=True))
-            items.append("Average " + self.frame.format_value(col, Int64(self.sum // max(self.count, 1)), total=True))
+            items.append("Average " + self.average_text(col))
         if self.message != "":
             items.append(self.message)
         return StatusBar(items, fixed(self.milliseconds, 1) + " ms on " + (self.gf()[].device_name() if self.gf_addr != 0 else "CPU"))
@@ -614,76 +639,18 @@ struct Main(App):
         var ed = self.grid.editor_place(self.frame)
         if ed[2] > 0:
             items.append(self.grid.editor(self.edit_text, CELL_COMMIT, CELL_CANCEL).at(ed[0], ed[1]).width(ed[2]).height(30))
-        var main = VStack(fx, Board(items^, width, GRID_H).width(width).height(GRID_H), spacing=6).width(width)
+        var sorted = ("sorted by " + self.frame.name(self.grid.sort_col) + (" ↓" if self.grid.sort_desc else " ↑")) if self.grid.sort_col >= 0 else String("")
+        var head = HStack(Text(self.name, HEADLINE), Text(grouped(self.frame.rows()) + " rows", CAPTION).tone(TONE_ACCENT), Spacer(),
+                          Text(sorted, CAPTION), spacing=12).fill().align(CENTER).height(28)
+        var main = VStack(fx, head, Board(items^, width, GRID_H).width(width).height(GRID_H), spacing=6).width(width)
         var row = HStack(main, self.inspector(), spacing=16).align(START) if self.inspector_open else HStack(main, spacing=0)
         var names = List[String]()
         names.append(self.name)
         return VStack(
             self.toolbar().height(64),
-            HStack(Tabs(names, 0, NO_MSG), Spacer(), Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), spacing=8).fill().align(CENTER).padding(0, 20).height(36),
+            HStack(SheetTabs(names, 0, NO_MSG), Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), spacing=8).fill().align(CENTER).padding(0, 20).height(36),
             row^.padding(0, 20),
             Spacer(),
             self.status().height(30),
             spacing=6,
         ).fill().grow()
-
-
-# ---------- small helpers ----------
-
-def file_name(path: String) -> String:
-    var i = path.rfind("/")
-    return String(path[byte = i + 1 :]) if i >= 0 else path
-
-
-def file_stem(path: String) -> String:
-    var name = file_name(path)
-    var dot = name.rfind(".")
-    return String(name[byte=:dot]) if dot > 0 else name
-
-
-def raw_text(frame: Frame, col: Int, row: Int) -> String:
-    """A number or date as typed (no currency signs or separators): what the editor starts from."""
-    var v = frame.get(col, row)
-    var kind = frame.kind(col)
-    if kind == DATE:
-        return date_text(v)
-    if kind == DECIMAL:
-        return decimal_text(v, frame.scale(col))
-    return String(v)
-
-
-def config_dir() -> String:
-    return environment("OMX_CONFIG", environment("HOME", ".") + "/.config/omxapp")
-
-
-def recent_path() -> String:
-    return config_dir() + "/recent.txt"
-
-
-def read_recent() -> List[String]:
-    var out = List[String]()
-    try:
-        with open(recent_path(), "r") as f:
-            for line in f.read().split("\n"):
-                var p = String(line.strip())
-                if p != "":
-                    out.append(p)
-    except:
-        pass
-    return out^
-
-
-def remember(path: String, mut recent: List[String]):
-    var out = List[String]()
-    out.append(path)
-    for p in recent:
-        if p != path and len(out) < 10:
-            out.append(p)
-    recent = out^
-    try:
-        make_dir(config_dir())
-        with open(recent_path(), "w") as f:
-            for p in recent:
-                f.write(p + "\n")
-    except:
-        pass
