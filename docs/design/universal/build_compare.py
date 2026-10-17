@@ -21,10 +21,11 @@ for opt, _ in OPTS:
         page = src.replace('<body>', '<body class="big" style="margin:0;background:#fff">').replace(
             'document.getElementById("main").innerHTML = OPTIONS.map',
             f'document.querySelector("header").remove(); document.getElementById("main").innerHTML = `<div class="{opt}">${{{fn}}}</div>`; [].map')
-        tmp = pathlib.Path(f"/tmp/claude-{opt}-{k}.html"); tmp.write_text(page)
+        tmp = here / f".claude-{opt}-{k}.html"; tmp.write_text(page)
         subprocess.run(["chromium", "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--window-size={w},{h}",
                         "--virtual-time-budget=4000", f"--screenshot={out}/claude-{opt}-{SCREENS[k]}.png", f"file://{tmp}"],
                        stderr=subprocess.DEVNULL, check=True)
+        tmp.unlink()
 cell = lambda f, cap: f'<figure><a href="img/{f}" target="_blank"><img src="img/{f}"></a><figcaption>{cap}</figcaption></figure>' if (out / f).exists() else f'<figure class="none"><figcaption>{cap}: not generated</figcaption></figure>'
 rows = ""
 for opt, name in OPTS:

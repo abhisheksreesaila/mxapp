@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>omxplorer · Ledger · the full component kit</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omx.css">
+<style>
+/* ---------- floating things: one shadow, the only depth in the theme ---------- */
+main { --shadow:0 4px 16px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08); --scrim:rgba(17,22,28,.32); }
+main.graphite { --shadow:0 6px 20px rgba(0,0,0,.55), 0 0 0 1px #34363b; --scrim:rgba(0,0,0,.5); }
+.ico { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+.menu { position:absolute; z-index:4; min-width:270px; background:var(--surface); border:1px solid var(--line); border-radius:6px; box-shadow:var(--shadow); padding:4px; font-size:12.5px; color:var(--ink); }
+.mi { display:flex; align-items:center; gap:10px; height:28px; padding:0 10px; border-radius:4px; white-space:nowrap; }
+.mi .ico { color:var(--sub); } .mi .k { margin-left:auto; padding-left:24px; color:var(--sub); font:11px "JetBrains Mono"; } .mi .ch { margin-left:auto; color:var(--sub); }
+.mi .blank { width:15px; flex:none; }
+.mi.hi { background:var(--sel); } .mi.hi .ico { color:var(--accent); }
+.mi.off { color:var(--sub); opacity:.6; } .mi.danger, .mi.danger .ico { color:var(--bad); }
+.mlabel { padding:6px 10px 4px; font:600 10.5px Inter; letter-spacing:.8px; text-transform:uppercase; color:var(--sub); }
+.sep { height:1px; background:var(--line); margin:4px 6px; }
+.tip { position:absolute; z-index:5; background:var(--ink); color:var(--surface); font-size:12px; padding:7px 10px; border-radius:4px; max-width:260px; line-height:1.4; box-shadow:var(--shadow); }
+.tip b { font-weight:600; } .tip .kbd { background:transparent; color:inherit; border-color:color-mix(in srgb, var(--surface) 40%, transparent); }
+.toast { position:absolute; z-index:5; display:flex; align-items:center; gap:14px; background:var(--ink); color:var(--surface); padding:10px 12px 10px 14px; border-radius:6px; font-size:12.5px; box-shadow:var(--shadow); }
+.toast .act { color:color-mix(in srgb, var(--accent) 55%, var(--surface)); font-weight:600; } .graphite .toast .act { color:#a0640a; }
+.toast .ico { color:var(--good); } .graphite .toast .ico { color:#1f8a4c; }
+.kbd { display:inline-block; font:500 10.5px "JetBrains Mono"; padding:1px 5px; border:1px solid var(--strong); border-bottom-width:2px; border-radius:4px; color:var(--body); background:var(--surface); }
+.scrim { position:absolute; inset:0; z-index:3; background:var(--scrim); }
+.dlg { position:absolute; z-index:4; left:50%; transform:translateX(-50%); background:var(--surface); color:var(--ink); border-radius:8px; box-shadow:0 16px 48px rgba(0,0,0,.28); display:flex; flex-direction:column; overflow:hidden; }
+.dlg .dh { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); } .dlg .dh h2 { margin:0; font-size:15px; font-weight:600; } .dlg .dh .sub { color:var(--sub); font-size:12px; }
+.dlg .dh .x { margin-left:auto; color:var(--sub); }
+.dlg .db { padding:16px 20px; display:flex; flex-direction:column; gap:14px; }
+.dlg .df { display:flex; align-items:center; gap:10px; padding:12px 20px; border-top:1px solid var(--line); background:var(--raised); }
+.btn { height:30px; padding:0 14px; display:inline-flex; align-items:center; gap:7px; border-radius:6px; border:1px solid var(--strong); background:var(--surface); color:var(--ink); font:500 12.5px Inter; white-space:nowrap; }
+.btn.pri { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.btn.subtle { border-color:transparent; background:transparent; color:var(--body); }
+.btn.danger { background:var(--bad); border-color:var(--bad); color:#fff; }
+.btn.hover { background:var(--raised); } .btn.pri.hover { background:color-mix(in srgb, var(--accent) 86%, #000); } .btn.subtle.hover { background:var(--raised); } .btn.danger.hover { background:color-mix(in srgb, var(--bad) 86%, #000); }
+.btn.press { background:var(--chrome-hover); } .btn.pri.press { background:color-mix(in srgb, var(--accent) 74%, #000); } .btn.subtle.press { background:var(--chrome-hover); } .btn.danger.press { background:color-mix(in srgb, var(--bad) 74%, #000); }
+.btn.focus { box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+.btn.dis { opacity:.45; }
+.btn.icon { width:30px; padding:0; justify-content:center; }
+.inp { height:30px; display:flex; align-items:center; gap:8px; padding:0 10px; border:1px solid var(--strong); border-radius:4px; background:var(--surface); color:var(--ink); font-size:12.5px; min-width:0; }
+.inp .ph2 { color:var(--sub); } .inp .ico { color:var(--sub); }
+.inp.focus { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+.inp.err { border-color:var(--bad); box-shadow:0 0 0 3px color-mix(in srgb, var(--bad) 14%, transparent); }
+.inp.dis { background:var(--raised); color:var(--sub); }
+.caret { display:inline-block; width:1px; height:15px; background:var(--accent); margin-left:-6px; }
+.help { font-size:11.5px; color:var(--sub); } .help.err { color:var(--bad); }
+.field { display:flex; flex-direction:column; gap:5px; } .field label { font-size:12px; font-weight:500; color:var(--body); }
+.cb { width:15px; height:15px; border:1.5px solid var(--strong); border-radius:3px; display:inline-grid; place-items:center; flex:none; background:var(--surface); }
+.cb.on, .cb.mix { background:var(--accent); border-color:var(--accent); } .cb.on::after { content:""; width:8px; height:4px; border:2px solid var(--on-accent); border-top:0; border-right:0; transform:translateY(-1px) rotate(-45deg); }
+.cb.mix::after { content:""; width:8px; height:2px; background:var(--on-accent); }
+.rd { width:15px; height:15px; border:1.5px solid var(--strong); border-radius:50%; display:inline-grid; place-items:center; flex:none; } .rd.on { border-color:var(--accent); } .rd.on::after { content:""; width:7px; height:7px; border-radius:50%; background:var(--accent); }
+.switch.off { background:var(--strong); } .switch.off::after { right:auto; left:2px; background:#fff; }
+.opt { display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--body); }
+.slider { position:relative; height:16px; width:220px; } .slider::before { content:""; position:absolute; left:0; right:0; top:7px; height:3px; border-radius:2px; background:var(--line); }
+.slider i { position:absolute; left:0; top:7px; height:3px; border-radius:2px; background:var(--accent); } .slider b { position:absolute; top:0; width:16px; height:16px; border-radius:50%; background:var(--surface); border:2px solid var(--accent); margin-left:-8px; }
+.bar { height:6px; border-radius:3px; background:var(--raised); overflow:hidden; box-shadow:inset 0 0 0 1px var(--line); } .bar i { display:block; height:100%; background:var(--accent); border-radius:3px; }
+.bar.ind i { width:30%; margin-left:35%; background:linear-gradient(90deg, transparent, var(--accent), transparent); }
+.spin { width:16px; height:16px; border-radius:50%; border:2px solid var(--line); border-top-color:var(--accent); display:inline-block; }
+.skel { height:10px; border-radius:3px; background:var(--raised); }
+.banner { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:6px; font-size:12.5px; line-height:1.45; border:1px solid; }
+.banner.warn { background:color-mix(in srgb, var(--warn) 9%, var(--surface)); border-color:color-mix(in srgb, var(--warn) 35%, transparent); } .banner.warn .ico { color:var(--warn); }
+.banner.info { background:color-mix(in srgb, var(--accent) 8%, var(--surface)); border-color:color-mix(in srgb, var(--accent) 30%, transparent); } .banner.info .ico { color:var(--accent); }
+.banner.bad { background:color-mix(in srgb, var(--bad) 8%, var(--surface)); border-color:color-mix(in srgb, var(--bad) 30%, transparent); } .banner.bad .ico { color:var(--bad); }
+.banner a { color:var(--accent); font-weight:600; text-decoration:none; margin-left:6px; }
+.tabs2 { display:flex; gap:18px; border-bottom:1px solid var(--line); } .tabs2 span { padding:8px 0; font-size:12.5px; color:var(--sub); font-weight:500; } .tabs2 span.on { color:var(--ink); box-shadow:inset 0 -2px var(--accent); }
+.typechip { display:inline-flex; align-items:center; gap:5px; font:500 11px "JetBrains Mono"; padding:2px 6px; border:1px solid var(--line); border-radius:4px; color:var(--body); background:var(--surface); }
+.typechip::after { content:"⌄"; color:var(--sub); }
+.count { font:500 11px "JetBrains Mono"; color:var(--sub); margin-left:auto; }
+
+/* grid cell states */
+.grid th .sorted, .grid th .filt { float:right; color:var(--accent); } .grid th .sorted svg, .grid th .filt svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2; }
+.grid td.edited { position:relative; } .grid td.edited::before { content:""; position:absolute; right:0; top:0; border:5px solid transparent; border-top-color:var(--accent); border-right-color:var(--accent); }
+.grid td.null { color:var(--sub); font-style:italic; opacity:.7; }
+.grid td.errc { color:var(--bad); }
+.grid td.match { background:color-mix(in srgb, var(--warn) 22%, var(--surface)); }
+.grid td.range { background:var(--sel); } .grid td.editing { outline:2px solid var(--accent); outline-offset:-2px; background:var(--surface); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+.grid .frozen { border-right:2px solid var(--strong) !important; }
+
+/* specimen board */
+.board { width:1400px; background:var(--page); color:var(--ink); padding:24px; border-radius:10px; font:13px Inter; display:grid; grid-template-columns:repeat(3, 1fr); gap:18px; box-shadow:0 0 0 1px #2a2b30; }
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:16px; display:flex; flex-direction:column; gap:12px; }
+.panel.w2 { grid-column:span 2; } .panel.w3 { grid-column:span 3; }
+.panel h4 { margin:0; font:600 10.5px Inter; letter-spacing:.8px; color:var(--sub); text-transform:uppercase; }
+.line { display:flex; align-items:center; gap:10px; flex-wrap:wrap; } .line .lab { width:70px; font-size:11.5px; color:var(--sub); }
+.menu.static { position:static; box-shadow:var(--shadow); }
+.swatches { display:grid; grid-template-columns:repeat(8, 1fr); gap:8px; } .sw { height:40px; border-radius:4px; border:1px solid var(--line); } .swl { font:10.5px "JetBrains Mono"; color:var(--sub); margin-top:3px; }
+
+/* skin picker */
+.skins { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+.skin { border:1px solid var(--line); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:8px; }
+.skin.on { border:2px solid var(--accent); padding:7px; }
+.mini { height:110px; border-radius:4px; overflow:hidden; background:var(--page); display:grid; grid-template-rows:14px 16px 1fr 8px; border:1px solid var(--line); }
+.mini .a { background:var(--chrome); } .mini .b { background:var(--chrome); border-bottom:1px solid var(--chrome-line); display:flex; gap:4px; padding:4px 6px; } .mini .b i { width:14px; background:var(--chrome-line); border-radius:2px; } .mini .b i.on { background:var(--accent); }
+.mini .c { background:var(--surface); background-image:linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size:100% 11px, 34px 100%; position:relative; }
+.mini .c::after { content:""; position:absolute; left:68px; top:22px; width:34px; height:11px; outline:2px solid var(--accent); outline-offset:-1px; }
+.mini .d { background:var(--chrome); }
+.skin .nm { display:flex; align-items:center; gap:8px; font-weight:600; font-size:12.5px; } .skin .nm small { color:var(--sub); font-weight:400; margin-left:auto; }
+
+/* start screen */
+.start { grid-row:3 / 5; display:grid; grid-template-columns:300px 1fr; background:var(--page); min-height:0; }
+.start .side { background:var(--surface); border-right:1px solid var(--line); padding:22px 18px; display:flex; flex-direction:column; gap:6px; }
+.start .side .mi { height:34px; font-size:13px; }
+.start .mainc { padding:30px 40px; display:flex; flex-direction:column; gap:22px; overflow:hidden; }
+.drop { border:1.5px dashed var(--strong); border-radius:8px; background:var(--surface); padding:26px; display:flex; align-items:center; gap:18px; }
+.drop .big { width:48px; height:48px; border-radius:10px; background:var(--sel); color:var(--accent); display:grid; place-items:center; } .drop .big svg { width:24px; height:24px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+.samples { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+.sample { background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:6px; }
+.sample .t { font-weight:600; } .sample .s { color:var(--sub); font-size:12px; }
+h3.sec2 { margin:0; font-size:13px; font-weight:600; }
+.recent { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:6px; overflow:hidden; font-size:12.5px; }
+.recent td, .recent th { padding:9px 14px; border-bottom:1px solid var(--line); text-align:left; } .recent th { background:var(--raised); color:var(--sub); font-weight:500; font-size:12px; }
+.recent td.n { font-family:"JetBrains Mono"; text-align:right; color:var(--body); } .recent th.n { text-align:right; } .recent tr.hi td { background:var(--sel); }
+.fileic { display:inline-flex; vertical-align:-3px; margin-right:8px; color:var(--accent); }
+
+/* palette */
+.pal { width:640px; top:110px; }
+.pal .inp { border:0; box-shadow:none; height:48px; font-size:15px; padding:0 18px; border-bottom:1px solid var(--line); border-radius:0; }
+.pal .res { padding:6px; max-height:520px; } .pal .mi { height:34px; font-size:13px; } .pal .mi em { font-style:normal; color:var(--accent); font-weight:600; }
+.pal .foot { display:flex; gap:16px; padding:8px 14px; border-top:1px solid var(--line); background:var(--raised); font-size:11.5px; color:var(--sub); }
+
+.title2 { color:#9a9ca3; font-size:13px; margin:0 0 14px; max-width:980px; line-height:1.5; }
+.frame.phone .ph .scrim { border-radius:0; }
+</style>
+</head>
+<body>
+<header class="viewer">
+  <h1>omxplorer · the full component kit</h1>
+  <div class="seg" id="skin"><button class="on" onclick="skin('ledger',this)">Ledger (default)</button><button onclick="skin('graphite',this)">Graphite</button><button onclick="skin('blueprint',this)">Blueprint</button></div>
+  <div class="seg" id="sz"><button class="on" onclick="size(0,this)">Overview</button><button onclick="size(1,this)">Actual size</button></div>
+</header>
+<main id="main" class="ledger"></main>
+
+<script src="omx.js"></script>
+<script>
+const ic = (k, cls = "ico") => `<svg class="${cls}" viewBox="0 0 24 24">${I[k]}</svg>`;
+const mi = (label, o = {}) => `<div class="mi ${o.cls || ""}">${o.icon ? ic(o.icon) : `<span class="blank">${o.check ? ic("check") : ""}</span>`}<span>${label}</span>${o.k ? `<span class="k">${o.k}</span>` : ""}${o.sub ? `<span class="ch">${ic("right")}</span>` : ""}</div>`;
+const SEP = `<div class="sep"></div>`;
+const menu = (items, style, cls = "") => `<div class="menu ${cls}" style="${style}">${items.join("")}</div>`;
+const kbd = k => `<span class="kbd">${k}</span>`;
+
+// Overlays are placed against the element they belong to, measured after layout (offsets ignore the zoom).
+function at(app, sel, dx = 0, dy = 0) { let el = app.querySelector(sel), x = 0, y = 0; while (el && el !== app) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return [x + dx, y + dy]; }
+const placed = []; // [sceneId, selector, overlayId, dx, dy, alignRight]
+const scene = (id, html, overlays = "") => `<div class="app" id="${id}">${html.replace(/^<div class="app">/, "").replace(/<\/div>$/, "")}${overlays}</div>`;
+
+// 1 · the menu bar with Data open and a submenu
+function s1() {
+  const data = menu([
+    mi("Sort ascending", {icon:"sort", k:"Ctrl+Shift+↑"}), mi("Sort descending", {k:"Ctrl+Shift+↓"}), mi("Sort by several columns…"), SEP,
+    mi("Filter", {icon:"filter", check:true, k:"Ctrl+Shift+L"}), mi("Clear all filters", {cls:"off"}), SEP,
+    mi("Add formula column", {icon:"formula", k:"="}), mi("Group by", {icon:"group", sub:true, cls:"hi"}), mi("Pivot table…", {icon:"pivot", k:"Ctrl+Alt+P"}), SEP,
+    mi("Clean up text values", {icon:"sparkle", sub:true}), mi("Remove duplicate rows…"), SEP,
+    mi("Import data…", {icon:"upload", k:"Ctrl+I"}), mi("Refresh from source", {icon:"db", k:"F5"})], "", "") .replace('class="menu "', 'class="menu " id="m-data"');
+  const sub = menu([`<div class="mlabel">Group revenue by</div>`, mi("region", {cls:"hi", k:"5 values"}), mi("customer", {k:"10"}), mi("product", {k:"6"}), mi("carrier", {k:"4"}), mi("date · month", {k:"9"}), SEP, mi("Choose columns…")], "", "").replace('class="menu "', 'class="menu " id="m-sub"');
+  placed.push(["s1", ".menus span.open", "m-data", 0, 30], ["s1", "#m-data .mi.hi", "m-sub", 0, -5, "beside:m-data"]);
+  return scene("s1", sheet().replace(chrome("orders.csv", false), chrome("orders.csv", false, "Data")), data + sub);
+}
+// 2 · right-click a column header, and a tooltip on a toolbar button
+function s2() {
+  const ctx = `<div class="menu" id="m-ctx">${[`<div class="mlabel">revenue · Currency</div>`, mi("Sort smallest → largest", {icon:"sort"}), mi("Sort largest → smallest"), SEP,
+    mi("Filter this column…", {icon:"filter", cls:"hi"}), mi("Format as", {icon:"format", sub:true}), mi("Column stats", {icon:"chart", k:"Ctrl+Shift+I"}), SEP,
+    mi("Insert formula column right", {icon:"formula"}), mi("Rename…", {icon:"rename", k:"F2"}), mi("Hide column", {icon:"eyeoff"}), mi("Copy column name", {icon:"copy"}), SEP,
+    mi("Delete column", {icon:"trash", cls:"danger", k:"Ctrl+−"})].join("")}</div>`;
+  const tip = `<div class="tip" id="t-pivot"><b>Pivot table</b> ${kbd("Ctrl+Alt+P")}<br>Summarise revenue by rows and columns. Runs on the GPU.</div>`;
+  placed.push(["s2", "th.selcol", "m-ctx", 60, 40], ["s2", ".toolbar .group:nth-child(2) .tool:nth-child(3)", "t-pivot", 0, 64]);
+  const html = sheet().replace('<div class="tool hover">', '<div class="tool ">').replace(tool("pivot", "Pivot"), tool("pivot", "Pivot", "hover"));
+  return scene("s2", html, ctx + tip);
+}
+// 3 · the column filter popover, and the toast after it applies
+function s3() {
+  const vals = [["West","255,102",1],["East","248,991",1],["North","201,430",0],["South","180,027",1],["Central","114,450",0]];
+  const pop = `<div class="menu" id="p-filter" style="width:300px;padding:0">
+    <div style="padding:12px 12px 8px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:13px">Filter region</b><span class="count">5 values</span></div>
+      <div class="segc"><span class="on">Values</span><span>Condition</span></div>
+      <div class="inp focus">${ic("search")}<span class="ph2">Search values</span></div></div>
+    <div style="padding:0 6px 6px"><div class="mi"><span class="cb mix"></span>Select all<span class="count">1,000,000</span></div>${SEP}
+      ${vals.map(([v,n,on]) => `<div class="mi ${v==="North"?"hi":""}"><span class="cb ${on?"on":""}"></span>${v}<span class="count">${n}</span></div>`).join("")}
+      <div class="mi"><span class="cb"></span><i style="color:var(--sub)">empty</i><span class="count">0</span></div></div>
+    <div style="display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--raised)"><span class="btn subtle">Clear</span><span style="flex:1"></span><span class="btn">Cancel</span><span class="btn pri">Apply</span></div></div>`;
+  const toast = `<div class="toast" style="left:430px;bottom:80px">${ic("check")}Filtered to 618,120 of 1,000,000 rows in 1.2 ms<span class="act">Undo</span>${ic("x")}</div>`;
+  placed.push(["s3", "thead th:nth-child(4)", "p-filter", 0, 58]);
+  let html = sheet().replace(/(<th class="" style="width:\d+px">region<span class="badge ">Aa<\/span>)/, `$1<span class="filt">${ic("filter","")}</span>`);
+  return scene("s3", html, pop + toast);
+}
+// 4 · Import: a preview first, types per column, then the load streams in the background
+function s4() {
+  const cols = [["order_id","# int","0",""],["date","date","0",""],["region","Aa text","0","5 distinct"],["customer","Aa text","12","10 distinct"],["revenue","$ 0.00","0",""],["cost","$ 0.00","0","3 didn't parse"]];
+  const sample = [["1048213","2026-07-03","West","Acme Labs","$1,204.50","$811.20"],["1048250","2026-07-11","East","Globex","$88.00","$61.10"],["1048287","2026-07-19","North","Initech","$412.75","$297.40"],["1048324","2026-07-02","West","","$1,950.00","12.x"]];
+  const dlg = `<div class="scrim"></div><div class="dlg" style="top:84px;width:960px">
+    <div class="dh">${ic("upload")}<h2>Import orders_2026.csv</h2><span class="sub">4.2 GB · about 108 million rows</span><span class="x">${ic("x")}</span></div>
+    <div class="db">
+      <div class="tabs2"><span class="on">1 · Preview</span><span>2 · Columns</span><span>3 · Load</span></div>
+      <div class="line"><div class="field"><label>Separator</label><div class="segc" style="width:240px"><span class="on">Comma</span><span>Tab</span><span>;</span><span>|</span></div></div>
+        <div class="field"><label>Encoding</label><div class="dd" style="height:30px;align-items:center;min-width:120px">UTF-8</div></div>
+        <div class="field"><label>First row is the header</label><div style="height:30px;display:flex;align-items:center"><div class="switch"></div></div></div>
+        <div class="field" style="margin-left:auto"><label>Name</label><div class="inp" style="width:220px">orders_2026</div></div></div>
+      <table class="grid" style="border:1px solid var(--line)"><thead><tr><th class="rn"></th>${cols.map(([n,t,e,note]) => `<th style="height:66px">${n}<div style="margin-top:6px"><span class="typechip">${t}</span></div><div style="font:400 10.5px Inter;color:${note.includes("parse")?"var(--bad)":"var(--sub)"};margin-top:4px">${e!=="0"?e+" empty · ":""}${note}</div></th>`).join("")}</tr></thead>
+        <tbody>${sample.map((r,i) => `<tr><td class="rn num">${i+1}</td>${r.map((v,c) => `<td class="${c>=4?"n ":""}${c===2||c===3?"":"num"} ${v===""?"null":""} ${v==="12.x"?"errc":""}">${v===""?"empty":v}</td>`).join("")}</tr>`).join("")}</tbody></table>
+      <div class="banner warn">${ic("alert")}<div><b>3 values in cost aren't numbers</b> (rows 4, 88,412 and 1,207,331). They'll import as empty, and you can fix them later.<a>Show rows</a></div></div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--raised)">
+        <div class="line" style="font-size:12.5px"><span class="spin"></span><b>Loading in the background</b><span style="color:var(--sub)">you can start working with the first 1,000,000 rows now</span><span class="num" style="margin-left:auto">41.2M of 108M rows · 38% · 12 s left</span></div>
+        <div class="bar"><i style="width:38%"></i></div></div>
+    </div>
+    <div class="df"><span class="help">${ic("info")} Nothing leaves this computer.</span><span style="flex:1"></span><span class="btn">Cancel</span><span class="btn pri">Open while loading</span></div></div>`;
+  return scene("s4", sheet(), dlg);
+}
+// 5 · the command palette (Ctrl+K): every menu item and column, by typing
+function s5() {
+  const pal = `<div class="scrim" style="background:color-mix(in srgb, var(--scrim) 60%, transparent)"></div><div class="dlg pal">
+    <div class="inp focus">${ic("search")}piv<span class="caret"></span><span class="count">${kbd("Esc")}</span></div>
+    <div class="res"><div class="mlabel">Actions</div>
+      ${mi("New <em>piv</em>ot table", {icon:"pivot", k:"Ctrl+Alt+P", cls:"hi"})}${mi("<em>Piv</em>ot revenue by region × product", {icon:"pivot"})}${mi("Convert table to <em>piv</em>ot", {icon:"table"})}
+      <div class="mlabel">Help</div>${mi("How <em>piv</em>ot tables work", {icon:"info"})}
+      <div class="mlabel">Recent</div>${mi("q3-<em>piv</em>ots.omx", {icon:"file", k:"2 h ago"})}</div>
+    <div class="foot"><span>${kbd("↑")} ${kbd("↓")} move</span><span>${kbd("Enter")} run</span><span>${kbd("Tab")} columns</span><span style="margin-left:auto">${kbd("Ctrl+K")} anywhere</span></div></div>`;
+  return scene("s5", sheet(), pal);
+}
+// 6 · Settings → Appearance: Ledger is the default, every skin ships
+function s6() {
+  const card = (cls, name, note, on) => `<div class="skin ${on?"on":""}"><div class="mini ${cls}"><div class="a"></div><div class="b"><i></i><i></i><i class="on"></i><i></i></div><div class="c"></div><div class="d"></div></div>
+    <div class="nm"><span class="rd ${on?"on":""}"></span>${name}<small>${note}</small></div></div>`;
+  const dlg = `<div class="scrim"></div><div class="dlg" style="top:96px;width:820px;flex-direction:row">
+    <div style="width:200px;background:var(--raised);border-right:1px solid var(--line);padding:14px 8px;display:flex;flex-direction:column;gap:2px">
+      <div class="mlabel">Settings</div>${mi("General", {icon:"gear"})}${mi("Appearance", {icon:"format", cls:"hi"})}${mi("Numbers & dates", {icon:"table"})}${mi("GPU & memory", {icon:"db"})}${mi("Keyboard", {icon:"text"})}</div>
+    <div style="flex:1;display:flex;flex-direction:column"><div class="dh"><h2>Appearance</h2><span class="sub">The same on every computer, whatever the system theme</span><span class="x">${ic("x")}</span></div>
+      <div class="db"><div class="skins">${card("ledger","Ledger","default",1)}${card("graphite","Graphite","dark",0)}${card("blueprint","Blueprint","navy band",0)}</div>
+        <div class="prow">When the computer is in dark mode, use<div class="dd" style="min-width:150px">Graphite</div></div>
+        <div class="prow">Row height<div class="segc" style="width:240px"><span>Compact</span><span class="on">Standard</span><span>Roomy</span></div></div>
+        <div class="prow">Text size<div class="slider"><i style="width:45%"></i><b style="left:45%"></b></div></div>
+        <div class="prow">Show distributions in column headers<div class="switch"></div></div>
+        <div class="prow">Show GPU timings in the status bar<div class="switch off"></div></div></div>
+      <div class="df"><span class="btn subtle">Reset to defaults</span><span style="flex:1"></span><span class="btn pri">Done</span></div></div></div>`;
+  return scene("s6", sheet(), dlg);
+}
+// 7 · the start screen: open, recent, samples
+function s7() {
+  const ch = chrome("Start", false).replace(/<span class="doc"><strong>Start<\/strong> — 1,000,000 rows<\/span>/, `<span class="doc"><strong>Start</strong></span>`);
+  const rec = [["orders_2026.csv","108,214,330","4.2 GB","Today 09:12"],["q3-pivots.omx","1,000,000","38 MB","Yesterday"],["flights-2024.parquet","7,079,061","210 MB","Oct 12"],["survey_raw.tsv","48,210","6 MB","Oct 3"]];
+  return `<div class="app" id="s7">${ch}
+    <div class="start"><div class="side"><div class="mlabel">omxplorer</div>${mi("Start", {icon:"file", cls:"hi"})}${mi("New blank sheet", {icon:"plus", k:"Ctrl+N"})}${mi("Open file…", {icon:"open", k:"Ctrl+O"})}${mi("Connect a database", {icon:"db"})}${SEP}${mi("Settings", {icon:"gear", k:"Ctrl+,"})}${mi("Keyboard shortcuts", {icon:"text", k:"Ctrl+/"})}
+      <div style="margin-top:auto" class="banner info">${ic("info")}<div>GPU ready: <b>RTX 4090</b>, 24 GB. Files bigger than memory open too.</div></div></div>
+    <div class="mainc"><div class="drop"><div class="big">${ic("upload","")}</div><div><div style="font-size:16px;font-weight:600">Drop a CSV, Parquet or .omx file here</div><div style="color:var(--sub);margin-top:4px">or <b style="color:var(--accent)">choose a file</b>. A billion rows is fine: you see a preview first and the rest loads while you work.</div></div><span style="margin-left:auto" class="btn pri">${ic("open")}Open file…</span></div>
+      <h3 class="sec2">Recent</h3><table class="recent"><tr><th>Name</th><th class="n">Rows</th><th class="n">Size</th><th class="n">Opened</th></tr>
+        ${rec.map((r,i)=>`<tr class="${i===0?"hi":""}"><td><span class="fileic">${ic(r[0].endsWith("omx")?"table":"file")}</span>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td></tr>`).join("")}</table>
+      <h3 class="sec2">Try a sample</h3><div class="samples">${[["Orders","1M rows · sales by region, product, carrier"],["Flights","7M rows · delays by airline and airport"],["Taxi trips","100M rows · a GPU workout"],["Survey","48k rows · messy text to clean"]].map(([t,s])=>`<div class="sample"><span class="t">${t}</span><span class="s">${s}</span></div>`).join("")}</div></div></div>
+    <div class="bottom"><div class="status num" style="margin-left:0;padding-left:14px"><span>Ready</span></div><div class="status num"><span class="gpu"><i></i>RTX 4090 · <b>idle</b></span></div></div></div>`;
+}
+// phone: a column's actions as a sheet; the filter as a sheet
+function p1() {
+  const items = [mi("Sort smallest → largest", {icon:"sort"}), mi("Filter this column…", {icon:"filter"}), mi("Format as", {icon:"format", sub:true}), mi("Column stats", {icon:"chart"}), SEP, mi("Insert formula column", {icon:"formula"}), mi("Rename…", {icon:"rename"}), mi("Hide column", {icon:"eyeoff"}), SEP, mi("Delete column", {icon:"trash", cls:"danger"})].join("").replaceAll('class="mi ', 'style="height:42px;font-size:15px" class="mi ');
+  return phone(`<div style="display:flex;align-items:baseline;justify-content:space-between"><b style="font-size:16px">revenue</b><span style="color:var(--sub);font-size:12px">Currency</span></div>${items}`, 560).replace('<div class="sheet"', '<div class="scrim"></div><div class="sheet" style="z-index:4"');
+}
+function p2() {
+  const vals = [["West","255,102",1],["East","248,991",1],["North","201,430",0],["South","180,027",1],["Central","114,450",0]];
+  return phone(`<div style="display:flex;align-items:center"><b style="font-size:16px">Filter region</b><span class="btn subtle" style="margin-left:auto">Clear</span></div>
+    <div class="inp" style="height:38px">${ic("search")}<span class="ph2">Search values</span></div>
+    ${vals.map(([v,n,on])=>`<div class="mi" style="height:42px;font-size:15px"><span class="cb ${on?"on":""}" style="width:20px;height:20px"></span>${v}<span class="count">${n}</span></div>`).join("")}
+    <span class="btn pri" style="height:46px;justify-content:center;font-size:15px;border-radius:10px;margin-top:6px">Show 618,120 rows</span>`, 470).replace('<div class="sheet"', '<div class="scrim"></div><div class="sheet" style="z-index:4"');
+}
+
+// the specimen board: every control in every state
+function board() {
+  const states = ["", "hover", "press", "focus", "dis"], names = ["Default","Hover","Pressed","Focus","Disabled"];
+  const btnRow = (cls, label) => `<div class="line"><span class="lab">${label}</span>${states.map(s=>`<span class="btn ${cls} ${s}">${cls==="danger"?"Delete":cls==="pri"?"Import":"Cancel"}</span>`).join("")}</div>`;
+  const sw = [["--chrome","chrome"],["--page","page"],["--surface","surface"],["--raised","raised"],["--sel","selection"],["--line","line"],["--strong","strong line"],["--ink","ink"],["--body","body"],["--sub","secondary"],["--accent","accent"],["--formula","formula"],["--good","good"],["--bad","bad"],["--warn","warning"],["--s2","series 2"]];
+  return `<div class="board">
+  <div class="panel w2"><h4>Buttons · ${names.join(" · ")}</h4>${btnRow("pri","Primary")}${btnRow("","Secondary")}${btnRow("subtle","Subtle")}${btnRow("danger","Danger")}
+    <div class="line"><span class="lab">With icon</span><span class="btn pri">${ic("open")}Open file…</span><span class="btn">${ic("filter")}Filter</span><span class="btn icon">${ic("plus")}</span><span class="btn icon subtle">${ic("gear")}</span><span class="btn">Sort${ic("down")}</span></div></div>
+  <div class="panel"><h4>Colour</h4><div class="swatches">${sw.map(([v,n])=>`<div><div class="sw" style="background:var(${v})"></div><div class="swl">${n}</div></div>`).join("")}</div>
+    <div class="line"><span class="mono" style="font-size:22px">1,234.50</span><span style="font-size:13px">Inter 13 · words</span></div><div class="help">Numbers: JetBrains Mono, tabular, right-aligned. Both fonts ship inside the app.</div></div>
+
+  <div class="panel"><h4>Text fields</h4>
+    <div class="field"><label>Column name</label><div class="inp">revenue</div></div>
+    <div class="field"><label>Formula</label><div class="inp focus mono">revenue − cost<span class="caret" style="margin-left:0"></span></div></div>
+    <div class="field"><label>Decimals</label><div class="inp err mono">two</div><span class="help err">Type a whole number from 0 to 10.</span></div>
+    <div class="field"><label>Source</label><div class="inp dis">orders_2026.csv</div><span class="help">Read-only: the file the table came from.</span></div>
+    <div class="inp">${ic("search")}<span class="ph2">Find in sheet</span><span class="count">${kbd("Ctrl+F")}</span></div></div>
+  <div class="panel"><h4>Choices</h4>
+    <div class="line"><span class="opt"><span class="cb on"></span>Header row</span><span class="opt"><span class="cb"></span>Trim spaces</span><span class="opt"><span class="cb mix"></span>Some</span></div>
+    <div class="line"><span class="opt"><span class="rd on"></span>Comma</span><span class="opt"><span class="rd"></span>Tab</span><span class="opt"><span class="rd"></span>Semicolon</span></div>
+    <div class="line"><span class="opt"><div class="switch"></div>On</span><span class="opt"><div class="switch off"></div>Off</span></div>
+    <div class="segc"><span>Auto</span><span>Number</span><span class="on">Currency</span><span>Percent</span></div>
+    <div class="line"><div class="dd">region</div><div class="stepper num"><span>−</span><span>2</span><span>+</span></div><div class="slider" style="width:140px"><i style="width:60%"></i><b style="left:60%"></b></div></div>
+    <div class="line"><span class="chip on">region = West</span><span class="chip">carrier: all</span><span class="chip add">+ Filter</span></div></div>
+  <div class="panel"><h4>Dropdown, open</h4><div class="dd" style="width:200px;border-color:var(--accent)">Sum</div>
+    <div class="menu static" style="width:200px;min-width:0">${mi("Sum", {check:true})}${mi("Average", {cls:"hi"})}${mi("Count")}${mi("Min")}${mi("Max")}${mi("Count distinct", {cls:"off"})}</div></div>
+
+  <div class="panel"><h4>Menu (menu bar, context, ⋯)</h4><div class="menu static">${mi("Cut", {k:"Ctrl+X"})}${mi("Copy", {icon:"copy", k:"Ctrl+C", cls:"hi"})}${mi("Paste", {k:"Ctrl+V", cls:"off"})}${SEP}${mi("Show formulas", {check:true, k:"Ctrl+`"})}${mi("Freeze", {sub:true})}${SEP}${mi("Delete rows", {icon:"trash", cls:"danger"})}</div>
+    <div class="help">On a Mac the menu bar's menus move to the system menu bar and shortcuts show ⌘; the menus are the same.</div></div>
+  <div class="panel"><h4>Feedback</h4>
+    <div class="banner info">${ic("info")}<div>Loading in the background. Totals update as rows arrive.</div></div>
+    <div class="banner warn">${ic("alert")}<div>3 values in cost aren't numbers.<a>Show rows</a></div></div>
+    <div class="banner bad">${ic("alert")}<div>The GPU ran out of memory. Using the CPU for this pivot.</div></div>
+    <div class="toast" style="position:static;align-self:flex-start">${ic("check")}Sorted 1,000,000 rows in 0.02 s<span class="act">Undo</span></div>
+    <div class="tip" style="position:static;align-self:flex-start"><b>Undo</b> ${kbd("Ctrl+Z")}</div></div>
+  <div class="panel"><h4>Progress and loading</h4>
+    <div class="line" style="font-size:12.5px"><span class="spin"></span>Sorting 108M rows…<span class="num" style="margin-left:auto">38%</span><span class="btn subtle" style="height:24px">Cancel</span></div><div class="bar"><i style="width:38%"></i></div>
+    <div class="bar ind"><i></i></div><div class="help">Unknown length: a moving band.</div>
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr 80px;gap:8px">${Array.from({length:12},(_, i)=>`<div class="skel" style="${i%4===3?"":"opacity:.7"}"></div>`).join("")}</div><div class="help">Rows not loaded yet show as grey bars, never as zeros.</div></div>
+
+  <div class="panel w3"><h4>Grid states · header sorted ▾ and filtered, frozen first column, selected range, editing, a cell changed from the file (corner mark), empty, an error, a find match</h4>
+    <table class="grid" style="border:1px solid var(--line)"><thead><tr><th class="rn"></th><th class="frozen">order_id<span class="badge">#</span></th><th>region<span class="badge">Aa</span><span class="filt">${ic("filter","")}</span></th><th>customer<span class="badge">Aa</span></th><th class="selcol">revenue<span class="badge">$</span><span class="sorted">${ic("down","")}</span></th><th>cost<span class="badge">$</span></th><th>margin<span class="badge fx2">ƒx</span></th><th>margin %<span class="badge fx2">ƒx</span></th></tr></thead><tbody>
+      <tr><td class="rn num">1</td><td class="num frozen">1048213</td><td>West</td><td>Acme Labs</td><td class="n num range">$9,980.00</td><td class="n num range">$6,402.10</td><td class="n num f">$3,577.90</td><td class="n num f">35.9%</td></tr>
+      <tr><td class="rn num">2</td><td class="num frozen">1048250</td><td>West</td><td class="match">Globex</td><td class="n num range">$9,412.75</td><td class="n num range edited">$6,013.00</td><td class="n num f">$3,399.75</td><td class="n num f">36.1%</td></tr>
+      <tr><td class="rn num">3</td><td class="num frozen">1048287</td><td>West</td><td class="null">empty</td><td class="n num editing">9200.5<span class="caret" style="margin-left:1px"></span></td><td class="n num null">empty</td><td class="n num null">empty</td><td class="n num null">empty</td></tr>
+      <tr><td class="rn num">4</td><td class="num frozen">1048324</td><td>West</td><td>Initech</td><td class="n num">$0.00</td><td class="n num">$0.00</td><td class="n num f">$0.00</td><td class="n num errc">÷ 0</td></tr></tbody></table>
+    <div class="help">Empty is not zero: it shows the word, sorts last and is left out of averages. An error shows what went wrong (÷ 0), never #VALUE!.</div></div>
+  </div>`;
+}
+
+function render() {
+  placed.length = 0; seed = 7;
+  const desk = (id, html, cap) => `<div><div class="frame desk">${html}</div><div class="cap">${cap}</div></div>`;
+  document.getElementById("main").innerHTML = `
+  <section class="option"><h2>In the app</h2><p class="title2">The pieces the first artboards didn't show. The menu bar sits in the title bar on Linux, Windows and the web; on a Mac the same menus go to the system menu bar. Everything else is drawn by omxplorer itself, so it looks the same on every computer.</p>
+  <div class="row">${desk("s1", s1(), "1 · Menu bar: Data, with a submenu")}${desk("s2", s2(), "2 · Right-click a column header · a tooltip")}${desk("s3", s3(), "3 · Filter a column · the toast with Undo")}
+    ${desk("s4", s4(), "4 · Import: preview, types, bad values, loading in the background")}${desk("s5", s5(), "5 · Command palette, Ctrl+K")}${desk("s6", s6(), "6 · Settings → Appearance: every skin ships, Ledger is the default")}
+    ${desk("s7", s7(), "7 · Start screen")}</div></section>
+  <section class="option"><h2>On a phone</h2><p class="title2">Menus and popovers become bottom sheets with 42-point rows; the same items in the same order.</p>
+  <div class="row"><div><div class="frame phone">${p1()}</div><div class="cap">Column actions</div></div><div><div class="frame phone">${p2()}</div><div class="cap">Filter</div></div></div></section>
+  <section class="option"><h2>Every component, every state</h2><p class="title2">The hand-off sheet: a developer builds from this, a reviewer checks against it.</p>${board()}</section>`;
+  for (const [sid, sel, oid, dx, dy, rel] of placed) {
+    const app = document.getElementById(sid), o = document.getElementById(oid);
+    let [x, y] = at(app, sel, dx, dy);
+    if (rel) { const m = document.getElementById(rel.slice(7)); x = m.offsetLeft + m.offsetWidth - 4; y = m.offsetTop + app.querySelector(sel).offsetTop + dy; }
+    o.style.left = x + "px"; o.style.top = y + "px";
+  }
+}
+function skin(name, btn) { document.getElementById("main").className = name; document.querySelectorAll("#skin button").forEach(b => b.classList.toggle("on", b === btn)); render(); }
+function size(big, btn) { document.body.classList.toggle("big", !!big); document.querySelectorAll("#sz button").forEach(b => b.classList.toggle("on", b === btn)); }
+const q = new URLSearchParams(location.search);
+if (q.get("skin")) document.getElementById("main").className = q.get("skin");
+if (q.get("big")) document.body.classList.add("big");
+render();
+// ?only=s3 (a scene, "board", or "p1"/"p2") shows just that, at actual size: for screenshots
+if (q.get("only")) { const o = q.get("only"), keep = o === "board" ? document.querySelector(".board") : o.startsWith("p") ? document.querySelectorAll(".frame.phone")[+o[1]-1] : document.getElementById(o).parentElement;
+  document.body.classList.add("big"); document.body.style.background = "#fff"; document.body.replaceChildren(document.getElementById("main")); const m = document.getElementById("main"); m.replaceChildren(keep); keep.style.margin = 0; }
+</script>
+</body>
+</html>
