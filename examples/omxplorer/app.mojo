@@ -6,7 +6,7 @@
 
 from mojoui.view import (View, Text, Button, FilePicker, TextField, Canvas, Board, VStack, HStack, Card, Spacer, Divider,
                          Dropdown, Segmented, Toggle, Tabs, Grid, Scroll, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
-                         BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, TOOL)
+                         BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, TOOL, ICON_ONLY)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface
 from mojoui.text import Font
@@ -24,6 +24,12 @@ from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENC
                               NUMBER_STYLES, DATE_STYLES)
 from mojoui.inspector import Inspector, Section, Row, Stepper
 from mojoui.sheetchrome import Tool, Toolbar, FormulaBar, StatusBar, SheetTabs
+from mojoui.sheetpage import (SheetObject, compute, chart_view, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
+                              CHART_BAR, CHART_LINE, HEADER_H)
+from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
+                               TILE_CHART)
+from mojoui.chartview import ChartView
+from mojoui.view import TAP
 from mojoui.orders import order_columns
 from mojoui.orders_ops import col_program, histogram
 
@@ -58,6 +64,24 @@ comptime TOGGLE_INSPECTOR = 22
 comptime SAVE = 24
 comptime IMPORT_COLUMN = 23  # Import: the column whose details show
 comptime RECENT = 40  # + index: open a recent file
+comptime INSERT_CHART = 25
+comptime INSERT_PIVOT = 26
+comptime MOVE = 27  # a sheet object dragged by its title bar
+comptime SHEET_TAB = 28  # the table / Report tabs
+comptime CHART_STYLE = 29
+comptime OBJ_VALUE = 30
+comptime OBJ_GROUP = 31
+comptime OBJ_ACROSS = 32
+comptime REPORT_COL = 33
+comptime FILTER_COL = 34
+comptime FILTER_VALUE = 35
+comptime ADD_TILE = 50  # + TILE_SUM … TILE_CHART
+comptime OBJ_TAP = 100  # + object: its chart's canvas
+comptime OBJ_CLOSE = 200  # + object
+comptime OBJ_PICK = 300  # + object: show it in the inspector
+comptime TILE_TAP = 400  # + tile: a chart tile's canvas
+comptime TILE_CLOSE = 500  # + tile
+comptime TABLE_H = 400  # the table's height once objects share the sheet
 
 comptime APP = "omxapp"  # (settings live in ~/.config/omxapp)
 comptime W = 1440  # the window (Stitch's artboards; the web check's viewport)
@@ -90,6 +114,13 @@ struct Main(App):
     var milliseconds: Float64
     var recent: List[String]
     var version: Int
+    var objects: List[SheetObject]  # charts and pivots on the sheet
+    var active: Int  # the object the inspector shows (-1: none)
+    var chart_sizes: List[Tuple[Float64, Float64]]  # per canvas id: points from the last draw (taps)
+    var sheet_tab: Int  # 0: the table's sheet, 1: the Report
+    var tiles: List[ReportTile]
+    var filter: ReportFilter
+    var report_col: Int  # the column new tiles use
 
     def __init__(out self):
         self.screen = START_SCREEN
@@ -118,6 +149,13 @@ struct Main(App):
         self.count = 0
         self.milliseconds = 0
         self.recent = read_recent(APP)
+        self.objects = List[SheetObject]()
+        self.active = -1
+        self.chart_sizes = List[Tuple[Float64, Float64]](length=1000, fill=(400.0, 240.0))
+        self.sheet_tab = 0
+        self.tiles = List[ReportTile]()
+        self.filter = ReportFilter(-1, 0)
+        self.report_col = -1
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -230,6 +268,12 @@ struct Main(App):
 
     def to_sheet(mut self):
         self.screen = SHEET
+        self.objects = List[SheetObject]()
+        self.active = -1
+        self.tiles = List[ReportTile]()
+        self.filter = ReportFilter(-1, 0)
+        self.sheet_tab = 0
+        self.report_col = self.first_number()
         self.grid = DataGrid()
         self.grid.prepare(self.frame, self.font, self.pal)
         for c in range(self.frame.stored()):
@@ -239,6 +283,62 @@ struct Main(App):
         self.select_cell(self.grid.cur_row, self.grid.cur_col)
         self.message = ("Imported " + grouped(self.frame.rows()) + " rows from " + self.name + ".csv") if self.source != "sample" and self.source != "blank" else ""
         self.version += 1
+
+    def numbers(self) -> List[Int]:
+        """The columns a chart or tile can sum (numbers and formulas)."""
+        var out = List[Int]()
+        for c in range(self.frame.columns()):
+            if self.frame.kind(c) == INT or self.frame.kind(c) == DECIMAL:
+                out.append(c)
+        return out^
+
+    def texts(self) -> List[Int]:
+        """The columns a chart or pivot can group by."""
+        var out = List[Int]()
+        for c in range(self.frame.stored()):
+            if self.frame.kind(c) == TEXT:
+                out.append(c)
+        return out^
+
+    def groupings(self) -> List[Int]:
+        """Text columns by how few values they have (2 or more): a new chart groups by the first (region before
+        customer), a new pivot uses the first two."""
+        var out = List[Int]()
+        var used = List[Bool](length=self.frame.stored(), fill=False)
+        for _ in range(len(self.texts())):
+            var best = -1
+            for c in self.texts():
+                var n = groups_of(self.frame, c)
+                if not used[c] and n >= 2 and (best < 0 or n < groups_of(self.frame, best)):
+                    best = c
+            if best < 0:
+                break
+            used[best] = True
+            out.append(best)
+        return out^
+
+    def names_of(self, cols: List[Int]) -> List[String]:
+        var out = List[String]()
+        for c in cols:
+            out.append(self.frame.name(c))
+        return out^
+
+    def index_in(self, cols: List[Int], col: Int) -> Int:
+        for k in range(len(cols)):
+            if cols[k] == col:
+                return k
+        return 0
+
+    def refresh(mut self):
+        """Every chart, pivot and tile again (after an edit or a change to one): GPU group-bys."""
+        for k in range(len(self.objects)):
+            compute(self.objects[k], self.frame, self.gf()[])
+        for k in range(len(self.tiles)):
+            compute_tile(self.tiles[k], self.frame, self.gf()[], self.filter)
+        self.version += 1
+
+    def table_h(self) -> Int:
+        return TABLE_H if len(self.objects) > 0 else GRID_H
 
     def first_number(self) -> Int:
         for c in range(self.frame.columns()):
@@ -309,6 +409,7 @@ struct Main(App):
                 self.message = self.frame.name(col) + " on row " + grouped(row + 1) + ": " + before + " → " + self.frame.display(col, row)
                 self.grid.committed(self.frame)
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
+                self.refresh()
             except e:
                 self.edit_text = text
                 self.message = String(e) + " (fix it and press Enter)"
@@ -421,6 +522,7 @@ struct Main(App):
                 self.grid.keep_in_view(row, max(self.grid.cur_col, 0), self.frame)
                 self.select_cell(row, max(self.grid.cur_col, 0))
                 self.message = "Row " + grouped(row + 1) + " added: type to fill it"
+                self.refresh()
             except e:
                 self.message = String(e)
             self.version += 1
@@ -459,10 +561,106 @@ struct Main(App):
             except e:
                 self.message = "Couldn't save: " + String(e)
             self.version += 1
+        elif m == INSERT_CHART or m == INSERT_PIVOT:
+            var texts = self.groupings()
+            if len(texts) == 0 or len(self.numbers()) == 0:
+                self.message = "A chart needs a number column and a text column to group by"
+            else:
+                var value = self.grid.cur_col if self.grid.cur_col >= 0 and (self.frame.kind(self.grid.cur_col) == INT or self.frame.kind(self.grid.cur_col) == DECIMAL) else self.numbers()[0]
+                var width = self.sheet_width()
+                var w = 520 if m == INSERT_CHART else max(width - 520 - 16, 520)  # (a chart and a pivot side by side)
+                var spot = free_spot(self.objects, TABLE_H, width, w, 340)
+                var obj = SheetObject.chart(value, texts[0], spot[0], spot[1], w, 340) if m == INSERT_CHART else SheetObject.pivot(value, texts[0], texts[1] if len(texts) > 1 else -1, spot[0], spot[1], w, 340)
+                compute(obj, self.frame, self.gf()[])
+                self.objects.append(obj^)
+                self.active = len(self.objects) - 1
+                self.insp_tab = 2
+                self.message = ("Chart: " if m == INSERT_CHART else "Pivot: ") + object_title(self.objects[self.active], self.frame) + " (" + fixed(self.objects[self.active].milliseconds, 1) + " ms on the GPU)"
+            self.version += 1
+        elif m == MOVE:  # a sheet object dragged by its title bar (child 0 is the table: it stays put)
+            var k = event.number - 1
+            if 0 <= k < len(self.objects):
+                self.objects[k].x = max(0, self.objects[k].x + Int(event.dx))
+                self.objects[k].y = max(TABLE_H + 16, self.objects[k].y + Int(event.dy))
+                self.version += 1
+        elif m >= OBJ_TAP and m < OBJ_TAP + 100:
+            var k = m - OBJ_TAP
+            if k < len(self.objects) and event.number == TAP:
+                var cv = chart_view(self.objects[k], self.frame)
+                cv.size = self.chart_sizes[10 + k]
+                if cv.tap(event.x, event.y, self.font, self.pal):
+                    self.objects[k].selected = cv.selected
+                    self.active = k
+                    self.version += 1
+        elif m >= OBJ_CLOSE and m < OBJ_CLOSE + 100:
+            var k = m - OBJ_CLOSE
+            if k < len(self.objects):
+                _ = self.objects.pop(k)
+                self.active = -1 if len(self.objects) == 0 else min(self.active, len(self.objects) - 1)
+                if self.active < 0 and self.insp_tab == 2:
+                    self.insp_tab = 1
+                self.version += 1
+        elif m >= OBJ_PICK and m < OBJ_PICK + 100:
+            if m - OBJ_PICK < len(self.objects):
+                self.active = m - OBJ_PICK
+                self.insp_tab = 2
+                self.inspector_open = True
+                self.version += 1
+        elif m == CHART_STYLE or m == OBJ_VALUE or m == OBJ_GROUP or m == OBJ_ACROSS:
+            if 0 <= self.active < len(self.objects):
+                ref o = self.objects[self.active]
+                if m == CHART_STYLE:
+                    o.style = CHART_LINE if event.number == 1 else CHART_BAR
+                elif m == OBJ_VALUE:
+                    o.value = self.numbers()[event.number]
+                elif m == OBJ_GROUP:
+                    o.group = self.texts()[event.number]
+                else:
+                    o.across = self.texts()[event.number - 1] if event.number > 0 else -1
+                o.selected = -1
+                compute(o, self.frame, self.gf()[])
+                self.message = object_title(o, self.frame)
+                self.version += 1
+        elif m == SHEET_TAB:
+            self.sheet_tab = event.number
+            self.version += 1
+        elif m == REPORT_COL:
+            self.report_col = self.numbers()[event.number]
+            self.version += 1
+        elif m >= ADD_TILE and m <= ADD_TILE + TILE_CHART:
+            var texts = self.groupings()
+            var col = self.report_col if self.report_col >= 0 else self.first_number()
+            var t = new_tile(m - ADD_TILE, col, texts[0] if len(texts) > 0 else -1)
+            if t.kind == TILE_CHART and len(texts) == 0:
+                self.message = "A chart tile needs a text column to group by"
+            else:
+                compute_tile(t, self.frame, self.gf()[], self.filter)
+                self.tiles.append(t^)
+            self.version += 1
+        elif m >= TILE_CLOSE and m < TILE_CLOSE + 100:
+            if m - TILE_CLOSE < len(self.tiles):
+                _ = self.tiles.pop(m - TILE_CLOSE)
+                self.version += 1
+        elif m >= TILE_TAP and m < TILE_TAP + 100:
+            var k = m - TILE_TAP
+            if k < len(self.tiles) and event.number == TAP:
+                var cv = chart_view(self.tiles[k].chart, self.frame)
+                cv.size = self.chart_sizes[60 + k]
+                if cv.tap(event.x, event.y, self.font, self.pal):
+                    self.tiles[k].chart.selected = cv.selected
+                    self.version += 1
+        elif m == FILTER_COL:
+            var texts = self.texts()
+            self.filter = ReportFilter(texts[event.number - 1] if event.number > 0 else -1, 0)
+            self.refresh()
+        elif m == FILTER_VALUE:
+            self.filter.code = event.number
+            self.refresh()
         elif m == UNDO:
             if self.frame.undo():
                 self.grid.redraw()
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
+                self.refresh()
                 self.message = "Undone"
             else:
                 self.message = "Nothing to undo"
@@ -471,10 +669,20 @@ struct Main(App):
     # ---------- drawing ----------
 
     def draw(mut self, canvas: Int, mut surface: Surface):
+        if 0 <= canvas < len(self.chart_sizes):
+            self.chart_sizes[canvas] = (surface.points_width(), surface.points_height())
         if canvas == 0:
             self.grid.draw(surface, self.frame, self.font, self.pal)
         elif canvas == 1:
             self.preview.draw(surface, self.frame, self.font, self.pal)
+        elif 10 <= canvas < 10 + len(self.objects):
+            var cv = chart_view(self.objects[canvas - 10], self.frame)
+            cv.draw(surface, self.font, self.pal)
+        elif 60 <= canvas < 60 + len(self.tiles):
+            var cv = chart_view(self.tiles[canvas - 60].chart, self.frame)
+            cv.draw(surface, self.font, self.pal)
+        else:
+            surface.fill(self.pal.card)  # (a KPI tile's sparkline: none yet)
 
     # ---------- screens ----------
 
@@ -561,15 +769,77 @@ struct Main(App):
 
     def toolbar(self) -> View:
         var left: List[Tool] = [Tool("Save", "save", SAVE, False), Tool("Undo", "undo", UNDO, False)]
-        var middle: List[Tool] = [Tool("Add row", "row-plus", ADD_ROW, False), Tool("Formula", "formula", NEW_FORMULA, self.formula_open),
+        var middle: List[Tool] = [Tool("Pivot", "pivot", INSERT_PIVOT, False), Tool("Chart", "chart-bar", INSERT_CHART, False),
+                                  Tool("Add row", "row-plus", ADD_ROW, False), Tool("Formula", "formula", NEW_FORMULA, self.formula_open),
                                   Tool("Sort", "sort", SORT, self.grid.sort_col >= 0)]
         var right: List[Tool] = [Tool("Format", "format", TOGGLE_INSPECTOR, self.inspector_open)]
         var extra = List[View]()
         extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt,.omx"))
         return Toolbar(left, middle, right, extra)
 
+    def report_inspector(self) -> View:
+        """The Report's inspector: the filter every tile reads through, and where the numbers come from."""
+        var texts = self.texts()
+        var cols = List[String]()
+        cols.append("Every row")
+        for c in texts:
+            cols.append(self.frame.name(c))
+        var at_col = 0
+        for k in range(len(texts)):
+            if texts[k] == self.filter.col:
+                at_col = k + 1
+        var filters = List[View]()
+        filters.append(Row("Column", Dropdown(cols, at_col, FILTER_COL)))
+        if self.filter.col >= 0:
+            var values = List[String]()
+            for code in range(groups_of(self.frame, self.filter.col)):
+                values.append(self.frame.text_of(self.filter.col, Int64(code)))
+            filters.append(Row("Is", Dropdown(values, self.filter.code, FILTER_VALUE)))
+        var sections = List[View]()
+        sections.append(Section("Filter · every tile", filters))
+        var data = List[View]()
+        data.append(Row("Source", Text(self.name)))
+        data.append(Row("Rows", Text(grouped(self.frame.rows()))))
+        data.append(Text("Edits in the table show here at once.", CAPTION))
+        sections.append(Section("Data", data))
+        var tabs: List[String] = ["Report"]
+        return Inspector(tabs, 0, NO_MSG, sections, INSPECTOR_W)
+
+    def object_inspector(self) -> List[View]:
+        """The selected chart's or pivot's settings."""
+        var sections = List[View]()
+        ref o = self.objects[self.active]
+        var nums = self.numbers()
+        var texts = self.texts()
+        var head = List[View]()
+        head.append(Text(object_title(o, self.frame), HEADLINE))
+        head.append(Text("Follows edits to " + self.name + " (" + fixed(o.milliseconds, 1) + " ms on the GPU)", CAPTION))
+        sections.append(Section("Chart" if o.kind == OBJ_CHART else "Pivot", head))
+        var data = List[View]()
+        if o.kind == OBJ_CHART:
+            var styles: List[String] = ["Bar", "Line"]
+            data.append(Row("Type", Segmented(styles, 1 if o.style == CHART_LINE else 0, CHART_STYLE)))
+            data.append(Row("Value", Dropdown(self.names_of(nums), self.index_in(nums, o.value), OBJ_VALUE)))
+            data.append(Row("Group by", Dropdown(self.names_of(texts), self.index_in(texts, o.group), OBJ_GROUP)))
+        else:
+            var across = List[String]()
+            across.append("None")
+            for c in texts:
+                across.append(self.frame.name(c))
+            data.append(Row("Value", Dropdown(self.names_of(nums), self.index_in(nums, o.value), OBJ_VALUE)))
+            data.append(Row("Rows", Dropdown(self.names_of(texts), self.index_in(texts, o.group), OBJ_GROUP)))
+            data.append(Row("Columns", Dropdown(across, self.index_in(texts, o.across) + 1 if o.across >= 0 else 0, OBJ_ACROSS)))
+        sections.append(Section("Data", data))
+        return sections^
+
     def inspector(self) -> View:
+        if self.sheet_tab == 1:
+            return self.report_inspector()
         var tabs: List[String] = ["Table", "Cell"]
+        if 0 <= self.active < len(self.objects):
+            tabs.append("Chart" if self.objects[self.active].kind == OBJ_CHART else "Pivot")
+            if self.insp_tab == 2:
+                return Inspector(tabs, 2, INSP_TAB, self.object_inspector(), INSPECTOR_W)
         var sections = List[View]()
         if self.insp_tab == 0:
             var info = List[View]()
@@ -609,7 +879,7 @@ struct Main(App):
                             at_symbol = k
                     fmt.append(Row("Currency", Segmented(symbols, at_symbol, SYMBOL)))
             sections.append(Section("Data format", fmt))
-        return Inspector(tabs, self.insp_tab, INSP_TAB, sections, INSPECTOR_W)
+        return Inspector(tabs, min(self.insp_tab, 1), INSP_TAB, sections, INSPECTOR_W)
 
     def status(self) -> View:
         var items = List[String]()
@@ -627,25 +897,64 @@ struct Main(App):
             items.append(self.message)
         return StatusBar(items, fixed(self.milliseconds, 1) + " ms on " + (self.gf()[].device_name() if self.gf_addr != 0 else "CPU"))
 
+    def sheet_width(self) -> Int:
+        return W - 40 - (INSPECTOR_W + 16 if self.inspector_open else 0)
+
+    def report_view(self) -> View:
+        """The Report tab (Stitch 06): KPI and chart tiles over the filtered rows, and the row that adds them."""
+        var kpis = List[View]()
+        var charts = List[View]()
+        var first_kpi = True
+        for k in range(len(self.tiles)):
+            ref t = self.tiles[k]
+            if t.kind == TILE_CHART:
+                var cv = chart_view(t.chart, self.frame)
+                charts.append(Card(HStack(Text(cv.title, HEADLINE), Spacer(), Button("Remove", TILE_CLOSE + k, ICON_ONLY, icon="close"), spacing=8).fill().align(CENTER),
+                                   Canvas(60 + k, self.version, on_gesture=TILE_TAP + k).fill().height(240),
+                                   Text(readout(t.chart, self.frame), CAPTION), spacing=6).fill())
+            else:
+                kpis.append(VStack(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version),
+                                   Button("Remove", TILE_CLOSE + k, SUBTLE), spacing=2).fill())
+                first_kpi = False
+        var nums = self.numbers()
+        var add = HStack(Text("Add a tile", CAPTION), Dropdown(self.names_of(nums), self.index_in(nums, self.report_col), REPORT_COL),
+                         Button("Sum tile", ADD_TILE + TILE_SUM, icon="plus"), Button("Average tile", ADD_TILE + TILE_AVERAGE, icon="plus"),
+                         Button("Count tile", ADD_TILE + TILE_COUNT, icon="plus"),
+                         Button("Chart tile", ADD_TILE + TILE_CHART, icon="chart-bar"), spacing=8).align(CENTER)
+        if len(self.tiles) == 0:
+            add = VStack(Text("An empty report: add a tile below. Every tile reads the table, so edits show here at once.", CAPTION), add^, spacing=8).align(START)
+        var page = ReportPage("Report", self.name + " · " + self.filter.words(self.frame), kpis, charts, Card(add, spacing=8).fill())
+        return Scroll(page^.padding(4, 4), height=GRID_H + 30).width(self.sheet_width())
+
     def sheet_screen(self) -> View:
-        var width = W - 40 - (INSPECTOR_W + 16 if self.inspector_open else 0)
+        var width = self.sheet_width()
         var cell = (self.frame.name(self.grid.cur_col) if self.grid.cur_col >= 0 else "") + (" " + String(self.grid.cur_row + 1) if self.grid.cur_row >= 0 else "")
         var fx = FormulaBar("New column", "", FORMULA_SUBMIT, placeholder="A new column: its name, then its formula") if self.formula_open else FormulaBar(cell, self.edit_text, FX_COMMIT, CELL_CANCEL)
-        var items = List[View]()
-        items.append(Canvas(0, self.version + self.grid.version, on_gesture=GRID, keys=True).at(0, 0).width(width).height(GRID_H).tag("table"))
-        var ed = self.grid.editor_place(self.frame)
-        if ed[2] > 0:
-            items.append(self.grid.editor(self.edit_text, CELL_COMMIT, CELL_CANCEL).at(ed[0], ed[1]).width(ed[2]).height(30))
         var sorted = ("sorted by " + self.frame.name(self.grid.sort_col) + (" ↓" if self.grid.sort_desc else " ↑")) if self.grid.sort_col >= 0 else String("")
         var head = HStack(Text(self.name, HEADLINE), Text(grouped(self.frame.rows()) + " rows", CAPTION).tone(TONE_ACCENT), Spacer(),
-                          Text(sorted, CAPTION), spacing=12).fill().align(CENTER).height(28)
-        var main = VStack(fx, head, Board(items^, width, GRID_H).width(width).height(GRID_H), spacing=6).width(width)
+                          Text(sorted, CAPTION), spacing=12).fill().align(CENTER).height(HEADER_H - 8)
+        var th = self.table_h()
+        var items = List[View]()  # child 0: the table (its title bar is the drag handle; it stays put); then the objects; then the editor
+        items.append(VStack(head, Canvas(0, self.version + self.grid.version, on_gesture=GRID, keys=True).fill().height(th - HEADER_H), spacing=8)
+                     .at(0, 0).width(width).height(th).tag("table"))
+        var bottom = th
+        for k in range(len(self.objects)):
+            ref o = self.objects[k]
+            items.append(object_card(o, self.frame, 10 + k, self.version, OBJ_TAP + k, OBJ_CLOSE + k, OBJ_PICK + k)
+                         .at(o.x, o.y).width(o.w).height(o.h).tag("chart" + String(k) if o.kind == OBJ_CHART else "pivot" + String(k)))
+            bottom = max(bottom, o.y + o.h)
+        var ed = self.grid.editor_place(self.frame)
+        if ed[2] > 0:
+            items.append(self.grid.editor(self.edit_text, CELL_COMMIT, CELL_CANCEL).at(ed[0], HEADER_H + ed[1]).width(ed[2]).height(30))
+        var area = Board(items^, width, bottom + 24, on_move=MOVE).width(width).height(GRID_H + 30) if self.sheet_tab == 0 else self.report_view()
+        var main = VStack(fx, area^, spacing=6).width(width) if self.sheet_tab == 0 else VStack(area^, spacing=6).width(width)
         var row = HStack(main, self.inspector(), spacing=16).align(START) if self.inspector_open else HStack(main, spacing=0)
         var names = List[String]()
         names.append(self.name)
+        names.append("Report")
         return VStack(
             self.toolbar().height(64),
-            HStack(SheetTabs(names, 0, NO_MSG), Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), spacing=8).fill().align(CENTER).padding(0, 20).height(36),
+            HStack(SheetTabs(names, self.sheet_tab, SHEET_TAB), Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), spacing=8).fill().align(CENTER).padding(0, 20).height(36),
             row^.padding(0, 20),
             Spacer(),
             self.status().height(30),
