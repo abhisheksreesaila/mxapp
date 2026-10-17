@@ -13,6 +13,7 @@ Run: pixi run python mojoui/hosts/web.py build/hello/web [port]
 """
 
 import ctypes
+import os
 import importlib
 import io
 import json
@@ -41,6 +42,7 @@ PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY = 0, 1, 2, 3, 4
 START, CENTER, END = 1, 2, 3
 SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
 KEY = 7  # a canvas gesture: a key pressed while it had focus (text = the key, dx = modifiers)
+EVENT_DELAY = float(os.environ.get("MOJOUI_EVENT_DELAY_MS", "0")) / 1000  # checks only: answers events this much later
 JPEG_QUALITY = 85
 MAX_SESSIONS = 200  # oldest tabs are closed beyond this
 STATIC = Path(__file__).parent / "static"
@@ -232,13 +234,12 @@ CANVAS_JS = r"""
   // Keys typed on a canvas before the in-place editor they open has appeared (a round trip later) wait here, then
   // go into it in order (Enter and Escape act as in it); with no editor (a read-only cell) they go to the canvas.
   // Page-wide: the screen that shows the editor replaces the canvas element that sent the first key.
-  // While a key's answer is on its way (a key typed on a cell opens an editor; Enter or Escape in the editor closes
-  // it), the keys pressed meanwhile wait here, page-wide (the next screen replaces the elements that would have
-  // got them), and are replayed in order once the screen they were meant for is up: into the editor if there is
-  // one, else to the canvas. A replayed key that itself waits for an answer (a character that opens an editor,
-  // Enter, Escape) holds the rest back again. So "Zed Co⏎AB⏎" typed at full speed writes two cells, as in Excel.
+  // Keys on a canvas go to the app in order, however fast (a value typed on a grid stays with the grid: its editor
+  // only echoes it). An editor that has the keyboard itself (F2, a double click, a click in it) is different: its
+  // Enter or Escape is answered with a screen without it, so the keys pressed meanwhile wait here, page-wide, and
+  // then go to the canvas in order (or back into the editor if it's still there: a value it refused).
   const isChar = (k, m) => [...k].length === 1 && !(m & 6);
-  const early = { typing: false, inflight: 0, from: null, keys: [] };
+  const early = { typing: false, inflight: 0, from: null, keys: [], replaying: false };
   const hold = from => { early.typing = true; early.from = from; early.since = performance.now(); if (from) setTimeout(release, 1600); };
   function release() {
     if (!early.typing || early.inflight) return;
@@ -252,22 +253,52 @@ CANVAS_JS = r"""
       if (editor) {
         editor.focus();
         if (k === 'Enter') { hold(editor); editor.form.requestSubmit(); return; }
-        if (k === 'Escape') { hold(editor); editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return; }
+        if (k === 'Escape') {  // (replayed past the listener below, which would otherwise hold it again)
+          early.replaying = true; editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); early.replaying = false;
+          hold(editor); return;
+        }
         if (k === 'Backspace') editor.value = editor.value.slice(0, -1);
         else if (isChar(k, m)) editor.value += k;
         const end = editor.value.length; editor.setSelectionRange(end, end);
       } else if (div && div.mojoui) {
-        div.mojoui.sendKey(k, m);
-        if (isChar(k, m)) { hold(null); return; }  // it opens an editor: the rest wait for it
+        div.mojoui.sendKey(k, m);  // (in order: a value typed on the grid stays with the grid, however fast)
       }
     }
   }
   // Enter or Escape pressed in an in-place editor: its answer replaces the editor, so hold what comes next.
   document.addEventListener('keydown', e => {
-    if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+    if (early.replaying || ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
     const m = (e.shiftKey ? 1 : 0) + (e.ctrlKey || e.metaKey ? 2 : 0) + (e.altKey ? 4 : 0);
     if (early.typing) { e.preventDefault(); e.stopPropagation(); early.keys.push([e.key, m]); return; }
     if (e.target.matches && e.target.matches('input.cell-editor') && (e.key === 'Enter' || e.key === 'Escape')) hold(e.target);
+  }, true);
+  // Every canvas's gestures and keys, in the order they happened, one at a time: page-wide, not per canvas
+  // element, because an answer can replace the element (a key that opens an editor rebuilds the screen) while
+  // the keys typed after it are still waiting to go.
+  const events = window.mojouiEvents = { queue: [], sending: false };
+  async function flushEvents() {
+    if (events.sending) return;
+    events.sending = true;
+    try {
+      while (events.queue.length) {
+        const { sid, ...e } = events.queue.shift();
+        if (e.number === KEY) early.inflight++;
+        try { await htmx.ajax('POST', `/e/${sid}`, { values: { ...e, v: shape() }, swap: 'none', source: document.body }); }
+        catch (err) { console.warn('mojoui: event not sent', err); }
+        finally { if (e.number === KEY) { early.inflight--; setTimeout(release, 50); } }
+        const div = document.querySelector(`[data-kind=canvas][data-node="${e.n}"]`);
+        if (div && div.mojoui) { div.mojoui.want = true; div.mojoui.pump(); }
+      }
+    } finally { events.sending = false; }
+  }
+  // A key pressed while nothing has the keyboard (the screen was just rebuilt under it) goes to the canvas that had it.
+  document.addEventListener('keydown', e => {
+    if (e.target !== document.body || early.typing || window.mojouiKeyCanvas === undefined) return;
+    const div = document.querySelector(`[data-kind=canvas][data-keys="1"][data-node="${window.mojouiKeyCanvas}"]`);
+    if (!div) return;
+    if (!div.mojoui) attach(div);  // (a screen still settling: its canvas isn't wired up yet)
+    const cv = div.querySelector('canvas');
+    e.preventDefault(); e.stopPropagation(); cv.focus({ preventScroll: true }); cv.dispatchEvent(new KeyboardEvent('keydown', e));
   }, true);
   function attach(div) {
     if (div.mojoui) return;
@@ -318,25 +349,11 @@ CANVAS_JS = r"""
     st.pump = pump;
     st.sendKey = (k, m) => send(KEY, 0, 0, m, 0, 1, k);
     function send(kind, x, y, dx, dy, zoom, text = '') {
-      const last = st.queue[st.queue.length - 1];
-      if (kind === KEY) st.queue.push({ n, number: kind, x, y, dx, dy, zoom, text });
-      else if (last && last.number === kind && kind === PAN) { last.dx += dx; last.dy += dy; last.x = x; last.y = y; }
-      else if (last && last.number === kind && kind === ZOOM) { last.zoom *= zoom; }
-      else st.queue.push({ n, number: kind, x, y, dx, dy, zoom });
-      flush();
-    }
-    async function flush() {
-      if (st.sending) return;
-      st.sending = true;
-      try {
-        while (st.queue.length) {
-          const e = st.queue.shift();
-          if (e.number === KEY) early.inflight++;
-          try { await htmx.ajax('POST', `/e/${sid}`, { values: { ...e, v: shape() }, swap: 'none', source: div }); }
-          finally { if (e.number === KEY) { early.inflight--; setTimeout(release, 50); } }
-          st.want = true; pump();
-        }
-      } finally { st.sending = false; }
+      const q = events.queue, last = q[q.length - 1], same = last && last.n === n && last.number === kind;
+      if (same && kind === PAN) { last.dx += dx; last.dy += dy; last.x = x; last.y = y; }
+      else if (same && kind === ZOOM) { last.zoom *= zoom; }
+      else q.push({ n, sid, number: kind, x, y, dx, dy, zoom, text });
+      flushEvents();
     }
     const pointers = new Map();
     let moved = false, spread = 0;
@@ -353,7 +370,6 @@ CANVAS_JS = r"""
         if ((OWN_KEYS.has(e.key) && !(mods & 6)) || typed || (mods & 2 && ['Home', 'End'].includes(e.key))) e.preventDefault();
         // a key typed on a cell opens an editor a round trip later: keys pressed meanwhile wait for it (not lost,
         // not sent to the grid), then go into the editor in order
-        if (typed) hold(null);  // (keys pressed while it's answered wait: the listener on the page above)
         send(KEY, 0, 0, mods, 0, 1, e.key);  // (Ctrl and Alt keys too, as GTK sends them; the page keeps their defaults)
       });
     }
@@ -608,15 +624,15 @@ def render_node(s, i, sid):
         # the form's queue, so a fast Return can't overtake the typing it follows.
         # hx-vals is inherited from ancestors, so the input says second=0 explicitly
         # (otherwise it would pick up the form's second=1 and every keystroke would "submit").
-        editor = n["value"] in (1, 2)  # .focused(): an in-place editor takes the keyboard, its text selected (1) or the caret after it (2)
+        editor = n["value"] in (1, 2, 3)  # .focused(): an in-place editor takes the keyboard, its text selected (1) or the caret after it (2); .echo() (3): it doesn't
         at_end = "const k = this.value.length; this.setSelectionRange(k, k)"
         cancel = (f"if (event.key === 'Escape') {{ event.preventDefault(); htmx.ajax('POST', '{post}', "
                   f"{{ values: {{ n: {i}, second: 2, text: this.value, v: document.getElementById('mojoui-v').value }}, swap: 'none', source: document.body }}); }}"  # (not the input: its hx-vals would win)
                   if n["size"] else None)
         field = Input(type="text", name="text", value=n["text"], placeholder=n["hint"], data_kind="field",
-                      cls="cell-editor" if editor else None, onfocus=(at_end if n["value"] == 2 else "this.select()") if editor else None,
+                      cls="cell-editor" if editor else None, onfocus=(at_end if n["value"] in (2, 3) else "this.select()") if editor else None,
                       onkeydown=cancel,
-                      autocomplete="off", autofocus=(s.focus == i or editor), hx_trigger="input",
+                      autocomplete="off", autofocus=(s.focus == i or n["value"] in (1, 2)), hx_trigger="input",
                       hx_sync="closest form:queue all", **dict(common, hx_vals=json.dumps({"n": i, "second": 0})))
         return Form(field, cls="field", id=nid, hx_post=post, hx_vals=json.dumps({"n": i, "second": 1}),
                     hx_swap="none", hx_include="#mojoui-v", hx_sync="this:queue all")
@@ -902,6 +918,8 @@ def make_app(module_dir):
     @app.post("/e/{sid}")
     def event(sid: str, n: int, v: int = -1, second: int = 0, text: str = "", number: int = 0, on: str = "",
               x: float = 0, y: float = 0, dx: float = 0, dy: float = 0, zoom: float = 1):
+        if EVENT_DELAY:  # (checks only: a slow network, so keys typed meanwhile really wait for the answer)
+            time.sleep(EVENT_DELAY)
         s = sessions.get(sid)
         if s is None:
             return Main(P("This page expired: reload it.", cls="text caption"), id="mojoui-root", hx_swap_oob="true")

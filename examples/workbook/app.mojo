@@ -26,7 +26,7 @@ from mojoui.workbook import save_workbook, open_workbook, read_widths, ObjectSpe
 from mojoui.maths import log2
 from mojoui.theme import Palette
 from mojoui.datagrid import (DataGrid, GRID_NONE, GRID_REDRAW, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY,
-                             GRID_FITTED, GRID_RESIZED, GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_HEADER_H, GRID_ROW_H, GRID_GUTTER, GRID_BAR_W)
+                             GRID_FITTED, GRID_RESIZED, GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT, GRID_HEADER_H, GRID_ROW_H, GRID_GUTTER, GRID_BAR_W)
 
 comptime SOURCE_PREFIX = "contoso:"  # + the row count: the shared table's source name (a workbook file names it instead of copying it)
 comptime SAMPLE = "examples/workbook/contoso.mxwb"
@@ -344,6 +344,20 @@ struct Main(App):
         self.edit_text = self.frame.display(col, row) if row >= 0 and col >= 0 else ""  # (row -1: a whole column)
         self.version += 1
 
+    def write_cell(mut self, text: String):
+        """The in-place editor's value into its cell (Enter in the field, or Enter on a value typed on the grid)."""
+        if self.grid.editing and self.grid.cur_row >= 0 and self.grid.cur_col >= 0:  # (a second Enter after it closed writes nothing)
+            try:
+                self.frame.set_text(self.grid.cur_col, self.grid.cur_row, text)
+                self.message = "Row " + grouped(self.grid.cur_row + 1) + ": " + self.frame.name(self.grid.cur_col) + " = " + self.frame.display(self.grid.cur_col, self.grid.cur_row)
+                self.grid.committed(self.frame)
+                self.select_cell(self.grid.cur_row, self.grid.cur_col)
+                self.compute()
+            except e:
+                self.edit_text = text
+                self.message = String(e) + " (fix it and press Enter)"  # the editor stays open with what was typed
+        self.version += 1
+
     def update(mut self, event: Event):
         var m = event.message
         if m != CELL_COMMIT and m != CELL_CANCEL and self.grid.editing and not (GRID_GESTURE <= m < GRID_GESTURE + MAX_OBJECTS):
@@ -366,6 +380,9 @@ struct Main(App):
             elif action == GRID_CANCEL:
                 self.select_cell(g.cur_row, g.cur_col)
                 self.message = "Edit cancelled"
+            elif action == GRID_COMMIT:  # Enter on a value typed on the grid
+                var typed = String(g.typed)
+                self.write_cell(typed)
             elif action == GRID_CLEAR:
                 var col = g.cur_col
                 var row = g.cur_row
@@ -389,17 +406,7 @@ struct Main(App):
             elif action == GRID_REDRAW:
                 self.version += 1
         elif m == CELL_COMMIT:  # the in-place editor's Enter: write the cell, then select the one below (as a spreadsheet does)
-            if self.grid.editing and self.grid.cur_row >= 0 and self.grid.cur_col >= 0:  # (a second Enter after it closed writes nothing)
-                try:
-                    self.frame.set_text(self.grid.cur_col, self.grid.cur_row, event.text)
-                    self.message = "Row " + grouped(self.grid.cur_row + 1) + ": " + self.frame.name(self.grid.cur_col) + " = " + self.frame.display(self.grid.cur_col, self.grid.cur_row)
-                    self.grid.committed(self.frame)
-                    self.select_cell(self.grid.cur_row, self.grid.cur_col)
-                    self.compute()
-                except e:
-                    self.edit_text = event.text
-                    self.message = String(e) + " (fix it and press Enter)"  # the editor stays open with what was typed
-            self.version += 1
+            self.write_cell(event.text)
         elif m == CELL_CANCEL:  # the in-place editor's Escape: nothing written
             self.grid.cancel_edit()
             self.select_cell(self.grid.cur_row, self.grid.cur_col)

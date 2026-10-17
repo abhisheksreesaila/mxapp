@@ -291,6 +291,12 @@ struct View(Copyable, Movable):
         self.nodes[0].value = 1 if select_all else 2
         return self^
 
+    def echo(var self) -> View:
+        """An in-place editor that shows text another view types into it (a grid that keeps the keyboard while you
+        type a value): it doesn't take the keyboard until it's clicked."""
+        self.nodes[0].value = 3
+        return self^
+
     def at(var self, x: Int, y: Int) -> View:
         """Where the view sits inside a Board (points from its top-left)."""
         self.nodes[0].x = x

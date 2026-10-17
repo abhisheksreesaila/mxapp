@@ -85,7 +85,8 @@ CANVASES_DRAWN = """() => [...document.querySelectorAll('[data-kind=canvas]')].e
   const st = div.mojoui, m = document.getElementById('n' + div.dataset.node + '-meta');
   if (!st || !m) return false;
   if (m.dataset.frames !== '0') return st.count > 0;  // playing: frames keep coming
-  return !st.busy && !st.sending && !st.updating && !st.again && !st.timer && st.queue.length === 0 && String(st.drawn) === m.dataset.version;
+  const ev = window.mojouiEvents;
+  return !st.busy && !(ev && (ev.sending || ev.queue.length)) && !st.updating && !st.again && !st.timer && String(st.drawn) === m.dataset.version;
 })"""
 
 
@@ -148,7 +149,12 @@ def step(page, s):
         page.keyboard.press("+".join([m.capitalize() if m != "ctrl" else "Control" for m in mods] + [key]))
     elif verb == "typekeys":  # typekeys:K=text: real key presses at a fast typist's pace (30 ms apart, no waiting
         _, _, text = rest.partition("=")  # for the editor the first one opens: the keys after it mustn't be lost)
-        page.keyboard.type(text.replace("⏎", "\n"), delay=30)  # (⏎: Enter)
+        for part in re.split("(⎋)", text):  # (⏎ Enter, ⎋ Escape: both at the same pace, nothing waits)
+            if part == "⎋":
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(30)
+            elif part:
+                page.keyboard.type(part.replace("⏎", "\n"), delay=30)
     elif verb in ("drag", "dragat", "doubletap", "zoom", "frames", "tapat"):  # canvas steps: real mouse input on the canvas
         k, _, arg = rest.partition("=")
         canvas = page.locator("[data-kind=canvas]").nth(int(k))

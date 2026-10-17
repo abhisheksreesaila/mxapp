@@ -8,7 +8,7 @@ from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
 from mojoui.datagrid import (DataGrid, GridSource, GRID_NONE, GRID_SELECTED, GRID_EDIT, GRID_READ_ONLY, GRID_TYPED, GRID_CLEAR,
-                             GRID_CANCEL, GRID_HEADER_H, GRID_ROW_H)
+                             GRID_CANCEL, GRID_COMMIT, GRID_HEADER_H, GRID_ROW_H)
 
 comptime MSG = 1
 
@@ -146,11 +146,23 @@ def main() raises:
     # keys typed before the editor appeared (a round trip on the web) go on the end
     assert_equal(g.handle(key("8"), src, font, pal), GRID_TYPED)
     assert_equal(g.typed, "78")
+    # while a value is typed the grid has it: Backspace takes a character off, arrows don't move, Enter writes it
+    assert_equal(g.handle(key("Backspace"), src, font, pal), GRID_TYPED)
+    assert_equal(g.typed, "7")
+    var at = g.cur_row
+    assert_equal(g.handle(key("ArrowDown"), src, font, pal), GRID_NONE)
+    assert_equal(g.cur_row, at)
+    assert_equal(g.handle(key("Enter"), src, font, pal), GRID_COMMIT)
+    assert_equal(g.typed, "7")
+    g.committed(src)  # (the app wrote it): the cell below, nothing being typed
+    assert_equal(g.cur_row, at + 1)
+    assert_false(g.typing)
+    assert_equal(g.handle(key("8"), src, font, pal), GRID_TYPED)
     _ = g.handle(key("Escape"), src, font, pal)
     assert_equal(g.typed, "")
     # F2 after typing (or anything that closed the editor) selects the value again: nothing typed comes back
     _ = g.handle(key("5"), src, font, pal)
-    g.cancel_edit()
+    g.editing = False  # (closed without cancel_edit(): F2 itself must drop what was typed)
     assert_equal(g.handle(key("F2"), src, font, pal), GRID_EDIT)
     assert_equal(g.typed, "")
     _ = g.handle(key("Escape"), src, font, pal)

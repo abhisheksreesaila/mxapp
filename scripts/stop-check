@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+"""Stops a running scripts/check (and the checker it runs) in this checkout only.
+
+  scripts/stop-check        # this checkout's check, if one is running
+
+Matches processes by their real argv (python … scripts/check.py) and working directory, never by a pattern over
+command lines: `pkill -f` / `pgrep -f` also match the shell that runs them, and killed it twice (docs/lessons.md).
+"""
+import os
+import signal
+from pathlib import Path
+
+root = str(Path(__file__).resolve().parent.parent)
+me = {os.getpid(), os.getppid()}
+stopped = []
+for d in Path("/proc").iterdir():
+    if not d.name.isdigit() or int(d.name) in me:
+        continue
+    try:
+        argv = (d / "cmdline").read_bytes().split(b"\0")
+        cwd = os.readlink(d / "cwd")
+    except OSError:
+        continue
+    if len(argv) >= 2 and Path(argv[0].decode(errors="replace")).name.startswith("python") \
+            and argv[1] == b"scripts/check.py" and cwd == root:
+        os.kill(int(d.name), signal.SIGTERM)
+        stopped.append(d.name)
+print(f"stopped {', '.join(stopped)}" if stopped else "no check running here")

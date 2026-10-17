@@ -38,6 +38,7 @@ comptime GRID_RESIZED = 7  # a header edge drag ended (grid.last_col)
 comptime GRID_TYPED = 8  # a character typed on a cell: the editor opened, starting from grid.typed (it replaces the value)
 comptime GRID_CLEAR = 9  # Delete or Backspace on an editable cell: the app clears it
 comptime GRID_CANCEL = 10  # Escape: the editor closed without writing
+comptime GRID_COMMIT = 11  # Enter on a value being typed: write grid.typed into the cell (then call committed())
 
 
 trait GridSource:
@@ -84,7 +85,8 @@ struct DataGrid(Copyable, Movable):
     var type_widths: List[Float64]  # per column: the source's default width for its values (from prepare())
     var histograms: List[List[Float64]]  # per column: bar heights 0–1 (empty: none drawn)
     var editing: Bool
-    var typed: String  # the character that opened the editor (GRID_TYPED)
+    var typed: String  # what's been typed since a character opened the editor (GRID_TYPED)
+    var typing: Bool  # the editor was opened by typing: the grid keeps the keyboard and the text (the editor echoes it)
     var bar_drag: Bool
     var bar_grab: Float64
     var resize_col: Int
@@ -109,6 +111,7 @@ struct DataGrid(Copyable, Movable):
         self.histograms = List[List[Float64]]()
         self.editing = False
         self.typed = ""
+        self.typing = False
         self.bar_drag = False
         self.bar_grab = 0
         self.resize_col = -1
@@ -277,19 +280,25 @@ struct DataGrid(Copyable, Movable):
         self.cur_col = col
         self.editing = False
         self.typed = ""
+        self.typing = False
         self.redraw()
 
     def cancel_edit(mut self):
         """The editor closed without writing (its Escape, or anything else the app does meanwhile)."""
         self.editing = False
         self.typed = ""
+        self.typing = False
         self.redraw()
 
     def editor(self, value: String, on_submit: Int, on_cancel: Int) -> View:
         """The in-place editor's field (place it with editor_place()): Enter sends on_submit (event.text = the
         value), Escape on_cancel. Opened by typing, it starts from what was typed with the caret after it;
-        opened by F2 or a double click, the value is selected (typing replaces it)."""
-        return TextField(value, placeholder="Cell", on_submit=on_submit, on_cancel=on_cancel).focused(select_all=self.typed == "").tag("cell-editor")
+        opened by F2 or a double click, the value is selected (typing replaces it). While a value is being typed the
+        grid keeps the keyboard (every key reaches it in order, however fast) and the field echoes grid.typed;
+        a click in the field gives it the keyboard instead."""
+        if self.typing:
+            return TextField(self.typed, placeholder="Cell", on_submit=on_submit, on_cancel=on_cancel).echo().tag("cell-editor")
+        return TextField(value, placeholder="Cell", on_submit=on_submit, on_cancel=on_cancel).focused().tag("cell-editor")
 
     def set_order(mut self, var order: List[Int], col: Int, descending: Bool):
         """Show the rows in this order (the engine's sort); col and descending set the header marker."""
@@ -410,6 +419,7 @@ struct DataGrid(Copyable, Movable):
         if event.number == PRESS:
             self.editing = False
             self.typed = ""
+            self.typing = False
             if self.edge_hit(event.x, event.y, src) >= 0:  # a header's edge: resize that column
                 self.resize_col = self.edge_hit(event.x, event.y, src)
                 self.resize_x0 = event.x
@@ -587,6 +597,29 @@ struct DataGrid(Copyable, Movable):
                 self.cancel_edit()
                 return GRID_CANCEL
             return GRID_NONE
+        var chars = 0
+        for _ in name.codepoint_slices():
+            chars += 1
+        var printable = chars == 1 and not ctrl and (mods & ALT) == 0
+        if self.editing and self.typing:  # a value being typed: Enter writes it, Backspace takes a character off
+            if name == "Enter" or name == "Tab":
+                return GRID_COMMIT
+            if name == "Backspace":
+                var kept = String("")
+                var n = 0
+                for ch in self.typed.codepoint_slices():
+                    n += 1
+                var k = 0
+                for ch in self.typed.codepoint_slices():
+                    k += 1
+                    if k < n:
+                        kept += String(ch)
+                self.typed = kept
+                return GRID_TYPED
+            if printable:
+                self.typed += name
+                return GRID_TYPED
+            return GRID_NONE
         var moves = (name == "ArrowDown" or name == "ArrowUp" or name == "ArrowLeft" or name == "ArrowRight" or name == "Tab"
                      or name == "Enter" or name == "PageDown" or name == "PageUp" or name == "Home" or name == "End")
         if self.cur_col < 0:  # nothing selected: a movement key starts at the first cell on screen
@@ -612,27 +645,23 @@ struct DataGrid(Copyable, Movable):
             return self.move_to(self.edge_row(False, src) if ctrl else row, 0, src)
         if name == "End":
             return self.move_to(self.edge_row(True, src) if ctrl else row, src.grid_columns() - 1, src)
-        var chars = 0
-        for _ in name.codepoint_slices():
-            chars += 1
         var editable = src.grid_editable(col)
         if name == "F2":
             if not editable:
                 return GRID_READ_ONLY
             self.keep_in_view(row, col, src)
             self.typed = ""  # (F2: the value selected, typing replaces it)
+            self.typing = False
             self.editing = True
             return GRID_EDIT
         if name == "Delete" or name == "Backspace":
             return GRID_CLEAR if editable else GRID_READ_ONLY
-        if chars == 1 and not ctrl and (mods & ALT) == 0:
+        if printable:
             if not editable:
                 return GRID_READ_ONLY
-            if self.editing and self.typed != "":  # typed faster than the editor appeared: it goes on the end
-                self.typed += name
-                return GRID_TYPED
             self.keep_in_view(row, col, src)
             self.typed = name
+            self.typing = True
             self.editing = True
             return GRID_TYPED
         return GRID_NONE

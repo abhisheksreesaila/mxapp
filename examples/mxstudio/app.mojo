@@ -12,7 +12,7 @@ from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
 from mojoui.charts import money, grouped, fixed
-from mojoui.datagrid import DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED, GRID_TYPED, GRID_CLEAR, GRID_CANCEL
+from mojoui.datagrid import DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED, GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT
 from mojoui.pivot import PivotTable
 from mojoui.chartview import ChartView
 from mojoui.kpi import KpiView
@@ -457,6 +457,24 @@ struct Main(App):
         self.find()
         self.histograms()  # (the headers' shapes follow the edit too)
 
+    def write_cell(mut self, text: String):
+        """The in-place editor's value into its cell (Enter in the field, or Enter on a value typed on the grid),
+        then the cell below; a value the column can't hold keeps the editor open with what was typed."""
+        if self.grid.editing and self.grid.cur_row >= 0 and self.grid.cur_col >= 0:
+            try:
+                var col = self.grid.cur_col
+                var row = self.grid.cur_row
+                var before = self.frame.display(col, row)
+                self.frame.set_text(col, row, text)
+                self.message = self.frame.name(col) + " on row " + grouped(row + 1) + ": " + before + " → " + self.frame.display(col, row)
+                self.grid.committed(self.frame)
+                self.select_cell(self.grid.cur_row, self.grid.cur_col)
+                self.after_edit()
+            except e:
+                self.edit_text = text
+                self.message = String(e) + " (fix it and press Enter)"
+        self.version += 1
+
     def update(mut self, event: Event):
         var m = event.message
         if m != CELL_COMMIT and m != CELL_CANCEL and m != GRID and self.grid.editing:
@@ -477,6 +495,9 @@ struct Main(App):
             elif action == GRID_CANCEL:
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
                 self.message = "Edit cancelled"
+            elif action == GRID_COMMIT:  # Enter on a value typed on the grid
+                var typed = String(self.grid.typed)
+                self.write_cell(typed)
             elif action == GRID_CLEAR:
                 var col = self.grid.cur_col
                 var row = self.grid.cur_row
@@ -495,20 +516,7 @@ struct Main(App):
             elif action != 0:
                 self.version += 1
         elif m == CELL_COMMIT:
-            if self.grid.editing and self.grid.cur_row >= 0 and self.grid.cur_col >= 0:
-                try:
-                    var col = self.grid.cur_col
-                    var row = self.grid.cur_row
-                    var before = self.frame.display(col, row)
-                    self.frame.set_text(col, row, event.text)
-                    self.message = self.frame.name(col) + " on row " + grouped(row + 1) + ": " + before + " → " + self.frame.display(col, row)
-                    self.grid.committed(self.frame)
-                    self.select_cell(self.grid.cur_row, self.grid.cur_col)
-                    self.after_edit()
-                except e:
-                    self.edit_text = event.text
-                    self.message = String(e) + " (fix it and press Enter)"
-            self.version += 1
+            self.write_cell(event.text)
         elif m == CELL_CANCEL:  # Escape in the editor: nothing written
             self.grid.cancel_edit()
             self.select_cell(self.grid.cur_row, self.grid.cur_col)

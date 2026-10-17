@@ -921,9 +921,13 @@ struct GtkHost[A: App](Movable):
                 if self.rt.shown.nodes[k].value == 1:
                     _ = external_call["gtk_widget_grab_focus", c_int](self.widgets[k])
                     external_call["gtk_editable_select_region", NoneType](self.widgets[k], c_int(0), c_int(-1))
-                else:  # the caret after the text (typing goes on from the key that opened it)
+                elif self.rt.shown.nodes[k].value == 2:  # the caret after the text
                     _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[k])
                     external_call["gtk_editable_set_position", NoneType](self.widgets[k], c_int(-1))
+                else:  # .echo(): the canvas typing into it keeps the keyboard
+                    for c in self.canvases:
+                        if c.node == self.key_node:
+                            _ = external_call["gtk_widget_grab_focus", c_int](c.widget)
                 self.focus = -1
         if not editor:
             self.editor_keys = 0
@@ -1851,7 +1855,8 @@ def run_step[A: App](host_addr: Int, step: String):
         var state = 0
         if verb == "typekeys":  # typekeys:K=text: one press per character
             for ch in kv[1].codepoint_slices():
-                presses.append("Enter" if String(ch) == "⏎" else String(ch))  # (⏎: Enter, as in drive.py)
+                var c = String(ch)
+                presses.append("Enter" if c == "⏎" else ("Escape" if c == "⎋" else c))  # (⏎ Enter, ⎋ Escape, as in drive.py)
         else:  # key:K=shift+ctrl+Name
             var name = kv[1]
             while True:
@@ -1877,14 +1882,15 @@ def run_step[A: App](host_addr: Int, step: String):
                 if host[].rt.shown.nodes[k].kind == FIELD and host[].rt.shown.nodes[k].value >= 1 and k < len(host[].widgets) and host[].widgets[k] != 0:
                     editor = k
             var handled = List[c_int](length=1, fill=0)
-            # a person's keys go where the focus is: say so if it isn't where this step sends them
-            var target = host[].widgets[editor] if editor >= 0 else 0
-            if editor < 0:
-                for k in range(len(host[].canvases)):
-                    if host[].canvases[k].node == node:
-                        target = host[].canvases[k].widget
-            if target == 0 or not holds_keyboard(target):
-                print("TEST: " + p + " pressed, but " + ("the editor" if editor >= 0 else "canvas " + kv[0]) + " doesn't have the keyboard")
+            # a person's keys go where the focus is: the editor if it has it, else the canvas (say so if neither)
+            if editor >= 0 and not holds_keyboard(host[].widgets[editor]):
+                editor = -1  # (an editor that echoes the canvas's typing: the canvas has the keyboard)
+            var canvas_w = 0
+            for k in range(len(host[].canvases)):
+                if host[].canvases[k].node == node:
+                    canvas_w = host[].canvases[k].widget
+            if editor < 0 and (canvas_w == 0 or not holds_keyboard(canvas_w)):
+                print("TEST: " + p + " pressed, but neither an editor nor canvas " + kv[0] + " has the keyboard")
             if editor >= 0 and p == "Enter":
                 var activate = String("activate")
                 external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[editor], activate.as_c_string_span())

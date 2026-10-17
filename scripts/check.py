@@ -37,16 +37,22 @@ def shown(out):
     return sorted(l for l in out.splitlines() if re.match(SHOWN, l) and not TIMING.match(l))
 
 
-def both(app, steps, name):
+def both(app, steps, name, slow=False):
+    """GTK, then the web (slow: the web server answers each event 250 ms late, like a far-away server)."""
     exe = BUILD / app / "linux" / app
     r = run([str(exe)], env={"MOJOUI_TEST": steps, "MOJOUI_SHOT": str(BUILD / app / f"{name}-gtk.png")}, timeout=900)
     og = r.stdout + r.stderr
     if r.returncode != 0 or "CRITICAL" in og or "TEST: " in og:
         return None, f"{app} GTK run failed (exit {r.returncode}): {og[-300:]}"
+    import os
     try:
+        if slow:
+            os.environ["MOJOUI_EVENT_DELAY_MS"] = "250"
         rw, ow = drive.web_run(BUILD / app / "web", steps, shot=str(BUILD / app / f"{name}-web.png"), viewport=(1440, 900))
     except Exception as e:
         return None, f"{app} web run crashed: {e!r}"
+    finally:
+        os.environ.pop("MOJOUI_EVENT_DELAY_MS", None)
     if rw.returncode != 0:
         return None, f"{app} web: {ow[-300:]}"
     return og, ow
@@ -101,12 +107,12 @@ def m3():
         onward = both(app, a["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;typekeys:0=Zed Co;key:0=Enter;key:0=ArrowDown;key:0=F2", "keys-onward")
         escaped = both(app, a["tap"] + ";key:0=ArrowDown;typekeys:0=Zed;key:0=Escape", "keys-escape")
         back = both(app, a["tap"] + ";key:0=ArrowDown;typekeys:0=Zed;key:0=Escape;key:0=ArrowDown;key:0=F2", "keys-back")
-        kept = both(app, a["tap"] + ";key:0=ArrowDown;typekeys:0=Zed;key:0=Escape;key:0=F2", "keys-kept")  # the cell after Escape
+        kept = both(app, a["tap"] + ";key:0=ArrowDown;typekeys:0=Zed⎋;key:0=F2", "keys-kept", slow=True)  # the cell after an Escape typed straight on
         plain = both(app, a["tap"] + ";key:0=ArrowDown;key:0=F2", "keys-plain")  # the same cell, never typed in
         cleared = both(app, a["tap"] + ";key:0=ArrowDown;key:0=Delete", "keys-delete")
         # data entry at a typist's pace: value, Enter, the next value, Enter (keys typed while Enter is answered wait)
-        entry = both(app, a["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;typekeys:0=Zed Co⏎AB⏎", "keys-entry")
-        entry_up = both(app, a["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;typekeys:0=Zed Co⏎AB⏎;key:0=ArrowUp;key:0=ArrowUp;key:0=F2", "keys-entry-up")
+        entry = both(app, a["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;typekeys:0=Zed Co⏎AB⏎", "keys-entry", slow=True)
+        entry_up = both(app, a["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;typekeys:0=Zed Co⏎AB⏎;key:0=ArrowUp;key:0=ArrowUp;key:0=F2", "keys-entry-up", slow=True)
         for o in (typed, onward, escaped, back, kept, plain, cleared, entry, entry_up):
             if o[0] is None:
                 return False, o[1]
@@ -119,7 +125,7 @@ def m3():
             if "LABEL: Edit cancelled" not in escaped[k]:
                 problems.append(f"{app} {host}: Escape didn't say the edit was cancelled")
             fields = lambda out: sorted(l for l in out.splitlines() if l.startswith("FIELD: "))
-            if fields(kept[k]) != fields(plain[k]) or any("Zed" in l for l in fields(kept[k])):
+            if fields(kept[k]) != fields(plain[k]) or any("Zed" in l for l in fields(kept[k])) or first(a["editing"], kept[k]) != a["start"]:
                 problems.append(f"{app} {host}: after Escape the cell isn't what it was: {fields(kept[k])} vs {fields(plain[k])}")
             if first(a["editing"], back[k]) != a["start"] + 1:
                 problems.append(f"{app} {host}: after Escape the keyboard isn't back on the grid ({first(a['editing'], back[k])})")
