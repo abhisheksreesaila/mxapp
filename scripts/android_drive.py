@@ -105,11 +105,16 @@ def field_text(n):
 
 
 def find(kind, pred=lambda n: True, nth=0, ns=None):
-    ns = ns if ns is not None else nodes(dump())
-    found = [n for n in ns if n["cls"].endswith("." + kind) and pred(n)]
-    if len(found) <= nth:
-        raise ValueError(f"no {kind} #{nth}")
-    return found[nth]
+    """The nth view of a kind; waits up to 10 s for it (a loaded emulator draws late), as a person would."""
+    deadline = time.time() + 10
+    while True:
+        here = ns if ns is not None else nodes(dump())
+        found = [n for n in here if n["cls"].endswith("." + kind) and pred(n)]
+        if len(found) > nth:
+            return found[nth]
+        if ns is not None or time.time() > deadline:
+            raise ValueError(f"no {kind} #{nth}")
+        time.sleep(0.5)
 
 
 def settle():

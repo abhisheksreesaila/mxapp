@@ -895,10 +895,15 @@ struct Frame(Movable, GridSource):
         var flat = self.flat_program(col - self.stored())
         var ops = len(flat) // 2
         out = List[Int64](capacity=self.rows())
-        var stored = self.stored()
+        var used = List[Int]()  # only the columns the formula reads go into each row vector
+        for k in range(ops):
+            if flat[2 * k] == Int64(OP_COL):
+                var c = Int(flat[2 * k + 1])
+                if c not in used:
+                    used.append(c)
         for row in range(n):
             var r = Row(0)
-            for c in range(stored):
+            for c in used:
                 r[c] = self.base()[].cols[c].values[row]
             out.append(eval_program(flat.unsafe_ptr(), ops, r))
         for i in range(len(self.added)):
