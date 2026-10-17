@@ -23,9 +23,9 @@ from mojoui.frame import Frame, share, MERGE, SET
 from mojoui.frame_gpu import GpuFrame, group_sum
 from mojoui.gpu import gpu_present
 from mojoui.shared import put_shared, get_shared, keep, at, count_load, environment
-from orders import order_columns, CUSTOMER, PRODUCT, REGION, REVENUE, COST, FREIGHT, ORDER, DAY, ZIP, WEIGHT, YEAR_START, RATE_CHANGE, REGIONS, PRODUCTS
+from orders import order_columns, CUSTOMER, PRODUCT, REGION, CARRIER, REVENUE, COST, FREIGHT, ORDER, DAY, ZIP, WEIGHT, YEAR_START, RATE_CHANGE, REGIONS, PRODUCTS
 from ops import (col_program, totals_by, fold, find_duplicate_names, customer_product, histogram, rows_with, text_groups, Finding, Totals, Pivot)
-from report_ops import (kpis, weekly, margin_heatmap, shares, worst_margin_fall, quarter_range, shares_by_region_product, Kpis, Weekly, Grid2, Anomaly, WEEKS)
+from report_ops import (kpis, weekly, margin_heatmap, shares, worst_margin_fall, quarter_range, quarter_days, shares_by_region_product, Kpis, Weekly, Grid2, Anomaly, WEEKS)
 from mojoui.view import TextArea
 
 # messages
@@ -123,6 +123,7 @@ struct Main(App):
     var top: Grid2  # revenue per customer (merged folded)
     var unmerged_top: Int  # the top customer's revenue under its main spelling only (what merging adds)
     var anomaly: Anomaly
+    var anomaly_at: Int  # the frame's edit count when the anomaly was found (it ignores filters: found again only after edits)
     var report_ms: Float64
 
     @staticmethod
@@ -182,11 +183,12 @@ struct Main(App):
         self.now = Kpis(0, 0, 0, 0, 0)
         self.before = Kpis(0, 0, 0, 0, 0)
         self.weeks = Weekly(List[Float64](), List[Float64](), 0)
-        self.heat = Grid2(List[Float64](), 0)
-        self.mix = Grid2(List[Float64](), 0)
-        self.top = Grid2(List[Float64](), 0)
+        self.heat = Grid2(List[Float64](), 0, List[Float64]())
+        self.mix = Grid2(List[Float64](), 0, List[Float64]())
+        self.top = Grid2(List[Float64](), 0, List[Float64]())
         self.unmerged_top = 0
-        self.anomaly = Anomaly(0, False, 0, 0, 0, 0)
+        self.anomaly = Anomaly(0, False, 0, 0, 0, 0, -1, 0, 0)
+        self.anomaly_at = -1
         self.report_ms = 0
         self.ranges()
         self.grid.prepare(self.frame, self.font, self.pal)
@@ -261,9 +263,9 @@ struct Main(App):
 
     # ---------- the Report ----------
 
-    def filters(self, quarter: Int) -> List[Range]:
+    def filters(self, quarter: Int, days: Int = 1000) -> List[Range]:
         var out = List[Range]()
-        out.append(quarter_range(quarter))
+        out.append(quarter_range(quarter, days))
         if self.region >= 0:
             out.append(Range(REGION, Int64(self.region), Int64(self.region)))
         if self.product >= 0:
@@ -282,7 +284,8 @@ struct Main(App):
         """Every tile, on the GPU, over the ledger as the Sheet left it (edits and merges included)."""
         var f = self.filters(self.quarter)
         self.now = kpis(self.frame, self.gf()[], f)
-        self.before = kpis(self.frame, self.gf()[], self.filters(max(self.quarter - 1, 0))) if self.quarter > 0 else Kpis(0, 0, 0, 0, 0)
+        # against the previous quarter over the same number of days (Q4 is to date: its first 16 days vs Q3's)
+        self.before = kpis(self.frame, self.gf()[], self.filters(max(self.quarter - 1, 0), quarter_days(self.quarter))) if self.quarter > 0 else Kpis(0, 0, 0, 0, 0)
         self.weeks = weekly(self.frame, self.gf()[], self.filters_no_quarter())
         var in_quarter = List[Range]()
         in_quarter.append(quarter_range(self.quarter))
@@ -292,37 +295,45 @@ struct Main(App):
         if self.region >= 0:
             mix_filters.append(Range(REGION, Int64(self.region), Int64(self.region)))
         self.mix = shares(self.frame, self.gf()[], PRODUCT, mix_filters)
-        self.top = shares(self.frame, self.gf()[], CUSTOMER, f)
-        # what the top customer has under its own spelling alone, in the same quarter and filters (what merging adds)
-        var raw = group_sum(self.frame, self.gf()[], col_program(CUSTOMER), col_program(REVENUE), f, text_groups(self.frame, CUSTOMER))
-        self.unmerged_top = raw.sums[0] if len(raw.sums) > 0 else 0
-        self.anomaly = worst_margin_fall(self.frame, self.gf()[])
+        self.top = shares(self.frame, self.gf()[], CUSTOMER, f)  # (its .raw: before merges, for what a merge added)
+        if self.anomaly_at != self.frame.edits:  # the finder looks at every row, unfiltered: again only after edits
+            self.anomaly = worst_margin_fall(self.frame, self.gf()[])
+            self.anomaly_at = self.frame.edits
         self.report_ms = (self.now.milliseconds + self.before.milliseconds + self.weeks.milliseconds + self.heat.milliseconds
                           + self.mix.milliseconds + self.top.milliseconds + self.anomaly.milliseconds)
         self.version += 1
+
+    def vs(self) -> String:
+        var q = materialize[QUARTERS]()
+        var days = quarter_days(self.quarter)
+        return "vs " + q[self.quarter - 1] + (" (same " + String(days) + " days)" if days < 89 else "")
 
     def change(self, now: Float64, was: Float64) -> String:
         if was == 0:
             return "first quarter of data"
         var pct = (now - was) / was * 100.0
-        return ("+" if pct >= 0 else "-") + fixed(abs(pct), 1) + "% vs " + materialize[QUARTERS]()[self.quarter - 1]
+        return ("+" if pct >= 0 else "-") + fixed(abs(pct), 1) + "% " + self.vs()
 
     def kpi(self, k: Int) -> KpiView:
         var spark = List[Float64]()
         var start = (max(self.quarter, 0) * 13)
         for w in range(start, min(start + 13, len(self.weeks.revenue))):
             spark.append(self.weeks.revenue[w])
-        var q = materialize[QUARTERS]()
+        var first = self.quarter == 0
         if k == 0:
-            return KpiView("Revenue", money(self.now.revenue), self.change(Float64(self.now.revenue), Float64(self.before.revenue)), spark^, True)
+            return KpiView("Revenue", money(self.now.revenue), self.change(Float64(self.now.revenue), Float64(self.before.revenue)), spark^, True,
+                           0 if first else (TONE_GOOD if self.now.revenue >= self.before.revenue else TONE_WARN))
         if k == 1:
-            return KpiView("Orders", grouped(self.now.orders), self.change(Float64(self.now.orders), Float64(self.before.orders)), List[Float64](), False)
+            return KpiView("Orders", grouped(self.now.orders), self.change(Float64(self.now.orders), Float64(self.before.orders)), List[Float64](), False,
+                           0 if first else (TONE_GOOD if self.now.orders >= self.before.orders else TONE_WARN))
         if k == 2:
             var pts = (self.now.margin_share() - self.before.margin_share()) * 100.0
-            var note = (("+" if pts >= 0 else "-") + fixed(abs(pts), 1) + " pts vs " + q[self.quarter - 1]) if self.quarter > 0 else "first quarter of data"
-            return KpiView("Gross margin", fixed(self.now.margin_share() * 100.0, 1) + "%", note, List[Float64](), False)
+            var note = (("+" if pts >= 0 else "-") + fixed(abs(pts), 1) + " pts " + self.vs()) if not first else "first quarter of data"
+            return KpiView("Gross margin", fixed(self.now.margin_share() * 100.0, 1) + "%", note, List[Float64](), False,
+                           0 if first else (TONE_GOOD if pts >= 0 else TONE_WARN))
         var merged = len(self.frame.aliases) > 0
-        return KpiView("Active customers", grouped(self.now.customers), "after merging duplicate names" if merged else "3 spellings of Acme still split", List[Float64](), False)
+        return KpiView("Active customers", grouped(self.now.customers), "after merging duplicate names" if merged else "3 spellings of Acme still split",
+                       List[Float64](), False, 0)
 
     def week_chart(self) -> ChartView:
         var labels = List[String]()
@@ -563,6 +574,14 @@ struct Main(App):
                     self.product = -1
                     self.message = "Filters cleared"
                 self.compute_report()
+        elif m == TAP_LINE and event.number == TAP:
+            var cv = self.week_chart()
+            cv.size = self.sizes[6]
+            if cv.tap(event.x, event.y, self.font, self.pal):
+                var w = cv.selected
+                if w >= 0 and w < len(self.weeks.revenue):
+                    self.message = "Week " + String(w + 1) + ": " + money(Int(self.weeks.revenue[w])) + " revenue, " + fixed(self.weeks.margin[w] * 100.0, 1) + "% gross margin"
+                self.version += 1
         elif m == REPORT_PAGE:
             if event.number != 0:
                 self.message = materialize[REPORT_PAGES]()[event.number] + " page: next (Revenue is the one built)"
@@ -801,12 +820,20 @@ struct Main(App):
             Canvas(6, self.version, on_gesture=TAP_LINE).fill().height(240),
             spacing=8).at(PAGE_X, PAGE_Y + 216).width(816).height(310).tag("weekly"))
         var merged = len(self.frame.aliases) > 0
-        var top_name = self.frame.text_of(CUSTOMER, 0)
-        var gain = Int(self.top.values[0]) - self.unmerged_top if len(self.top.values) > 0 else 0
+        var top_code = 0  # the top customer (merges folded) and how many spellings were merged into it
+        for c in range(len(self.top.values)):
+            if self.top.values[c] > self.top.values[top_code]:
+                top_code = c
+        var top_name = self.frame.text_of(CUSTOMER, Int64(top_code))
+        var joined = 1
+        for item in self.frame.aliases.items():
+            if (item.key >> 32) == CUSTOMER and Int(item.value) == top_code:
+                joined += 1
+        var gain = Int(self.top.values[top_code] - self.top.raw[top_code]) if top_code < len(self.top.raw) else 0
         items.append(Card(
             HStack(Text("Top customers", style=HEADLINE), Spacer(), Button("Edit data", on_tap=MODE, style=SUBTLE), spacing=8).fill().height(32),
             Canvas(7, self.version, on_gesture=TAP_CUSTOMERS).fill().height(190),
-            Text(("+" + money(gain) + " for " + top_name + " once 3 spellings were merged") if merged else "Acme is split across 3 spellings: merge them in the Sheet", style=CAPTION).tone(TONE_GOOD if merged else TONE_WARN).tag("merge-note"),
+            Text(("+" + money(gain) + " for " + top_name + " once " + String(joined) + " spellings were merged") if merged and joined > 1 else "Acme is split across 3 spellings: merge them in the Sheet", style=CAPTION).tone(TONE_GOOD if merged and joined > 1 else TONE_WARN).tag("merge-note"),
             spacing=8).at(PAGE_X + 832, PAGE_Y + 216).width(400).height(310).tag("customers"))
         items.append(Card(
             HStack(Text("Product mix", style=HEADLINE), Text("tap a bar to filter", style=CAPTION), spacing=12).height(32),
@@ -818,8 +845,10 @@ struct Main(App):
             spacing=8).at(PAGE_X, PAGE_Y + 542).width(816).height(300).tag("heatmap"))
         ref a = self.anomaly
         var what = ("Heavy" if a.heavy else "Light") + " parcels in the " + self.frame.text_of(REGION, Int64(a.region)) + " lost " + fixed(a.points(), 1) + \
-                   " margin points after Jul 14 (" + fixed(a.before * 100.0, 1) + "% → " + fixed(a.after * 100.0, 1) + "%, " + grouped(a.rows) + \
-                   " orders). One carrier's new rate table charges a flat $14.20 above 4 kg."
+                   " margin points after Jul 14 (" + fixed(a.before * 100.0, 1) + "% → " + fixed(a.after * 100.0, 1) + "%, " + grouped(a.rows) + " orders)."
+        if a.carrier >= 0:  # the cause, as the engine found it in those rows
+            what += " " + self.frame.text_of(CARRIER, Int64(a.carrier)) + "'s freight rose from " + money_exact(Int(a.freight_before)) + \
+                    " to " + money_exact(Int(a.freight_after)) + " an order on them."
         items.append(FindingCard("Worth a look", what, ["Open the rows"], [OPEN_ROWS], note="the rows open in the Sheet, filtered")
                      .at(PAGE_X, PAGE_Y + 858).width(816).height(170).tag("worth"))
         return items^

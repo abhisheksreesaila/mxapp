@@ -3,7 +3,7 @@
 
 from mojoui.frame import Frame, Range, OP_COL, OP_CONST, OP_SUB, OP_ADD, OP_MUL, OP_FLOORDIV, OP_MIN, OP_MAX
 from mojoui.frame_gpu import GpuFrame, group_sum, pivot_program
-from orders import (DAY, CUSTOMER, REGION, PRODUCT, REVENUE, COST, FREIGHT, WEIGHT, YEAR_START, RATE_CHANGE, DAYS)
+from orders import (DAY, CUSTOMER, REGION, PRODUCT, REVENUE, COST, FREIGHT, WEIGHT, CARRIER, YEAR_START, RATE_CHANGE, DAYS)
 from ops import col_program, text_groups, fold
 
 comptime WEEKS = 41  # Jan 1 … Oct 14: whole weeks only (a part week would look like a fall)
@@ -34,10 +34,17 @@ def week_program() -> List[Int64]:
     return p^
 
 
-def quarter_range(q: Int) -> Range:
-    """Days of quarter q (0–3) of 2025."""
+def quarter_range(q: Int, days: Int = 1000) -> Range:
+    """Days of quarter q (0–3) of 2025: the whole quarter, or only its first `days` days."""
     var start = materialize[QUARTER_START]()
-    return Range(DAY, Int64(YEAR_START + start[q]), Int64(YEAR_START + start[q + 1] - 1))
+    var last = min(start[q + 1] - 1, start[q] + days - 1)
+    return Range(DAY, Int64(YEAR_START + start[q]), Int64(YEAR_START + last))
+
+
+def quarter_days(q: Int) -> Int:
+    """How many days of quarter q the ledger has (Q4 is to date: Oct 1 … Oct 16)."""
+    var start = materialize[QUARTER_START]()
+    return min(start[q + 1], DAYS) - start[q]
 
 
 @fieldwise_init
@@ -90,10 +97,11 @@ def weekly(frame: Frame, gf: GpuFrame, ranges: List[Range]) -> Weekly:
 
 @fieldwise_init
 struct Grid2(Copyable, Movable):
-    """A rows × columns result (shares or sums) with the time it took."""
+    """A rows × columns result (shares or sums) with the time it took; `raw`: before merges were folded."""
 
     var values: List[Float64]
     var milliseconds: Float64
+    var raw: List[Float64]
 
 
 def margin_heatmap(frame: Frame, gf: GpuFrame, ranges: List[Range]) -> Grid2:
@@ -106,7 +114,7 @@ def margin_heatmap(frame: Frame, gf: GpuFrame, ranges: List[Range]) -> Grid2:
     var out = List[Float64]()
     for i in range(nr * np):
         out.append(Float64(mar.sums[i]) / Float64(rev.sums[i]) if rev.sums[i] > 0 else 0.0)
-    return Grid2(out^, rev.milliseconds + mar.milliseconds)
+    return Grid2(out^, rev.milliseconds + mar.milliseconds, List[Float64]())
 
 
 def shares(frame: Frame, gf: GpuFrame, col: Int, ranges: List[Range]) -> Grid2:
@@ -115,9 +123,12 @@ def shares(frame: Frame, gf: GpuFrame, col: Int, ranges: List[Range]) -> Grid2:
     var r = group_sum(frame, gf, col_program(col), col_program(REVENUE), ranges, g)
     var folded = fold(frame, col, r.sums)
     var out = List[Float64]()
+    var raw = List[Float64]()
     for v in folded:
         out.append(Float64(v))
-    return Grid2(out^, r.milliseconds)
+    for v in r.sums:
+        raw.append(Float64(v))
+    return Grid2(out^, r.milliseconds, raw^)
 
 
 @fieldwise_init
@@ -130,6 +141,9 @@ struct Anomaly(Copyable, Movable):
     var after: Float64
     var rows: Int  # rows after the change in that group
     var milliseconds: Float64
+    var carrier: Int  # the carrier whose freight an order rose most in that group (-1: none)
+    var freight_before: Float64  # that carrier's freight an order, cents
+    var freight_after: Float64
 
     def points(self) -> Float64:
         return (self.before - self.after) * 100.0
@@ -141,6 +155,8 @@ def worst_margin_fall(frame: Frame, gf: GpuFrame) -> Anomaly:
     op(key, OP_CONST, 4)
     op(key, OP_MUL)
     var heavy = col_program(WEIGHT)
+    op(heavy, OP_CONST, 0)
+    op(heavy, OP_MAX)  # (an edited negative weight stays light, in its own region's slot)
     op(heavy, OP_CONST, 4001)
     op(heavy, OP_FLOORDIV)
     op(heavy, OP_CONST, 1)
@@ -155,6 +171,8 @@ def worst_margin_fall(frame: Frame, gf: GpuFrame) -> Anomaly:
     op(after, OP_SUB)
     op(after, OP_CONST, 1000)
     op(after, OP_ADD)  # (positive: 1000 + days since)
+    op(after, OP_CONST, 0)
+    op(after, OP_MAX)  # (an edited day far in the past stays "before")
     op(after, OP_CONST, 1000)
     op(after, OP_FLOORDIV)
     op(after, OP_CONST, 1)
@@ -165,7 +183,7 @@ def worst_margin_fall(frame: Frame, gf: GpuFrame) -> Anomaly:
     var groups = text_groups(frame, REGION) * 4
     var rev = group_sum(frame, gf, key, col_program(REVENUE), List[Range](), groups)
     var mar = group_sum(frame, gf, key, margin_program(), List[Range](), groups)
-    var best = Anomaly(0, False, 0, 0, 0, rev.milliseconds + mar.milliseconds)
+    var best = Anomaly(0, False, 0, 0, 0, rev.milliseconds + mar.milliseconds, -1, 0, 0)
     var worst = -1e9
     for region in range(text_groups(frame, REGION)):
         for h in range(2):
@@ -176,7 +194,31 @@ def worst_margin_fall(frame: Frame, gf: GpuFrame) -> Anomaly:
             var after_share = Float64(mar.sums[b + 1]) / Float64(rev.sums[b + 1])
             if before - after_share > worst:
                 worst = before - after_share
-                best = Anomaly(region, h == 1, before, after_share, rev.counts[b + 1], rev.milliseconds + mar.milliseconds)
+                best = Anomaly(region, h == 1, before, after_share, rev.counts[b + 1], rev.milliseconds + mar.milliseconds, -1, 0, 0)
+    # why: in that group, freight an order by carrier, before and after (the engine finds it; nothing is assumed)
+    var filters = List[Range]()
+    filters.append(Range(REGION, Int64(best.region), Int64(best.region)))
+    filters.append(Range(WEIGHT, Int64(4001), Int64(1 << 30)) if best.heavy else Range(WEIGHT, Int64(-(1 << 30)), Int64(4000)))  # (GPU filters compare 32-bit values)
+    var ckey = col_program(CARRIER)
+    op(ckey, OP_CONST, 2)
+    op(ckey, OP_MUL)
+    for v in after:
+        ckey.append(v)
+    op(ckey, OP_ADD)
+    var nc = text_groups(frame, CARRIER)
+    var fr = group_sum(frame, gf, ckey, col_program(FREIGHT), filters, nc * 2)
+    var jump = 0.0
+    for c in range(nc):
+        if fr.counts[c * 2] == 0 or fr.counts[c * 2 + 1] == 0:
+            continue
+        var was = Float64(fr.sums[c * 2]) / Float64(fr.counts[c * 2])
+        var now = Float64(fr.sums[c * 2 + 1]) / Float64(fr.counts[c * 2 + 1])
+        if now - was > jump:
+            jump = now - was
+            best.carrier = c
+            best.freight_before = was
+            best.freight_after = now
+    best.milliseconds += fr.milliseconds
     return best^
 
 

@@ -160,3 +160,11 @@ Newest last. What was tried, what happened, dead ends.
 - Mistake: the first full check rebuilt from a working tree holding half-written Report code (M4/M5 failed to build). Lesson recorded: no source edits during a full check.
 - The Report compiled almost first time; first screenshot: a missing "−" glyph (ASCII "-" now), a part week at the end that looked like a crash (whole weeks only), and no regional story (D-119).
 
+## Goal 12: MX Studio's Report (2026-10-16 night, owner away)
+- Contract written from docs/plans/GOAL12.md after goal 11 pushed (D-120: the Report's code came first, while goal 11's check ran).
+- KpiView became native labels + a sparkline canvas: the KPI numbers are readable, selectable and visible to the checks on both hosts (a canvas-drawn tile wasn't).
+- The anomaly finder is one GPU group-by keyed region × heavy × before/after (21 bytecode pairs, stack depth 3 of 4) for revenue and margin; test_report checks it against a CPU pass: West heavy parcels -7.66 points over 96,927 orders; Q3 KPIs equal to the cent.
+- Two bugs the checks caught: chart taps toggled twice (canvases send PRESS before TAP and the Report's handlers didn't check the kind: they do now); "+$-12.8M" from comparing a Q3 merged total with an all-time single spelling (now the same filters).
+- Engine on the way: formula columns' values read only the columns the formula uses (sort by margin 2.1 → 1.1 s).
+- Goal 11's M6 failures (a loaded machine's 3.8 s sort; Android's first tap before the app drew) were checked one by one and fixed (faster sort; the Android driver waits for a view).
+

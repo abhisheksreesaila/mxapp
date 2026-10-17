@@ -68,16 +68,23 @@ def main() raises:
         labels.append("W" + String(i) if i % 5 == 0 else "")
         vals.append(Float64(1000 + i * 50))
         shares.append(0.40 - (0.03 if i >= 10 else 0.0))
-    var line = ChartView.line("Revenue and margin", labels^, vals^, shares^, 10, "rate table v7")
+    var line = ChartView.line("Revenue and margin", labels.copy(), vals.copy(), shares.copy(), 10, "rate table v7")
     line.draw(s, font, pal)
-    var warn_px = 0  # pixels close to the warning colour (lines and text are anti-aliased)
+    var with_marker = px.copy()
+    var plain = ChartView.line("Revenue and margin", labels^, vals^, shares^, -1, "")
+    plain.draw(s, font, pal)
+    # the marker is the difference: a dashed column in the warning colour (and its label) where the event is
+    var changed = 0
+    var near_warn = 0
     for i in range(w * h):
-        var d = 0
-        for shift in [0, 8, 16]:
-            d += abs(Int((px[i] >> UInt32(shift)) & 255) - Int((pal.warn >> UInt32(shift)) & 255))
-        if d < 90:
-            warn_px += 1
-    assert_true(warn_px > 20, "the marker is drawn: " + String(warn_px))
+        if with_marker[i] != px[i]:
+            changed += 1
+            var d = 0
+            for shift in [0, 8, 16]:
+                d += abs(Int((with_marker[i] >> UInt32(shift)) & 255) - Int((pal.warn >> UInt32(shift)) & 255))
+            if d < 60:
+                near_warn += 1
+    assert_true(changed > 50 and near_warn > 30, "the marker is drawn: " + String(changed) + " changed, " + String(near_warn) + " in the warning colour")
     # a heatmap: a tap picks the cell under it; the second tap lets go
     var heat = ChartView.heatmap("Margin", ["West", "East"], ["Tent", "Pack", "Stove"], [0.31, 0.40, 0.39, 0.41, 0.43, 0.40])
     heat.draw(s, font, pal)
@@ -86,7 +93,7 @@ def main() raises:
     assert_true(heat.tap(Float64(w) - 10, Float64(h) - 10, font, pal))
     assert_equal(heat.selected, -1)
     # a KPI: native labels (its value in the accent when focal), and a sparkline drawn in the accent
-    var kv = KpiView("Revenue", "$1.11B", "+4.2% vs Q2", [1.0, 3.0, 2.0, 5.0], True)
+    var kv = KpiView("Revenue", "$1.11B", "+4.2% vs Q2", [1.0, 3.0, 2.0, 5.0], True, TONE_GOOD)
     var kview = kv.view(7, 1)
     var value_tone = -1
     for i in range(len(kview.nodes)):

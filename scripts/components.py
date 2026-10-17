@@ -69,7 +69,7 @@ COMPOSITES = [
     ("DataGrid", "mojoui/datagrid.mojo", ["Canvas", "Canvas: press, release, double", "In-place editor", "Board: drag, resize, snap"], "DataGrid("),
     ("PivotTable", "mojoui/pivot.mojo", ["Grid", "Scroll", "Text tones"], "PivotTable("),
     ("ChartView", "mojoui/chartview.mojo", ["Canvas", "Canvas: pan, zoom, tap"], "ChartView"),
-    ("KpiView", "mojoui/kpi.mojo", ["Canvas"], "KpiView("),
+    ("KpiView", "mojoui/kpi.mojo", ["Card tones", "Text tones", "Canvas"], "KpiView("),
     ("FindingCard", "mojoui/finding.mojo", ["Card tones", "Text tones", "Quiet buttons"], "FindingCard("),
 ]
 

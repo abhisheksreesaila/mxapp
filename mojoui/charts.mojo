@@ -539,7 +539,7 @@ struct Heatmap(Movable):
                 rect(s, left + cw * Float64(c) + 2 * k, y + 2 * k, cw - 4 * k, ch - 4 * k, fill, 4 * k)
                 if i == self.selected:
                     rect(s, left + cw * Float64(c) + 1 * k, y + 1 * k, cw - 2 * k, 2 * k, self.pal.ink)
-                var text = (String(Int(v * 1000.0 + 0.5) // 10) + "." + String(Int(v * 1000.0 + 0.5) % 10) + "%") if self.percent else compact(v)
+                var text = (fixed(v * 100.0, 1) + "%") if self.percent else compact(v)  # (negative margins too)
                 font.draw(s, text, left + cw * (Float64(c) + 0.5), y + ch / 2 + 4.5 * k, 12.5 * k, self.pal.ink, self.pal.medium, CENTRE)
 
     def hit(self, width_pt: Float64, height_pt: Float64, font: Font, x_pt: Float64, y_pt: Float64) -> Int:

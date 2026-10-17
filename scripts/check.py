@@ -82,6 +82,12 @@ def built_test(src, out_name, marker, includes=(".",)):
     return marker in t.stdout, (t.stdout + t.stderr)[-400:]
 
 
+def kpi(out, name):
+    """A KPI's value: the label after its name."""
+    got = labels(out)
+    return got[got.index(name) + 1] if name in got and got.index(name) + 1 < len(got) else None
+
+
 def kpi_values(out):
     return [l for l in labels(out) if re.match(r"^\$[\d.]+[KMB]?$|^[\d,]+$|^[\d.]+%$", l)]
 
@@ -128,15 +134,17 @@ def m3():
         missing = [t for t in TILES if t not in labels(o)]
         if missing:
             problems.append(f"{host}: no {missing}")
-        if label(o, "Jul 14") is None and "Jul 14 · rate table v7" not in o:
-            pass  # (the marker is drawn on the canvas; the finding names the date)
         if not re.search(r"^LABEL: (Heavy|Light) parcels in the \w+ lost [\d.]+ margin points after Jul 14", o, re.M):
             problems.append(f"{host}: 'Worth a look' doesn't name the fall")
+        if not re.search(r"Carrier A's freight rose from \$[\d.,]+ to \$14\.20 an order", o):
+            problems.append(f"{host}: the finding doesn't give the cause the engine found")
+        if kpi(o, "Active customers") != "20":
+            problems.append(f"{host}: active customers before a merge: {kpi(o, 'Active customers')}")
     if shown(rep[0]) != shown(rep[1]) or shown(west[0]) != shown(west[1]):
         problems.append(f"GTK and web differ: {sorted(set(shown(rep[0])) ^ set(shown(rep[1])))[:4]}")
     if kpi_values(rep[0]) == kpi_values(west[0]):
         problems.append("picking the West didn't change the KPIs")
-    return not problems, "; ".join(problems) or "the Report on both hosts: filters, four KPIs, weekly revenue and margin with the Jul 14 marker, top customers, product mix, heatmap, 'Worth a look'; the West filter changes the KPIs"
+    return not problems, "; ".join(problems) or "the Report on both hosts: filters, four KPIs, weekly revenue and margin (the marker proven in test_components), top customers, product mix, heatmap, 'Worth a look' with the cause it found; the West filter changes the KPIs"
 
 
 def m4():
@@ -148,12 +156,14 @@ def m4():
         if o[0] is None:
             return False, o[1]
     for host, o in (("GTK", merged[0]), ("web", merged[1])):
+        if kpi(o, "Active customers") != "18":
+            problems.append(f"{host}: active customers after the merge: {kpi(o, 'Active customers')} (want 18)")
         if "after merging duplicate names" not in labels(o):
             problems.append(f"{host}: the Report didn't see the Sheet's merge")
         if not any(re.match(r"^\+\$[\d.]+[KMB]? for Acme Corp once 3 spellings were merged", l) for l in labels(o)):
             problems.append(f"{host}: top customers doesn't say what the merge added")
     rep = both(REPORT, "report-count")
-    m = re.search(r"([\d,]+) orders\)\. One carrier", rep[0] or "")
+    m = re.search(r"([\d,]+) orders\)\.", rep[0] or "")
     for host, o in (("GTK", opened[0]), ("web", opened[1])):
         if not re.search(r"^LABEL: Transactions$", o, re.M):
             problems.append(f"{host}: Open the rows didn't go to the Sheet")
@@ -162,6 +172,8 @@ def m4():
     for host, o in (("GTK", mix[0]), ("web", mix[1])):
         if label(o, "Filtered to Trail Pack") is None:
             problems.append(f"{host}: tapping a product bar didn't filter")
+        if kpi(o, "Revenue") == kpi(rep[0], "Revenue"):
+            problems.append(f"{host}: the product filter didn't change the KPIs ({kpi(o, 'Revenue')})")
     for name, o in (("merged", merged), ("opened", opened), ("mix", mix)):
         if shown(o[0]) != shown(o[1]):
             problems.append(f"{name}: GTK and web differ: {sorted(set(shown(o[0])) ^ set(shown(o[1])))[:3]}")

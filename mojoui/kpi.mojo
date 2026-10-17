@@ -1,7 +1,7 @@
 # mojoui.kpi: a headline number: label, value, the change against the last period, and a sparkline. Native
 # labels (readable, selectable, the same on every host) in a card; the sparkline on a small Canvas.
 #
-#   var k = KpiView("Revenue", "$1.11B", "+4.2% vs Q2", spark, accent=True)
+#   var k = KpiView("Revenue", "$1.11B", "+4.2% vs Q2", spark, True, TONE_GOOD)
 #   k.view(canvas_id, version)          # in view()
 #   k.draw(surface, palette)            # in draw(), for that canvas: the sparkline
 
@@ -15,13 +15,13 @@ from mojoui.draw import line, area, with_alpha
 struct KpiView(Copyable, Movable):
     var label: String
     var value: String
-    var note: String  # e.g. "+4.2% vs Q2" ("+" reads good, "-" reads as a warning)
+    var note: String  # e.g. "+4.2% vs Q2"
     var spark: List[Float64]
     var accent: Bool  # the focal number (its value in the accent colour)
+    var tone: Int  # the note's tone: TONE_GOOD, TONE_WARN or 0 (the app says whether a change is good: a rising cost isn't)
 
     def view(self, canvas: Int, version: Int) -> View:
-        var tone = TONE_GOOD if self.note.startswith("+") else (TONE_WARN if self.note.startswith("-") else 0)
-        var bottom = HStack(Text(self.note, style=CAPTION).tone(tone).tag("kpi-note"),
+        var bottom = HStack(Text(self.note, style=CAPTION).tone(self.tone).tag("kpi-note"),
                             Canvas(canvas, version, on_gesture=NO_MSG).width(110).height(34), spacing=8).fill()
         return Card(
             Text(self.label, style=CAPTION).tag("kpi-label"),

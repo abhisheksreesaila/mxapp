@@ -69,7 +69,7 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | `DataGrid` | `mojoui/datagrid.mojo` | Canvas, Canvas: press, release, double, In-place editor, Board: drag, resize, snap | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
 | `PivotTable` | `mojoui/pivot.mojo` | Grid, Scroll, Text tones | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
 | `ChartView` | `mojoui/chartview.mojo` | Canvas, Canvas: pan, zoom, tap | ✅ | ✅ | 🔨 | 🔨 | 🔨 | mxstudio, workbook |
-| `KpiView` | `mojoui/kpi.mojo` | Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | mxstudio |
+| `KpiView` | `mojoui/kpi.mojo` | Card tones, Text tones, Canvas | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio |
 | `FindingCard` | `mojoui/finding.mojo` | Card tones, Text tones, Quiet buttons | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio |
 
 ## Totals
@@ -78,9 +78,9 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 |---|---|---|---|
 | Linux (GTK) | 49 | 0 | 0 |
 | Web | 49 | 0 | 0 |
-| Android | 19 | 12 | 18 |
-| Mac (AppKit) | 0 | 31 | 18 |
-| iPhone (UIKit) | 0 | 31 | 18 |
+| Android | 19 | 11 | 19 |
+| Mac (AppKit) | 0 | 30 | 19 |
+| iPhone (UIKit) | 0 | 30 | 19 |
 
 ## Inside one app, not components yet (the debt)
 
