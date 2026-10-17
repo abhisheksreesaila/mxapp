@@ -1,4 +1,4 @@
-"""Milestone checker for GOAL.md (goal 13: keys, so the grid feels like a spreadsheet; goal 12's checks run as M4,
+"""Milestone checker for goal 13 (archived: docs/goals/13-keys.md: keys, so the grid feels like a spreadsheet; goal 12's checks run as M4,
 earlier goals' inside them). Rebuilds from scratch, prints PASS/FAIL per milestone. GTK runs headless; the web runs
 use real key presses in Chromium (so focus is proven there, not just the events).
 
@@ -10,7 +10,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pixi.toml").exists())  # (archived in docs/goals/)
 sys.path.insert(0, str(ROOT / "scripts"))
 
 _spec = importlib.util.spec_from_file_location("goal12", ROOT / "docs/goals/12-check.py")

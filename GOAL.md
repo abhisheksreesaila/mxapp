@@ -1,31 +1,38 @@
-# GOAL 13: keys, so the grid feels like a spreadsheet (Linux + web)
+# GOAL 14: omxplorer from scratch: open a CSV, a Numbers-style sheet with formats (Linux + web)
 
-**End goal (owner's words, 2026-10-16):** "double click on a cell and edit… like Excel"; "ask yourself what component do I need, then build the component… then go back and build the app"; "go for it and make me proud". Two review rounds ended at the same gap: the framework had no keyboard events, so Escape couldn't cancel an edit, arrows couldn't move the selection and typing couldn't start an edit.
+**End goal (owner's words, 2026-10-16):** "I should be able to install this Linux app, load some data from CSV… get the thing up and running, add a report… use it from scratch as opposed to having widgets on a screen"; "follow [the Stitch designs]… I like the classic design, not the island"; "this product will be called [omxplorer]"; "focus on the web and the Linux for now… load one million… once you get the features right then try it on 10, 50, 100 million… dazzle me."
+
+Design: the Stitch classic screens in `docs/design/mxstudio-app/` (01 start, 02 import, 03 sheet classic; 05 chart and 06 report are goal 15). Language: Omarchy (JetBrains Mono, flat, Tokyo Night). New app: `examples/omxplorer` (the earlier `examples/mxstudio` stays as a showcase: thirteen goals of checks name it).
 
 ## Components this needs (from `docs/components.md`, before the build)
 | Component | Before | Plan |
 |---|---|---|
-| Key events on a Canvas (`KEY`: the key's name or the character typed, plus modifiers) | ❌ every host | GTK: a key controller on the canvas; web: keydown on a focusable canvas |
-| Canvas focus (it receives keys after a press) | ❌ | GTK: focusable, grabbed on press; web: tabindex + focus on pointerdown; focus comes back when an in-place editor closes |
-| DataGrid keyboard: arrows, Tab, Enter, PageUp/Down, Home/End (Ctrl: first/last row), F2, Escape, typing, Delete | ❌ | `mojoui/datagrid.mojo`, tested without a host |
-| TextField Escape (`on_cancel`) and an editor that echoes the grid's typing (`.echo()`; was "caret after the text", D-134) | ❌ | GTK key controller on the entry; web keydown on the input |
+| Toolbar button, icon over label (Numbers) | ❌ (`Button(icon=)` puts the icon beside the text) | `Button(style=TOOL)` on GTK and web |
+| File picker | ❌ every host | `FilePicker(title, on_pick)`: GTK's file dialog; web upload; a test step `pick:` |
+| Inspector (tabs + titled sections of controls) | ❌ (each app wires its own) | `mojoui/inspector.mojo`: `Inspector(tabs, sections)` built from Segmented/Dropdown/Toggle/Text |
+| Stepper (− value +) | ❌ | `Stepper(value, on_change)` composite |
+| Formula bar, sheet tabs, status bar | app-local in the Workbook / MX Studio | `mojoui/sheetchrome.mojo`, used by omxplorer |
+| Column number formats (currency, percent, decimals, thousands, negatives, compact, dates) | ❌ | `ColumnFormat` in `mojoui/frame.mojo`, drawn by DataGrid, followed by pivots, charts and the status bar |
+| CSV reader | ❌ (MX frame's job) | `mojoui/csvio.mojo`: SHIM through pyarrow until MX frame's readers land; types inferred; logged in `docs/plans/needs-mxframe.md` |
 
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M1 | Keys reach the app | `KEY`, `Runtime.key`, `TextField(on_cancel=)` in mojoui; on both hosts a tap then arrow keys move the grid's selection and F2 opens the editor on the cell they reached (identical on GTK and web; the web run uses real key presses); the matrix lists keys, Escape and the echo editor ✅ on Linux and web (D-134) |
-| M2 | DataGrid's keyboard | `tests/test_grid_keys.mojo` (every key above, deleted rows skipped, scrolling keeps the cell on screen, computed columns read-only) and `tests/test_datagrid.mojo` pass |
-| M3 | Spreadsheet editing in both apps | MX Studio's Sheet and the Workbook, on GTK and web: typing on a cell opens the editor with that text and Enter writes it (then the selection is on the cell below), Escape cancels without writing, Delete clears a text cell; after Enter or Escape the keyboard is back on the grid (the next arrow and F2 edit the right cell); identical on both hosts |
-| M4 | Nothing regressed | goal 12's checks (and goals 3–11's inside them) still pass; the matrix is current |
+| M1 | The components | TOOL buttons, FilePicker, Inspector, Stepper, sheet chrome in mojoui with tests; the matrix lists them ✅ on Linux and web |
+| M2 | Start → import a CSV | omxplorer opens on the Start screen (Stitch 01); picking `orders_1m.csv` (1,000,000 rows, 12 columns) shows the Import step (Stitch 02: columns, inferred types, row count) and creates a table; the sums of revenue and qty equal an independent pass over the CSV; identical on GTK and web |
+| M3 | The sheet, Numbers classic | Stitch 03: toolbar, sheet tabs, formula bar, grid, inspector (Table · Cell), status bar; choosing Currency / Percent / decimals / thousands / negatives in the inspector changes the column everywhere (grid cells, status-bar sum, a pivot of it); add a row; add a formula column from the toolbar; sort; identical on GTK and web |
+| M4 | Save and open | Save writes `.omx` (the table, its formats, its formulas, edits); opening it restores the same screen on both hosts |
+| M5 | Scale | the same CSV at 1M (default), then 10M, 50M, 100M rows: import, sort, recompute and first-draw times measured on this machine and written to the report; 1M meets: import < 5 s, sort < 1 s, a format change < 50 ms |
+| M6 | Nothing regressed | goal 13's checks (and goals 3–12's inside them) still pass; the matrix is current |
 
 ## Done means
-`scripts/check` prints PASS for M1–M4; push to `origin` after.
+`scripts/check` prints PASS for M1–M6; push to `origin` after.
 
 ## Out of bounds
-As goal 12. Android, Mac and iPhone keys are later (the matrix shows them ❌). Blank numbers and dates (Delete on a number) wait for MX frame's nulls (`docs/plans/needs-mxframe.md`).
+No deploys, sign-ups or secrets. Checks headless. Charts, pivots placed by the user and the Report tab are goal 15 (Stitch 05, 06). Other platforms: components copied only where trivial (the owner tests them on the weekend).
 
 ## Assumptions
-- Key names are the web's (`ArrowDown`, `Enter`, …); GTK maps its own names to them.
-- Enter moves down and F2 edits, as in Excel; double click still edits.
-- Ctrl/Alt shortcuts stay the window's or the browser's (the canvas doesn't take them, except Ctrl+Home/End).
-- Budget: 2 hours wall clock.
+- Name spelled **omxplorer**, all lowercase, one word (owner); one rename if the owner meant otherwise.
+- CSV reading goes through pyarrow as a labelled SHIM (fast, correct quoting and types) until MX frame's readers exist.
+- One table per sheet for now; multiple sheets later.
+- Budget: the night (about 7 hours).
