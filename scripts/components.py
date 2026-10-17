@@ -54,6 +54,9 @@ FEATURES = [
     ("Canvas: pan, zoom, tap", "on_gesture: PAN, ZOOM, TAP", r"\bPAN\b|PAN =", "lens"),
     ("Canvas: press, release, double", "PRESS, RELEASE, DOUBLE", r"\bDOUBLE\b|DOUBLE =", "workbook"),
     ("Canvas frames (animation)", "on_frame", r"tick|SET_FRAMES|on_frame", "lens"),
+    ("Canvas: keys (focus on press)", "on_gesture: KEY (event.text, modifiers)", r"\"key-pressed\"|addEventListener\('keydown'", "mxstudio"),
+    ("TextField: Escape cancels", "TextField(on_cancel=)", r"on_field_key|second: 2", "mxstudio"),
+    ("Editor: caret after the text", ".focused(select_all=False)", r"gtk_editable_set_position|setSelectionRange", "mxstudio"),
     ("Board: drag, resize, snap", "Board(on_move, on_resize)", r"\bBOARD\b", "workbook"),
     ("Board: scrolls, reveals a child", "Board(reveal=, reveal_count=)", r"reveal", "workbook"),
     ("Board: phone-width list", "(automatic under 720 pt)", r"board_list|max-width: 719px", "workbook"),
@@ -66,7 +69,7 @@ FEATURES = [
 # Components built in Mojo from the ones above (drawn on a Canvas or assembled from native controls):
 # (name, module, what it's made of: component or feature names above, the constructor apps call)
 COMPOSITES = [
-    ("DataGrid", "mojoui/datagrid.mojo", ["Canvas", "Canvas: press, release, double", "In-place editor", "Board: drag, resize, snap"], "DataGrid("),
+    ("DataGrid", "mojoui/datagrid.mojo", ["Canvas", "Canvas: press, release, double", "Canvas: keys (focus on press)", "In-place editor", "TextField: Escape cancels", "Board: drag, resize, snap"], "DataGrid("),
     ("PivotTable", "mojoui/pivot.mojo", ["Grid", "Scroll", "Text tones"], "PivotTable("),
     ("ChartView", "mojoui/chartview.mojo", ["Canvas", "Canvas: pan, zoom, tap"], "ChartView"),
     ("KpiView", "mojoui/kpi.mojo", ["Card tones", "Text tones", "Canvas"], "KpiView("),

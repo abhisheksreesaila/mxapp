@@ -7,7 +7,7 @@ from std.python.bindings import PythonModuleBuilder
 from app import Main
 from mojoui.shared import shared_loads
 from mojoui.theme import Palette, hex_of
-from mojoui.hosts.web import web_init_shared, web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design
+from mojoui.hosts.web import web_init_shared, web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design, web_key, web_cancel
 
 
 @export
@@ -26,6 +26,8 @@ def PyInit_mojoui_app() abi("C") -> PythonObject:
         m.def_function[palette]("palette", docstring="The Omarchy palette as 'name=#rrggbb;…' (dark=1 or 0 first).")
         m.def_function[draw]("draw", docstring="Paint a canvas (node, width, height, scale); JSON with the pixels' address and what changed.")
         m.def_function[gesture]("gesture", docstring="A canvas gesture (node, kind, x, y, dx, dy, zoom); returns what changed as JSON.")
+        m.def_function[key]("key", docstring="A key on a focused canvas (node, name, modifiers); returns what changed as JSON.")
+        m.def_function[cancel]("cancel", docstring="Escape in a field (node, text); returns what changed as JSON.")
         m.def_function[frame]("frame", docstring="A display frame for a canvas (node, microseconds); returns what changed as JSON.")
         return m.finalize()
     except e:
@@ -72,6 +74,14 @@ def draw(handle: PythonObject, node: PythonObject, width: PythonObject, height: 
 
 def gesture(handle: PythonObject, node: PythonObject, kind: PythonObject, x: PythonObject, y: PythonObject, dx: PythonObject, dy: PythonObject, zoom: PythonObject) raises -> PythonObject:
     return PythonObject(web_gesture[Main](Int(py=handle), Int(py=node), Int(py=kind), Float64(py=x), Float64(py=y), Float64(py=dx), Float64(py=dy), Float64(py=zoom)))
+
+
+def key(handle: PythonObject, node: PythonObject, name: PythonObject, modifiers: PythonObject) raises -> PythonObject:
+    return PythonObject(web_key[Main](Int(py=handle), Int(py=node), String(py=name), Int(py=modifiers)))
+
+
+def cancel(handle: PythonObject, node: PythonObject, text: PythonObject) raises -> PythonObject:
+    return PythonObject(web_cancel[Main](Int(py=handle), Int(py=node), String(py=text)))
 
 
 def frame(handle: PythonObject, node: PythonObject, microseconds: PythonObject) raises -> PythonObject:

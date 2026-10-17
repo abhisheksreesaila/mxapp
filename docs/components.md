@@ -52,6 +52,9 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | Canvas: pan, zoom, tap | `on_gesture: PAN, ZOOM, TAP` | ✅ | ✅ | ✅ | 🔨 | 🔨 |
 | Canvas: press, release, double | `PRESS, RELEASE, DOUBLE` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Canvas frames (animation) | `on_frame` | ✅ | ✅ | ✅ | 🔨 | 🔨 |
+| Canvas: keys (focus on press) | `on_gesture: KEY (event.text, modifiers)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| TextField: Escape cancels | `TextField(on_cancel=)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Editor: caret after the text | `.focused(select_all=False)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Board: drag, resize, snap | `Board(on_move, on_resize)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Board: scrolls, reveals a child | `Board(reveal=, reveal_count=)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Board: phone-width list | `(automatic under 720 pt)` | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -66,7 +69,7 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Component | Module | Made of | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Used by |
 |---|---|---|---|---|---|---|---|---|
-| `DataGrid` | `mojoui/datagrid.mojo` | Canvas, Canvas: press, release, double, In-place editor, Board: drag, resize, snap | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
+| `DataGrid` | `mojoui/datagrid.mojo` | Canvas, Canvas: press, release, double, Canvas: keys (focus on press), In-place editor, TextField: Escape cancels, Board: drag, resize, snap | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
 | `PivotTable` | `mojoui/pivot.mojo` | Grid, Scroll, Text tones | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
 | `ChartView` | `mojoui/chartview.mojo` | Canvas, Canvas: pan, zoom, tap | ✅ | ✅ | 🔨 | 🔨 | 🔨 | mxstudio, workbook |
 | `KpiView` | `mojoui/kpi.mojo` | Card tones, Text tones, Canvas | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio |
@@ -76,11 +79,11 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 49 | 0 | 0 |
-| Web | 49 | 0 | 0 |
-| Android | 19 | 11 | 19 |
-| Mac (AppKit) | 0 | 30 | 19 |
-| iPhone (UIKit) | 0 | 30 | 19 |
+| Linux (GTK) | 52 | 0 | 0 |
+| Web | 52 | 0 | 0 |
+| Android | 19 | 11 | 22 |
+| Mac (AppKit) | 0 | 30 | 22 |
+| iPhone (UIKit) | 0 | 30 | 22 |
 
 ## Inside one app, not components yet (the debt)
 

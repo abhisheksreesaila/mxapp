@@ -108,7 +108,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
     var options: List[String]  # dropdown choices
     var hint: String  # field placeholder
     var msg2: Int  # field: message sent on Return
-    var size: Int  # scroll: visible height in points; image: height
+    var size: Int  # scroll: visible height in points; image: height; field: message sent on Escape
     var pixels: List[UInt32]  # image: RGBA bytes, one UInt32 per pixel (R in the low byte)
     # Layout settings (0 = not set). Sizes include padding (border-box) on every host.
     var pad_v: Int  # padding top and bottom
@@ -285,9 +285,10 @@ struct View(Copyable, Movable):
         self.nodes[0].value = t
         return self^
 
-    def focused(var self) -> View:
-        """A TextField that takes the keyboard when it appears, its text selected (an in-place editor)."""
-        self.nodes[0].value = 1
+    def focused(var self, select_all: Bool = True) -> View:
+        """A TextField that takes the keyboard when it appears (an in-place editor): its text selected, or
+        (select_all=False) the caret after it, so typing goes on from what's there (a key that opened it)."""
+        self.nodes[0].value = 1 if select_all else 2
         return self^
 
     def at(var self, x: Int, y: Int) -> View:
@@ -316,10 +317,10 @@ def Button(title: String, on_tap: Int, style: Int = PLAIN, icon: String = "") ->
     return _one(Node(BUTTON, title, on_tap, style=style, hint=icon))
 
 
-def TextField(value: String, placeholder: String = "", on_change: Int = NO_MSG, on_submit: Int = NO_MSG) -> View:
-    """One line of text. Sends `on_change` (event.text = new text) as you type
-    and `on_submit` when Return is pressed."""
-    return _one(Node(FIELD, value, on_change, hint=placeholder, msg2=on_submit))
+def TextField(value: String, placeholder: String = "", on_change: Int = NO_MSG, on_submit: Int = NO_MSG, on_cancel: Int = NO_MSG) -> View:
+    """One line of text. Sends `on_change` (event.text = new text) as you type, `on_submit` when Return
+    is pressed and `on_cancel` when Escape is (event.text = the text, unchanged by the app)."""
+    return _one(Node(FIELD, value, on_change, hint=placeholder, msg2=on_submit, size=on_cancel))
 
 
 def Toggle(label: String, on: Bool, on_toggle: Int) -> View:

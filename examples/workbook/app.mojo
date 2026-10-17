@@ -26,7 +26,7 @@ from mojoui.workbook import save_workbook, open_workbook, read_widths, ObjectSpe
 from mojoui.maths import log2
 from mojoui.theme import Palette
 from mojoui.datagrid import (DataGrid, GRID_NONE, GRID_REDRAW, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY,
-                             GRID_FITTED, GRID_RESIZED, GRID_HEADER_H, GRID_ROW_H, GRID_GUTTER, GRID_BAR_W)
+                             GRID_FITTED, GRID_RESIZED, GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_HEADER_H, GRID_ROW_H, GRID_GUTTER, GRID_BAR_W)
 
 comptime SOURCE_PREFIX = "contoso:"  # + the row count: the shared table's source name (a workbook file names it instead of copying it)
 comptime SAMPLE = "examples/workbook/contoso.mxwb"
@@ -68,6 +68,7 @@ comptime PAGE_W = 1232  # the objects' width (the page is PAGE_X wider each side
 comptime CARD_PAD_X = 14  # a card's padding (both hosts' CSS) and where its grid starts inside it:
 comptime GRID_TOP = 96  # padding 12 + header row 32 + gap 10 + formula bar 32 + gap 10
 comptime CELL_COMMIT = 280  # the in-place editor's Enter
+comptime CELL_CANCEL = 281  # the in-place editor's Escape
 
 comptime HEADER_H = GRID_HEADER_H  # (the grid's, re-exported for tests)
 
@@ -98,6 +99,7 @@ struct Main(App):
     var pal: Palette  # the person's Omarchy theme: the grid and the charts draw in it
     var objects: List[Obj]
     var edit_text: String
+    var edit_typed: Bool  # the editor opened by typing: the caret after the text, not the text selected
     var message: String  # the last error or confirmation
     var results: List[List[Int]]  # per object: group sums
     var counts: List[List[Int]]
@@ -142,6 +144,7 @@ struct Main(App):
         self.objects.append(obj(CHART, "Revenue by region", 872, 396, 360, 300, a=1, c=1))
         self.objects.append(obj(NOTE_OBJ, "Note", 0, 712, 480, 136, text="Please review this: Q4 revenue by region, then the margin column."))
         self.edit_text = ""
+        self.edit_typed = False
         self.message = ""
         self.results = List[List[Int]]()
         self.counts = List[List[Int]]()
@@ -341,11 +344,12 @@ struct Main(App):
         self.grid.cur_row = row
         self.grid.cur_col = col
         self.edit_text = self.frame.display(col, row) if row >= 0 and col >= 0 else ""  # (row -1: a whole column)
+        self.edit_typed = False
         self.version += 1
 
     def update(mut self, event: Event):
         var m = event.message
-        if m != CELL_COMMIT and self.grid.editing and not (GRID_GESTURE <= m < GRID_GESTURE + MAX_OBJECTS):
+        if m != CELL_COMMIT and m != CELL_CANCEL and self.grid.editing and not (GRID_GESTURE <= m < GRID_GESTURE + MAX_OBJECTS):
             self.grid.editing = False  # anything else closes the in-place editor (its edit isn't written)
             self.version += 1
         if GRID_GESTURE <= m < GRID_GESTURE + MAX_OBJECTS:
@@ -355,9 +359,28 @@ struct Main(App):
             if action == GRID_SELECTED or action == GRID_EDIT or action == GRID_READ_ONLY:
                 self.select_cell(g.cur_row, g.cur_col)
                 if action == GRID_EDIT:
-                    self.message = "Editing row " + grouped(g.cur_row + 1) + " · " + self.frame.name(g.cur_col) + ": Enter writes it"
+                    self.message = "Editing row " + grouped(g.cur_row + 1) + " · " + self.frame.name(g.cur_col) + ": Enter writes it, Escape cancels"
                 elif action == GRID_READ_ONLY:
                     self.message = "ƒ " + self.frame.name(g.cur_col) + " is a formula: edit the columns it uses"
+            elif action == GRID_TYPED:  # a key typed on a cell: the editor starts from it (it replaces the value)
+                self.select_cell(g.cur_row, g.cur_col)
+                self.edit_text = g.typed
+                self.edit_typed = True
+                self.message = "Editing row " + grouped(g.cur_row + 1) + " · " + self.frame.name(g.cur_col) + ": Enter writes it, Escape cancels"
+            elif action == GRID_CANCEL:
+                self.select_cell(g.cur_row, g.cur_col)
+                self.message = "Edit cancelled"
+            elif action == GRID_CLEAR:
+                var col = g.cur_col
+                var row = g.cur_row
+                try:
+                    self.frame.set_text(col, row, "")
+                    self.message = "Row " + grouped(row + 1) + ": " + self.frame.name(col) + " cleared"
+                    self.select_cell(row, col)
+                    self.compute()
+                except:  # numbers and dates have no blank yet (docs/plans/needs-mxframe.md)
+                    self.message = self.frame.name(col) + " can't be empty yet: type a value (0 to zero it)"
+                self.version += 1
             elif action == GRID_COLUMN:
                 self.select_cell(-1, g.cur_col)
                 self.message = "Column " + self.frame.name(g.cur_col) + " selected: Sort orders the table by it"
@@ -381,6 +404,11 @@ struct Main(App):
                     self.edit_text = event.text
                     self.message = String(e) + " (fix it and press Enter)"  # the editor stays open with what was typed
             self.version += 1
+        elif m == CELL_CANCEL:  # the in-place editor's Escape: nothing written
+            self.grid.editing = False
+            self.grid.redraw()
+            self.select_cell(self.grid.cur_row, self.grid.cur_col)
+            self.message = "Edit cancelled"
         elif m == COMMIT:
             if self.grid.cur_row >= 0 and self.grid.cur_col >= 0:
                 try:
@@ -705,7 +733,7 @@ struct Main(App):
             board_h = max(board_h, o.y + o.h)
         var ed = self.editor_place()
         if ed[2] > 0:  # the in-place editor floats on the page over its cell (last: drawn on top)
-            items.append(TextField(self.edit_text, placeholder="Cell", on_submit=CELL_COMMIT).focused()
+            items.append(TextField(self.edit_text, placeholder="Cell", on_submit=CELL_COMMIT, on_cancel=CELL_CANCEL).focused(select_all=not self.edit_typed)
                          .at(ed[0], ed[1]).width(ed[2]).height(30).tag("cell-editor"))  # (a row, 26 pt, and its 2-pt ring each side)
         var engine = self.gf()[].device_name()
         # The chrome floats over the page in islands; the page scrolls underneath.

@@ -14,7 +14,7 @@ from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, KEY, SHIFT, CTRL, ALT,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.app import App, Event, Runtime
@@ -349,6 +349,7 @@ struct GtkCanvas(Copyable, Movable):
     var drag: Int  # GtkGestureDrag
     var scroll: Int  # GtkEventControllerScroll
     var click: Int  # GtkGestureClick
+    var keys: Int  # GtkEventControllerKey (the canvas takes focus when pressed)
     var pixels: List[UInt32]
     var wpx: Int
     var hpx: Int
@@ -375,6 +376,7 @@ struct GtkCanvas(Copyable, Movable):
         self.drag = 0
         self.scroll = 0
         self.click = 0
+        self.keys = 0
         self.pixels = List[UInt32]()
         self.wpx = 0
         self.hpx = 0
@@ -434,6 +436,8 @@ struct GtkHost[A: App](Movable):
     var css: Int  # one GtkCssProvider for padding classes
     var css_rules: String
     var focus: Int  # text field to keep focused across the next rebuild (-1: none)
+    var key_node: Int  # the canvas node that had the keyboard last (it gets it back when an in-place editor closes)
+    var editor_keys: Int  # the in-place editor's key controller (test steps press Escape through it)
 
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
@@ -450,6 +454,8 @@ struct GtkHost[A: App](Movable):
         self.css = 0
         self.css_rules = ""
         self.focus = -1
+        self.key_node = -1
+        self.editor_keys = 0
 
     def padding_class(mut self, v: Int, h: Int) -> String:
         """A CSS class giving `v`/`h` padding (GTK has no padding setter; CSS does it)."""
@@ -554,8 +560,15 @@ struct GtkHost[A: App](Movable):
             connect(w, "clicked", on_clicked[Self.A], self_addr)
         elif node.kind == FIELD:
             w = external_call["gtk_entry_new", Int]()
-            if node.value == 1:
+            if node.value >= 1:
                 add_class(w, "mui-cell-editor")
+            if node.size != 0:  # on_cancel: Escape
+                var esc = external_call["gtk_event_controller_key_new", Int]()
+                set_node(esc, i)
+                connect_any(esc, "key-pressed", on_field_key[Self.A], self_addr)
+                external_call["gtk_widget_add_controller", NoneType](w, esc)
+                if node.value >= 1:
+                    self.editor_keys = esc
             var t = node.text
             var h = node.hint
             external_call["gtk_editable_set_text", NoneType](w, t.as_c_string_span())
@@ -632,9 +645,15 @@ struct GtkHost[A: App](Movable):
             set_index(click, ci)
             connect_any(click, "released", on_click_released[Self.A], self_addr)
             external_call["gtk_widget_add_controller", NoneType](w, click)
+            external_call["gtk_widget_set_focusable", NoneType](w, c_int(1))  # keys: a press gives it focus
+            var keys = external_call["gtk_event_controller_key_new", Int]()
+            set_index(keys, ci)
+            connect_any(keys, "key-pressed", on_key_pressed[Self.A], self_addr)
+            external_call["gtk_widget_add_controller", NoneType](w, keys)
             c.drag = drag
             c.scroll = scroll
             c.click = click
+            c.keys = keys
             self.canvases.append(c^)
             self.arm(ci, self_addr)
             # A picture asks for its texture's size in pixels, which would grow the canvas each
@@ -792,7 +811,7 @@ struct GtkHost[A: App](Movable):
                 self.board_list = True
                 inner = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(16))
                 for c in node.children:
-                    if self.rt.shown.nodes[c].kind == FIELD and self.rt.shown.nodes[c].value == 1:
+                    if self.rt.shown.nodes[c].kind == FIELD and self.rt.shown.nodes[c].value >= 1:
                         continue  # an in-place editor has no cell to sit over in the list
                     var child = self.build(c, self_addr)
                     external_call["gtk_widget_set_halign", NoneType](child, c_int(0))  # fill the width
@@ -888,11 +907,23 @@ struct GtkHost[A: App](Movable):
             _ = external_call["gtk_widget_add_tick_callback", c_uint](root, on_reveal_tick[Self.A], self_addr, 0)
         if self.dialog != 0 and (getenv("MOJOUI_TEST") == "" or getenv("MOJOUI_SHOT") != ""):  # plain tests drive it unseen
             external_call["adw_dialog_present", NoneType](self.dialog, self.window)
+        var editor = False
         for k in range(len(self.rt.shown.nodes)):  # an in-place editor (.focused()) takes the keyboard, its text selected
-            if self.rt.shown.nodes[k].kind == FIELD and self.rt.shown.nodes[k].value == 1 and self.widgets[k] != 0:
-                _ = external_call["gtk_widget_grab_focus", c_int](self.widgets[k])
-                external_call["gtk_editable_select_region", NoneType](self.widgets[k], c_int(0), c_int(-1))
+            if self.rt.shown.nodes[k].kind == FIELD and self.rt.shown.nodes[k].value >= 1 and self.widgets[k] != 0:
+                editor = True
+                if self.rt.shown.nodes[k].value == 1:
+                    _ = external_call["gtk_widget_grab_focus", c_int](self.widgets[k])
+                    external_call["gtk_editable_select_region", NoneType](self.widgets[k], c_int(0), c_int(-1))
+                else:  # the caret after the text (typing goes on from the key that opened it)
+                    _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[k])
+                    external_call["gtk_editable_set_position", NoneType](self.widgets[k], c_int(-1))
                 self.focus = -1
+        if not editor:
+            self.editor_keys = 0
+            if self.focus < 0:  # an in-place editor closed: the keyboard goes back to the canvas it came from
+                for c in self.canvases:
+                    if c.node == self.key_node:
+                        _ = external_call["gtk_widget_grab_focus", c_int](c.widget)
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
         self.focus = -1
@@ -1079,6 +1110,12 @@ struct GtkHost[A: App](Movable):
         var d = self.rt.gesture(self.canvases[ci].node, kind, x, y, dx, dy, zoom)
         self.apply(d, self_addr)
 
+    def canvas_key(mut self, ci: Int, name: String, modifiers: Int, self_addr: Int):
+        if ci < 0 or ci >= len(self.canvases):
+            return
+        var d = self.rt.key(self.canvases[ci].node, name, modifiers)
+        self.apply(d, self_addr)
+
     def pointer(self, ci: Int) -> Tuple[Float64, Float64]:
         """Where the pointer is over canvas ci (its centre if it hasn't been seen)."""
         ref c = self.canvases[ci]
@@ -1218,6 +1255,8 @@ def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi
     host[].canvases[ci].start_x = x
     host[].canvases[ci].start_y = y
     host[].canvases[ci].moved = False
+    _ = external_call["gtk_widget_grab_focus", c_int](host[].canvases[ci].widget)  # keys go to the canvas pressed last
+    host[].key_node = host[].canvases[ci].node
     if not busy():
         host[].canvas_send(ci, PRESS, x, y, 0, 0, 1, host_addr)  # where a drag (or a tap) starts
 
@@ -1295,6 +1334,73 @@ def on_pinch[A: App](pinch: Int, scale: Float64, host_addr: Int) abi("C"):
         xy[1] = at[1]
     host[].canvas_send(ci, ZOOM, xy[0], xy[1], 0, 0, factor, host_addr)
     _ = len(xy)
+
+
+comptime GDK_NAMES: List[String] = ["Down", "Up", "Left", "Right", "Return", "KP_Enter", "Escape", "Tab", "ISO_Left_Tab",
+                                     "BackSpace", "Delete", "Page_Down", "Page_Up", "Home", "End"]
+comptime KEY_NAMES: List[String] = ["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Enter", "Enter", "Escape", "Tab", "Tab",
+                                    "Backspace", "Delete", "PageDown", "PageUp", "Home", "End"]
+
+
+def key_name(keyval: Int) -> String:
+    """A GDK key as the web names it ("ArrowDown", "Enter", …), or the character it types."""
+    var gdk = c_str(external_call["gdk_keyval_name", Int](c_uint(keyval)))
+    var gdk_names = materialize[GDK_NAMES]()
+    var names = materialize[KEY_NAMES]()
+    for i in range(len(gdk_names)):
+        if gdk == gdk_names[i]:
+            return names[i]
+    if gdk.startswith("F") and gdk.byte_length() <= 3 and gdk != "F":
+        return gdk  # F1 … F12
+    var cp = Int(external_call["gdk_keyval_to_unicode", c_uint](c_uint(keyval)))
+    if cp >= 32 and cp != 127:
+        return chr(cp)
+    return gdk  # Shift_L, Control_L, … (apps ignore them)
+
+
+def gdk_keyval(name: String) -> Int:
+    """The other way (test steps): a web key name or a character → a GDK keyval."""
+    var gdk_names = materialize[GDK_NAMES]()
+    var names = materialize[KEY_NAMES]()
+    for i in range(len(names)):
+        if name == names[i]:
+            var g = gdk_names[i]
+            return Int(external_call["gdk_keyval_from_name", c_uint](g.as_c_string_span()))
+    if name.startswith("F") and name.byte_length() <= 3 and name != "F":
+        var f = name
+        return Int(external_call["gdk_keyval_from_name", c_uint](f.as_c_string_span()))
+    for ch in name.codepoint_slices():
+        return Int(external_call["gdk_unicode_to_keyval", c_uint](c_uint(Int(ord(String(ch))))))
+    return 0
+
+
+def on_key_pressed[A: App](keys: Int, keyval: c_uint, keycode: c_uint, state: c_uint, host_addr: Int) abi("C") -> c_int:
+    if busy():
+        return c_int(0)
+    var host = host_at[A](host_addr)
+    var ci = get_index(keys)
+    if ci < 0 or ci >= len(host[].canvases):
+        return c_int(0)
+    var s = Int(state)
+    var mods = (SHIFT if (s & 1) != 0 else 0) + (CTRL if (s & 4) != 0 else 0) + (ALT if (s & 8) != 0 else 0)
+    var name = key_name(Int(keyval))
+    host[].canvas_key(ci, name, mods, host_addr)
+    # handled (so Tab and the arrows don't move focus away), except shortcuts the window may own
+    return c_int(0 if (mods & (CTRL | ALT)) != 0 and name != "Home" and name != "End" else 1)
+
+
+def on_field_key[A: App](keys: Int, keyval: c_uint, keycode: c_uint, state: c_uint, host_addr: Int) abi("C") -> c_int:
+    """Escape in a field with on_cancel."""
+    if busy() or key_name(Int(keyval)) != "Escape":
+        return c_int(0)
+    var host = host_at[A](host_addr)
+    var node = get_node(keys)
+    if node < 0 or node >= len(host[].widgets) or host[].widgets[node] == 0:
+        return c_int(0)
+    var text = c_str(external_call["gtk_editable_get_text", Int](host[].widgets[node]))
+    var d = host[].rt.cancel(node, text)
+    host[].apply(d, host_addr)
+    return c_int(1)
 
 
 def on_click_released[A: App](click: Int, presses: c_int, x: Float64, y: Float64, host_addr: Int) abi("C"):
@@ -1712,6 +1818,65 @@ def run_step[A: App](host_addr: Int, step: String):
         else:
             var s = String("activate")
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span(), c_uint(position))
+    elif verb == "key" or verb == "typekeys":  # the key controller's own signal, as a real key press sends it
+        var kv = split_at(rest, "=")
+        var node = find(host[], CANVAS, "", to_int(kv[0]))
+        var ci = -1
+        for k in range(len(host[].canvases)):
+            if host[].canvases[k].node == node:
+                ci = k
+        if ci < 0:
+            print("TEST: no canvas", kv[0])
+            return
+        var presses = List[String]()
+        var state = 0
+        if verb == "typekeys":  # typekeys:K=text: one press per character
+            for ch in kv[1].codepoint_slices():
+                presses.append(String(ch))
+        else:  # key:K=shift+ctrl+Name
+            var name = kv[1]
+            while True:
+                if name.startswith("shift+"):
+                    state |= 1
+                    var cut = String(name[byte=6:])
+                    name = cut
+                elif name.startswith("ctrl+"):
+                    state |= 4
+                    var cut = String(name[byte=5:])
+                    name = cut
+                elif name.startswith("alt+"):
+                    state |= 8
+                    var cut = String(name[byte=4:])
+                    name = cut
+                else:
+                    break
+            presses.append(name)
+        var signal = String("key-pressed")
+        for p in presses:
+            var editor = -1  # an in-place editor open: it has the keyboard, as it would for a person
+            for k in range(len(host[].rt.shown.nodes)):
+                if host[].rt.shown.nodes[k].kind == FIELD and host[].rt.shown.nodes[k].value >= 1 and k < len(host[].widgets) and host[].widgets[k] != 0:
+                    editor = k
+            var handled = List[c_int](length=1, fill=0)
+            if editor >= 0 and p == "Enter":
+                var activate = String("activate")
+                external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[editor], activate.as_c_string_span())
+            elif editor >= 0 and p == "Escape":
+                if host[].editor_keys != 0:
+                    external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].editor_keys, signal.as_c_string_span(),
+                        c_uint(gdk_keyval(p)), c_uint(0), c_uint(state), Int(handled.unsafe_ptr()))
+            elif editor >= 0:  # a character typed into the editor, after its text
+                var now = c_str(external_call["gtk_editable_get_text", Int](host[].widgets[editor])) + p
+                external_call["gtk_editable_set_text", NoneType](host[].widgets[editor], now.as_c_string_span())
+            else:
+                var cs = ci
+                for k in range(len(host[].canvases)):  # (the canvas list is rebuilt when the screen's shape changes)
+                    if host[].canvases[k].node == node:
+                        cs = k
+                external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[cs].keys, signal.as_c_string_span(),
+                    c_uint(gdk_keyval(p)), c_uint(0), c_uint(state), Int(handled.unsafe_ptr()))
+            _ = len(handled)
+            settle()
     elif verb == "drag" or verb == "dragat" or verb == "doubletap" or verb == "zoom" or verb == "frames" or verb == "tapat":
         var kv = split_at(rest, "=")
         var node = find(host[], CANVAS, "", to_int(kv[0]))

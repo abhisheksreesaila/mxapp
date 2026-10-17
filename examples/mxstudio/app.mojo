@@ -12,7 +12,7 @@ from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
 from mojoui.charts import money, grouped, fixed
-from mojoui.datagrid import DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED
+from mojoui.datagrid import DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED, GRID_TYPED, GRID_CLEAR, GRID_CANCEL
 from mojoui.pivot import PivotTable
 from mojoui.chartview import ChartView
 from mojoui.kpi import KpiView
@@ -41,6 +41,7 @@ comptime ALL_ROWS = 9
 comptime MOVE = 10
 comptime SORT = 11
 comptime FIND = 12
+comptime CELL_CANCEL = 13
 comptime QUARTER = 20  # Report: filters, taps, actions
 comptime REGION_PICK = 21
 comptime PRODUCT_PICK = 22
@@ -107,6 +108,7 @@ struct Main(App):
     var milliseconds: Float64
     var message: String
     var edit_text: String
+    var edit_typed: Bool  # the editor opened by typing: the caret after the text, not the text selected
     var showing: String  # what the grid is filtered to ("" = every row)
     var lows: List[Int64]  # per column: min and max (for the header histograms' bins)
     var highs: List[Int64]
@@ -173,6 +175,7 @@ struct Main(App):
         self.milliseconds = 0
         self.message = ""
         self.edit_text = ""
+        self.edit_typed = False
         self.showing = ""
         self.lows = List[Int64]()
         self.highs = List[Int64]()
@@ -449,11 +452,17 @@ struct Main(App):
 
     def select_cell(mut self, row: Int, col: Int):
         self.edit_text = self.frame.display(col, row) if row >= 0 and col >= 0 else ""
+        self.edit_typed = False
         self.version += 1
+
+    def after_edit(mut self):
+        self.compute()
+        self.find()
+        self.histograms()  # (the headers' shapes follow the edit too)
 
     def update(mut self, event: Event):
         var m = event.message
-        if m != CELL_COMMIT and m != GRID and self.grid.editing:
+        if m != CELL_COMMIT and m != CELL_CANCEL and m != GRID and self.grid.editing:
             self.grid.editing = False
             self.version += 1
         if m == GRID:
@@ -461,7 +470,29 @@ struct Main(App):
             if action == GRID_SELECTED or action == GRID_EDIT or action == GRID_READ_ONLY:
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
                 if action == GRID_EDIT:
-                    self.message = "Editing order row " + grouped(self.grid.cur_row + 1) + " · " + self.frame.name(self.grid.cur_col) + ": Enter writes it"
+                    self.message = "Editing order row " + grouped(self.grid.cur_row + 1) + " · " + self.frame.name(self.grid.cur_col) + ": Enter writes it, Escape cancels"
+                elif action == GRID_READ_ONLY:
+                    self.message = self.frame.name(self.grid.cur_col) + " is a formula: edit the columns it reads"
+            elif action == GRID_TYPED:  # a key typed on a cell: the editor starts from it (it replaces the value)
+                self.select_cell(self.grid.cur_row, self.grid.cur_col)
+                self.edit_text = self.grid.typed
+                self.edit_typed = True
+                self.message = "Editing order row " + grouped(self.grid.cur_row + 1) + " · " + self.frame.name(self.grid.cur_col) + ": Enter writes it, Escape cancels"
+            elif action == GRID_CANCEL:
+                self.select_cell(self.grid.cur_row, self.grid.cur_col)
+                self.message = "Edit cancelled"
+            elif action == GRID_CLEAR:
+                var col = self.grid.cur_col
+                var row = self.grid.cur_row
+                var before = self.frame.display(col, row)
+                try:
+                    self.frame.set_text(col, row, "")
+                    self.message = self.frame.name(col) + " on row " + grouped(row + 1) + ": " + before + " → (empty)"
+                    self.select_cell(row, col)
+                    self.after_edit()
+                except:  # numbers and dates have no blank yet (docs/plans/needs-mxframe.md)
+                    self.message = self.frame.name(col) + " can't be empty yet: type a value (0 to zero it)"
+                self.version += 1
             elif action == GRID_COLUMN:
                 self.message = "Column " + self.frame.name(self.grid.cur_col) + " selected: Sort orders the table by it"
                 self.version += 1
@@ -477,13 +508,16 @@ struct Main(App):
                     self.message = self.frame.name(col) + " on row " + grouped(row + 1) + ": " + before + " → " + self.frame.display(col, row)
                     self.grid.committed(self.frame)
                     self.select_cell(self.grid.cur_row, self.grid.cur_col)
-                    self.compute()
-                    self.find()
-                    self.histograms()  # (the headers' shapes follow the edit too)
+                    self.after_edit()
                 except e:
                     self.edit_text = event.text
                     self.message = String(e) + " (fix it and press Enter)"
             self.version += 1
+        elif m == CELL_CANCEL:  # Escape in the editor: nothing written
+            self.grid.editing = False
+            self.grid.redraw()
+            self.select_cell(self.grid.cur_row, self.grid.cur_col)
+            self.message = "Edit cancelled"
         elif m == SORT:
             var col = self.grid.cur_col
             if col >= 0:
@@ -915,7 +949,7 @@ struct Main(App):
             bottom = max(bottom, self.y[k] + self.h[k])
         var ed = self.grid.editor_place(self.frame)
         if ed[2] > 0:  # the in-place editor, over its cell, on the page
-            items.append(TextField(self.edit_text, placeholder="Cell", on_submit=CELL_COMMIT).focused()
+            items.append(TextField(self.edit_text, placeholder="Cell", on_submit=CELL_COMMIT, on_cancel=CELL_CANCEL).focused(select_all=not self.edit_typed)
                          .at(self.x[TABLE] + PAGE_X + CARD_PAD_X + ed[0], self.y[TABLE] + PAGE_Y + GRID_TOP + ed[1])
                          .width(ed[2]).height(30).tag("cell-editor"))
         return self.page(items^, bottom)

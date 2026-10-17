@@ -40,6 +40,7 @@ BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY = 0, 1, 2, 3, 4
 START, CENTER, END = 1, 2, 3
 SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
+KEY = 7  # a canvas gesture: a key pressed while it had focus (text = the key, dx = modifiers)
 JPEG_QUALITY = 85
 MAX_SESSIONS = 200  # oldest tabs are closed beyond this
 STATIC = Path(__file__).parent / "static"
@@ -224,8 +225,10 @@ CANVAS_JS = r"""
 // its version or size changes. Gestures: drag = PAN, wheel/pinch = ZOOM, click = TAP,
 // sent through htmx like any other event, so the rest of the page updates as usual.
 (() => {
-  const PAN = 1, ZOOM = 2, TAP = 3, PRESS = 4, RELEASE = 5, DOUBLE = 6;
+  const PAN = 1, ZOOM = 2, TAP = 3, PRESS = 4, RELEASE = 5, DOUBLE = 6, KEY = 7;
   const shape = () => document.getElementById('mojoui-v').value;
+  // keys a canvas uses itself (the page mustn't scroll or move focus on them)
+  const OWN_KEYS = new Set(['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'PageDown', 'PageUp', 'Home', 'End', 'Backspace', 'Delete', 'Escape', 'F2', ' ']);
   function attach(div) {
     if (div.mojoui) return;
     const cv = div.querySelector('canvas'), g = cv.getContext('2d');
@@ -273,9 +276,10 @@ CANVAS_JS = r"""
         .finally(() => { st.updating = false; if (st.again) update(); });
     }
     st.pump = pump;
-    function send(kind, x, y, dx, dy, zoom) {
+    function send(kind, x, y, dx, dy, zoom, text = '') {
       const last = st.queue[st.queue.length - 1];
-      if (last && last.number === kind && kind === PAN) { last.dx += dx; last.dy += dy; last.x = x; last.y = y; }
+      if (kind === KEY) st.queue.push({ n, number: kind, x, y, dx, dy, zoom, text });
+      else if (last && last.number === kind && kind === PAN) { last.dx += dx; last.dy += dy; last.x = x; last.y = y; }
       else if (last && last.number === kind && kind === ZOOM) { last.zoom *= zoom; }
       else st.queue.push({ n, number: kind, x, y, dx, dy, zoom });
       flush();
@@ -295,7 +299,18 @@ CANVAS_JS = r"""
     let moved = false, spread = 0;
     const at = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     const distance = () => { const [a, b] = [...pointers.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+    cv.tabIndex = 0;  // keys: a press gives the canvas focus (as on GTK)
+    cv.addEventListener('focus', () => { window.mojouiKeyCanvas = n; });
+    cv.addEventListener('keydown', e => {
+      if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+      const mods = (e.shiftKey ? 1 : 0) + (e.ctrlKey || e.metaKey ? 2 : 0) + (e.altKey ? 4 : 0);
+      const typed = [...e.key].length === 1 && !(mods & 6);
+      if (mods & 6 && !['Home', 'End'].includes(e.key)) return;  // shortcuts stay the browser's
+      if (OWN_KEYS.has(e.key) || typed) e.preventDefault();
+      send(KEY, 0, 0, mods, 0, 1, e.key);
+    });
     cv.addEventListener('pointerdown', e => {
+      cv.focus({ preventScroll: true });
       cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, at(e));
       if (pointers.size === 1) { moved = false; const [x, y] = at(e); send(PRESS, x, y, 0, 0, 1); }  // where a drag (or tap) starts
       if (pointers.size === 2) spread = distance();
@@ -335,6 +350,9 @@ CANVAS_JS = r"""
   document.addEventListener('DOMContentLoaded', scan);
   document.addEventListener('htmx:afterSettle', () => {
     scan();
+    // an in-place editor closed: the keyboard goes back to the canvas it came from
+    const back = document.querySelector(`[data-kind=canvas][data-node="${window.mojouiKeyCanvas}"] canvas`);
+    if (back && (!document.activeElement || document.activeElement === document.body)) back.focus({ preventScroll: true });
     document.querySelectorAll('[data-kind=canvas]').forEach(div => {
       const st = div.mojoui, m = document.getElementById('n' + div.dataset.node + '-meta');
       if (st && m && (m.dataset.version !== String(st.drawn) || m.dataset.frames !== '0')) { st.want = true; st.pump(); }
@@ -540,9 +558,14 @@ def render_node(s, i, sid):
         # the form's queue, so a fast Return can't overtake the typing it follows.
         # hx-vals is inherited from ancestors, so the input says second=0 explicitly
         # (otherwise it would pick up the form's second=1 and every keystroke would "submit").
-        editor = n["value"] == 1  # .focused(): an in-place editor takes the keyboard, its text selected
+        editor = n["value"] in (1, 2)  # .focused(): an in-place editor takes the keyboard, its text selected (1) or the caret after it (2)
+        at_end = "const k = this.value.length; this.setSelectionRange(k, k)"
+        cancel = (f"if (event.key === 'Escape') {{ event.preventDefault(); htmx.ajax('POST', '{post}', "
+                  f"{{ values: {{ n: {i}, second: 2, text: this.value, v: document.getElementById('mojoui-v').value }}, swap: 'none', source: document.body }}); }}"  # (not the input: its hx-vals would win)
+                  if n["size"] else None)
         field = Input(type="text", name="text", value=n["text"], placeholder=n["hint"], data_kind="field",
-                      cls="cell-editor" if editor else None, onfocus="this.select()" if editor else None,
+                      cls="cell-editor" if editor else None, onfocus=(at_end if n["value"] == 2 else "this.select()") if editor else None,
+                      onkeydown=cancel,
                       autocomplete="off", autofocus=(s.focus == i or editor), hx_trigger="input",
                       hx_sync="closest form:queue all", **dict(common, hx_vals=json.dumps({"n": i, "second": 0})))
         return Form(field, cls="field", id=nid, hx_post=post, hx_vals=json.dumps({"n": i, "second": 1}),
@@ -842,7 +865,11 @@ def make_app(module_dir):
             source = s.nodes[n]
             if source["kind"] == TOGGLE:
                 number = 1 if on else 0
-            if source["kind"] in (CANVAS, BOARD):
+            if source["kind"] == CANVAS and number == KEY:
+                d = json.loads(mod.key(s.handle, n, text, int(dx)))
+            elif source["kind"] == FIELD and second == 2:  # Escape (on_cancel)
+                d = json.loads(mod.cancel(s.handle, n, text))
+            elif source["kind"] in (CANVAS, BOARD):
                 d = json.loads(mod.gesture(s.handle, n, number, x, y, dx, dy, zoom))
             else:
                 d = json.loads(mod.event(s.handle, n, second, text, number))

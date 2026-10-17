@@ -139,6 +139,18 @@ def web_gesture[A: App](handle: Int, node: Int, kind: Int, x: Float64, y: Float6
     return diff_to_json(d, rt[].shown)
 
 
+def web_key[A: App](handle: Int, node: Int, name: String, modifiers: Int) -> String:
+    var rt = session_at[A](handle)
+    var d = rt[].key(node, name, modifiers)
+    return diff_to_json(d, rt[].shown)
+
+
+def web_cancel[A: App](handle: Int, node: Int, text: String) -> String:
+    var rt = session_at[A](handle)
+    var d = rt[].cancel(node, text)
+    return diff_to_json(d, rt[].shown)
+
+
 def web_frame[A: App](handle: Int, node: Int, microseconds: Int) -> String:
     var rt = session_at[A](handle)
     var d = rt[].frame(node, microseconds)

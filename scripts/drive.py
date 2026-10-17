@@ -142,6 +142,15 @@ def step(page, s):
     elif verb == "row":
         k, _, row = rest.partition("=")
         page.locator("[data-kind=list]").nth(int(k)).locator(f'[data-row="{int(row)}"]').click()
+    elif verb == "key":  # key:K=shift+ctrl+Name: a real key press, to whatever has the keyboard (a tapped canvas, an open editor)
+        _, _, name = rest.partition("=")
+        *mods, key = name.split("+")
+        page.keyboard.press("+".join([m.capitalize() if m != "ctrl" else "Control" for m in mods] + [key]))
+    elif verb == "typekeys":  # typekeys:K=text: one real key press per character (the first may open an editor)
+        _, _, text = rest.partition("=")
+        for ch in text:
+            page.keyboard.type(ch)
+            settle(page)
     elif verb in ("drag", "dragat", "doubletap", "zoom", "frames", "tapat"):  # canvas steps: real mouse input on the canvas
         k, _, arg = rest.partition("=")
         canvas = page.locator("[data-kind=canvas]").nth(int(k))

@@ -1,6 +1,6 @@
 # What an app provides, and the platform-independent loop every host runs.
 
-from mojoui.view import View, CANVAS, BOARD, PAN, ZOOM
+from mojoui.view import View, CANVAS, BOARD, FIELD, PAN, ZOOM, KEY
 from mojoui.diff import Diff, diff
 from mojoui.canvas import Surface
 
@@ -11,7 +11,7 @@ struct Event(Copyable, Movable):
     Buttons: just `message`. TextField: `text` = the field's contents.
     Toggle: `number` = 1 or 0. Dropdown: `number` = index, `text` = option.
     Slider: `number` = 0–100.
-    Canvas gestures: `number` = PAN, ZOOM or TAP; `x`, `y` = pointer position in the canvas
+    Canvas gestures: `number` = PAN, ZOOM, TAP, PRESS, RELEASE, DOUBLE or KEY (`text` = the key); `x`, `y` = pointer position in the canvas
     (points from its top-left); PAN: `dx`, `dy` = movement in points; ZOOM: `zoom` = scale factor.
     Canvas frames: `number` = microseconds since the previous frame.
     """
@@ -129,6 +129,22 @@ struct Runtime[A: App](Movable):
         if n.kind != CANVAS or n.msg == 0:
             return Diff(False, [])
         return self.dispatch(Event(n.msg, "", kind, x, y, dx, dy, zoom))
+
+    def key(mut self, node: Int, name: String, modifiers: Int) -> Diff:
+        """A key pressed while canvas node `node` had focus: its gesture message with number = KEY,
+        text = the key's name (or the character typed), dx = modifiers (SHIFT, CTRL, ALT)."""
+        if node < 0 or node >= len(self.shown.nodes):
+            return Diff(False, [])
+        ref n = self.shown.nodes[node]
+        if n.kind != CANVAS or n.msg == 0:
+            return Diff(False, [])
+        return self.dispatch(Event(n.msg, name, KEY, 0, 0, Float64(modifiers), 0, 1))
+
+    def cancel(mut self, node: Int, text: String) -> Diff:
+        """Escape in field node `node`: its on_cancel message (event.text = the field's text)."""
+        if node < 0 or node >= len(self.shown.nodes) or self.shown.nodes[node].kind != FIELD or self.shown.nodes[node].size == 0:
+            return Diff(False, [])
+        return self.dispatch(Event(self.shown.nodes[node].size, text, 0))
 
     def frame(mut self, node: Int, microseconds: Int) -> Diff:
         """One display frame for canvas node `node` (only if it asked for frames)."""
