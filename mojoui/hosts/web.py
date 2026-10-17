@@ -229,6 +229,25 @@ CANVAS_JS = r"""
   const shape = () => document.getElementById('mojoui-v').value;
   // keys a canvas uses itself (the page mustn't scroll or move focus on them)
   const OWN_KEYS = new Set(['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'PageDown', 'PageUp', 'Home', 'End', 'Backspace', 'Delete', 'Escape', 'F2', ' ']);
+  // Keys typed on a canvas before the in-place editor they open has appeared (a round trip later) wait here, then
+  // go into it in order (Enter and Escape act as in it); with no editor (a read-only cell) they go to the canvas.
+  // Page-wide: the screen that shows the editor replaces the canvas element that sent the first key.
+  const early = { typing: false, inflight: 0, keys: [] };
+  function release() {
+    if (!early.typing || early.inflight) return;
+    early.typing = false;
+    const keys = early.keys.splice(0), editor = document.querySelector('input.cell-editor');
+    const div = document.querySelector(`[data-kind=canvas][data-node="${window.mojouiKeyCanvas}"]`);
+    if (!editor) { for (const [k, m] of keys) if (div && div.mojoui) div.mojoui.sendKey(k, m); return; }
+    editor.focus();
+    for (const [k] of keys) {
+      if (k === 'Enter') { editor.form.requestSubmit(); return; }
+      if (k === 'Escape') { editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return; }
+      if (k === 'Backspace') editor.value = editor.value.slice(0, -1);
+      else if ([...k].length === 1) editor.value += k;
+    }
+    const end = editor.value.length; editor.setSelectionRange(end, end);
+  }
   function attach(div) {
     if (div.mojoui) return;
     const cv = div.querySelector('canvas'), g = cv.getContext('2d');
@@ -276,6 +295,7 @@ CANVAS_JS = r"""
         .finally(() => { st.updating = false; if (st.again) update(); });
     }
     st.pump = pump;
+    st.sendKey = (k, m) => send(KEY, 0, 0, m, 0, 1, k);
     function send(kind, x, y, dx, dy, zoom, text = '') {
       const last = st.queue[st.queue.length - 1];
       if (kind === KEY) st.queue.push({ n, number: kind, x, y, dx, dy, zoom, text });
@@ -290,7 +310,9 @@ CANVAS_JS = r"""
       try {
         while (st.queue.length) {
           const e = st.queue.shift();
-          await htmx.ajax('POST', `/e/${sid}`, { values: { ...e, v: shape() }, swap: 'none', source: div });
+          if (e.number === KEY) early.inflight++;
+          try { await htmx.ajax('POST', `/e/${sid}`, { values: { ...e, v: shape() }, swap: 'none', source: div }); }
+          finally { if (e.number === KEY) { early.inflight--; setTimeout(release, 50); } }
           st.want = true; pump();
         }
       } finally { st.sending = false; }
@@ -299,18 +321,24 @@ CANVAS_JS = r"""
     let moved = false, spread = 0;
     const at = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     const distance = () => { const [a, b] = [...pointers.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
-    cv.tabIndex = 0;  // keys: a press gives the canvas focus (as on GTK)
-    cv.addEventListener('focus', () => { window.mojouiKeyCanvas = n; });
-    cv.addEventListener('keydown', e => {
-      if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
-      const mods = (e.shiftKey ? 1 : 0) + (e.ctrlKey || e.metaKey ? 2 : 0) + (e.altKey ? 4 : 0);
-      const typed = [...e.key].length === 1 && !(mods & 6);
-      if (mods & 6 && !['Home', 'End'].includes(e.key)) return;  // shortcuts stay the browser's
-      if (OWN_KEYS.has(e.key) || typed) e.preventDefault();
-      send(KEY, 0, 0, mods, 0, 1, e.key);
-    });
+    const keys = div.dataset.keys === '1';  // Canvas(keys=True): a press gives it the keyboard (as on GTK)
+    if (keys) {
+      cv.tabIndex = 0;
+      cv.addEventListener('focus', () => { window.mojouiKeyCanvas = n; });
+      cv.addEventListener('keydown', e => {
+        if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+        const mods = (e.shiftKey ? 1 : 0) + (e.ctrlKey || e.metaKey ? 2 : 0) + (e.altKey ? 4 : 0);
+        const typed = [...e.key].length === 1 && !(mods & 6);
+        if ((OWN_KEYS.has(e.key) && !(mods & 6)) || typed || (mods & 2 && ['Home', 'End'].includes(e.key))) e.preventDefault();
+        // a key typed on a cell opens an editor a round trip later: keys pressed meanwhile wait for it (not lost,
+        // not sent to the grid), then go into the editor in order
+        if (early.typing) { early.keys.push([e.key, mods]); return; }
+        if (typed) early.typing = true;
+        send(KEY, 0, 0, mods, 0, 1, e.key);  // (Ctrl and Alt keys too, as GTK sends them; the page keeps their defaults)
+      });
+    }
     cv.addEventListener('pointerdown', e => {
-      cv.focus({ preventScroll: true });
+      if (keys) cv.focus({ preventScroll: true });
       cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, at(e));
       if (pointers.size === 1) { moved = false; const [x, y] = at(e); send(PRESS, x, y, 0, 0, 1); }  // where a drag (or tap) starts
       if (pointers.size === 2) spread = distance();
@@ -350,9 +378,11 @@ CANVAS_JS = r"""
   document.addEventListener('DOMContentLoaded', scan);
   document.addEventListener('htmx:afterSettle', () => {
     scan();
+    release();
+    const kdiv = document.querySelector(`[data-kind=canvas][data-node="${window.mojouiKeyCanvas}"]`);
     // an in-place editor closed: the keyboard goes back to the canvas it came from
-    const back = document.querySelector(`[data-kind=canvas][data-node="${window.mojouiKeyCanvas}"] canvas`);
-    if (back && (!document.activeElement || document.activeElement === document.body)) back.focus({ preventScroll: true });
+    const back = kdiv && kdiv.querySelector('canvas');
+    if (back && kdiv.dataset.keys === '1' && (!document.activeElement || document.activeElement === document.body)) back.focus({ preventScroll: true });
     document.querySelectorAll('[data-kind=canvas]').forEach(div => {
       const st = div.mojoui, m = document.getElementById('n' + div.dataset.node + '-meta');
       if (st && m && (m.dataset.version !== String(st.drawn) || m.dataset.frames !== '0')) { st.want = true; st.pump(); }
@@ -648,7 +678,7 @@ def render_node(s, i, sid):
         sized_h = n["h"] or (n["height_from_parent"] if "height_from_parent" in n else n["grows"] or n["fills"])
         own = ";".join(([] if sized_w else ["width:320px"]) + ([] if sized_h else ["height:240px"]))
         return Div(Canvas(), canvas_meta(n, i), id=nid, cls="canvas", data_kind="canvas", data_node=str(i), data_sid=sid,
-                   style=own or None)
+                   data_keys="1" if n["size"] == 1 else None, style=own or None)
     if kind == DIVIDER:
         return Hr(id=nid)
     if kind == SPACER:

@@ -12,7 +12,7 @@
 # the data (a GridSource), writing values and sorting (engine operations: the grid only shows them).
 
 from mojoui.app import Event
-from mojoui.view import TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE, KEY, SHIFT, CTRL, ALT
+from mojoui.view import View, TextField, TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE, KEY, SHIFT, CTRL, ALT
 from mojoui.canvas import Surface
 from mojoui.text import Font, MONO, RIGHT
 from mojoui.draw import rect, hline, line
@@ -276,7 +276,20 @@ struct DataGrid(Copyable, Movable):
         self.cur_row = row
         self.cur_col = col
         self.editing = False
+        self.typed = ""
         self.redraw()
+
+    def cancel_edit(mut self):
+        """The editor closed without writing (its Escape, or anything else the app does meanwhile)."""
+        self.editing = False
+        self.typed = ""
+        self.redraw()
+
+    def editor(self, value: String, on_submit: Int, on_cancel: Int) -> View:
+        """The in-place editor's field (place it with editor_place()): Enter sends on_submit (event.text = the
+        value), Escape on_cancel. Opened by typing, it starts from what was typed with the caret after it;
+        opened by F2 or a double click, the value is selected (typing replaces it)."""
+        return TextField(value, placeholder="Cell", on_submit=on_submit, on_cancel=on_cancel).focused(select_all=self.typed == "").tag("cell-editor")
 
     def set_order(mut self, var order: List[Int], col: Int, descending: Bool):
         """Show the rows in this order (the engine's sort); col and descending set the header marker."""
@@ -570,8 +583,7 @@ struct DataGrid(Copyable, Movable):
         var ctrl = (mods & CTRL) != 0
         if name == "Escape":
             if self.editing:
-                self.editing = False
-                self.redraw()
+                self.cancel_edit()
                 return GRID_CANCEL
             return GRID_NONE
         var moves = (name == "ArrowDown" or name == "ArrowUp" or name == "ArrowLeft" or name == "ArrowRight" or name == "Tab"
@@ -614,6 +626,9 @@ struct DataGrid(Copyable, Movable):
         if chars == 1 and not ctrl and (mods & ALT) == 0:
             if not editable:
                 return GRID_READ_ONLY
+            if self.editing and self.typed != "":  # typed faster than the editor appeared: it goes on the end
+                self.typed += name
+                return GRID_TYPED
             self.keep_in_view(row, col, src)
             self.typed = name
             self.editing = True

@@ -168,3 +168,13 @@ Newest last. What was tried, what happened, dead ends.
 - Engine on the way: formula columns' values read only the columns the formula uses (sort by margin 2.1 → 1.1 s).
 - Goal 11's M6 failures (a loaded machine's 3.8 s sort; Android's first tap before the app drew) were checked one by one and fixed (faster sort; the Android driver waits for a view).
 
+- Goal 12's final full run: M1–M4 PASS; M5 failed three ways: MX Studio imported its own modules (goal 3's "apps import only mojoui"), no Tokyo Night accent without a theme file, 54 fps on goal 6's lens under load. Fixed the first two in the code (D-126, D-127); the README's Android row lost the word goal 7 looks for ("runs"); the lens holds 60.0 fps three times out of three when run alone, so the 54 was contention.
+- Mistake: ran an archived checker directly to retest fps; it ignores milestone names, rebuilds everything and skips the headless display (windows on the owner's screen for a few minutes). Lesson recorded; the probe now calls its function after headless.ensure().
+
+## Goal 13: keys (2026-10-16 night, owner away)
+- Built in a worktree while goal 12's regression ran in the main tree (D-130).
+- DataGrid's keyboard passed its own test on the first build; GTK's first build tripped the known "aliasing in String(x[byte=n:])" rule.
+- The test step name `type:` was already taken (typing into a field by placeholder): the keyboard one is `typekeys:`.
+- Web Escape first did nothing: htmx.ajax with `source: this` merges the input's own hx-vals ({second: 0}) over the values given. Sent from the body now.
+- The checker's first M3 failure was the checker's: the follow-on keys replace the status line that proved the write; the Workbook's tap lands on a cell, not a header. Split into two runs, rows per app.
+- Review round 1 (NEEDS WORK): fast typing on the web lost characters (a second key before the editor appeared reopened it: the grid now appends, and the page holds keys typed during the round trip and puts them into the editor in order; the driver types 30 ms apart without waiting); Escape's check couldn't fail (now: Escape then F2 shows the cell's old value, compared with a run that never typed); GTK steps didn't prove focus or the caret (they now say TEST: … when the canvas or editor doesn't have the keyboard, and type at the caret over any selection); every canvas trapped Tab (keys are opt-in: Canvas(keys=True)); GTK sent Ctrl/Alt keys and the web didn't (both send them now); the editor flow was copied in both apps (DataGrid.editor() and cancel_edit() own it); more grid tests (sorted order, edges, exact PageDown/PageUp, Home, scrolling up, before the first draw, fast typing); the comparison filter was put back to goal 12's.

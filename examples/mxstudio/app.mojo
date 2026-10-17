@@ -108,7 +108,6 @@ struct Main(App):
     var milliseconds: Float64
     var message: String
     var edit_text: String
-    var edit_typed: Bool  # the editor opened by typing: the caret after the text, not the text selected
     var showing: String  # what the grid is filtered to ("" = every row)
     var lows: List[Int64]  # per column: min and max (for the header histograms' bins)
     var highs: List[Int64]
@@ -175,7 +174,6 @@ struct Main(App):
         self.milliseconds = 0
         self.message = ""
         self.edit_text = ""
-        self.edit_typed = False
         self.showing = ""
         self.lows = List[Int64]()
         self.highs = List[Int64]()
@@ -452,7 +450,6 @@ struct Main(App):
 
     def select_cell(mut self, row: Int, col: Int):
         self.edit_text = self.frame.display(col, row) if row >= 0 and col >= 0 else ""
-        self.edit_typed = False
         self.version += 1
 
     def after_edit(mut self):
@@ -476,7 +473,6 @@ struct Main(App):
             elif action == GRID_TYPED:  # a key typed on a cell: the editor starts from it (it replaces the value)
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
                 self.edit_text = self.grid.typed
-                self.edit_typed = True
                 self.message = "Editing order row " + grouped(self.grid.cur_row + 1) + " · " + self.frame.name(self.grid.cur_col) + ": Enter writes it, Escape cancels"
             elif action == GRID_CANCEL:
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
@@ -514,8 +510,7 @@ struct Main(App):
                     self.message = String(e) + " (fix it and press Enter)"
             self.version += 1
         elif m == CELL_CANCEL:  # Escape in the editor: nothing written
-            self.grid.editing = False
-            self.grid.redraw()
+            self.grid.cancel_edit()
             self.select_cell(self.grid.cur_row, self.grid.cur_col)
             self.message = "Edit cancelled"
         elif m == SORT:
@@ -743,7 +738,7 @@ struct Main(App):
                 ),
                 spacing=12,
             ).justify(BETWEEN).fill().height(32),
-            Canvas(0, self.version + self.grid.version, on_gesture=GRID).fill().height(self.h[TABLE] - 66),
+            Canvas(0, self.version + self.grid.version, on_gesture=GRID, keys=True).fill().height(self.h[TABLE] - 66),
             spacing=10,
         )
 
@@ -949,9 +944,9 @@ struct Main(App):
             bottom = max(bottom, self.y[k] + self.h[k])
         var ed = self.grid.editor_place(self.frame)
         if ed[2] > 0:  # the in-place editor, over its cell, on the page
-            items.append(TextField(self.edit_text, placeholder="Cell", on_submit=CELL_COMMIT, on_cancel=CELL_CANCEL).focused(select_all=not self.edit_typed)
+            items.append(self.grid.editor(self.edit_text, CELL_COMMIT, CELL_CANCEL)
                          .at(self.x[TABLE] + PAGE_X + CARD_PAD_X + ed[0], self.y[TABLE] + PAGE_Y + GRID_TOP + ed[1])
-                         .width(ed[2]).height(30).tag("cell-editor"))
+                         .width(ed[2]).height(30))
         return self.page(items^, bottom)
 
     def page(self, var items: List[View], bottom: Int) -> View:

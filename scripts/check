@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rebuild everything and print PASS/FAIL for each milestone in GOAL.md.
+# Rebuild everything and print PASS/FAIL for each milestone in GOAL.md (scripts/check M2 M3: only those, no rebuild).
 set -uo pipefail
 cd "$(dirname "$0")/.."
-exec pixi run python scripts/check.py
+exec pixi run python scripts/check.py "$@"

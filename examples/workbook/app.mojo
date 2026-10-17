@@ -99,7 +99,6 @@ struct Main(App):
     var pal: Palette  # the person's Omarchy theme: the grid and the charts draw in it
     var objects: List[Obj]
     var edit_text: String
-    var edit_typed: Bool  # the editor opened by typing: the caret after the text, not the text selected
     var message: String  # the last error or confirmation
     var results: List[List[Int]]  # per object: group sums
     var counts: List[List[Int]]
@@ -144,7 +143,6 @@ struct Main(App):
         self.objects.append(obj(CHART, "Revenue by region", 872, 396, 360, 300, a=1, c=1))
         self.objects.append(obj(NOTE_OBJ, "Note", 0, 712, 480, 136, text="Please review this: Q4 revenue by region, then the margin column."))
         self.edit_text = ""
-        self.edit_typed = False
         self.message = ""
         self.results = List[List[Int]]()
         self.counts = List[List[Int]]()
@@ -344,7 +342,6 @@ struct Main(App):
         self.grid.cur_row = row
         self.grid.cur_col = col
         self.edit_text = self.frame.display(col, row) if row >= 0 and col >= 0 else ""  # (row -1: a whole column)
-        self.edit_typed = False
         self.version += 1
 
     def update(mut self, event: Event):
@@ -365,7 +362,6 @@ struct Main(App):
             elif action == GRID_TYPED:  # a key typed on a cell: the editor starts from it (it replaces the value)
                 self.select_cell(g.cur_row, g.cur_col)
                 self.edit_text = g.typed
-                self.edit_typed = True
                 self.message = "Editing row " + grouped(g.cur_row + 1) + " · " + self.frame.name(g.cur_col) + ": Enter writes it, Escape cancels"
             elif action == GRID_CANCEL:
                 self.select_cell(g.cur_row, g.cur_col)
@@ -405,8 +401,7 @@ struct Main(App):
                     self.message = String(e) + " (fix it and press Enter)"  # the editor stays open with what was typed
             self.version += 1
         elif m == CELL_CANCEL:  # the in-place editor's Escape: nothing written
-            self.grid.editing = False
-            self.grid.redraw()
+            self.grid.cancel_edit()
             self.select_cell(self.grid.cur_row, self.grid.cur_col)
             self.message = "Edit cancelled"
         elif m == COMMIT:
@@ -669,7 +664,7 @@ struct Main(App):
                 TextField("", placeholder="Formula", on_submit=FORMULA).width(320),
                 spacing=8,
             ).fill().height(32),
-            Canvas(k, self.version + self.grid.version, on_gesture=GRID_GESTURE + k).fill().height(o.h - 124),  # (a fixed size: the same cell under a tap on every host)
+            Canvas(k, self.version + self.grid.version, on_gesture=GRID_GESTURE + k, keys=True).fill().height(o.h - 124),  # (a fixed size: the same cell under a tap on every host)
             spacing=10,
         )
 
@@ -733,8 +728,8 @@ struct Main(App):
             board_h = max(board_h, o.y + o.h)
         var ed = self.editor_place()
         if ed[2] > 0:  # the in-place editor floats on the page over its cell (last: drawn on top)
-            items.append(TextField(self.edit_text, placeholder="Cell", on_submit=CELL_COMMIT, on_cancel=CELL_CANCEL).focused(select_all=not self.edit_typed)
-                         .at(ed[0], ed[1]).width(ed[2]).height(30).tag("cell-editor"))  # (a row, 26 pt, and its 2-pt ring each side)
+            items.append(self.grid.editor(self.edit_text, CELL_COMMIT, CELL_CANCEL)
+                         .at(ed[0], ed[1]).width(ed[2]).height(30))  # (a row, 26 pt, and its 2-pt ring each side)
         var engine = self.gf()[].device_name()
         # The chrome floats over the page in islands; the page scrolls underneath.
         var title = HStack(Text("Contoso Workbook", style=HEADLINE), spacing=12)

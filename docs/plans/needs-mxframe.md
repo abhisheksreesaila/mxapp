@@ -18,7 +18,8 @@ covers MX Studio's Sheet and Report. These need MX frame and are skipped or stub
 | Data bigger than GPU or host memory (E8) | chunked, streamed execution | 20M rows in memory; MOJOUI_ROWS caps it |
 | The DuckDB test oracle and TPC-H (P3–P5, E5) | the engine those tests are for | the stand-in is checked against its own CPU path (GPU = CPU exactly) |
 | Count distinct, percentiles, top-k, binning as engine operations (E5, C5) | aggregate operators | done in app code over GPU group-by results (histograms, top customers) |
+| Blank (null) numbers and dates: Delete on a number cell, empty cells in imports | nulls per column | Delete clears text cells only; a number cell says "type a value (0 to zero it)" (goal 13) |
 
 When MX frame's Mojo API is ready, the switch is one layer: `GridSource`, the ops modules
-(`examples/mxstudio/ops.mojo`, `report_ops.mojo`) and the Workbook's compute() call the engine; the components
+(`mojoui/orders_ops.mojo`, `orders_report.mojo`) and the Workbook's compute() call the engine; the components
 (DataGrid, PivotTable, ChartView, KpiView, FindingCard) don't change.

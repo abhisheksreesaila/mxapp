@@ -438,6 +438,7 @@ struct GtkHost[A: App](Movable):
     var focus: Int  # text field to keep focused across the next rebuild (-1: none)
     var key_node: Int  # the canvas node that had the keyboard last (it gets it back when an in-place editor closes)
     var editor_keys: Int  # the in-place editor's key controller (test steps press Escape through it)
+    var editor_open: Bool  # the last build showed an in-place editor
 
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
@@ -456,6 +457,7 @@ struct GtkHost[A: App](Movable):
         self.focus = -1
         self.key_node = -1
         self.editor_keys = 0
+        self.editor_open = False
 
     def padding_class(mut self, v: Int, h: Int) -> String:
         """A CSS class giving `v`/`h` padding (GTK has no padding setter; CSS does it)."""
@@ -645,11 +647,13 @@ struct GtkHost[A: App](Movable):
             set_index(click, ci)
             connect_any(click, "released", on_click_released[Self.A], self_addr)
             external_call["gtk_widget_add_controller", NoneType](w, click)
-            external_call["gtk_widget_set_focusable", NoneType](w, c_int(1))  # keys: a press gives it focus
-            var keys = external_call["gtk_event_controller_key_new", Int]()
-            set_index(keys, ci)
-            connect_any(keys, "key-pressed", on_key_pressed[Self.A], self_addr)
-            external_call["gtk_widget_add_controller", NoneType](w, keys)
+            var keys = 0
+            if node.size == 1:  # Canvas(keys=True): a press gives it the keyboard
+                external_call["gtk_widget_set_focusable", NoneType](w, c_int(1))
+                keys = external_call["gtk_event_controller_key_new", Int]()
+                set_index(keys, ci)
+                connect_any(keys, "key-pressed", on_key_pressed[Self.A], self_addr)
+                external_call["gtk_widget_add_controller", NoneType](w, keys)
             c.drag = drag
             c.scroll = scroll
             c.click = click
@@ -920,10 +924,12 @@ struct GtkHost[A: App](Movable):
                 self.focus = -1
         if not editor:
             self.editor_keys = 0
-            if self.focus < 0:  # an in-place editor closed: the keyboard goes back to the canvas it came from
+            if self.editor_open:  # an in-place editor closed: the keyboard goes back to the canvas it came from
+                self.focus = -1  # (not to the field that sent Enter: it's gone)
                 for c in self.canvases:
                     if c.node == self.key_node:
                         _ = external_call["gtk_widget_grab_focus", c_int](c.widget)
+        self.editor_open = editor
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
         self.focus = -1
@@ -1255,8 +1261,9 @@ def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi
     host[].canvases[ci].start_x = x
     host[].canvases[ci].start_y = y
     host[].canvases[ci].moved = False
-    _ = external_call["gtk_widget_grab_focus", c_int](host[].canvases[ci].widget)  # keys go to the canvas pressed last
-    host[].key_node = host[].canvases[ci].node
+    if host[].canvases[ci].keys != 0:  # keys go to the canvas pressed last
+        _ = external_call["gtk_widget_grab_focus", c_int](host[].canvases[ci].widget)
+        host[].key_node = host[].canvases[ci].node
     if not busy():
         host[].canvas_send(ci, PRESS, x, y, 0, 0, 1, host_addr)  # where a drag (or a tap) starts
 
@@ -1372,6 +1379,15 @@ def gdk_keyval(name: String) -> Int:
     for ch in name.codepoint_slices():
         return Int(external_call["gdk_unicode_to_keyval", c_uint](c_uint(Int(ord(String(ch))))))
     return 0
+
+
+def holds_keyboard(w: Int) -> Bool:
+    """The window's keyboard focus is w or inside it (a GtkEntry focuses its own inner text widget)."""
+    var root = external_call["gtk_widget_get_root", Int](w)
+    if root == 0:
+        return False
+    var f = external_call["gtk_root_get_focus", Int](root)
+    return f != 0 and (f == w or Int(external_call["gtk_widget_is_ancestor", c_int](f, w)) != 0)
 
 
 def on_key_pressed[A: App](keys: Int, keyval: c_uint, keycode: c_uint, state: c_uint, host_addr: Int) abi("C") -> c_int:
@@ -1858,6 +1874,14 @@ def run_step[A: App](host_addr: Int, step: String):
                 if host[].rt.shown.nodes[k].kind == FIELD and host[].rt.shown.nodes[k].value >= 1 and k < len(host[].widgets) and host[].widgets[k] != 0:
                     editor = k
             var handled = List[c_int](length=1, fill=0)
+            # a person's keys go where the focus is: say so if it isn't where this step sends them
+            var target = host[].widgets[editor] if editor >= 0 else 0
+            if editor < 0:
+                for k in range(len(host[].canvases)):
+                    if host[].canvases[k].node == node:
+                        target = host[].canvases[k].widget
+            if target == 0 or not holds_keyboard(target):
+                print("TEST: " + p + " pressed, but " + ("the editor" if editor >= 0 else "canvas " + kv[0]) + " doesn't have the keyboard")
             if editor >= 0 and p == "Enter":
                 var activate = String("activate")
                 external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[editor], activate.as_c_string_span())
@@ -1865,16 +1889,22 @@ def run_step[A: App](host_addr: Int, step: String):
                 if host[].editor_keys != 0:
                     external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].editor_keys, signal.as_c_string_span(),
                         c_uint(gdk_keyval(p)), c_uint(0), c_uint(state), Int(handled.unsafe_ptr()))
-            elif editor >= 0:  # a character typed into the editor, after its text
-                var now = c_str(external_call["gtk_editable_get_text", Int](host[].widgets[editor])) + p
-                external_call["gtk_editable_set_text", NoneType](host[].widgets[editor], now.as_c_string_span())
+            elif editor >= 0:  # a character typed into the editor where a person's would go: over the selection, at the caret
+                var ed = host[].widgets[editor]
+                _ = external_call["gtk_editable_delete_selection", NoneType](ed)
+                var pos = List[c_int](length=1, fill=external_call["gtk_editable_get_position", c_int](ed))
+                var ch = p
+                external_call["gtk_editable_insert_text", NoneType](ed, ch.as_c_string_span(), c_int(ch.byte_length()), Int(pos.unsafe_ptr()))
+                external_call["gtk_editable_set_position", NoneType](ed, pos[0])
+                _ = len(pos)
             else:
                 var cs = ci
                 for k in range(len(host[].canvases)):  # (the canvas list is rebuilt when the screen's shape changes)
                     if host[].canvases[k].node == node:
                         cs = k
-                external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[cs].keys, signal.as_c_string_span(),
-                    c_uint(gdk_keyval(p)), c_uint(0), c_uint(state), Int(handled.unsafe_ptr()))
+                if host[].canvases[cs].keys != 0:
+                    external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[cs].keys, signal.as_c_string_span(),
+                        c_uint(gdk_keyval(p)), c_uint(0), c_uint(state), Int(handled.unsafe_ptr()))
             _ = len(handled)
             settle()
     elif verb == "drag" or verb == "dragat" or verb == "doubletap" or verb == "zoom" or verb == "frames" or verb == "tapat":
@@ -2311,7 +2341,10 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     if testing:
         # Test windows ignore the real keyboard and mouse: the checks drive the widgets
         # themselves, and someone working at the desktop mustn't type into them by accident.
-        external_call["gtk_widget_set_can_focus", NoneType](host[].window, c_int(0))
+        # On the checks' private display (scripts/headless.py) nobody types, so the keyboard focus is real
+        # there: key steps check that the canvas or editor they press keys into really has it.
+        if getenv("MOJOUI_PRIVATE_DISPLAY") != "1":
+            external_call["gtk_widget_set_can_focus", NoneType](host[].window, c_int(0))
         external_call["gtk_widget_set_can_target", NoneType](host[].window, c_int(0))
         # A fixed size, so measurements don't depend on how the desktop tiles windows.
         external_call["gtk_window_set_resizable", NoneType](host[].window, c_int(0))

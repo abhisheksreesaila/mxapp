@@ -108,7 +108,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
     var options: List[String]  # dropdown choices
     var hint: String  # field placeholder
     var msg2: Int  # field: message sent on Return
-    var size: Int  # scroll: visible height in points; image: height; field: message sent on Escape
+    var size: Int  # scroll: visible height in points; image: height; field: message sent on Escape; canvas: 1 = takes keys
     var pixels: List[UInt32]  # image: RGBA bytes, one UInt32 per pixel (R in the low byte)
     # Layout settings (0 = not set). Sizes include padding (border-box) on every host.
     var pad_v: Int  # padding top and bottom
@@ -401,13 +401,15 @@ def LazyList(count: Int, list_id: Int, on_tap: Int = NO_MSG, height: Int = 320, 
     return _one(Node(LAZYLIST, "", on_tap, value=count, msg2=list_id, size=height, spacing=row_height))
 
 
-def Canvas(id: Int, version: Int, on_gesture: Int = NO_MSG, on_frame: Int = NO_MSG) -> View:
+def Canvas(id: Int, version: Int, on_gesture: Int = NO_MSG, on_frame: Int = NO_MSG, keys: Bool = False) -> View:
     """A surface the app paints itself: hosts call the app's `draw(id, surface)` at the canvas's
     real pixel size, and again whenever `version` changes or the canvas is resized.
     Drags, pinches, wheel zooms and taps send `on_gesture` (event.number = PAN, ZOOM or TAP).
     With `on_frame`, it sends one event per display frame (event.number = microseconds since the last).
+    With `keys=True` it takes the keyboard when pressed and sends `on_gesture` with event.number = KEY for each
+    key (a canvas without it never holds the keyboard: Tab moves on past it).
     Size it with layout settings, e.g. `Canvas(0, v).grow().fill()`."""
-    return _one(Node(CANVAS, "", on_gesture, style=id, value=version, msg2=on_frame))
+    return _one(Node(CANVAS, "", on_gesture, style=id, value=version, msg2=on_frame, size=1 if keys else 0))
 
 
 def Divider() -> View:

@@ -1,7 +1,8 @@
-"""Milestone checker for GOAL.md (goal 12: MX Studio's Report; goal 11's checks run as M5, earlier goals' inside them: MX Studio's Sheet, components first; goal 10's checks run as M6,
-earlier goals' inside them). Rebuilds from scratch, prints PASS/FAIL per milestone. GTK runs headless.
+"""Milestone checker for GOAL.md (goal 13: keys, so the grid feels like a spreadsheet; goal 12's checks run as M4,
+earlier goals' inside them). Rebuilds from scratch, prints PASS/FAIL per milestone. GTK runs headless; the web runs
+use real key presses in Chromium (so focus is proven there, not just the events).
 
-Run: scripts/check   (a subset without rebuilding: scripts/check M4 M5; earlier goals: docs/goals/NN-check.py)
+Run: scripts/check   (a subset without rebuilding: scripts/check M2 M3; earlier goals: through docs/goals/NN-check.py)
 """
 
 import importlib.util
@@ -12,181 +13,128 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-_spec = importlib.util.spec_from_file_location("goal11", ROOT / "docs/goals/11-check.py")
-g11 = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(g11)
-g10 = g11.g10
-run, BUILD = g11.run, g11.BUILD
+_spec = importlib.util.spec_from_file_location("goal12", ROOT / "docs/goals/12-check.py")
+g12 = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(g12)
+run, BUILD, EXAMPLES = g12.run, g12.BUILD, g12.EXAMPLES
 
 import drive  # noqa: E402
 
-EXAMPLES = g11.EXAMPLES
 SHOWN = r"^(LABEL|TONE|SEGMENTED|TABS|DROPDOWN|BUTTON|FIELD|TEXTAREA|BOARD): "
 TIMING = re.compile(r"^LABEL: .*[\d.]+ ms on ")
 
-REPORT = "segment:0=Report"
-WEST = REPORT + ";select:1=West"  # the Report's region filter (dropdowns: quarter, region, product)
-MERGE_REPORT = "tap:Merge into “Acme Corp”;segment:0=Report"
-OPEN = REPORT + ";tap:Open the rows"
-MIX = REPORT + ";tapat:6=500,40"  # canvases in order: 4 KPI sparklines, weekly, top customers, product mix (the first bar)
-TILES = ("Revenue and margin by week", "Top customers", "Product mix", "Margin · region × product", "Worth a look",
-         "Revenue", "Orders", "Gross margin", "Active customers")
+# Each app's grid is canvas 0. MX Studio's tap lands on a header (a column: the first Down selects row 1); the
+# Workbook's on row 1's cell (the first Down selects row 2). `start`: the row after the tap and one Down.
+APPS = {
+    "mxstudio": dict(tap="tapat:0=300,100", start=1, written=r"^LABEL: customer on row (\d+): .* → Zed Co$",
+                     editing=r"^LABEL: Editing order row (\d+) · customer", cleared=r"^LABEL: customer on row (\d+): .* → \(empty\)$"),
+    "workbook": dict(tap="tapat:0=300,200", start=2, written=r"^LABEL: Row (\d+): region = Zed Co$",
+                     editing=r"^LABEL: Editing row (\d+) · region", cleared=r"^LABEL: Row (\d+): region cleared$"),
+}
 
 
 def shown(out):
     return sorted(l for l in out.splitlines() if re.match(SHOWN, l) and not TIMING.match(l))
 
 
-def label(out, start):
-    return next((l[len("LABEL: "):] for l in out.splitlines() if l.startswith("LABEL: " + start)), None)
-
-
-def labels(out):
-    return [l[len("LABEL: "):] for l in out.splitlines() if l.startswith("LABEL: ")]
-
-
-def gtk(steps, shot=None, env=None):
-    e = {"MOJOUI_TEST": steps, "MOJOUI_SHOT": shot or str(BUILD / "mxstudio" / "gtk.png")}
-    e.update(env or {})
-    exe = BUILD / "mxstudio" / "linux" / "mxstudio"
-    if not exe.exists():
-        return None, f"no {exe}"
-    r = run([str(exe)], env=e, timeout=900)
-    out = r.stdout + r.stderr
-    if r.returncode != 0 or "CRITICAL" in out or "TEST: " in out:
-        return None, f"GTK run failed (exit {r.returncode}):\n{out[-600:]}"
-    return r, out
-
-
-def both(steps, name):
-    rg, og = gtk(steps, shot=str(BUILD / "mxstudio" / f"{name}-gtk.png"))
-    if rg is None:
-        return None, f"GTK: {og[-300:]}"
+def both(app, steps, name):
+    exe = BUILD / app / "linux" / app
+    r = run([str(exe)], env={"MOJOUI_TEST": steps, "MOJOUI_SHOT": str(BUILD / app / f"{name}-gtk.png")}, timeout=900)
+    og = r.stdout + r.stderr
+    if r.returncode != 0 or "CRITICAL" in og or "TEST: " in og:
+        return None, f"{app} GTK run failed (exit {r.returncode}): {og[-300:]}"
     try:
-        rw, ow = drive.web_run(BUILD / "mxstudio" / "web", steps, shot=str(BUILD / "mxstudio" / f"{name}-web.png"), viewport=(1440, 900))
+        rw, ow = drive.web_run(BUILD / app / "web", steps, shot=str(BUILD / app / f"{name}-web.png"), viewport=(1440, 900))
     except Exception as e:
-        return None, f"web run crashed: {e!r}"
+        return None, f"{app} web run crashed: {e!r}"
     if rw.returncode != 0:
-        return None, f"web: {ow[-300:]}"
+        return None, f"{app} web: {ow[-300:]}"
     return og, ow
 
 
-def built_test(src, out_name, marker, includes=(".",)):
-    args = ["pixi", "run", "mojo", "build"]
-    for inc in includes:
-        args += ["-I", inc]
-    b = run(args + [src, "-o", str(BUILD / out_name)], timeout=900)
-    if b.returncode != 0:
-        return False, f"{src} build: {(b.stdout + b.stderr)[-400:]}"
-    t = run(["pixi", "run", str(BUILD / out_name)], timeout=900)
-    return marker in t.stdout, (t.stdout + t.stderr)[-400:]
-
-
-def kpi(out, name):
-    """A KPI's value: the label after its name."""
-    got = labels(out)
-    return got[got.index(name) + 1] if name in got and got.index(name) + 1 < len(got) else None
-
-
-def kpi_values(out):
-    return [l for l in labels(out) if re.match(r"^\$[\d.]+[KMB]?$|^[\d,]+$|^[\d.]+%$", l)]
+def first(pattern, out):
+    m = re.search(pattern, out or "", re.M)
+    return int(m.group(1)) if m and m.groups() else (True if m else None)
 
 
 def m1():
     problems = []
-    for f, needle in (("mojoui/kpi.mojo", "struct KpiView"), ("mojoui/finding.mojo", "def FindingCard("),
-                      ("mojoui/charts.mojo", "struct Heatmap"), ("mojoui/charts.mojo", "def with_marker")):
+    for f, needle in (("mojoui/view.mojo", "comptime KEY = 7"), ("mojoui/app.mojo", "def key("), ("mojoui/app.mojo", "def cancel("),
+                      ("mojoui/view.mojo", "on_cancel: Int"), ("mojoui/hosts/gtk.mojo", "gtk_event_controller_key_new"),
+                      ("mojoui/hosts/web.py", "addEventListener('keydown'")):
         if needle not in (ROOT / f).read_text():
             problems.append(f"{f} lacks {needle}")
-    ok, out = built_test("tests/test_components.mojo", "test_components", "COMPONENT TESTS PASSED")
-    if not ok:
-        problems.append(f"test_components: {out}")
-    app = (ROOT / "examples/mxstudio/app.mojo").read_text()
-    if "return FindingCard(" not in app[app.index("def agent_card"):]:
-        problems.append("the Sheet's agent card isn't a FindingCard")
+    o = both("mxstudio", APPS["mxstudio"]["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;key:0=F2", "keys-move")
+    if o[0] is None:
+        return False, o[1]
+    for host, out in (("GTK", o[0]), ("web", o[1])):
+        if first(APPS["mxstudio"]["editing"], out) != 2:
+            problems.append(f"{host}: two arrows down from the column then F2 didn't edit row 2 ({first(APPS['mxstudio']['editing'], out)})")
+    if shown(o[0]) != shown(o[1]):
+        problems.append(f"GTK and web differ: {sorted(set(shown(o[0])) ^ set(shown(o[1])))[:4]}")
     r = run(["pixi", "run", "python", "scripts/components.py", "--check"], timeout=120)
     if r.returncode != 0:
         problems.append("docs/components.md is stale")
     doc = (ROOT / "docs/components.md").read_text()
-    for name in ("KpiView", "FindingCard"):
-        row = next((l for l in doc.splitlines() if l.startswith(f"| `{name}`")), "")
-        if row.count("✅") < 2:
-            problems.append(f"the matrix doesn't show {name} ✅ on Linux and web")
-    return not problems, "; ".join(problems) or "KpiView, FindingCard, line markers and Heatmap in mojoui with tests; the matrix shows them ✅ on Linux and web"
+    for name in ("Canvas: keys", "TextField: Escape cancels", "Editor: caret after the text"):
+        row = next((l for l in doc.splitlines() if l.startswith(f"| {name}")), "")
+        cells = [c.strip() for c in row.split("|")[3:5]]
+        if cells != ["✅", "✅"]:
+            problems.append(f"the matrix doesn't show '{name}' ✅ on Linux and web: {cells}")
+    return not problems, "; ".join(problems) or "KEY events, canvas focus and on_cancel in mojoui; arrows then F2 edit the same cell on GTK and web (real key presses); the matrix shows them ✅ on Linux and web"
 
 
 def m2():
-    ok, out = built_test("tests/test_report.mojo", "test_report", "REPORT TESTS PASSED", (".",))
-    if not ok:
-        return False, f"test_report: {out}"
-    m = re.search(r"REPORT: .*", out)
-    return True, (m.group(0) if m else "the anomaly finder and the KPIs match the CPU")
+    problems = []
+    for src, out_name, marker in (("tests/test_grid_keys.mojo", "test_grid_keys", "GRID KEY TESTS PASSED"),
+                                  ("tests/test_datagrid.mojo", "test_datagrid", "DATAGRID TESTS PASSED")):
+        ok, out = g12.built_test(src, out_name, marker)
+        if not ok:
+            problems.append(f"{out_name}: {out}")
+    return not problems, "; ".join(problems) or "DataGrid's keyboard: arrows, Tab, Enter, PageUp/Down, Home/End, F2, Escape, typing, Delete (deleted rows skipped, the cell kept on screen, formulas read-only); the grid's own tests pass"
 
 
 def m3():
     problems = []
-    rep = both(REPORT, "report")
-    west = both(WEST, "report-west")
-    for o in (rep, west):
-        if o[0] is None:
-            return False, o[1]
-    for host, o in (("GTK", rep[0]), ("web", rep[1])):
-        missing = [t for t in TILES if t not in labels(o)]
-        if missing:
-            problems.append(f"{host}: no {missing}")
-        if not re.search(r"^LABEL: (Heavy|Light) parcels in the \w+ lost [\d.]+ margin points after Jul 14", o, re.M):
-            problems.append(f"{host}: 'Worth a look' doesn't name the fall")
-        if not re.search(r"Carrier A's freight rose from \$[\d.,]+ to \$14\.20 an order", o):
-            problems.append(f"{host}: the finding doesn't give the cause the engine found")
-        if kpi(o, "Active customers") != "20":
-            problems.append(f"{host}: active customers before a merge: {kpi(o, 'Active customers')}")
-    if shown(rep[0]) != shown(rep[1]) or shown(west[0]) != shown(west[1]):
-        problems.append(f"GTK and web differ: {sorted(set(shown(rep[0])) ^ set(shown(rep[1])))[:4]}")
-    if kpi_values(rep[0]) == kpi_values(west[0]):
-        problems.append("picking the West didn't change the KPIs")
-    return not problems, "; ".join(problems) or "the Report on both hosts: filters, four KPIs, weekly revenue and margin (the marker proven in test_components), top customers, product mix, heatmap, 'Worth a look' with the cause it found; the West filter changes the KPIs"
+    for app, a in APPS.items():
+        typed = both(app, a["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;typekeys:0=Zed Co;key:0=Enter", "keys-type")
+        onward = both(app, a["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;typekeys:0=Zed Co;key:0=Enter;key:0=ArrowDown;key:0=F2", "keys-onward")
+        escaped = both(app, a["tap"] + ";key:0=ArrowDown;typekeys:0=Zed;key:0=Escape", "keys-escape")
+        back = both(app, a["tap"] + ";key:0=ArrowDown;typekeys:0=Zed;key:0=Escape;key:0=ArrowDown;key:0=F2", "keys-back")
+        kept = both(app, a["tap"] + ";key:0=ArrowDown;typekeys:0=Zed;key:0=Escape;key:0=F2", "keys-kept")  # the cell after Escape
+        plain = both(app, a["tap"] + ";key:0=ArrowDown;key:0=F2", "keys-plain")  # the same cell, never typed in
+        cleared = both(app, a["tap"] + ";key:0=ArrowDown;key:0=Delete", "keys-delete")
+        for o in (typed, onward, escaped, back, kept, plain, cleared):
+            if o[0] is None:
+                return False, o[1]
+        for host, k in (("GTK", 0), ("web", 1)):
+            row = first(a["written"], typed[k])
+            if row != a["start"] + 1:
+                problems.append(f"{app} {host}: typing then Enter didn't write 'Zed Co' on row {a['start'] + 1} ({row})")
+            elif first(a["editing"], onward[k]) != row + 2:  # Enter moved down a row, Down another, F2 edits there
+                problems.append(f"{app} {host}: after Enter, Down and F2 didn't edit two rows below row {row} ({first(a['editing'], onward[k])})")
+            if "LABEL: Edit cancelled" not in escaped[k]:
+                problems.append(f"{app} {host}: Escape didn't say the edit was cancelled")
+            fields = lambda out: sorted(l for l in out.splitlines() if l.startswith("FIELD: "))
+            if fields(kept[k]) != fields(plain[k]) or any("Zed" in l for l in fields(kept[k])):
+                problems.append(f"{app} {host}: after Escape the cell isn't what it was: {fields(kept[k])} vs {fields(plain[k])}")
+            if first(a["editing"], back[k]) != a["start"] + 1:
+                problems.append(f"{app} {host}: after Escape the keyboard isn't back on the grid ({first(a['editing'], back[k])})")
+            if first(a["cleared"], cleared[k]) != a["start"]:
+                problems.append(f"{app} {host}: Delete didn't clear the text cell on row {a['start']} ({first(a['cleared'], cleared[k])})")
+        for name, o in (("type", typed), ("onward", onward), ("escape", escaped), ("back", back), ("kept", kept), ("delete", cleared)):
+            if shown(o[0]) != shown(o[1]):
+                problems.append(f"{app} {name}: GTK and web differ: {sorted(set(shown(o[0])) ^ set(shown(o[1])))[:3]}")
+    return not problems, "; ".join(problems) or "MX Studio and the Workbook on both hosts: typing replaces and Enter writes (selection moves down), Escape cancels, Delete clears, the keyboard returns to the grid; identical on GTK and web"
 
 
 def m4():
     problems = []
-    merged = both(MERGE_REPORT, "report-merged")
-    opened = both(OPEN, "report-open")
-    mix = both(MIX, "report-mix")
-    for o in (merged, opened, mix):
-        if o[0] is None:
-            return False, o[1]
-    for host, o in (("GTK", merged[0]), ("web", merged[1])):
-        if kpi(o, "Active customers") != "18":
-            problems.append(f"{host}: active customers after the merge: {kpi(o, 'Active customers')} (want 18)")
-        if "after merging duplicate names" not in labels(o):
-            problems.append(f"{host}: the Report didn't see the Sheet's merge")
-        if not any(re.match(r"^\+\$[\d.]+[KMB]? for Acme Corp once 3 spellings were merged", l) for l in labels(o)):
-            problems.append(f"{host}: top customers doesn't say what the merge added")
-    rep = both(REPORT, "report-count")
-    m = re.search(r"([\d,]+) orders\)\.", rep[0] or "")
-    for host, o in (("GTK", opened[0]), ("web", opened[1])):
-        if not re.search(r"^LABEL: Transactions$", o, re.M):
-            problems.append(f"{host}: Open the rows didn't go to the Sheet")
-        if m is None or label(o, "showing " + m.group(1) + " heavy parcels in the West after Jul 14") is None:
-            problems.append(f"{host}: the Sheet isn't filtered to the finding's rows ({m.group(1) if m else '?'})")
-    for host, o in (("GTK", mix[0]), ("web", mix[1])):
-        if label(o, "Filtered to Trail Pack") is None:
-            problems.append(f"{host}: tapping a product bar didn't filter")
-        if kpi(o, "Revenue") == kpi(rep[0], "Revenue"):
-            problems.append(f"{host}: the product filter didn't change the KPIs ({kpi(o, 'Revenue')})")
-    for name, o in (("merged", merged), ("opened", opened), ("mix", mix)):
-        if shown(o[0]) != shown(o[1]):
-            problems.append(f"{name}: GTK and web differ: {sorted(set(shown(o[0])) ^ set(shown(o[1])))[:3]}")
-    return not problems, "; ".join(problems) or "one engine: the Sheet's merge reaches the Report; Open the rows filters the Sheet to the finding's rows; a product bar filters the tiles; identical on both hosts"
-
-
-def m5():
-    problems = []
-    for name in ("m1", "m2", "m3", "m4", "m5", "m6"):
-        ok, msg = getattr(g11, name)()
+    for name in ("m1", "m2", "m3", "m4", "m5"):
+        ok, msg = getattr(g12, name)()
         if not ok:
-            problems.append(f"goal 11 {name.upper()}: {msg[:300]}")
-    return not problems, "; ".join(problems) or "goal 11's checks (and goals 3–10's inside them) pass"
+            problems.append(f"goal 12 {name.upper()}: {msg[:300]}")
+    return not problems, "; ".join(problems) or "goal 12's checks (and goals 3–11's inside them) pass"
 
 
 def main():
@@ -208,7 +156,7 @@ def main():
                 if a.returncode != 0:
                     print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4)]:
         if only and name not in only:
             continue
         try:

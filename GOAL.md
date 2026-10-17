@@ -1,34 +1,31 @@
-# GOAL 12: MX Studio's Report, components first (Linux + web)
+# GOAL 13: keys, so the grid feels like a spreadsheet (Linux + web)
 
-**End goal (owner's words, 2026-10-16):** "the killer app is the data transformation app… I'm showing you how it would look like, the end product"; "ask yourself what component do I need, then build the component… then go back and build the app"; "go for it and make me proud". Source: SCREENS.md §2 (Report), MX_STUDIO.md A5.
-
-The Report mode: a dashboard over the same ledger the Sheet edits, so an edit or a merge in the Sheet redraws every tile, and a finding opens its rows back in the Sheet. The mode switch becomes real (Sheet ↔ Report).
+**End goal (owner's words, 2026-10-16):** "double click on a cell and edit… like Excel"; "ask yourself what component do I need, then build the component… then go back and build the app"; "go for it and make me proud". Two review rounds ended at the same gap: the framework had no keyboard events, so Escape couldn't cancel an edit, arrows couldn't move the selection and typing couldn't start an edit.
 
 ## Components this needs (from `docs/components.md`, before the build)
 | Component | Before | Plan |
 |---|---|---|
-| `KpiView` (label, value, change vs last period, sparkline, focal accent) | ❌ (KpiTile wired by each app on a Canvas) | `mojoui/kpi.mojo`: native labels (readable, testable) plus a small sparkline Canvas |
-| Line chart with a second series and an event marker | ❌ | `LineChart.with_second / with_marker`, `ChartView.line` |
-| `Heatmap` | ❌ | `mojoui.charts.Heatmap`, `ChartView.heatmap` (tap a cell) |
-| `FindingCard` | ❌ debt in the Sheet | `mojoui/finding.mojo`; the Sheet's agent card and the Report's "Worth a look" both use it |
-| Dropdown filters, ChartView bars, Card, Overlay islands, Tabs, Segmented | ✅ Linux + web | reuse |
+| Key events on a Canvas (`KEY`: the key's name or the character typed, plus modifiers) | ❌ every host | GTK: a key controller on the canvas; web: keydown on a focusable canvas |
+| Canvas focus (it receives keys after a press) | ❌ | GTK: focusable, grabbed on press; web: tabindex + focus on pointerdown; focus comes back when an in-place editor closes |
+| DataGrid keyboard: arrows, Tab, Enter, PageUp/Down, Home/End (Ctrl: first/last row), F2, Escape, typing, Delete | ❌ | `mojoui/datagrid.mojo`, tested without a host |
+| TextField Escape (`on_cancel`) and a caret-after-the-text editor (`.focused(select_all=False)`) | ❌ | GTK key controller on the entry; web keydown on the input |
 
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M1 | The components | KpiView, FindingCard, line marker + second series, Heatmap in mojoui with tests (`tests/test_components.mojo`); the matrix lists KpiView and FindingCard ✅ on Linux and web; the Sheet's agent card is a FindingCard |
-| M2 | The anomaly finder | `worst_margin_fall` (margin by region × parcel weight × before/after Jul 14, on the GPU) names the West's heavy parcels and a fall of at least 5 points, with its order count; `tests/test_report.mojo` checks it against a CPU computation |
-| M3 | The Report screen | on both hosts: filters (quarter, region, product), four KPIs with their change against the previous quarter, revenue and margin by week with the Jul 14 marker, top customers, product mix, the margin heatmap, "Worth a look"; every tile's numbers identical on GTK and web; picking a region changes the KPIs |
-| M4 | One engine | a merge in the Sheet changes the Report (active customers 20 → 18; top customers says what the merge added); "Open the rows" opens the Sheet filtered to the finding's rows (the count matches the finding); tapping a product bar filters the other tiles; identical on GTK and web |
-| M5 | Nothing regressed | goal 11's checks still pass; the component matrix is current |
+| M1 | Keys reach the app | `KEY`, `Runtime.key`, `TextField(on_cancel=)` in mojoui; on both hosts a tap then arrow keys move the grid's selection and F2 opens the editor on the cell they reached (identical on GTK and web; the web run uses real key presses); the matrix lists keys, Escape and the caret editor ✅ on Linux and web |
+| M2 | DataGrid's keyboard | `tests/test_grid_keys.mojo` (every key above, deleted rows skipped, scrolling keeps the cell on screen, computed columns read-only) and `tests/test_datagrid.mojo` pass |
+| M3 | Spreadsheet editing in both apps | MX Studio's Sheet and the Workbook, on GTK and web: typing on a cell opens the editor with that text and Enter writes it (then the selection is on the cell below), Escape cancels without writing, Delete clears a text cell; after Enter or Escape the keyboard is back on the grid (the next arrow and F2 edit the right cell); identical on both hosts |
+| M4 | Nothing regressed | goal 12's checks (and goals 3–11's inside them) still pass; the matrix is current |
 
 ## Done means
-`scripts/check` prints PASS for M1–M5; push to `origin` after.
+`scripts/check` prints PASS for M1–M4; push to `origin` after.
 
 ## Out of bounds
-As goal 11 (no deploys, secrets or sign-ups; checks headless; Explore, Query, MCP and the later rungs are later goals).
+As goal 12. Android, Mac and iPhone keys are later (the matrix shows them ❌). Blank numbers and dates (Delete on a number) wait for MX frame's nulls (`docs/plans/needs-mxframe.md`).
 
 ## Assumptions
-- One Report page (Revenue) is built; Margin and Customers pages answer "next".
-- KPIs compare against the previous quarter; Q1 says "first quarter of data".
-- Budget: 3 hours wall clock (the Report's code was written while goal 11's full check ran; D-120).
+- Key names are the web's (`ArrowDown`, `Enter`, …); GTK maps its own names to them.
+- Enter moves down and F2 edits, as in Excel; double click still edits.
+- Ctrl/Alt shortcuts stay the window's or the browser's (the canvas doesn't take them, except Ctrl+Home/End).
+- Budget: 2 hours wall clock.

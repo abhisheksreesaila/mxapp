@@ -57,7 +57,8 @@ def ensure():
         time.sleep(0.05)
     # Scale 1: the desktop's GDK_SCALE=2 would make every frame four times the pixels (the lens
     # drops to 27 fps through cairo at 1880×1600); a 1× monitor is a real target too.
-    os.environ.update({"DISPLAY": f":{n}", "GDK_BACKEND": "x11", "GSK_RENDERER": "cairo", "GDK_DISABLE": "gl,vulkan", "GDK_SCALE": "1"})
+    os.environ.update({"DISPLAY": f":{n}", "GDK_BACKEND": "x11", "GSK_RENDERER": "cairo", "GDK_DISABLE": "gl,vulkan", "GDK_SCALE": "1",
+                       "MOJOUI_PRIVATE_DISPLAY": "1"})  # (nobody types here: test windows may take the keyboard)
     os.environ.pop("WAYLAND_DISPLAY", None)
     os.environ.pop("GDK_DPI_SCALE", None)
     return True

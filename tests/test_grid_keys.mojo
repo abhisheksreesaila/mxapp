@@ -98,15 +98,34 @@ def main() raises:
     assert_equal(g.cur_row, 35)
     assert_true(g.screen_line(35, src) >= 0, "the selected row is on screen")
     # PageDown moves a screenful; Ctrl+Home / Ctrl+End go to the first / last row
-    var before = g.cur_row
-    _ = g.handle(key("PageDown"), src, font, pal)
-    assert_true(g.cur_row >= before + 8, "PageDown moved about a screen")
+    _ = g.handle(key("PageDown"), src, font, pal)  # a screen less one row: 9 rows (10 on screen)
+    assert_equal(g.cur_row, 44)
+    assert_true(g.screen_line(44, src) >= 0, "PageDown keeps the cell on screen")
+    _ = g.handle(key("PageUp"), src, font, pal)
+    assert_equal(g.cur_row, 35)
+    _ = g.handle(key("ArrowRight"), src, font, pal)
+    _ = g.handle(key("Home"), src, font, pal)  # Home: the first column, the same row
+    assert_equal(g.cur_row, 35)
+    assert_equal(g.cur_col, 0)
     _ = g.handle(key("End", CTRL), src, font, pal)
     assert_equal(g.cur_row, 999)
     assert_true(g.screen_line(999, src) >= 0, "the last row is on screen")
+    _ = g.handle(key("ArrowDown"), src, font, pal)  # the last row: Down stays
+    assert_equal(g.cur_row, 999)
     _ = g.handle(key("Home", CTRL), src, font, pal)
     assert_equal(g.cur_row, 0)
     assert_equal(g.cur_col, 0)
+    assert_equal(g.top, 0)  # scrolled back up to it
+    _ = g.handle(key("ArrowUp"), src, font, pal)  # the first row: Up stays
+    assert_equal(g.cur_row, 0)
+    # going up one row past the screen's top scrolls by one row
+    for _ in range(20):
+        _ = g.handle(key("ArrowDown"), src, font, pal)
+    var top = g.top
+    var first_line = g.first_on_screen(src)
+    g.select(first_line, 0)
+    _ = g.handle(key("ArrowUp"), src, font, pal)
+    assert_equal(g.top, top - 1)
 
     # F2 opens the editor on an editable cell; a computed column says read-only
     assert_equal(g.handle(key("F2"), src, font, pal), GRID_EDIT)
@@ -124,7 +143,11 @@ def main() raises:
     assert_equal(g.handle(key("7"), src, font, pal), GRID_TYPED)
     assert_true(g.editing)
     assert_equal(g.typed, "7")
+    # keys typed before the editor appeared (a round trip on the web) go on the end
+    assert_equal(g.handle(key("8"), src, font, pal), GRID_TYPED)
+    assert_equal(g.typed, "78")
     _ = g.handle(key("Escape"), src, font, pal)
+    assert_equal(g.typed, "")
     # Ctrl+a character isn't typing
     assert_equal(g.handle(key("c", CTRL), src, font, pal), GRID_NONE)
     assert_false(g.editing)
@@ -144,4 +167,31 @@ def main() raises:
 
     # keys the grid doesn't use are ignored
     assert_equal(g.handle(key("Shift"), src, font, pal), GRID_NONE)
+
+    # sorted (the engine's order: here, last row first): arrows follow the order shown, not the row numbers
+    var order = List[Int]()
+    for r in range(999, -1, -1):
+        order.append(r)
+    g.set_order(order^, 1, True)
+    g.select(500, 0)
+    assert_equal(g.index_of(500, src), 499)
+    _ = g.handle(key("ArrowDown"), src, font, pal)
+    assert_equal(g.cur_row, 499)
+    _ = g.handle(key("ArrowUp"), src, font, pal)
+    _ = g.handle(key("ArrowUp"), src, font, pal)
+    assert_equal(g.cur_row, 501)
+    _ = g.handle(key("Home", CTRL), src, font, pal)
+    assert_equal(g.cur_row, 999)
+    assert_equal(g.handle(key("End", CTRL), src, font, pal), GRID_SELECTED)
+    assert_equal(g.cur_row, 0)
+    for _ in range(6):  # the deleted row 5 is skipped in this order too
+        _ = g.handle(key("ArrowUp"), src, font, pal)
+    assert_equal(g.cur_row, 7)
+
+    # a key before the grid was ever drawn (no size yet) still works
+    var fresh = DataGrid()
+    assert_equal(fresh.handle(key("ArrowDown"), src, font, pal), GRID_SELECTED)
+    assert_equal(fresh.cur_row, 0)
+    assert_equal(fresh.handle(key("PageDown"), src, font, pal), GRID_SELECTED)
+    assert_true(fresh.cur_row > 0, "PageDown moved")
     print("GRID KEY TESTS PASSED")
