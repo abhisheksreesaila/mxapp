@@ -32,7 +32,7 @@
 </tr>
 <tr>
 <td><a href="docs/goals/11-report.md"><img src="docs/img/mxstudio-sheet.png" alt="MX Studio's Sheet: a ledger grid, a pivot and a chart that follow every edit, and an agent's finding"></a><br><b>🧪 MX Studio · Sheet</b> · a 2M-row ledger you edit in place; a finding merges three spellings of a customer · <code>examples/mxstudio</code></td>
-<td><a href="docs/report.md"><img src="docs/img/mxstudio-report.png" alt="MX Studio's Report: KPIs, revenue and margin by week with a marker, a heatmap, and the finding the engine made"></a><br><b>📈 MX Studio · Report</b> · the same ledger as a dashboard; the GPU finds why margin fell after Jul 14 · <code>examples/mxstudio</code></td>
+<td><a href="docs/goals/12-report.md"><img src="docs/img/mxstudio-report.png" alt="MX Studio's Report: KPIs, revenue and margin by week with a marker, a heatmap, and the finding the engine made"></a><br><b>📈 MX Studio · Report</b> · the same ledger as a dashboard; the GPU finds why margin fell after Jul 14 · <code>examples/mxstudio</code></td>
 </tr>
 </table>
 
@@ -43,11 +43,11 @@ Every ✅ below is run by `scripts/check` on that platform; 🔨 builds but hasn
 
 | Platform | ✅ proven | 🔨 built, not run | ❌ missing | Notes |
 |---|---|---|---|---|
-| 🐧 **Linux** (GTK 4) | 49 | 0 | 0 | every component, gesture and theme; your Omarchy theme |
-| 🌐 **Web** (FastHTML) | 49 | 0 | 0 | the same results as Linux, checked in Chromium |
-| 🤖 **Android** (views over JNI) | 19 | 11 | 19 | runs the classic controls on the emulator; the Workbook's new components not yet |
-| 🍎 **Mac** (AppKit) | 0 | 30 | 19 | builds and signs; not run on a Mac yet |
-| 📱 **iPhone** (UIKit) | 0 | 30 | 19 | builds and signs; not run on an iPhone yet |
+| 🐧 **Linux** (GTK 4) | 52 | 0 | 0 | every component, gesture and theme; your Omarchy theme; spreadsheet keys |
+| 🌐 **Web** (FastHTML) | 52 | 0 | 0 | the same results as Linux, checked in Chromium |
+| 🤖 **Android** (views over JNI) | 19 | 11 | 22 | runs the classic controls on the emulator; the Workbook's new components not yet |
+| 🍎 **Mac** (AppKit) | 0 | 30 | 22 | builds and signs; not run on a Mac yet |
+| 📱 **iPhone** (UIKit) | 0 | 30 | 22 | builds and signs; not run on an iPhone yet |
 | ⚡ **GPU** | NVIDIA | | | Apple and phone GPUs use the CPU path for now |
 
 Measured on this machine: a page recompute in ~8 ms, a grid redraw in ~6 ms, a GPU group-by under 1 ms, a sort of 20M rows in 0.3–2 s.
@@ -64,10 +64,9 @@ Measured on this machine: a page recompute in ~8 ms, a grid redraw in ~6 ms, a G
 
 **What's left to get there:**
 1. 🧪 MX Studio's other modes: Explore, Query and the agent's tools (most wait for MX frame: `docs/plans/needs-mxframe.md`).
-2. ⌨️ Keyboard events on every host (Escape, arrows, typing into a cell).
-3. 🤖 🍎 📱 Bring Board, Overlay, the new gestures and themes to Android, then run Mac and iPhone on real hardware.
-4. 🎨 Cell formatting, column-first (`docs/plans/formatting.md`).
-5. ⚡ Apple and phone GPUs; Mojo in WebAssembly.
+2. 🤖 🍎 📱 Bring Board, Overlay, the new gestures, keys and themes to Android, then run Mac and iPhone on real hardware (keys run on Linux and the web: [docs/report.md](docs/report.md)).
+3. 🎨 Cell formatting, column-first (`docs/plans/formatting.md`).
+4. ⚡ Apple and phone GPUs; Mojo in WebAssembly.
 
 ## One file, every platform
 

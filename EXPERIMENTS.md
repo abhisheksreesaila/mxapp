@@ -4,6 +4,28 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-16 · Experiments 11–13: MX Studio's Sheet and Report, and spreadsheet keys (autopilot, night)
+
+**Goal (owner's words):** "the killer app is the data transformation app… primarily focused on Linux and Web"; "ask yourself, okay, what component do I need, then build the component… then go back and build the app"; "go for it and make me proud". Contracts: `docs/goals/11-mxstudio-sheet.md`, `12-mxstudio-report.md`, `GOAL.md` (13). Reports: `docs/goals/11-report.md`, `12-report.md`, `docs/report.md`.
+
+**What worked:**
+- **Goal 11, MX Studio's Sheet:** a 2M-row planted ledger. DataGrid, PivotTable and ChartView came out of the Workbook into `mojoui/`. A finding merges three spellings of Acme in one undoable step.
+- **Goal 12, the Report:** KpiView, FindingCard, line markers and Heatmap. A GPU anomaly finder (heavy parcels in the West lost 7.66 margin points after Jul 14, Carrier A's freight to $14.20) checked against the CPU. One engine with the Sheet: merges reach the Report, and "Open the rows" filters the Sheet.
+- **Goal 13, keys:** `KEY` events on any `Canvas(keys=True)`, `TextField(on_cancel=)`, `.echo()`, and DataGrid's Excel keyboard. It runs on both apps and both hosts. Fast data entry works even against a slow server.
+
+**What broke and how it was fixed:**
+- **Goal 12's regressions:** MX Studio's local imports broke goal 3's purity rule (they moved into mojoui), and with no theme file the accent wasn't Tokyo Night's.
+- **Goal 13's review, five rounds:** the typed text lived in two places and keys raced between them. The fix gave the grid sole ownership (D-132), plus a page-wide event queue on the web.
+- **Checks that couldn't fail:** a slow test server and real GTK focus on the private display made them able to fail.
+- **A worktree's own Android debug key:** the emulator refused its APKs, so the worktree uses the main checkout's key.
+- **Process mistakes, both now in `docs/lessons.md`:** running an archived checker directly, and `pgrep -f` killing my own shell (now `scripts/stop-check`).
+
+**What it means:** the component library carries the apps. The grid, its keyboard, KPIs, findings and charts are framework pieces with their own tests, and both apps are mostly wiring. Everything MX Studio still needs that isn't in MX frame is listed in `docs/plans/needs-mxframe.md`.
+
+**Next:** MX Studio's Explore and Query (they need MX frame's Mojo API), cell formatting (`docs/plans/formatting.md`), or keys and the new components on Android.
+
+---
+
 ## 2026-10-16 · Experiment 10: the Workbook (autopilot, overnight)
 
 **Goal (owner's words):** "a spreadsheet where you can edit rows… but also a report and a dashboard built on the same engine"; Numbers-style, "you can place tables and you can place charts, everything is free flowing"; columns instead of Excel's cells, on purpose. Contract `GOAL.md`, report `docs/report.md`, walkthrough `docs/morning.md`.
