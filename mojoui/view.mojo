@@ -41,6 +41,12 @@ comptime TAP = 3  # event.x, y
 comptime PRESS = 4  # the pointer went down at event.x, y; a TAP or PANs follow (where a drag starts)
 comptime RELEASE = 5  # a drag (PANs) ended at event.x, y (not sent after a plain TAP)
 comptime DOUBLE = 6  # a double click / double tap at event.x, y (after the TAP of its first click)
+comptime KEY = 7  # a key pressed while the canvas has focus (a click gives it focus): event.text = the key's name
+#   ("ArrowDown", "Enter", "Escape", "Tab", "Backspace", "Delete", "PageDown", "Home", "F2", …, the web's names)
+#   or the character it typed ("7", "a", " "); event.dx = the modifiers held: SHIFT + CTRL + ALT
+comptime SHIFT = 1
+comptime CTRL = 2  # (Command on a Mac)
+comptime ALT = 4
 
 # Icon names every host understands (each maps them to its platform's own icons).
 comptime ICON_NAMES: List[String] = [

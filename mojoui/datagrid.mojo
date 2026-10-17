@@ -12,7 +12,7 @@
 # the data (a GridSource), writing values and sorting (engine operations: the grid only shows them).
 
 from mojoui.app import Event
-from mojoui.view import TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE
+from mojoui.view import TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE, KEY, SHIFT, CTRL, ALT
 from mojoui.canvas import Surface
 from mojoui.text import Font, MONO, RIGHT
 from mojoui.draw import rect, hline, line
@@ -35,6 +35,9 @@ comptime GRID_EDIT = 4  # the in-place editor opened over the selected cell
 comptime GRID_READ_ONLY = 5  # a double click on a column that can't be edited (a formula)
 comptime GRID_FITTED = 6  # a column was fitted (grid.cur_col is unchanged; grid.last_col is the column)
 comptime GRID_RESIZED = 7  # a header edge drag ended (grid.last_col)
+comptime GRID_TYPED = 8  # a character typed on a cell: the editor opened, starting from grid.typed (it replaces the value)
+comptime GRID_CLEAR = 9  # Delete or Backspace on an editable cell: the app clears it
+comptime GRID_CANCEL = 10  # Escape: the editor closed without writing
 
 
 trait GridSource:
@@ -81,6 +84,7 @@ struct DataGrid(Copyable, Movable):
     var type_widths: List[Float64]  # per column: the source's default width for its values (from prepare())
     var histograms: List[List[Float64]]  # per column: bar heights 0–1 (empty: none drawn)
     var editing: Bool
+    var typed: String  # the character that opened the editor (GRID_TYPED)
     var bar_drag: Bool
     var bar_grab: Float64
     var resize_col: Int
@@ -104,6 +108,7 @@ struct DataGrid(Copyable, Movable):
         self.type_widths = List[Float64]()
         self.histograms = List[List[Float64]]()
         self.editing = False
+        self.typed = ""
         self.bar_drag = False
         self.bar_grab = 0
         self.resize_col = -1
@@ -482,6 +487,137 @@ struct DataGrid(Copyable, Movable):
         if event.number == ZOOM and event.zoom > 0:
             self.scroll_rows(Int(-log2(event.zoom) * 12.0), src)
             return GRID_REDRAW
+        if event.number == KEY:
+            return self.key(event.text, Int(event.dx), src)
+        return GRID_NONE
+
+    # ---------- keyboard ----------
+
+    def index_of[S: GridSource](self, row: Int, src: S) -> Int:
+        """The display index of `row` (its place in the sorted order), or -1."""
+        if len(self.order) == 0:
+            return row if 0 <= row < src.grid_rows() else -1
+        var lo = max(self.top - 4 * self.rows_in(self.size[1]), 0)  # near the screen first (cheap), then everywhere
+        for i in range(lo, min(lo + 8 * self.rows_in(self.size[1]), len(self.order))):
+            if self.order[i] == row:
+                return i
+        for i in range(len(self.order)):
+            if self.order[i] == row:
+                return i
+        return -1
+
+    def step_row[S: GridSource](self, row: Int, by: Int, src: S) -> Int:
+        """The row `by` living rows below (above, if negative) `row` in display order; stops at the ends."""
+        var i = self.index_of(row, src)
+        if i < 0:
+            return row
+        var best = row
+        var left = abs(by)
+        var d = 1 if by > 0 else -1
+        while left > 0:
+            i += d
+            var r = self.shown_row(i, src)
+            if r < 0:
+                break
+            if src.grid_alive(r):
+                best = r
+                left -= 1
+        return best
+
+    def edge_row[S: GridSource](self, last: Bool, src: S) -> Int:
+        """The first (or last) living row in display order."""
+        var n = self.shown_count(src)
+        var i = n - 1 if last else 0
+        while 0 <= i < n:
+            var r = self.shown_row(i, src)
+            if r >= 0 and src.grid_alive(r):
+                return r
+            i += -1 if last else 1
+        return -1
+
+    def first_on_screen[S: GridSource](self, src: S) -> Int:
+        var i = self.top
+        while True:
+            var r = self.shown_row(i, src)
+            if r < 0 or src.grid_alive(r):
+                return r
+            i += 1
+
+    def keep_in_view[S: GridSource](mut self, row: Int, col: Int, src: S):
+        """Scrolls the least that shows the cell: a row just off an edge scrolls by a row, not a screen."""
+        if self.screen_line(row, src) < 0:
+            var i = self.index_of(row, src)
+            var lines = self.rows_in(self.size[1])
+            if i >= 0 and i < self.top:
+                self.top = i
+            elif i >= 0:
+                self.top = max(i - lines + 1, 0)
+                while self.screen_line(row, src) < 0 and self.top < i:  # (removed rows above it take no line)
+                    self.top += 1
+        self.reveal_cell(row, col, src)
+
+    def move_to[S: GridSource](mut self, row: Int, col: Int, src: S) -> Int:
+        if row < 0:
+            return GRID_NONE
+        var c = min(max(col, 0), src.grid_columns() - 1)
+        self.select(row, c)
+        self.keep_in_view(row, c, src)
+        return GRID_SELECTED
+
+    def key[S: GridSource](mut self, name: String, mods: Int, src: S) -> Int:
+        """A key the hosts sent (KEY): moves the selection, opens or closes the editor, or asks the app to clear."""
+        var shift = (mods & SHIFT) != 0
+        var ctrl = (mods & CTRL) != 0
+        if name == "Escape":
+            if self.editing:
+                self.editing = False
+                self.redraw()
+                return GRID_CANCEL
+            return GRID_NONE
+        var moves = (name == "ArrowDown" or name == "ArrowUp" or name == "ArrowLeft" or name == "ArrowRight" or name == "Tab"
+                     or name == "Enter" or name == "PageDown" or name == "PageUp" or name == "Home" or name == "End")
+        if self.cur_col < 0:  # nothing selected: a movement key starts at the first cell on screen
+            return self.move_to(self.first_on_screen(src), 0, src) if moves else GRID_NONE
+        if self.cur_row < 0:  # a whole column: a movement key starts at its first row on screen
+            return self.move_to(self.first_on_screen(src), self.cur_col, src) if moves else GRID_NONE
+        var row = self.cur_row
+        var col = self.cur_col
+        var page = max(self.rows_in(self.size[1]) - 1, 1)
+        if name == "ArrowDown" or (name == "Enter" and not shift):
+            return self.move_to(self.step_row(row, 1, src), col, src)
+        if name == "ArrowUp" or (name == "Enter" and shift):
+            return self.move_to(self.step_row(row, -1, src), col, src)
+        if name == "ArrowRight" or (name == "Tab" and not shift):
+            return self.move_to(row, col + 1, src)
+        if name == "ArrowLeft" or (name == "Tab" and shift):
+            return self.move_to(row, col - 1, src)
+        if name == "PageDown":
+            return self.move_to(self.step_row(row, page, src), col, src)
+        if name == "PageUp":
+            return self.move_to(self.step_row(row, -page, src), col, src)
+        if name == "Home":
+            return self.move_to(self.edge_row(False, src) if ctrl else row, 0, src)
+        if name == "End":
+            return self.move_to(self.edge_row(True, src) if ctrl else row, src.grid_columns() - 1, src)
+        var chars = 0
+        for _ in name.codepoint_slices():
+            chars += 1
+        var editable = src.grid_editable(col)
+        if name == "F2":
+            if not editable:
+                return GRID_READ_ONLY
+            self.keep_in_view(row, col, src)
+            self.editing = True
+            return GRID_EDIT
+        if name == "Delete" or name == "Backspace":
+            return GRID_CLEAR if editable else GRID_READ_ONLY
+        if chars == 1 and not ctrl and (mods & ALT) == 0:
+            if not editable:
+                return GRID_READ_ONLY
+            self.keep_in_view(row, col, src)
+            self.typed = name
+            self.editing = True
+            return GRID_TYPED
         return GRID_NONE
 
     # ---------- drawing ----------
