@@ -4,7 +4,7 @@
 # under three spellings) that merges in one undoable step. Built from mojoui components only: DataGrid,
 # PivotTable, ChartView, Card tones, Overlay islands, Segmented, Tabs.
 
-from mojoui.view import (View, Text, Button, TextField, Canvas, Board, Overlay, VStack, HStack, Card, Spacer, Segmented, Tabs,
+from mojoui.view import (View, Text, Button, TextField, Canvas, Board, Overlay, VStack, HStack, Card, Spacer, Segmented, Tabs, TAP,
                          HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, ICON_ONLY, START, CENTER, END, BETWEEN, OMARCHY,
                          CARD, CARD_WARN, CARD_GOOD, TONE_WARN, TONE_GOOD, TONE_STRONG, TONE_ACCENT, NO_MSG)
 from mojoui.app import App, Event
@@ -20,11 +20,11 @@ from mojoui.finding import FindingCard
 from mojoui.view import Dropdown
 from mojoui.frame import Range
 from mojoui.frame import Frame, share, MERGE, SET
-from mojoui.frame_gpu import GpuFrame
+from mojoui.frame_gpu import GpuFrame, group_sum
 from mojoui.gpu import gpu_present
 from mojoui.shared import put_shared, get_shared, keep, at, count_load, environment
 from orders import order_columns, CUSTOMER, PRODUCT, REGION, REVENUE, COST, FREIGHT, ORDER, DAY, ZIP, WEIGHT, YEAR_START, RATE_CHANGE, REGIONS, PRODUCTS
-from ops import (totals_by, fold, find_duplicate_names, customer_product, histogram, rows_with, text_groups, Finding, Totals, Pivot)
+from ops import (col_program, totals_by, fold, find_duplicate_names, customer_product, histogram, rows_with, text_groups, Finding, Totals, Pivot)
 from report_ops import (kpis, weekly, margin_heatmap, shares, worst_margin_fall, quarter_range, shares_by_region_product, Kpis, Weekly, Grid2, Anomaly, WEEKS)
 from mojoui.view import TextArea
 
@@ -293,7 +293,8 @@ struct Main(App):
             mix_filters.append(Range(REGION, Int64(self.region), Int64(self.region)))
         self.mix = shares(self.frame, self.gf()[], PRODUCT, mix_filters)
         self.top = shares(self.frame, self.gf()[], CUSTOMER, f)
-        var raw = totals_by(self.frame, self.gf()[], CUSTOMER, REVENUE)
+        # what the top customer has under its own spelling alone, in the same quarter and filters (what merging adds)
+        var raw = group_sum(self.frame, self.gf()[], col_program(CUSTOMER), col_program(REVENUE), f, text_groups(self.frame, CUSTOMER))
         self.unmerged_top = raw.sums[0] if len(raw.sums) > 0 else 0
         self.anomaly = worst_margin_fall(self.frame, self.gf()[])
         self.report_ms = (self.now.milliseconds + self.before.milliseconds + self.weeks.milliseconds + self.heat.milliseconds
@@ -419,7 +420,7 @@ struct Main(App):
             var cv = self.chart()
             cv.draw(surface, self.font, self.pal)
         elif 2 <= canvas <= 5:
-            self.kpi(canvas - 2).draw(surface, self.font, self.pal)
+            self.kpi(canvas - 2).draw(surface, self.pal)
         elif canvas == 6:
             var cv = self.week_chart()
             cv.draw(surface, self.font, self.pal)
@@ -518,7 +519,7 @@ struct Main(App):
             self.find()
             self.message = "Agent looked again: " + (String(len(self.findings)) + " finding" + ("s" if len(self.findings) != 1 else "") if len(self.findings) > 0 else "nothing new")
             self.version += 1
-        elif m == CHART_TAP:
+        elif m == CHART_TAP and event.number == TAP:
             var cv = self.chart()
             if cv.tap(event.x, event.y, self.font, self.pal):
                 self.chart_pick = cv.selected
@@ -541,14 +542,14 @@ struct Main(App):
         elif m == PRODUCT_PICK:
             self.product = event.number - 1
             self.compute_report()
-        elif m == TAP_MIX:
+        elif m == TAP_MIX and event.number == TAP:
             var cv = self.mix_chart()
             cv.size = self.sizes[8]
             if cv.tap(event.x, event.y, self.font, self.pal):
                 self.product = cv.selected
                 self.message = ("Filtered to " + self.frame.text_of(PRODUCT, Int64(self.product))) if self.product >= 0 else "Product filter cleared"
                 self.compute_report()
-        elif m == TAP_HEAT:
+        elif m == TAP_HEAT and event.number == TAP:
             var cv = self.heat_chart()
             cv.size = self.sizes[9]
             if cv.tap(event.x, event.y, self.font, self.pal):
@@ -794,7 +795,7 @@ struct Main(App):
         ).fill())
         items.append(bar^.at(PAGE_X, PAGE_Y).width(1232).height(64).tag("filters"))
         for k in range(4):
-            items.append(Canvas(2 + k, self.version, on_gesture=NO_MSG).at(PAGE_X + k * 312, PAGE_Y + 80).width(296).height(120).tag("kpi" + String(k + 1)))
+            items.append(self.kpi(k).view(2 + k, self.version).at(PAGE_X + k * 312, PAGE_Y + 80).width(296).height(120).tag("kpi" + String(k + 1)))
         items.append(Card(
             HStack(Text("Revenue and margin by week", style=HEADLINE), Text("orders_clean · revenue (blue) and gross margin (orange)", style=CAPTION), spacing=12).height(32),
             Canvas(6, self.version, on_gesture=TAP_LINE).fill().height(240),

@@ -85,13 +85,20 @@ def main() raises:
     assert_equal(heat.selected, 5)  # bottom-right: East × Stove
     assert_true(heat.tap(Float64(w) - 10, Float64(h) - 10, font, pal))
     assert_equal(heat.selected, -1)
-    # a KPI tile draws its accent when it's the focal one
-    KpiView("Revenue", "$1.11B", "+4.2% vs Q2", [1.0, 2.0, 3.0], True).draw(s, font, pal)
+    # a KPI: native labels (its value in the accent when focal), and a sparkline drawn in the accent
+    var kv = KpiView("Revenue", "$1.11B", "+4.2% vs Q2", [1.0, 3.0, 2.0, 5.0], True)
+    var kview = kv.view(7, 1)
+    var value_tone = -1
+    for i in range(len(kview.nodes)):
+        if kview.nodes[i].kind == TEXT and kview.nodes[i].text == "$1.11B":
+            value_tone = kview.nodes[i].value
+    assert_equal(value_tone, 4)  # TONE_ACCENT
+    kv.draw(s, pal)
     var accent_px = 0
     for i in range(w * h):
         if px[i] == pal.accent:
             accent_px += 1
-    assert_true(accent_px > w * h // 4, "the focal tile is filled with the accent")
+    assert_true(accent_px > 50, "the sparkline is drawn: " + String(accent_px))
     # FindingCard: warning while open, good once resolved; its first action is the main button
     var open_card = FindingCard("Agent noticed", "3 spellings", ["Merge", "Show the rows"], [6, 8], note="or by hand", again=12)
     assert_equal(open_card.nodes[0].style, CARD_WARN)
