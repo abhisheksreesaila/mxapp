@@ -194,3 +194,9 @@ Newest last. What was tried, what happened, dead ends.
 - A formula column's GPU sum read column 12 of a 12-wide row (garbage): Frame.flatten inlines formulas into stored-column steps.
 - Scale: 10M imported in 15 s while a check ran, 3 s alone. At 50M the custom date parsers doubled pyarrow's read and numpy temporaries thrashed memory (32 GB of the owner's other work in swap): default parsers, Arrow kernels, one column at a time. 100M: 106 s import, 26 GB peak, sort 3.7 s, format change 54 ms (docs/scale.md).
 - Review round 1 (NEEDS WORK, 16 items): checks that could pass while broken (prefix label matches and truncated money; no qty; Save without edits; M5 read only a document); the matrix over-claimed GTK's file dialog; a crafted .omx could reach raw memory (now validated in the reader: column count, names, kinds, nulls, text codes, formats); an integer average; formatting edges (compact carry, percent in parentheses, overflow, the parser rejecting what the formats print); dialog and upload leaks; tables never released; app-local helpers. All fixed or logged (D-141–D-143).
+
+## Goal 15: charts, pivots and the Report (2026-10-17 night)
+- Sheet objects sit on a Board with the table as child 0 (its 44-pt title bar is the drag handle, so the grid's header row stays clickable); charts and pivots go into free space beside or below.
+- Free-space placement scanned 16-pt steps and missed the one spot that fits (x = 536): candidate positions (left edge, right of / below each object) instead.
+- Two buttons named "Chart" (the toolbar's and the Report's add-tile) made a test step tap the wrong one: the tile buttons say "… tile".
+- Mojo can't move single fields out of a struct here: open_document fills out-parameters instead of returning a document struct.

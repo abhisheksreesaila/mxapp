@@ -19,7 +19,7 @@ from mojoui.frame_gpu import GpuFrame, group_sum
 from mojoui.shared import keep, at, environment, make_dir
 from mojoui.files import file_name, file_stem, read_recent, remember
 from mojoui.csvio import read_csv, CsvImport, CsvColumn, kind_name
-from mojoui.omxfile import save_omx, open_omx
+from mojoui.omxfile import save_omx, open_document
 from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
                               NUMBER_STYLES, DATE_STYLES)
 from mojoui.inspector import Inspector, Section, Row, Stepper
@@ -197,11 +197,19 @@ struct Main(App):
         """A CSV file → the Import step (its columns as read); an .omx document → straight to its sheet."""
         if path.endswith(".omx"):
             try:
-                self.use_table(open_omx(path))
+                var objects = List[SheetObject]()
+                var tiles = List[ReportTile]()
+                var filter = ReportFilter(-1, 0)
+                var frame = open_document(path, objects, tiles, filter)
+                self.use_table(frame^)
                 self.source = path
                 self.name = file_stem(path)
                 remember(APP, path, self.recent)
                 self.to_sheet()
+                self.objects = objects^  # the sheet's charts and pivots, and the Report, as they were saved
+                self.tiles = tiles^
+                self.filter = filter^
+                self.refresh()
                 self.message = "Opened " + file_name(path) + " · " + grouped(self.frame.rows()) + " rows"
             except e:
                 self.message = String(e)
@@ -554,7 +562,7 @@ struct Main(App):
             make_dir(folder)
             var path = folder + "/" + self.name + ".omx"
             try:
-                save_omx(path, self.frame)
+                save_omx(path, self.frame, self.objects, self.tiles, self.filter)
                 self.source = path
                 remember(APP, path, self.recent)
                 self.message = "Saved " + path

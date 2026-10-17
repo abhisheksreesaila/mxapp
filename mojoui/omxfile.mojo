@@ -9,6 +9,8 @@ from std.ffi import external_call
 from mojoui.frame import Frame, Column, Columns, Edit, share, INT, DECIMAL, TEXT, DATE, MAX_COLS
 from mojoui.numformat import ColumnFormat
 from mojoui.workbook import json_string
+from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT
+from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_CHART
 
 comptime OMX_BRIDGE = """
 import ctypes, json
@@ -62,6 +64,12 @@ def read(path, max_cols):
 
 def done():
     KEEP.clear()
+
+
+def meta_of(path):
+    \"\"\"The document's metadata alone (the sheet's objects and the Report).\"\"\"
+    t = pq.read_schema(path)
+    return json.loads((t.metadata or {}).get(b"omx", b"{}"))
 """
 
 
@@ -78,8 +86,10 @@ def format_json(f: ColumnFormat) -> String:
             + ', "parens": ' + ("true" if f.parens else "false") + ', "symbol": ' + json_string(f.symbol) + "}")
 
 
-def save_omx(path: String, frame: Frame) raises:
-    """Writes the table as it stands (every alive row, the edits applied) to `path` (.omx)."""
+def save_omx(path: String, frame: Frame, objects: List[SheetObject] = [], tiles: List[ReportTile] = [],
+             filter: ReportFilter = ReportFilter(-1, 0)) raises:
+    """Writes the table as it stands (every alive row, the edits applied), the sheet's charts and pivots, and the
+    Report (its tiles and filter) to `path` (.omx)."""
     ref base = frame.base()[]
     var stored = frame.stored()
     var alive = List[Int]()
@@ -127,7 +137,16 @@ def save_omx(path: String, frame: Frame) raises:
     for f in range(len(frame.formulas)):
         meta += ("," if f > 0 else "") + '{"text": ' + json_string(frame.formulas[f].name + " = " + frame.formulas[f].formula)
         meta += ', "format": ' + format_json(frame.format_of(stored + f)) + "}"
-    meta += "]}"
+    meta += '], "objects": ['
+    for k in range(len(objects)):
+        ref o = objects[k]
+        meta += ("," if k > 0 else "") + ('{"kind": ' + String(o.kind) + ', "x": ' + String(o.x) + ', "y": ' + String(o.y) + ', "w": ' + String(o.w)
+                                          + ', "h": ' + String(o.h) + ', "value": ' + String(o.value) + ', "group": ' + String(o.group)
+                                          + ', "across": ' + String(o.across) + ', "style": ' + String(o.style) + "}")
+    meta += '], "report": {"tiles": ['
+    for k in range(len(tiles)):
+        meta += ("," if k > 0 else "") + '{"kind": ' + String(tiles[k].kind) + ', "col": ' + String(tiles[k].col) + ', "group": ' + String(tiles[k].group) + "}"
+    meta += '], "filter": {"col": ' + String(filter.col) + ', "code": ' + String(filter.code) + "}}}"
     var names = Python.list()
     var addresses = Python.list()
     for c in range(stored):
@@ -142,6 +161,47 @@ def format_from(o: PythonObject) raises -> ColumnFormat:
     """A saved format, or Automatic if it isn't one this code can draw."""
     var f = ColumnFormat(Int(py=o["style"]), Int(py=o["decimals"]), Bool(py=o["thousands"]), Bool(py=o["parens"]), String(py=o["symbol"]))
     return f^ if f.valid() else ColumnFormat.auto()
+
+
+def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[ReportTile], mut filter: ReportFilter) raises -> Frame:
+    """Reads `path` (.omx): returns the table and fills in the sheet's objects and the Report. An object or tile
+    that names a column the table doesn't have (or a kind this code doesn't know) is left out rather than trusted."""
+    var py = bridge()
+    var frame = open_omx(path)
+    var meta = py.meta_of(path)
+    var columns = frame.columns()
+    var stored = frame.stored()
+    objects = List[SheetObject]()
+    var specs = meta.get("objects", Python.list())
+    for k in range(Int(py=specs.__len__())):
+        var o = specs[k]
+        var kind = Int(py=o["kind"])
+        var value = Int(py=o["value"])
+        var group = Int(py=o["group"])
+        var across = Int(py=o["across"])
+        if (kind != OBJ_CHART and kind != OBJ_PIVOT) or not (0 <= value < columns) or not (0 <= group < stored) or not (-1 <= across < stored):
+            continue
+        var obj = SheetObject.chart(value, group, Int(py=o["x"]), Int(py=o["y"]), Int(py=o["w"]), Int(py=o["h"]))
+        obj.kind = kind
+        obj.across = across
+        obj.style = Int(py=o["style"])
+        objects.append(obj^)
+    tiles = List[ReportTile]()
+    var report = meta.get("report", Python.dict())
+    var tile_specs = report.get("tiles", Python.list())
+    for k in range(Int(py=tile_specs.__len__())):
+        var t = tile_specs[k]
+        var kind = Int(py=t["kind"])
+        var col = Int(py=t["col"])
+        var group = Int(py=t["group"])
+        if not (TILE_SUM <= kind <= TILE_CHART) or not (0 <= col < columns) or (kind == TILE_CHART and not (0 <= group < stored)):
+            continue
+        tiles.append(new_tile(kind, col, group))
+    var f = report.get("filter", Python.dict())
+    filter = ReportFilter(Int(py=f.get("col", -1)), Int(py=f.get("code", 0)))
+    if not (-1 <= filter.col < stored):
+        filter = ReportFilter(-1, 0)
+    return frame^
 
 
 def open_omx(path: String) raises -> Frame:

@@ -79,6 +79,8 @@ COMPOSITES = [
     ("Inspector", "mojoui/inspector.mojo", ["Segmented", "Dropdown", "Toggle", "Card", "Quiet buttons"], "Inspector("),
     ("Toolbar · FormulaBar · StatusBar", "mojoui/sheetchrome.mojo", ["Toolbar button (icon over label)", "TextField", "Text"], "Toolbar("),
     ("Column number formats", "mojoui/numformat.mojo", ["Canvas", "Text"], "set_format("),
+    ("Sheet objects (charts, pivots)", "mojoui/sheetpage.mojo", ["Board: drag, resize, snap", "Canvas", "Card", "Grid"], "object_card("),
+    ("Report page (KPI and chart tiles, filters)", "mojoui/reportpage.mojo", ["Grid", "Card", "Dropdown", "Canvas"], "ReportPage("),
 ]
 
 # Built inside one app, not in mojoui yet: each should become a component before another app needs it.
