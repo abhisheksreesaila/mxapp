@@ -21,58 +21,78 @@ import pyarrow.csv as pv
 KEEP = []  # the arrays Mojo is copying from, alive until it says done
 
 
-def _decimal_scale(col):
-    a = pc.fill_null(col, 0.0).to_numpy(zero_copy_only=False)
-    if a.size == 0:
-        return 2
-    cents = a * 100.0
-    return 2 if np.all(np.abs(cents - np.round(cents)) < 1e-6) else 4
+def _scaled(col):
+    \"\"\"A float column as integers: hundredths if every value has at most 2 decimals, else ten-thousandths.
+    Arrow's kernels, a few passes and no Python-level temporaries (it matters at 100M rows).\"\"\"
+    col = pc.fill_null(col, 0.0)
+    for scale in (2, 4):
+        scaled = pc.multiply(col, float(10 ** scale))
+        rounded = pc.round(scaled)
+        worst = pc.max(pc.abs(pc.subtract(scaled, rounded))).as_py() if len(col) else 0.0
+        if scale == 4 or (worst or 0.0) < 1e-6:
+            return scale, pc.cast(rounded, pa.int64()).to_numpy(zero_copy_only=False)
 
 
-def read(path, max_cols):
+COLUMNS = []  # the parsed file's columns, each dropped once Mojo has its copy (one column's extra memory at a time)
+STATE = {}
+
+
+def open_file(path, max_cols):
+    \"\"\"Parses the file; returns the row count, the columns it will hand over, and those past the limit.\"\"\"
     t0 = time.perf_counter()
-    table = pv.read_csv(path, convert_options=pv.ConvertOptions(timestamp_parsers=["%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y"]))
-    read_s = time.perf_counter() - t0
+    table = pv.read_csv(path)  # (ISO dates are found by default; extra date formats doubled the read time at 50M rows)
+    COLUMNS.clear()
     KEEP.clear()
-    out = {"rows": table.num_rows, "read_s": read_s, "names": [], "kinds": [], "scales": [], "addresses": [],
-           "dictionaries": [], "empty": [], "samples": [], "skipped": []}
-    for i, name in enumerate(table.column_names):
-        if len(out["names"]) >= max_cols:
-            out["skipped"].append(name)
-            continue
-        col = table.column(i).combine_chunks()
-        empty = col.null_count
-        t = col.type
-        dictionary = []
-        if pa.types.is_integer(t) or pa.types.is_boolean(t):
-            kind, scale = 0, 0
-            arr = pc.fill_null(col.cast(pa.int64()), 0).to_numpy(zero_copy_only=False)
-        elif pa.types.is_floating(t) or pa.types.is_decimal(t):
-            kind = 1
-            col = col.cast(pa.float64())
-            scale = _decimal_scale(col)
-            arr = np.round(pc.fill_null(col, 0.0).to_numpy(zero_copy_only=False) * (10 ** scale)).astype(np.int64)
-        elif pa.types.is_date(t) or pa.types.is_timestamp(t):
-            kind, scale = 3, 0
-            days = col.cast(pa.date32()).cast(pa.int32())
-            arr = pc.fill_null(days, 0).to_numpy(zero_copy_only=False).astype(np.int64)
-        else:
-            kind, scale = 2, 0
-            enc = pc.fill_null(col.cast(pa.string()), "").dictionary_encode()
-            dictionary = enc.dictionary.to_pylist()
-            arr = enc.indices.to_numpy(zero_copy_only=False).astype(np.int64)
-        arr = np.ascontiguousarray(arr)
-        KEEP.append(arr)
-        sample = [("" if v is None else str(v)) for v in col.slice(0, 8).to_pylist()]
-        for key, value in (("names", name), ("kinds", kind), ("scales", scale), ("addresses", arr.ctypes.data),
-                           ("dictionaries", dictionary), ("empty", empty), ("samples", sample)):
-            out[key].append(value)
-    out["convert_s"] = time.perf_counter() - t0 - read_s
-    return out
+    names = table.column_names[:max_cols]
+    COLUMNS.extend(table.column(i) for i in range(len(names)))
+    STATE["read_s"] = time.perf_counter() - t0
+    STATE["convert_s"] = 0.0
+    return {"rows": table.num_rows, "names": list(names), "skipped": table.column_names[max_cols:]}
+
+
+def column(i):
+    \"\"\"Column i as the engine's int64 values (kind, scale, address, dictionary…); the parsed column is let go.\"\"\"
+    t0 = time.perf_counter()
+    col = COLUMNS[i].combine_chunks()
+    COLUMNS[i] = None
+    empty = col.null_count
+    t = col.type
+    dictionary = []
+    if pa.types.is_integer(t) or pa.types.is_boolean(t):
+        kind, scale = 0, 0
+        arr = pc.fill_null(col.cast(pa.int64()), 0).to_numpy(zero_copy_only=False)
+    elif pa.types.is_floating(t) or pa.types.is_decimal(t):
+        kind = 1
+        scale, arr = _scaled(col.cast(pa.float64()))
+    elif pa.types.is_date(t) or pa.types.is_timestamp(t):
+        kind, scale = 3, 0
+        days = col.cast(pa.date32()).cast(pa.int32())
+        arr = pc.fill_null(days, 0).to_numpy(zero_copy_only=False).astype(np.int64)
+    else:
+        kind, scale = 2, 0
+        enc = pc.fill_null(col.cast(pa.string()), "").dictionary_encode()
+        dictionary = enc.dictionary.to_pylist()
+        arr = enc.indices.to_numpy(zero_copy_only=False).astype(np.int64)
+    arr = np.ascontiguousarray(arr)
+    KEEP.clear()
+    KEEP.append(arr)
+    sample = [("" if v is None else str(v)) for v in col.slice(0, 8).to_pylist()]
+    STATE["convert_s"] += time.perf_counter() - t0
+    return {"kind": kind, "scale": scale, "address": arr.ctypes.data, "dictionary": dictionary, "empty": empty, "sample": sample}
+
+
+def seconds():
+    return STATE.get("read_s", 0.0) + STATE.get("convert_s", 0.0)
 
 
 def done():
     KEEP.clear()
+    COLUMNS.clear()
+
+
+def release(i):
+    \"\"\"Column i is copied: its array can go (so a 100M-row file never holds two copies of every column).\"\"\"
+    KEEP[i] = None
 
 
 def count_rows(path):
@@ -112,7 +132,8 @@ struct CsvImport(Movable):
     var columns: List[CsvColumn]
     var skipped: List[String]  # columns past the engine's limit (MAX_COLS)
     var seconds: Float64  # read + convert + copy
-    var base_addr: Int  # the shared columns (mojoui.frame.share); Frame(base_addr) is the table
+    var base_addr: Int
+    var parse_seconds: Float64  # of which: the file read and typed (pyarrow)  # the shared columns (mojoui.frame.share); Frame(base_addr) is the table
 
 
 def kind_name(kind: Int) -> String:
@@ -137,37 +158,38 @@ def read_csv(path: String) raises -> CsvImport:
     var start = Float64(py=time.perf_counter())
     var mod = types.ModuleType("mojoui_csv_bridge")
     _ = builtins.exec(CSV_BRIDGE, mod.__dict__)
-    var out: PythonObject
+    var head: PythonObject
     try:
-        out = mod.read(path, MAX_COLS)
+        head = mod.open_file(path, MAX_COLS)
     except e:
         raise Error("couldn't read " + path + " as CSV: " + String(e))
-    var rows = Int(py=out["rows"])
+    var rows = Int(py=head["rows"])
     var cols = Columns()
     var info = List[CsvColumn]()
-    var n = Int(py=out["names"].__len__())
+    var n = Int(py=head["names"].__len__())
     for c in range(n):
-        var col = Column(py_text(out["names"][c]), Int(py=out["kinds"][c]), Int(py=out["scales"][c]))
-        if col.kind == DECIMAL:
-            col.scale = Int(py=out["scales"][c])
+        var one = mod.column(c)
+        var col = Column(py_text(head["names"][c]), Int(py=one["kind"]), Int(py=one["scale"]))
+        col.scale = Int(py=one["scale"])
         col.values = List[Int64](length=rows, fill=0)
         if rows > 0:
-            _ = external_call["memcpy", Int](Int(col.values.unsafe_ptr()), Int(py=out["addresses"][c]), rows * 8)
-        var words = out["dictionaries"][c]
+            _ = external_call["memcpy", Int](Int(col.values.unsafe_ptr()), Int(py=one["address"]), rows * 8)
+        var words = one["dictionary"]
         for k in range(Int(py=words.__len__())):
             col.dictionary.append(py_text(words[k]))
         var sample = List[String]()
-        var s = out["samples"][c]
+        var s = one["sample"]
         for k in range(Int(py=s.__len__())):
             sample.append(py_text(s[k]))
-        info.append(CsvColumn(col.name, col.kind, col.scale, Int(py=out["empty"][c]), len(col.dictionary), sample^))
+        info.append(CsvColumn(col.name, col.kind, col.scale, Int(py=one["empty"]), len(col.dictionary), sample^))
         cols.add(col^)
+    var parse = Float64(py=mod.seconds())
     _ = mod.done()
     var skipped = List[String]()
-    for k in range(Int(py=out["skipped"].__len__())):
-        skipped.append(py_text(out["skipped"][k]))
+    for k in range(Int(py=head["skipped"].__len__())):
+        skipped.append(py_text(head["skipped"][k]))
     var addr = share(cols^)
-    return CsvImport(path, rows, info^, skipped^, Float64(py=time.perf_counter()) - start, addr)
+    return CsvImport(path, rows, info^, skipped^, Float64(py=time.perf_counter()) - start, addr, parse)
 
 
 def csv_oracle(path: String) raises -> PythonObject:

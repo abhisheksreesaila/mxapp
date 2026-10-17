@@ -18,6 +18,8 @@ covers MX Studio's Sheet and Report. These need MX frame and are skipped or stub
 | Data bigger than GPU or host memory (E8) | chunked, streamed execution | 20M rows in memory; MOJOUI_ROWS caps it |
 | The DuckDB test oracle and TPC-H (P3–P5, E5) | the engine those tests are for | the stand-in is checked against its own CPU path (GPU = CPU exactly) |
 | Count distinct, percentiles, top-k, binning as engine operations (E5, C5) | aggregate operators | done in app code over GPU group-by results (histograms, top customers) |
+| CSV, Parquet, Excel and JSON readers (omxplorer's import; pyarrow stands in, `mojoui/csvio.mojo`) | streaming typed readers | pyarrow parses, Mojo copies column by column; 100M rows import in ~106 s on a loaded machine (docs/scale.md) |
+| More than 16 columns in a table | wider row vectors / columnar GPU frame | omxplorer imports the first 16 and says so |
 | Blank (null) numbers and dates: Delete on a number cell, empty cells in imports | nulls per column | Delete clears text cells only; a number cell says "type a value (0 to zero it)" (goal 13) |
 
 When MX frame's Mojo API is ready, the switch is one layer: `GridSource`, the ops modules

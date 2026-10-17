@@ -58,6 +58,7 @@ def main() raises:
     var format_ms = seconds_since(t) * 1000.0
     var rows = frame.rows()
     var size = String(rows // 1_000_000) + "M"
+    print("parse " + fixed(imp.parse_seconds, 2) + " s of " + fixed(import_s, 2) + " s")
     print("| " + size + " | " + fixed(import_s, 2) + " s | " + fixed(sort_s, 2) + " s | " + fixed(format_ms, 1) + " ms | "
           + fixed(sum_ms, 1) + " ms (" + gf.device_name() + ") | " + fixed(upload_s, 2) + " s | " + fixed(draw_ms, 1) + " ms | "
           + grouped(r.counts[0]) + " rows summed |")

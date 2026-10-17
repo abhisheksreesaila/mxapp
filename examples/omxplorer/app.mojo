@@ -99,7 +99,7 @@ struct Main(App):
         empty.add(c^)
         self.frame = Frame(share(empty^))
         self.gf_addr = 0
-        self.imp = CsvImport("", 0, List[CsvColumn](), List[String](), 0, 0)
+        self.imp = CsvImport("", 0, List[CsvColumn](), List[String](), 0, 0, 0)
         self.source = ""
         self.name = ""
         self.grid = DataGrid()
