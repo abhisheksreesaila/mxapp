@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MX Studio — Start</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- JetBrains Mono Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary": "#aec6ff",
+            "surface": "#1a1b26",
+            "primary-fixed-dim": "#aec6ff",
+            "background": "#12131d",
+            "tertiary-fixed-dim": "#f1c040",
+            "selection": "#292e42",
+            "on-surface": "#e2e1f1",
+            "surface-container-low": "#1a1b26",
+            "ink": "#c0caf5",
+            "good": "#9ece6a",
+            "body": "#a9b1d6",
+            "error": "#ffb4ab",
+            "on-secondary": "#3c1d6f",
+            "tertiary-container": "#ca9d1c",
+            "surface-dim": "#12131d",
+            "strong-line": "#414868",
+            "on-error": "#690005",
+            "warning": "#e0af68",
+            "secondary-container": "#56388a",
+            "on-primary": "#002e6b",
+            "outline": "#8d909d",
+            "inverse-on-surface": "#2f303b",
+            "on-surface-variant": "#c3c6d3",
+            "on-error-container": "#ffdad6",
+            "on-tertiary-fixed": "#251a00",
+            "toolbar": "#0e0e14",
+            "on-secondary-container": "#c8aaff",
+            "surface-tint": "#aec6ff",
+            "outline-variant": "#434751",
+            "hairline": "#2a2e40",
+            "secondary": "#565f89",
+            "on-tertiary-fixed-variant": "#5a4300",
+            "inverse-primary": "#305cac",
+            "secondary-fixed": "#ebdcff",
+            "on-secondary-fixed-variant": "#533687",
+            "surface-bright": "#383844",
+            "surface-container-high": "#282935",
+            "bad": "#f7768e",
+            "raised": "#24283b",
+            "error-container": "#93000a",
+            "primary-fixed": "#d8e2ff",
+            "on-secondary-fixed": "#260059",
+            "primary-container": "#7aa2f7",
+            "surface-container": "#1e1f2a",
+            "surface-container-highest": "#333440",
+            "secondary-fixed-dim": "#d4bbff",
+            "on-tertiary-container": "#4a3700",
+            "on-tertiary": "#3f2e00",
+            "inverse-surface": "#e2e1f1",
+            "on-primary-fixed-variant": "#0c4393",
+            "on-primary-fixed": "#001a43",
+            "page": "#13141c",
+            "tertiary-fixed": "#ffdf98",
+            "on-background": "#e2e1f1",
+            "tertiary": "#f1c040",
+            "surface-container-lowest": "#0c0d18",
+            "on-primary-container": "#00367d"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.375rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-xs": "4px",
+            "margin": "16px",
+            "space-md": "12px",
+            "space-sm": "8px",
+            "space-xl": "24px",
+            "space-lg": "16px",
+            "gutter": "0px"
+          },
+          "fontFamily": {
+            "headline-xl": ["JetBrains Mono"],
+            "caption": ["JetBrains Mono"],
+            "headline-md": ["JetBrains Mono"],
+            "toolbar-label": ["JetBrains Mono"],
+            "body-md": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "headline-xl": ["20px", { "lineHeight": "24px", "fontWeight": "700" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-md": ["15px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "toolbar-label": ["11px", { "lineHeight": "14px", "fontWeight": "400" }],
+            "body-md": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: #13141c;
+      font-family: 'JetBrains Mono', monospace;
+      color: #a9b1d6;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="bg-page text-body min-h-screen flex flex-col justify-between overflow-x-hidden">
+<!-- Desktop Top Window Chrome & Navigation (Shared Component: TopNavBar execution) -->
+<header class="w-full flex items-center justify-between px-3 h-10 border-b border-hairline bg-toolbar select-none sticky top-0 z-40">
+<!-- Left: Native Window Controls & Application Identity -->
+<div class="flex items-center space-x-3">
+<!-- Window Dots -->
+<div class="flex items-center space-x-1.5 pr-2">
+<span class="w-3 h-3 rounded-full bg-bad/80 hover:bg-bad transition-colors cursor-pointer inline-block"></span>
+<span class="w-3 h-3 rounded-full bg-warning/80 hover:bg-warning transition-colors cursor-pointer inline-block"></span>
+<span class="w-3 h-3 rounded-full bg-good/80 hover:bg-good transition-colors cursor-pointer inline-block"></span>
+</div>
+<!-- App Name & Subtitle -->
+<div class="flex items-baseline space-x-2 border-l border-hairline pl-3">
+<span class="font-headline-md text-headline-md font-bold text-ink tracking-tight">MX Studio</span>
+<span class="font-caption text-caption text-secondary hidden sm:inline">Open data, shape it, report on it — on your GPU.</span>
+</div>
+<!-- Native Menu Links (TopNavBar links) -->
+<nav class="hidden lg:flex items-center space-x-1 pl-4"><button class="px-2 py-1 font-caption text-caption text-ink border-b-2 border-primary hover:bg-raised transition-colors duration-150">File</button><button class="px-2 py-1 font-caption text-caption text-body hover:text-ink hover:bg-raised transition-colors duration-150">Edit</button><button class="px-2 py-1 font-caption text-caption text-body hover:text-ink hover:bg-raised transition-colors duration-150">Insert</button><button class="px-2 py-1 font-caption text-caption text-body hover:text-ink hover:bg-raised transition-colors duration-150">Table</button><button class="px-2 py-1 font-caption text-caption text-body hover:text-ink hover:bg-raised transition-colors duration-150">Format</button><button class="px-2 py-1 font-caption text-caption text-body hover:text-ink hover:bg-raised transition-colors duration-150">View</button><button class="px-2 py-1 font-caption text-caption text-body hover:text-ink hover:bg-raised transition-colors duration-150">Help</button></nav>
+</div>
+<!-- Right: Hardware Status Chips & Actions -->
+<div class="flex items-center space-x-2">
+<!-- Hardware Chip -->
+<div class="flex items-center space-x-2 px-2.5 py-1 bg-surface border border-hairline rounded text-caption font-caption"><span class="w-2 h-2 rounded-full bg-good inline-block animate-pulse"></span><span class="text-ink">Local Engine · Ready</span></div>
+<!-- Version Chip -->
+<div class="px-2 py-1 bg-surface border border-hairline rounded font-toolbar-label text-toolbar-label text-secondary">v1.4.2</div>
+<!-- Trailing Action Icons -->
+<div class="flex items-center space-x-0.5 border-l border-hairline pl-2 text-secondary">
+<button class="p-1 hover:text-ink hover:bg-raised rounded transition-colors flex items-center justify-center" title="Terminal Shell">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+</button>
+<button class="p-1 hover:text-ink hover:bg-raised rounded transition-colors flex items-center justify-center" title="Settings">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="p-1 hover:text-ink hover:bg-raised rounded transition-colors flex items-center justify-center" title="Help &amp; Documentation">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Canvas Workspace -->
+<main class="flex-1 w-full max-w-6xl mx-auto px-6 py-6 pb-12 flex flex-col space-y-6">
+<!-- Start Workspace Cluster -->
+<section class="flex flex-col space-y-3">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-md text-headline-md text-ink font-medium tracking-wide">START</h2>
+<span class="font-caption text-caption text-secondary">Ready</span>
+</div>
+<!-- 4 High Density Bento Choice Tiles -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+<!-- Tile 1: Blank sheet -->
+<div class="group bg-surface hover:bg-raised border border-hairline hover:border-primary-container rounded-xl p-4 flex flex-col justify-between cursor-pointer transition-all duration-150 relative">
+<div class="flex flex-col space-y-3">
+<div class="w-9 h-9 rounded bg-surface-container flex items-center justify-center border border-hairline group-hover:border-primary-container text-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="table_chart">table_chart</span>
+</div>
+<div>
+<div class="font-headline-md text-headline-md font-semibold text-ink group-hover:text-primary transition-colors">Blank sheet</div>
+<p class="font-caption text-caption text-secondary mt-1 leading-normal">New empty workbook</p>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-hairline/60 flex items-center justify-between text-secondary group-hover:text-ink font-toolbar-label text-toolbar-label">
+<span>New Sheet</span>
+<span class="text-body font-mono">⌘N</span>
+</div>
+</div>
+<!-- Tile 2: Import a file -->
+<div class="group bg-surface hover:bg-raised border border-hairline hover:border-primary-container rounded-xl p-4 flex flex-col justify-between cursor-pointer transition-all duration-150 relative">
+<div class="flex flex-col space-y-3">
+<div class="w-9 h-9 rounded bg-surface-container flex items-center justify-center border border-hairline group-hover:border-primary-container text-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="file_open">file_open</span>
+</div>
+<div>
+<div class="font-headline-md text-headline-md font-semibold text-ink group-hover:text-primary transition-colors">Import a file</div>
+<p class="font-caption text-caption text-secondary mt-1 leading-normal">CSV, Parquet, Excel, Arrow, JSON</p>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-hairline/60 flex items-center justify-between text-secondary group-hover:text-ink font-toolbar-label text-toolbar-label">
+<span>Fast local import</span>
+<span class="text-body font-mono">⌘I</span>
+</div>
+</div>
+<!-- Tile 3: Connect a database -->
+<div class="group bg-surface hover:bg-raised border border-hairline hover:border-primary-container rounded-xl p-4 flex flex-col justify-between cursor-pointer transition-all duration-150 relative">
+<div class="flex flex-col space-y-3">
+<div class="w-9 h-9 rounded bg-surface-container flex items-center justify-center border border-hairline group-hover:border-primary-container text-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+</div>
+<div>
+<div class="font-headline-md text-headline-md font-semibold text-ink group-hover:text-primary transition-colors">Connect database</div>
+<p class="font-caption text-caption text-secondary mt-1 leading-normal">Postgres, DuckDB, SQLite, ClickHouse</p>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-hairline/60 flex items-center justify-between text-secondary group-hover:text-ink font-toolbar-label text-toolbar-label">
+<span>Direct connection</span>
+<span class="text-body font-mono">⌘D</span>
+</div>
+</div>
+<!-- Tile 4: Sample 2M orders -->
+<div class="group bg-surface hover:bg-raised border border-hairline hover:border-primary-container rounded-xl p-4 flex flex-col justify-between cursor-pointer transition-all duration-150 relative">
+<div class="flex flex-col space-y-3">
+<div class="w-9 h-9 rounded bg-surface-container flex items-center justify-center border border-hairline group-hover:border-primary-container text-good transition-colors">
+<span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+</div>
+<div>
+<div class="font-headline-md text-headline-md font-semibold text-ink group-hover:text-primary transition-colors">Sample · 2M orders</div>
+<p class="font-caption text-caption text-secondary mt-1 leading-normal">Sample dataset · 2,000,000 rows</p>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-hairline/60 flex items-center justify-between text-secondary group-hover:text-ink font-toolbar-label text-toolbar-label">
+<span class="text-good">Quick start · 186 MB</span>
+<span class="text-body font-mono">⌘B</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Native File Drag & Drop Target Zone -->
+<section class="w-full">
+<div class="w-full py-7 px-6 rounded-xl border border-dashed border-strong-line hover:border-primary-container bg-surface/50 hover:bg-raised/40 transition-colors duration-150 flex flex-col items-center justify-center text-center cursor-pointer group" id="drop-zone">
+<div class="w-10 h-10 rounded bg-surface flex items-center justify-center border border-hairline group-hover:border-primary-container text-secondary group-hover:text-ink transition-colors mb-2.5">
+<span class="material-symbols-outlined" data-icon="upload_file">upload_file</span>
+</div>
+<div class="font-headline-md text-headline-md text-ink font-medium">Drop a CSV or Parquet file here</div>
+<div class="font-caption text-caption text-secondary mt-1">or click to browse filesystem · auto-detects columns and formats</div>
+<div class="mt-2.5 flex items-center space-x-2">
+<span class="px-2 py-0.5 rounded bg-surface-container border border-hairline font-toolbar-label text-toolbar-label text-body">.parquet</span>
+<span class="px-2 py-0.5 rounded bg-surface-container border border-hairline font-toolbar-label text-toolbar-label text-body">.csv</span>
+<span class="px-2 py-0.5 rounded bg-surface-container border border-hairline font-toolbar-label text-toolbar-label text-body">.arrow</span>
+<span class="px-2 py-0.5 rounded bg-surface-container border border-hairline font-toolbar-label text-toolbar-label text-body">.xlsx</span>
+</div>
+</div>
+</section>
+<!-- Recent Datasets Section (Specification-Strict Data Grid) -->
+<section class="flex flex-col space-y-2.5">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<h2 class="font-headline-md text-headline-md text-ink font-medium tracking-wide">RECENT</h2>
+<span class="font-toolbar-label text-toolbar-label text-secondary px-2 py-0.5 bg-surface border border-hairline rounded">4 Workbooks</span>
+</div>
+<div class="flex items-center space-x-2">
+<div class="relative">
+<input class="bg-surface border border-hairline rounded px-2.5 py-1 text-caption font-caption text-ink placeholder-secondary focus:border-primary-container focus:outline-none w-48 transition-colors" placeholder="Filter recent items..." type="text"/>
+</div>
+<button class="px-2.5 py-1 text-caption font-caption bg-surface hover:bg-raised border border-hairline text-ink rounded transition-colors flex items-center space-x-1">
+<span>View all in workspace</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Tokyo Night Table -->
+<div class="border border-hairline rounded-xl overflow-hidden bg-surface">
+<table class="w-full border-collapse text-left">
+<thead>
+<tr class="bg-raised border-b border-hairline font-toolbar-label text-toolbar-label text-body">
+<th class="w-12 px-3 py-2 text-center text-secondary border-r border-hairline font-mono font-normal">#</th>
+<th class="px-4 py-2 font-normal text-body">Name</th>
+<th class="px-4 py-2 text-right font-normal text-body">Rows</th>
+<th class="px-4 py-2 text-right font-normal text-body">Size</th>
+<th class="px-4 py-2 text-right font-normal text-body">Last opened</th>
+<th class="w-36 px-4 py-2 text-center font-normal text-body">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-hairline font-body-md text-body-md">
+<!-- Row 1 -->
+<tr class="hover:bg-raised transition-colors group">
+<td class="w-12 px-3 py-2.5 text-center text-secondary border-r border-hairline font-caption text-caption tabular-nums">01</td>
+<td class="px-4 py-2.5">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-primary-container" data-icon="description">description</span>
+<div class="flex flex-col">
+<span class="text-ink font-medium group-hover:text-primary transition-colors cursor-pointer">orders_2025.csv</span>
+<span class="font-toolbar-label text-toolbar-label text-secondary">/workspace/datasets/retail/</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption tabular-nums text-ink">2,000,000</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption tabular-nums text-body">186 MB</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption text-good">today</td>
+<td class="px-4 py-2.5 text-center">
+<div class="flex items-center justify-center space-x-1 opacity-80 group-hover:opacity-100 transition-opacity">
+<button class="px-2 py-1 bg-surface-container hover:bg-selection border border-hairline text-caption font-caption text-ink rounded transition-colors">Open</button>
+<button class="px-2 py-1 bg-surface-container hover:bg-selection border border-hairline text-caption font-caption text-secondary hover:text-ink rounded transition-colors" title="Inspect Schema">Inspect</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-raised transition-colors group">
+<td class="w-12 px-3 py-2.5 text-center text-secondary border-r border-hairline font-caption text-caption tabular-nums">02</td>
+<td class="px-4 py-2.5">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-good" data-icon="data_object">data_object</span>
+<div class="flex flex-col">
+<span class="text-ink font-medium group-hover:text-primary transition-colors cursor-pointer">carriers.parquet</span>
+<span class="font-toolbar-label text-toolbar-label text-secondary">/workspace/logistics/dim/</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption tabular-nums text-ink">8</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption tabular-nums text-body">1.2 KB</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption text-secondary">yesterday</td>
+<td class="px-4 py-2.5 text-center">
+<div class="flex items-center justify-center space-x-1 opacity-80 group-hover:opacity-100 transition-opacity">
+<button class="px-2 py-1 bg-surface-container hover:bg-selection border border-hairline text-caption font-caption text-ink rounded transition-colors">Open</button>
+<button class="px-2 py-1 bg-surface-container hover:bg-selection border border-hairline text-caption font-caption text-secondary hover:text-ink rounded transition-colors" title="Inspect Schema">Inspect</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-raised transition-colors group">
+<td class="w-12 px-3 py-2.5 text-center text-secondary border-r border-hairline font-caption text-caption tabular-nums">03</td>
+<td class="px-4 py-2.5">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-primary-container" data-icon="description">description</span>
+<div class="flex flex-col">
+<span class="text-ink font-medium group-hover:text-primary transition-colors cursor-pointer">invoices_q3.csv</span>
+<span class="font-toolbar-label text-toolbar-label text-secondary">/workspace/finance/q3/</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption tabular-nums text-ink">41,200</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption tabular-nums text-body">4.8 MB</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption text-secondary">3 days ago</td>
+<td class="px-4 py-2.5 text-center">
+<div class="flex items-center justify-center space-x-1 opacity-80 group-hover:opacity-100 transition-opacity">
+<button class="px-2 py-1 bg-surface-container hover:bg-selection border border-hairline text-caption font-caption text-ink rounded transition-colors">Open</button>
+<button class="px-2 py-1 bg-surface-container hover:bg-selection border border-hairline text-caption font-caption text-secondary hover:text-ink rounded transition-colors" title="Inspect Schema">Inspect</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-raised transition-colors group">
+<td class="w-12 px-3 py-2.5 text-center text-secondary border-r border-hairline font-caption text-caption tabular-nums">04</td>
+<td class="px-4 py-2.5">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-tertiary" data-icon="grid_view">grid_view</span>
+<div class="flex flex-col">
+<span class="text-ink font-medium group-hover:text-primary transition-colors cursor-pointer">churn_model.mxs</span>
+<span class="font-toolbar-label text-toolbar-label text-secondary">/workspace/analytics/models/</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption text-body">workbook (8 sheets)</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption tabular-nums text-body">32 MB</td>
+<td class="px-4 py-2.5 text-right font-caption text-caption text-secondary">Oct 12</td>
+<td class="px-4 py-2.5 text-center">
+<div class="flex items-center justify-center space-x-1 opacity-80 group-hover:opacity-100 transition-opacity">
+<button class="px-2 py-1 bg-surface-container hover:bg-selection border border-hairline text-caption font-caption text-ink rounded transition-colors">Open</button>
+<button class="px-2 py-1 bg-surface-container hover:bg-selection border border-hairline text-caption font-caption text-secondary hover:text-ink rounded transition-colors" title="Inspect Schema">Inspect</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+<!-- Fixed Keyboard Shortcut Bar (Shared Component: Footer execution) -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex items-center justify-between px-4 h-7 border-t border-hairline bg-toolbar font-toolbar-label text-toolbar-label select-none">
+<!-- Left Status / Engine Notice -->
+<div class="flex items-center space-x-3 text-secondary font-caption text-caption"><div class="flex items-center space-x-1.5"><span class="w-1.5 h-1.5 rounded-full bg-good"></span><span class="text-secondary">MX Studio • Ready</span></div><span class="text-hairline">|</span><span class="text-ink">Memory: 2.1 GB used</span></div>
+<!-- Right Keyboard Hints (Shared Components Footer links) -->
+<div class="flex items-center space-x-4">
+<button class="text-secondary hover:text-ink transition-colors cursor-pointer select-none">⌘N New Sheet</button>
+<button class="text-secondary hover:text-ink transition-colors cursor-pointer select-none">⌘O Open File</button>
+<button class="text-secondary hover:text-ink transition-colors cursor-pointer select-none">⌘K Command Palette</button>
+<button class="text-secondary hover:text-ink transition-colors cursor-pointer select-none">⌘R Refresh</button>
+<button class="text-secondary hover:text-ink transition-colors cursor-pointer select-none">? Shortcuts</button>
+</div>
+</footer>
+<!-- Micro-Interactions -->
+<script>
+    // Lightweight Drag and Drop Micro-feedback
+    const dropZone = document.getElementById('drop-zone');
+    if (dropZone) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('border-primary', 'bg-raised');
+        }, false);
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove('border-primary', 'bg-raised');
+        }, false);
+      });
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+          alert('Ingesting ' + files[0].name + ' into GPU Tensor Memory...');
+        }
+      });
+    }
+  </script>
+</body></html>

@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MX Studio — Import orders_2025.csv</title>
+<!-- Google Fonts: JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-error": "#690005",
+            "surface-container": "#1e1f2a",
+            "secondary": "#565f89",
+            "body": "#a9b1d6",
+            "background": "#12131d",
+            "selection": "#292e42",
+            "on-tertiary-container": "#4a3700",
+            "surface-tint": "#aec6ff",
+            "surface-container-lowest": "#0c0d18",
+            "strong-line": "#414868",
+            "secondary-fixed-dim": "#d4bbff",
+            "on-surface-variant": "#c3c6d3",
+            "tertiary-fixed": "#ffdf98",
+            "surface-container-highest": "#333440",
+            "secondary-fixed": "#ebdcff",
+            "secondary-container": "#56388a",
+            "error": "#ffb4ab",
+            "hairline": "#2a2e40",
+            "tertiary-fixed-dim": "#f1c040",
+            "on-error-container": "#ffdad6",
+            "outline-variant": "#434751",
+            "inverse-primary": "#305cac",
+            "primary-fixed": "#d8e2ff",
+            "inverse-on-surface": "#2f303b",
+            "surface-dim": "#12131d",
+            "good": "#9ece6a",
+            "tertiary-container": "#ca9d1c",
+            "warning": "#e0af68",
+            "surface": "#1a1b26",
+            "on-primary-fixed": "#001a43",
+            "on-secondary-fixed": "#260059",
+            "page": "#13141c",
+            "ink": "#c0caf5",
+            "primary-fixed-dim": "#aec6ff",
+            "on-surface": "#e2e1f1",
+            "raised": "#24283b",
+            "bad": "#f7768e",
+            "on-secondary-fixed-variant": "#533687",
+            "tertiary": "#f1c040",
+            "outline": "#8d909d",
+            "on-tertiary-fixed": "#251a00",
+            "primary": "#aec6ff",
+            "on-primary": "#002e6b",
+            "surface-bright": "#383844",
+            "on-background": "#e2e1f1",
+            "surface-container-high": "#282935",
+            "surface-container-low": "#1a1b26",
+            "surface-variant": "#333440",
+            "on-primary-container": "#00367d",
+            "error-container": "#93000a",
+            "on-secondary-container": "#c8aaff",
+            "on-secondary": "#3c1d6f",
+            "on-tertiary-fixed-variant": "#5a4300",
+            "on-primary-fixed-variant": "#0c4393",
+            "primary-container": "#7aa2f7",
+            "on-tertiary": "#3f2e00",
+            "toolbar": "#0e0e14",
+            "inverse-surface": "#e2e1f1"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "gutter": "0px",
+            "space-xl": "24px",
+            "margin": "16px",
+            "space-sm": "8px",
+            "space-md": "12px",
+            "space-lg": "16px",
+            "space-xs": "4px"
+          },
+          "fontFamily": {
+            "toolbar-label": ["JetBrains Mono"],
+            "caption": ["JetBrains Mono"],
+            "headline-xl": ["JetBrains Mono"],
+            "body-md": ["JetBrains Mono"],
+            "headline-md": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "toolbar-label": ["11px", { "lineHeight": "14px", "fontWeight": "400" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-xl": ["20px", { "lineHeight": "24px", "fontWeight": "700" }],
+            "body-md": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "headline-md": ["15px", { "lineHeight": "20px", "fontWeight": "500" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      font-feature-settings: "tnum" 1, "zero" 1;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #13141c;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #2a2e40;
+      border-radius: 2px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #414868;
+    }
+  </style>
+</head>
+<body class="bg-page text-body w-screen h-screen overflow-hidden flex flex-col relative">
+<!-- ========================================================================= -->
+<!-- LAYER 1: DIMMED BACKGROUND SHEET WINDOW                                   -->
+<!-- ========================================================================= -->
+<!-- Top Window Chrome / System Bar -->
+<header class="w-full h-10 px-margin flex items-center justify-between border-b border-hairline bg-toolbar select-none z-10 shrink-0">
+<div class="flex items-center space-x-3"><div class="flex items-center space-x-2 mr-2"><span class="w-3 h-3 rounded-full bg-[#f7768e]/80 inline-block"></span><span class="w-3 h-3 rounded-full bg-[#e0af68]/80 inline-block"></span><span class="w-3 h-3 rounded-full bg-[#9ece6a]/80 inline-block"></span></div><span class="font-headline-md text-headline-md text-ink font-bold tracking-tight">MX Studio</span><span class="text-secondary font-caption text-caption">/</span><span class="text-secondary font-caption text-caption">orders_2025</span></div>
+<!-- Top Navigation Links (TopNavBar from Shared Components JSON) -->
+<nav class="hidden md:flex items-center space-x-1 h-full"><a class="px-3 h-full flex items-center text-body hover:text-ink transition-colors font-body-md text-body-md" href="#">File</a><a class="px-3 h-full flex items-center text-body hover:text-ink transition-colors font-body-md text-body-md" href="#">Edit</a><a class="px-3 h-full flex items-center text-ink border-b-2 border-primary font-medium font-body-md text-body-md" href="#">Insert</a><a class="px-3 h-full flex items-center text-body hover:text-ink transition-colors font-body-md text-body-md" href="#">Table</a><a class="px-3 h-full flex items-center text-body hover:text-ink transition-colors font-body-md text-body-md" href="#">Format</a><a class="px-3 h-full flex items-center text-body hover:text-ink transition-colors font-body-md text-body-md" href="#">View</a><a class="px-3 h-full flex items-center text-body hover:text-ink transition-colors font-body-md text-body-md" href="#">Help</a></nav>
+<!-- Trailing Actions Cluster -->
+<div class="flex items-center space-x-3"><div class="flex items-center space-x-2 mr-2"><span class="w-3 h-3 rounded-full bg-[#f7768e]/80 inline-block"></span><span class="w-3 h-3 rounded-full bg-[#e0af68]/80 inline-block"></span><span class="w-3 h-3 rounded-full bg-[#9ece6a]/80 inline-block"></span></div><span class="font-headline-md text-headline-md text-ink font-bold tracking-tight">MX Studio</span><span class="text-secondary font-caption text-caption">/</span><span class="text-secondary font-caption text-caption">orders_2025</span></div>
+</header>
+<!-- Secondary Desktop Tool Bar (Apple Numbers style stacked buttons) -->
+<div class="w-full h-14 bg-toolbar border-b border-hairline flex items-center px-4 space-x-1 select-none shrink-0">
+<!-- Table -->
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded hover:bg-raised text-ink transition-colors group">
+<span class="material-symbols-outlined text-[18px] text-body group-hover:text-primary">table_chart</span>
+<span class="font-toolbar-label text-toolbar-label text-body mt-0.5">Table</span>
+</button>
+<!-- Chart -->
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded hover:bg-raised text-ink transition-colors group">
+<span class="material-symbols-outlined text-[18px] text-body group-hover:text-primary">bar_chart</span>
+<span class="font-toolbar-label text-toolbar-label text-body mt-0.5">Chart</span>
+</button>
+<!-- Text -->
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded hover:bg-raised text-ink transition-colors group">
+<span class="material-symbols-outlined text-[18px] text-body group-hover:text-primary">title</span>
+<span class="font-toolbar-label text-toolbar-label text-body mt-0.5">Text</span>
+</button>
+<!-- Shape -->
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded hover:bg-raised text-ink transition-colors group">
+<span class="material-symbols-outlined text-[18px] text-body group-hover:text-primary">category</span>
+<span class="font-toolbar-label text-toolbar-label text-body mt-0.5">Shape</span>
+</button>
+<!-- Share -->
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded hover:bg-raised text-ink transition-colors group">
+<span class="material-symbols-outlined text-[18px] text-body group-hover:text-primary">ios_share</span>
+<span class="font-toolbar-label text-toolbar-label text-body mt-0.5">Share</span>
+</button>
+</div>
+<!-- Sheet Tab Bar -->
+<div class="w-full h-8 bg-[#161722] border-b border-hairline flex items-center px-3 space-x-1 select-none shrink-0">
+<div class="flex items-center px-3 h-full border-b-2 border-primary-container text-ink font-body-md text-[12px] font-medium bg-[#1a1b26]">
+      Sheet 1
+    </div>
+<button class="w-6 h-6 flex items-center justify-center text-secondary hover:text-ink hover:bg-raised rounded">
+<span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+</div>
+<!-- Background Data Grid Area (Empty Sheet Canvas) -->
+<div class="flex-1 w-full bg-page overflow-hidden relative">
+<!-- Formula Bar placeholder -->
+<div class="w-full h-7 bg-surface border-b border-hairline flex items-center px-3 space-x-2 font-caption text-caption text-secondary">
+<span class="text-primary font-medium">ƒx</span>
+<span class="text-secondary">|</span>
+<span class="text-body font-mono"></span>
+</div>
+<!-- Empty Table Lines -->
+<div class="w-full h-full grid grid-cols-[48px_repeat(14,140px)] auto-rows-[26px]">
+<!-- Column headers -->
+<div class="bg-raised border-r border-b border-hairline flex items-center justify-center text-[10px] text-secondary">#</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">A</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">B</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">C</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">D</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">E</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">F</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">G</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">H</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">I</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">J</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">K</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">L</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">M</div>
+<div class="bg-raised border-r border-b border-hairline px-2 flex items-center text-[11px] text-secondary">N</div>
+<!-- Repeating empty rows -->
+<template id="empty-row-placeholder">
+<!-- Rendered statically below for 18 rows -->
+</template>
+<!-- Row 1 to 18 static empty grid -->
+<div class="bg-surface border-r border-b border-hairline flex items-center justify-center text-[11px] text-secondary">1</div>
+<div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div>
+<div class="bg-surface border-r border-b border-hairline flex items-center justify-center text-[11px] text-secondary">2</div>
+<div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div>
+<div class="bg-surface border-r border-b border-hairline flex items-center justify-center text-[11px] text-secondary">3</div>
+<div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div>
+<div class="bg-surface border-r border-b border-hairline flex items-center justify-center text-[11px] text-secondary">4</div>
+<div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div>
+<div class="bg-surface border-r border-b border-hairline flex items-center justify-center text-[11px] text-secondary">5</div>
+<div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div>
+<div class="bg-surface border-r border-b border-hairline flex items-center justify-center text-[11px] text-secondary">6</div>
+<div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div>
+<div class="bg-surface border-r border-b border-hairline flex items-center justify-center text-[11px] text-secondary">7</div>
+<div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div><div class="border-r border-b border-hairline"></div>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- LAYER 2: MODAL DIMMING OVERLAY                                            -->
+<!-- ========================================================================= -->
+<div class="absolute inset-0 bg-[#0e0e14]/75 z-40 flex items-center justify-center p-4">
+<!-- ======================================================================= -->
+<!-- LAYER 3: CENTERED IMPORT DIALOG (~1080px × 680px)                        -->
+<!-- ======================================================================= -->
+<div class="w-[1080px] h-[680px] max-w-[98vw] max-h-[983px] bg-surface border border-hairline rounded-[6px] flex flex-col overflow-hidden select-none">
+<!-- Modal Header -->
+<div class="h-14 px-4 bg-surface border-b border-hairline flex items-center justify-between shrink-0">
+<!-- Title & Stats -->
+<div>
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-primary text-[19px]">data_table</span>
+<h2 class="font-headline-md text-headline-md text-ink font-medium">Import orders_2025.csv</h2>
+<div class="h-3 w-[1px] bg-hairline"></div>
+<!-- 3-step indicator -->
+<div class="flex items-center space-x-2 text-caption font-caption">
+<span class="text-secondary flex items-center">
+<span class="w-4 h-4 rounded-full bg-raised flex items-center justify-center text-[10px] text-body mr-1">1</span>
+                File
+              </span>
+<span class="text-secondary text-[11px]">›</span>
+<span class="px-2 py-0.5 rounded-[4px] bg-primary-container text-[#1a1b26] font-medium flex items-center">
+<span class="w-4 h-4 rounded-full bg-[#1a1b26] text-primary flex items-center justify-center text-[10px] mr-1">2</span>
+                Columns
+              </span>
+<span class="text-secondary text-[11px]">›</span>
+<span class="text-secondary flex items-center">
+<span class="w-4 h-4 rounded-full bg-raised flex items-center justify-center text-[10px] text-secondary mr-1">3</span>
+                Place
+              </span>
+</div>
+</div>
+<div class="text-[11px] leading-[14px] font-caption text-secondary mt-0.5 ml-8 flex items-center space-x-2"><span>2,000,000 rows</span><span>·</span><span>12 columns</span><span>·</span><span class="text-good font-medium">read in 0.8s</span></div>
+</div>
+<!-- Window Control Close Button -->
+<button class="w-7 h-7 rounded hover:bg-raised text-body hover:text-ink flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Settings Configuration Bar -->
+<div class="h-10 px-4 bg-page border-b border-hairline flex items-center justify-between text-caption font-caption shrink-0">
+<div class="flex items-center space-x-4">
+<!-- Delimiter -->
+<div class="flex items-center space-x-1.5">
+<span class="text-secondary">Delimiter:</span>
+<div class="flex items-center bg-surface border border-hairline rounded-[4px] px-2 py-0.5 text-ink hover:border-strong-line cursor-pointer">
+<span>Comma (,)</span>
+<span class="material-symbols-outlined text-[14px] text-secondary ml-1">expand_more</span>
+</div>
+</div>
+<!-- Header row switch -->
+<div class="flex items-center space-x-2">
+<span class="text-secondary">Header row:</span>
+<button class="w-8 h-4 bg-primary-container rounded-full relative transition-colors focus:outline-none">
+<span class="w-3 h-3 bg-[#1a1b26] rounded-full absolute top-0.5 right-0.5 transition-transform"></span>
+</button>
+<span class="text-ink text-[11px]">On</span>
+</div>
+<!-- Encoding -->
+<div class="flex items-center space-x-1.5">
+<span class="text-secondary">Encoding:</span>
+<div class="flex items-center bg-surface border border-hairline rounded-[4px] px-2 py-0.5 text-ink hover:border-strong-line cursor-pointer">
+<span>UTF-8</span>
+<span class="material-symbols-outlined text-[14px] text-secondary ml-1">expand_more</span>
+</div>
+</div>
+<!-- Decimal -->
+<div class="flex items-center space-x-1.5">
+<span class="text-secondary">Decimal:</span>
+<div class="flex items-center bg-surface border border-hairline rounded-[4px] px-2 py-0.5 text-ink hover:border-strong-line cursor-pointer">
+<span>Dot (.)</span>
+<span class="material-symbols-outlined text-[14px] text-secondary ml-1">expand_more</span>
+</div>
+</div>
+<!-- Dates -->
+<div class="flex items-center space-x-1.5">
+<span class="text-secondary">Dates:</span>
+<div class="flex items-center bg-surface border border-hairline rounded-[4px] px-2 py-0.5 text-ink hover:border-strong-line cursor-pointer">
+<span>YYYY-MM-DD</span>
+<span class="material-symbols-outlined text-[14px] text-secondary ml-1">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex items-center space-x-2 text-secondary text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-good"></span>
+<span>Schema verified</span>
+</div>
+</div>
+<!-- Main Content Split View (Table Preview + Column Inspector) -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Center Preview Table Area -->
+<div class="flex-1 flex flex-col overflow-hidden bg-page">
+<!-- Scrollable Table Container -->
+<div class="flex-1 overflow-auto custom-scroll">
+<table class="w-full border-collapse border-spacing-0 text-left text-body-md font-body-md whitespace-nowrap">
+<!-- Sticky Table Header with Types & Histograms -->
+<thead class="sticky top-0 z-20 bg-raised text-ink border-b border-hairline">
+<tr class="h-14">
+<!-- Row Number Gutter -->
+<th class="w-12 min-w-[48px] max-w-[48px] px-2 text-center text-secondary font-caption text-[11px] border-r border-hairline bg-surface select-none">
+                    #
+                  </th>
+<!-- Col 1: order_id -->
+<th class="px-3 py-1.5 border-r border-hairline font-medium min-w-[120px]">
+<div class="flex items-center justify-between text-ink text-[12px]">
+<span>order_id</span>
+<span class="material-symbols-outlined text-[14px] text-secondary hover:text-ink cursor-pointer">more_horiz</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span class="px-1.5 py-0.5 bg-[#1a1b26] text-primary text-[10px] font-caption rounded-[4px] border border-hairline">Integer</span>
+<!-- Histogram -->
+<div class="flex items-end space-x-0.5 h-3 ml-2">
+<span class="w-1 h-1.5 bg-primary-container"></span>
+<span class="w-1 h-2 bg-primary-container"></span>
+<span class="w-1 h-3 bg-primary-container"></span>
+<span class="w-1 h-2.5 bg-primary-container"></span>
+<span class="w-1 h-2 bg-primary-container"></span>
+<span class="w-1 h-1 bg-primary-container"></span>
+</div>
+</div>
+</th>
+<!-- Col 2: customer_id -->
+<th class="px-3 py-1.5 border-r border-hairline font-medium min-w-[120px]">
+<div class="flex items-center justify-between text-ink text-[12px]">
+<span>customer_id</span>
+<span class="material-symbols-outlined text-[14px] text-secondary hover:text-ink cursor-pointer">more_horiz</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span class="px-1.5 py-0.5 bg-[#1a1b26] text-body text-[10px] font-caption rounded-[4px] border border-hairline">Text</span>
+<!-- Histogram -->
+<div class="flex items-end space-x-0.5 h-3 ml-2">
+<span class="w-1 h-2 bg-secondary"></span>
+<span class="w-1 h-2.5 bg-secondary"></span>
+<span class="w-1 h-2.5 bg-secondary"></span>
+<span class="w-1 h-2 bg-secondary"></span>
+<span class="w-1 h-1.5 bg-secondary"></span>
+<span class="w-1 h-3 bg-secondary"></span>
+</div>
+</div>
+</th>
+<!-- Col 3: order_date -->
+<th class="px-3 py-1.5 border-r border-hairline font-medium min-w-[120px]">
+<div class="flex items-center justify-between text-ink text-[12px]">
+<span>order_date</span>
+<span class="material-symbols-outlined text-[14px] text-secondary hover:text-ink cursor-pointer">more_horiz</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span class="px-1.5 py-0.5 bg-[#1a1b26] text-primary text-[10px] font-caption rounded-[4px] border border-hairline">Date</span>
+<!-- Histogram -->
+<div class="flex items-end space-x-0.5 h-3 ml-2">
+<span class="w-1 h-1 bg-primary-container"></span>
+<span class="w-1 h-1.5 bg-primary-container"></span>
+<span class="w-1 h-2 bg-primary-container"></span>
+<span class="w-1 h-3 bg-primary-container"></span>
+<span class="w-1 h-2.5 bg-primary-container"></span>
+<span class="w-1 h-3 bg-primary-container"></span>
+</div>
+</div>
+</th>
+<!-- Col 4: ship_date (WARNING STATE) -->
+<th class="px-3 py-1.5 border-r border-hairline font-medium min-w-[160px] bg-[#24283b]">
+<div class="flex items-center justify-between text-ink text-[12px]">
+<span class="flex items-center">
+<span>ship_date</span>
+<span class="material-symbols-outlined text-[14px] text-warning ml-1">warning</span>
+</span>
+<span class="material-symbols-outlined text-[14px] text-secondary hover:text-ink cursor-pointer">more_horiz</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center space-x-1">
+<span class="px-1 py-0.5 bg-[#1a1b26] text-primary text-[10px] font-caption rounded-[4px] border border-hairline">Date</span>
+<span class="px-1 py-0.5 bg-warning/20 text-warning text-[9px] font-caption rounded-[3px] border border-warning/40">312 bad</span>
+</div>
+<!-- Histogram -->
+<div class="flex items-end space-x-0.5 h-3 ml-1">
+<span class="w-1 h-1.5 bg-warning"></span>
+<span class="w-1 h-2 bg-primary-container"></span>
+<span class="w-1 h-2 bg-primary-container"></span>
+<span class="w-1 h-1 bg-primary-container"></span>
+<span class="w-1 h-3 bg-warning"></span>
+<span class="w-1 h-1.5 bg-primary-container"></span>
+</div>
+</div>
+</th>
+<!-- Col 5: channel -->
+<th class="px-3 py-1.5 border-r border-hairline font-medium min-w-[110px]">
+<div class="flex items-center justify-between text-ink text-[12px]">
+<span>channel</span>
+<span class="material-symbols-outlined text-[14px] text-secondary hover:text-ink cursor-pointer">more_horiz</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span class="px-1.5 py-0.5 bg-[#1a1b26] text-body text-[10px] font-caption rounded-[4px] border border-hairline">Text</span>
+<div class="flex items-end space-x-0.5 h-3 ml-2">
+<span class="w-1 h-3 bg-secondary"></span>
+<span class="w-1 h-2 bg-secondary"></span>
+<span class="w-1 h-1 bg-secondary"></span>
+<span class="w-1 h-1 bg-secondary"></span>
+</div>
+</div>
+</th>
+<!-- Col 6: revenue (SELECTED STATE) -->
+<th class="px-3 py-1.5 border-r border-hairline font-medium min-w-[130px] bg-selection border-t-2 border-t-primary-container">
+<div class="flex items-center justify-between text-ink text-[12px]">
+<span class="font-bold text-ink">revenue</span>
+<span class="material-symbols-outlined text-[14px] text-primary cursor-pointer">check_circle</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span class="px-1.5 py-0.5 bg-[#1a1b26] text-primary text-[10px] font-caption rounded-[4px] border border-primary/40 font-medium">Currency</span>
+<!-- Histogram -->
+<div class="flex items-end space-x-0.5 h-3 ml-2">
+<span class="w-1 h-3 bg-primary"></span>
+<span class="w-1 h-2.5 bg-primary"></span>
+<span class="w-1 h-2 bg-primary"></span>
+<span class="w-1 h-1.5 bg-primary"></span>
+<span class="w-1 h-1 bg-primary"></span>
+<span class="w-1 h-0.5 bg-primary"></span>
+</div>
+</div>
+</th>
+<!-- Col 7: cost -->
+<th class="px-3 py-1.5 border-r border-hairline font-medium min-w-[120px]">
+<div class="flex items-center justify-between text-ink text-[12px]">
+<span>cost</span>
+<span class="material-symbols-outlined text-[14px] text-secondary hover:text-ink cursor-pointer">more_horiz</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span class="px-1.5 py-0.5 bg-[#1a1b26] text-primary text-[10px] font-caption rounded-[4px] border border-hairline">Currency</span>
+<div class="flex items-end space-x-0.5 h-3 ml-2">
+<span class="w-1 h-2.5 bg-primary-container"></span>
+<span class="w-1 h-2 bg-primary-container"></span>
+<span class="w-1 h-1.5 bg-primary-container"></span>
+<span class="w-1 h-1 bg-primary-container"></span>
+<span class="w-1 h-0.5 bg-primary-container"></span>
+</div>
+</div>
+</th>
+<!-- Col 8: quantity -->
+<th class="px-3 py-1.5 border-r border-hairline font-medium min-w-[100px]">
+<div class="flex items-center justify-between text-ink text-[12px]">
+<span>quantity</span>
+<span class="material-symbols-outlined text-[14px] text-secondary hover:text-ink cursor-pointer">more_horiz</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span class="px-1.5 py-0.5 bg-[#1a1b26] text-primary text-[10px] font-caption rounded-[4px] border border-hairline">Integer</span>
+<div class="flex items-end space-x-0.5 h-3 ml-2">
+<span class="w-1 h-3 bg-primary-container"></span>
+<span class="w-1 h-1 bg-primary-container"></span>
+<span class="w-1 h-0.5 bg-primary-container"></span>
+</div>
+</div>
+</th>
+<!-- Col 9: status -->
+<th class="px-3 py-1.5 border-r border-hairline font-medium min-w-[110px]">
+<div class="flex items-center justify-between text-ink text-[12px]">
+<span>status</span>
+<span class="material-symbols-outlined text-[14px] text-secondary hover:text-ink cursor-pointer">more_horiz</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span class="px-1.5 py-0.5 bg-[#1a1b26] text-body text-[10px] font-caption rounded-[4px] border border-hairline">Text</span>
+<div class="flex items-end space-x-0.5 h-3 ml-2">
+<span class="w-1 h-3 bg-good"></span>
+<span class="w-1 h-1.5 bg-warning"></span>
+<span class="w-1 h-0.5 bg-bad"></span>
+</div>
+</div>
+</th>
+</tr>
+</thead>
+<!-- Table 12 Rows of Order Data -->
+<tbody class="divide-y divide-hairline bg-surface text-ink text-[12px]">
+<!-- Row 1 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">1</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94021</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-1049</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-14</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-16</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Online</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$1,420.50</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$890.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">4</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">2</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94022</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-8831</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-14</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-15</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Enterprise</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$8,450.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$4,120.20</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">12</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+<!-- Row 3: Warning cell on ship_date ("TBD") -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">3</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94023</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-2209</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-14</td>
+<td class="px-3 py-1.5 border-r border-hairline text-warning bg-warning/10 font-medium">
+<span class="inline-flex items-center space-x-1">
+<span>TBD</span>
+<span class="text-[10px] text-warning/80">(!date)</span>
+</span>
+</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Retail</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$245.90</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$120.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">1</td>
+<td class="px-3 py-1.5 border-r border-hairline text-warning">PROCESSING</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">4</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94024</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-7741</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-15</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-17</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Online</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$12.50</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$4.20</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">1</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">5</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94025</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-0094</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-15</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-18</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Direct</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$3,200.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$1,850.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">2</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">6</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94026</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-3312</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-15</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-16</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Retail</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$560.10</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$310.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">3</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+<!-- Row 7 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">7</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94027</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-4119</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-16</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-19</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Enterprise</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$48,920.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$22,400.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">64</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+<!-- Row 8 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">8</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94028</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-6102</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-16</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-17</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Online</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$189.40</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$95.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">2</td>
+<td class="px-3 py-1.5 border-r border-hairline text-bad">RETURNED</td>
+</tr>
+<!-- Row 9 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">9</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94029</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-9430</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-16</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-20</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Direct</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$720.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$450.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">1</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+<!-- Row 10 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">10</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94030</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-1198</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-17</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-19</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Online</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$1,110.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$600.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">3</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+<!-- Row 11 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">11</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94031</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-5221</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-17</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-18</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Retail</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$340.50</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$195.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">2</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+<!-- Row 12 -->
+<tr class="hover:bg-raised transition-colors">
+<td class="w-12 px-2 text-center text-secondary border-r border-hairline bg-[#161722]">12</td>
+<td class="px-3 py-1.5 border-r border-hairline text-ink">ORD-94032</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">CUST-3045</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-17</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">2025-01-21</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">Enterprise</td>
+<td class="px-3 py-1.5 border-r border-hairline bg-selection text-ink font-medium">$12,300.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-body">$6,800.00</td>
+<td class="px-3 py-1.5 border-r border-hairline text-right text-body">15</td>
+<td class="px-3 py-1.5 border-r border-hairline text-good">DELIVERED</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Bottom preview summary bar inside table container -->
+<div class="h-6 px-3 bg-[#161722] border-t border-hairline flex items-center justify-between text-[11px] font-caption text-secondary shrink-0">
+<div>Showing rows 1–12 of 2,000,000 (Preview sampling)</div>
+<div class="flex items-center space-x-3">
+<span>9 columns configured</span>
+<span>·</span>
+<span class="text-ink">1 column selected: revenue</span>
+</div>
+</div>
+</div>
+<!-- Right Side Panel: Column Inspector (280px wide) -->
+<aside class="w-[280px] bg-surface border-l border-hairline flex flex-col justify-between shrink-0 overflow-y-auto custom-scroll">
+<div class="p-3.5 space-y-4">
+<!-- Inspector Header -->
+<div class="flex items-center justify-between pb-2 border-b border-hairline">
+<span class="text-[12px] font-medium text-ink uppercase tracking-wider">Column · revenue</span>
+<span class="px-1.5 py-0.5 rounded-[4px] bg-selection text-primary text-[10px]">col 6</span>
+</div>
+<!-- Field: Name -->
+<div class="space-y-1">
+<label class="text-[11px] text-secondary">Name</label>
+<input class="w-full h-7 px-2 bg-page border border-hairline rounded-[4px] text-ink text-[12px] focus:outline-none focus:border-primary-container font-mono" type="text" value="revenue"/>
+</div>
+<!-- Field: Type selector -->
+<div class="space-y-1">
+<label class="text-[11px] text-secondary">Type</label>
+<div class="flex items-center justify-between w-full h-7 px-2 bg-page border border-hairline rounded-[4px] text-ink text-[12px] cursor-pointer hover:border-strong-line">
+<div class="flex items-center space-x-1.5">
+<span class="text-primary font-bold">$</span>
+<span>Currency</span>
+</div>
+<span class="material-symbols-outlined text-[15px] text-secondary">expand_more</span>
+</div>
+</div>
+<!-- Field: Format -->
+<div class="space-y-1">
+<label class="text-[11px] text-secondary">Format</label>
+<div class="flex items-center justify-between w-full h-7 px-2 bg-page border border-hairline rounded-[4px] text-ink text-[12px] cursor-pointer hover:border-strong-line">
+<span>$1,234.56</span>
+<span class="material-symbols-outlined text-[15px] text-secondary">expand_more</span>
+</div>
+</div>
+<div class="h-[1px] bg-hairline my-2"></div>
+<!-- Metrics List -->
+<div class="space-y-2">
+<span class="text-[10px] uppercase font-semibold text-secondary tracking-wider">Column Metrics</span>
+<div class="space-y-1.5 text-[11px] font-caption">
+<div class="flex justify-between items-center py-0.5 border-b border-hairline/40">
+<span class="text-secondary">Empty cells</span>
+<span class="text-ink">0 <span class="text-secondary text-[10px]">(0.0%)</span></span>
+</div>
+<div class="flex justify-between items-center py-0.5 border-b border-hairline/40">
+<span class="text-secondary">Distinct values</span>
+<span class="text-ink">1.9M <span class="text-secondary text-[10px]">(95.0%)</span></span>
+</div>
+<div class="flex justify-between items-center py-0.5 border-b border-hairline/40">
+<span class="text-secondary">Min</span>
+<span class="text-ink font-mono">$12.50</span>
+</div>
+<div class="flex justify-between items-center py-0.5 border-b border-hairline/40">
+<span class="text-secondary">Max</span>
+<span class="text-ink font-mono">$48,920.00</span>
+</div>
+<div class="flex justify-between items-center py-0.5 border-b border-hairline/40">
+<span class="text-secondary">Mean</span>
+<span class="text-ink font-mono">$342.18</span>
+</div>
+<div class="flex justify-between items-center py-0.5">
+<span class="text-secondary">Sum</span>
+<span class="text-primary font-mono font-medium">$684.36M</span>
+</div>
+</div>
+</div>
+<div class="h-[1px] bg-hairline my-1"></div>
+<!-- Mini Preview Card with Distribution Chart / Sparkline -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center">
+<span class="text-[10px] uppercase font-semibold text-secondary tracking-wider">Distribution</span>
+<span class="text-[10px] text-secondary">Log scale</span>
+</div>
+<div class="w-full h-16 bg-page border border-hairline rounded-[4px] p-2 flex flex-col justify-end">
+<!-- SVG Sparkline & Bars representation -->
+<svg class="w-full h-10 overflow-visible" preserveaspectratio="none" viewbox="0 0 100 30">
+<!-- Gradient bars or flat Tokyo Night Tokyo Night accent polygon -->
+<polygon fill="#7aa2f7" fill-opacity="0.25" points="0,28 8,24 16,18 24,12 32,8 40,11 48,15 56,20 64,24 72,26 80,27 88,28 96,29 100,29 100,30 0,30"></polygon>
+<polyline fill="none" points="0,28 8,24 16,18 24,12 32,8 40,11 48,15 56,20 64,24 72,26 80,27 88,28 96,29 100,29" stroke="#7aa2f7" stroke-linecap="round" stroke-width="1.5"></polyline>
+</svg>
+<div class="flex justify-between text-[9px] text-secondary mt-1 font-mono">
+<span>$12.50</span>
+<span>$342</span>
+<span>$48.9k</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Inspector Note -->
+<div class="p-3 bg-[#161722] border-t border-hairline text-[11px] text-secondary flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[14px] text-good">check</span>
+<span>All values strictly numeric</span>
+</div>
+</aside>
+</div>
+<!-- Modal Footer -->
+<footer class="h-14 px-4 bg-surface border-t border-hairline flex items-center justify-between shrink-0">
+<!-- Left: Help & Auto-detect status -->
+<div class="flex items-center space-x-3 text-caption font-caption text-secondary">
+<span class="flex items-center space-x-1.5 text-body hover:text-ink cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">info</span>
+<span>Auto-detected 9 data types accurately</span>
+</span>
+<span>·</span>
+<a class="text-secondary hover:text-ink underline decoration-hairline" href="#">Import Help</a>
+</div>
+<!-- Right: Action Buttons -->
+<div class="flex items-center space-x-2">
+<!-- Back button -->
+<button class="px-4 py-1.5 text-[13px] font-caption text-body bg-transparent hover:bg-raised rounded-[6px] border border-hairline hover:border-strong-line transition-colors">
+            Back
+          </button>
+<!-- Create table button -->
+<button class="px-4 py-1.5 text-[13px] font-caption text-[#1a1b26] bg-primary-container hover:bg-primary font-medium rounded-[6px] transition-colors flex items-center space-x-1.5 shadow-none">
+<span class="material-symbols-outlined text-[17px]">add_box</span>
+<span>Create table</span>
+</button>
+</div>
+</footer>
+</div>
+</div>
+</body></html>

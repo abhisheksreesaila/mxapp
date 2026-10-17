@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MX Studio — Q3 Revenue Review.mx</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- JetBrains Mono Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-high": "#282935",
+            "on-secondary-container": "#c8aaff",
+            "surface-variant": "#333440",
+            "surface-container-highest": "#333440",
+            "primary-fixed": "#d8e2ff",
+            "tertiary": "#f1c040",
+            "on-error": "#690005",
+            "surface-tint": "#aec6ff",
+            "ink": "#c0caf5",
+            "tertiary-fixed": "#ffdf98",
+            "error": "#ffb4ab",
+            "primary-fixed-dim": "#aec6ff",
+            "on-tertiary-fixed": "#251a00",
+            "toolbar": "#0e0e14",
+            "on-tertiary-container": "#4a3700",
+            "surface-container": "#1e1f2a",
+            "secondary-fixed-dim": "#d4bbff",
+            "outline": "#8d909d",
+            "on-surface-variant": "#c3c6d3",
+            "inverse-on-surface": "#2f303b",
+            "inverse-surface": "#e2e1f1",
+            "on-primary-fixed-variant": "#0c4393",
+            "on-surface": "#e2e1f1",
+            "on-error-container": "#ffdad6",
+            "on-background": "#e2e1f1",
+            "on-secondary-fixed-variant": "#533687",
+            "surface-dim": "#12131d",
+            "hairline": "#2a2e40",
+            "on-secondary-fixed": "#260059",
+            "primary": "#aec6ff",
+            "selection": "#292e42",
+            "on-primary": "#002e6b",
+            "surface-container-low": "#1a1b26",
+            "secondary-container": "#56388a",
+            "error-container": "#93000a",
+            "page": "#13141c",
+            "outline-variant": "#434751",
+            "body": "#a9b1d6",
+            "on-tertiary": "#3f2e00",
+            "raised": "#24283b",
+            "tertiary-fixed-dim": "#f1c040",
+            "secondary-fixed": "#ebdcff",
+            "warning": "#e0af68",
+            "tertiary-container": "#ca9d1c",
+            "on-secondary": "#3c1d6f",
+            "background": "#12131d",
+            "secondary": "#565f89",
+            "good": "#9ece6a",
+            "surface-container-lowest": "#0c0d18",
+            "primary-container": "#7aa2f7",
+            "surface": "#1a1b26",
+            "on-primary-container": "#00367d",
+            "strong-line": "#414868",
+            "on-tertiary-fixed-variant": "#5a4300",
+            "bad": "#f7768e",
+            "surface-bright": "#383844",
+            "on-primary-fixed": "#001a43",
+            "inverse-primary": "#305cac"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-xs": "4px",
+            "space-md": "12px",
+            "gutter": "0px",
+            "space-xl": "24px",
+            "space-lg": "16px",
+            "margin": "16px",
+            "space-sm": "8px"
+          },
+          "fontFamily": {
+            "toolbar-label": ["JetBrains Mono"],
+            "headline-xl": ["JetBrains Mono"],
+            "headline-md": ["JetBrains Mono"],
+            "body-md": ["JetBrains Mono"],
+            "caption": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "toolbar-label": ["11px", { "lineHeight": "14px", "fontWeight": "400" }],
+            "headline-xl": ["20px", { "lineHeight": "24px", "fontWeight": "700" }],
+            "headline-md": ["15px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "body-md": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    * {
+      font-variant-numeric: tabular-nums;
+    }
+    .material-symbols-outlined {
+      font-size: 18px;
+      font-weight: 300;
+      line-height: 1;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #13141c;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2a2e40;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #414868;
+    }
+  </style>
+</head>
+<body class="bg-page text-body font-body-md text-body-md h-screen w-screen overflow-hidden flex flex-col select-none antialiased">
+<!-- 1. Window Chrome Titlebar -->
+<header class="h-9 w-full bg-toolbar border-b border-hairline flex items-center justify-between px-space-md shrink-0">
+<!-- Window Traffic Lights -->
+<div class="flex items-center gap-space-sm w-48">
+<div class="w-3 h-3 rounded-full bg-bad hover:opacity-80 cursor-pointer"></div>
+<div class="w-3 h-3 rounded-full bg-warning hover:opacity-80 cursor-pointer"></div>
+<div class="w-3 h-3 rounded-full bg-good hover:opacity-80 cursor-pointer"></div>
+</div>
+<!-- Centered Document Title -->
+<div class="flex items-center gap-space-xs font-caption text-caption text-secondary">
+<span class="material-symbols-outlined text-secondary text-[15px]">description</span>
+<span class="font-medium text-ink">MX Studio — Q3 Revenue Review.mx</span>
+<span class="px-1.5 py-0.2 bg-raised rounded-[2px] text-[10px] text-body border border-hairline">v7.2</span>
+</div>
+<!-- Right Window Utility Badges -->
+<div class="flex items-center justify-end gap-space-md w-48 font-caption text-caption">
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] bg-surface border border-hairline text-good">
+<span class="w-1.5 h-1.5 rounded-full bg-good animate-pulse"></span>
+<span class="text-[11px]">Synced</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-raised border border-hairline flex items-center justify-center text-ink font-semibold text-[11px]" title="User Profile Avatar">
+        JD
+      </div>
+</div>
+</header>
+<!-- 2. Apple Numbers-Style Native Toolbar (Shared Component: TopNavBar execution) -->
+<nav class="w-full flex items-center justify-between px-space-lg h-14 bg-toolbar border-b border-hairline shrink-0">
+<!-- Left: Brand / Title Identity Anchor -->
+<div class="flex items-center gap-space-md pr-space-lg border-r border-hairline">
+<span class="font-headline-md text-headline-md font-bold text-ink tracking-tight flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[20px]">grid_view</span>
+        MX Studio
+      </span>
+</div>
+<!-- Center: Main Creation & Action Toolbar Items (64px width stacked buttons) -->
+<div class="flex items-center gap-0.5 overflow-x-auto">
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded-[2px] text-ink hover:bg-raised transition-colors duration-150 group">
+<span class="material-symbols-outlined text-body group-hover:text-ink text-[18px]">table_chart</span>
+<span class="font-toolbar-label text-toolbar-label mt-1 text-body group-hover:text-ink">Insert Table</span>
+</button>
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded-[2px] text-primary border-b-2 border-primary pb-1 transition-colors duration-150 group bg-selection">
+<span class="material-symbols-outlined text-primary text-[18px]">insert_chart</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5 text-primary">Chart</span>
+</button>
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded-[2px] text-ink hover:bg-raised transition-colors duration-150 group">
+<span class="material-symbols-outlined text-body group-hover:text-ink text-[18px]">title</span>
+<span class="font-toolbar-label text-toolbar-label mt-1 text-body group-hover:text-ink">Text</span>
+</button>
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded-[2px] text-ink hover:bg-raised transition-colors duration-150 group">
+<span class="material-symbols-outlined text-body group-hover:text-ink text-[18px]">shapes</span>
+<span class="font-toolbar-label text-toolbar-label mt-1 text-body group-hover:text-ink">Shape</span>
+</button>
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded-[2px] text-ink hover:bg-raised transition-colors duration-150 group">
+<span class="material-symbols-outlined text-body group-hover:text-ink text-[18px]">functions</span>
+<span class="font-toolbar-label text-toolbar-label mt-1 text-body group-hover:text-ink">Formulas</span>
+</button>
+<button class="w-16 h-12 flex flex-col items-center justify-center rounded-[2px] text-ink hover:bg-raised transition-colors duration-150 group">
+<span class="material-symbols-outlined text-body group-hover:text-ink text-[18px]">filter_alt</span>
+<span class="font-toolbar-label text-toolbar-label mt-1 text-body group-hover:text-ink">Filter</span>
+</button>
+</div>
+<!-- Right Controls: Zoom, Sync, Sidebar, Actions -->
+<div class="flex items-center gap-space-sm pl-space-md border-l border-hairline">
+<!-- Zoom Dropdown -->
+<div class="flex items-center gap-1 bg-surface px-2 py-1 rounded-[2px] border border-hairline font-toolbar-label text-toolbar-label text-ink cursor-pointer hover:bg-raised">
+<span>100%</span>
+<span class="material-symbols-outlined text-secondary text-[14px]">expand_more</span>
+</div>
+<!-- Action Icons from JSON: sync, tune, view_sidebar -->
+<button class="w-8 h-8 flex items-center justify-center rounded-[2px] text-secondary hover:text-ink hover:bg-raised" title="sync">
+<span class="material-symbols-outlined">sync</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-[2px] text-secondary hover:text-ink hover:bg-raised" title="tune">
+<span class="material-symbols-outlined">tune</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-[2px] text-primary bg-selection border border-strong-line" title="view_sidebar">
+<span class="material-symbols-outlined">view_sidebar</span>
+</button>
+<div class="h-4 w-[1px] bg-hairline mx-1"></div>
+<!-- Trailing Primary & Secondary Actions from JSON -->
+<button class="px-3 py-1.5 rounded-[2px] bg-surface hover:bg-raised border border-hairline text-ink font-toolbar-label text-toolbar-label transition-colors">
+        Share
+      </button>
+<button class="px-3 py-1.5 rounded-[2px] bg-primary-container text-on-primary-container font-medium hover:opacity-95 font-toolbar-label text-toolbar-label transition-opacity">
+        Export
+      </button>
+</div>
+</nav>
+<!-- 3. Sheet Tabs Bar -->
+<div class="h-8 bg-toolbar border-b border-hairline flex items-center px-space-lg gap-space-xs shrink-0">
+<button class="px-3 py-1 text-secondary hover:text-ink font-caption text-caption border-b-2 border-transparent transition-colors">
+      Executive Summary
+    </button>
+<button class="px-3 py-1 text-secondary hover:text-ink font-caption text-caption border-b-2 border-transparent transition-colors">
+      Summary Table
+    </button>
+<button class="px-3 py-1 text-ink font-caption text-caption border-b-2 border-primary-container bg-surface flex items-center gap-1.5 transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+      Report
+    </button>
+<button class="px-3 py-1 text-secondary hover:text-ink font-caption text-caption border-b-2 border-transparent transition-colors">
+      Raw Orders
+    </button>
+<button class="w-6 h-6 flex items-center justify-center rounded-[2px] text-secondary hover:text-ink hover:bg-raised text-[14px]" title="Add Sheet">
+<span class="material-symbols-outlined text-[15px]">add</span>
+</button>
+</div>
+<!-- 4. Formula Bar (Native Desktop Spreadsheets Element) -->
+<div class="h-8 bg-surface-container-low border-b border-hairline flex items-center px-space-lg gap-space-md shrink-0">
+<div class="flex items-center gap-1 text-[#ad8ee6] font-bold text-caption font-caption w-10">
+<span>ƒx</span>
+</div>
+<div class="h-4 w-[1px] bg-hairline"></div>
+<div class="flex items-center gap-1 text-secondary font-caption text-caption">
+<span class="px-1.5 py-0.5 bg-raised rounded-[2px] text-ink border border-hairline">C4:F12</span>
+</div>
+<div class="flex-1 flex items-center gap-2 font-caption text-caption text-body overflow-hidden">
+<span class="text-secondary">=SUMIFS(orders_2025[revenue], orders_2025[quarter], "Q3", orders_2025[region], @region)</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-0.5 text-bad hover:bg-raised rounded-[2px]" title="Cancel">
+<span class="material-symbols-outlined text-[15px]">close</span>
+</button>
+<button class="p-0.5 text-good hover:bg-raised rounded-[2px]" title="Accept">
+<span class="material-symbols-outlined text-[15px]">check</span>
+</button>
+</div>
+</div>
+<!-- 5. Main Content Area (Split Canvas & Inspector) -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Scrollable Canvas Area (bg-page #13141c) -->
+<main class="flex-1 overflow-y-auto p-8 bg-page flex justify-center">
+<!-- Floating Canvas Page Container -->
+<div class="w-full max-w-[1080px] bg-surface border border-hairline rounded-[4px] p-8 flex flex-col gap-6 self-start shadow-none">
+<!-- Canvas Page Header -->
+<div class="flex items-start justify-between pb-4 border-b border-hairline">
+<div>
+<h1 class="font-headline-xl text-headline-xl font-bold text-ink tracking-tight">Q3 Revenue Review</h1>
+<p class="font-caption text-caption text-secondary mt-1 flex items-center gap-2">
+<span class="inline-flex items-center gap-1 text-ink">
+<span class="material-symbols-outlined text-[14px]">database</span>
+                orders_2025
+              </span>
+<span>·</span>
+<span>filters: Q3, all regions</span>
+<span>·</span>
+<span class="text-good">live schema sync</span>
+</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-caption font-caption text-secondary border border-hairline px-2.5 py-1 rounded-[2px] bg-surface-container">
+              Locked Canvas Grid
+            </span>
+</div>
+</div>
+<!-- Row of Four Flat KPI Cards -->
+<div class="grid grid-cols-4 gap-4">
+<!-- Card 1: Revenue -->
+<div class="bg-surface-container-low border border-hairline rounded-[2px] p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary font-caption text-caption">
+<span>Revenue</span>
+<span class="material-symbols-outlined text-[16px] text-primary">payments</span>
+</div>
+<div class="my-2">
+<div class="font-headline-xl text-headline-xl text-ink font-bold tracking-tight">$72.8M</div>
+</div>
+<div class="flex items-center justify-between text-[11px] pt-1 border-t border-hairline">
+<span class="text-good flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">trending_up</span>
+                +1.6% vs Q2
+              </span>
+<!-- Tiny SVG Sparkline -->
+<svg class="w-16 h-4 text-good" fill="none" viewbox="0 0 64 16">
+<path d="M1 13L14 10L28 12L42 5L54 7L63 2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+</svg>
+</div>
+</div>
+<!-- Card 2: Orders -->
+<div class="bg-surface-container-low border border-hairline rounded-[2px] p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary font-caption text-caption">
+<span>Orders</span>
+<span class="material-symbols-outlined text-[16px] text-body">shopping_cart</span>
+</div>
+<div class="my-2">
+<div class="font-headline-xl text-headline-xl text-ink font-bold tracking-tight">638,572</div>
+</div>
+<div class="flex items-center justify-between text-[11px] pt-1 border-t border-hairline text-secondary">
+<span>Avg $114.00 / order</span>
+<span class="text-good font-medium">+2.1%</span>
+</div>
+</div>
+<!-- Card 3: Gross Margin (Warning alert badge) -->
+<div class="bg-surface-container-low border border-hairline rounded-[2px] p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary font-caption text-caption">
+<span>Gross margin</span>
+<span class="px-1.5 py-0.2 rounded-[2px] bg-warning/10 text-warning text-[10px] font-medium border border-warning/30">ALERT</span>
+</div>
+<div class="my-2">
+<div class="font-headline-xl text-headline-xl text-ink font-bold tracking-tight">36.4%</div>
+</div>
+<div class="flex items-center justify-between text-[11px] pt-1 border-t border-hairline">
+<span class="text-warning flex items-center gap-0.5 font-medium">
+<span class="material-symbols-outlined text-[12px]">trending_down</span>
+                −3.0 pts
+              </span>
+<span class="text-secondary text-[10px]">Target: 39.5%</span>
+</div>
+</div>
+<!-- Card 4: Active Customers -->
+<div class="bg-surface-container-low border border-hairline rounded-[2px] p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary font-caption text-caption">
+<span>Active customers</span>
+<span class="material-symbols-outlined text-[16px] text-primary-container">groups</span>
+</div>
+<div class="my-2">
+<div class="font-headline-xl text-headline-xl text-ink font-bold tracking-tight">20</div>
+</div>
+<div class="flex items-center justify-between text-[11px] pt-1 border-t border-hairline text-secondary">
+<span>Key accounts</span>
+<span class="text-good">100% retained</span>
+</div>
+</div>
+</div>
+<!-- Wide Line Chart Card -->
+<div class="bg-surface-container-low border border-hairline rounded-[2px] p-5">
+<div class="flex items-center justify-between mb-4">
+<div>
+<h2 class="font-headline-md text-headline-md font-semibold text-ink">Revenue and margin by week</h2>
+<p class="font-caption text-caption text-secondary">Weekly performance overlay demonstrating July freight inflection</p>
+</div>
+<div class="flex items-center gap-4 text-caption font-caption">
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-0.5 bg-[#7aa2f7]"></span>
+<span class="text-ink">Revenue ($M)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-0.5 bg-[#449dab]"></span>
+<span class="text-ink">Gross Margin %</span>
+</div>
+</div>
+</div>
+<!-- SVG Chart Container with Gridlines and Markers -->
+<div class="w-full h-56 relative bg-toolbar/40 rounded-[2px] border border-hairline p-2">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 960 200">
+<!-- Grid Lines -->
+<line stroke="#2a2e40" stroke-dasharray="2,2" stroke-width="1" x1="40" x2="940" y1="30" y2="30"></line>
+<line stroke="#2a2e40" stroke-dasharray="2,2" stroke-width="1" x1="40" x2="940" y1="75" y2="75"></line>
+<line stroke="#2a2e40" stroke-dasharray="2,2" stroke-width="1" x1="40" x2="940" y1="120" y2="120"></line>
+<line stroke="#2a2e40" stroke-width="1" x1="40" x2="940" y1="165" y2="165"></line>
+<!-- Rate Table Inflection Marker Line -->
+<line stroke="#e0af68" stroke-dasharray="4,3" stroke-width="1.5" x1="415" x2="415" y1="15" y2="175"></line>
+<!-- Series 1: Revenue ($7aa2f7) -->
+<path d="M 40,140 Q 115,130 190,122 T 340,115 T 415,108 T 490,95 T 565,90 T 640,80 T 715,65 T 790,55 T 865,48 T 940,35" fill="none" stroke="#7aa2f7" stroke-width="2.5"></path>
+<!-- Series 2: Gross Margin % (#449dab) with drop after Jul 14 -->
+<path d="M 40,65 Q 115,62 190,64 T 340,66 T 415,70 T 490,112 T 565,118 T 640,122 T 715,124 T 790,120 T 865,122 T 940,125" fill="none" stroke="#449dab" stroke-width="2.5"></path>
+<!-- Data Node Markers on Inflection -->
+<circle cx="415" cy="108" fill="#7aa2f7" r="4" stroke="#1a1b26" stroke-width="2"></circle>
+<circle cx="415" cy="70" fill="#e0af68" r="4" stroke="#1a1b26" stroke-width="2"></circle>
+<circle cx="490" cy="112" fill="#f7768e" r="4" stroke="#1a1b26" stroke-width="2"></circle>
+</svg>
+<!-- Marker Label Floating Badge -->
+<div class="absolute top-3 left-[43%] -translate-x-1/2 bg-raised border border-warning/50 text-warning px-2 py-0.5 rounded-[2px] font-caption text-[11px] flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+              Jul 14 · rate table v7
+            </div>
+<!-- X-Axis Labels (Weeks W27 to W39) -->
+<div class="w-full flex justify-between px-10 pt-2 text-[10px] font-caption text-secondary">
+<span>W27</span>
+<span>W28</span>
+<span>W29</span>
+<span>W30</span>
+<span class="text-warning font-semibold">W31 (Jul 14)</span>
+<span>W32</span>
+<span>W33</span>
+<span>W34</span>
+<span>W35</span>
+<span>W36</span>
+<span>W37</span>
+<span>W38</span>
+<span>W39</span>
+</div>
+</div>
+</div>
+<!-- 2 Columns Grid: Heatmap + Finding Card -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Heatmap Card: Region x Product -->
+<div class="bg-surface-container-low border border-hairline rounded-[2px] p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-headline-md text-headline-md text-ink font-semibold">Margin · region × product</h3>
+<p class="font-caption text-caption text-secondary">Breakdown across territory catalogs</p>
+</div>
+<span class="text-[11px] font-caption text-secondary">Target: 38.0%</span>
+</div>
+<!-- Matrix Grid -->
+<div class="border border-hairline rounded-[2px] overflow-hidden">
+<div class="grid grid-cols-5 text-center font-caption text-[11px] bg-raised border-b border-hairline py-1.5 text-secondary">
+<div class="text-left pl-3 text-body font-medium">Region</div>
+<div>Enterprise</div>
+<div>Mid-Mkt</div>
+<div>Retail</div>
+<div>Freight</div>
+</div>
+<!-- Row 1: North -->
+<div class="grid grid-cols-5 text-center font-caption text-[12px] border-b border-hairline py-2 items-center hover:bg-raised/40">
+<div class="text-left pl-3 text-ink font-medium">North</div>
+<div class="text-good font-semibold">41.2%</div>
+<div class="text-good">38.9%</div>
+<div class="text-body">37.1%</div>
+<div class="text-body">34.8%</div>
+</div>
+<!-- Row 2: South -->
+<div class="grid grid-cols-5 text-center font-caption text-[12px] border-b border-hairline py-2 items-center hover:bg-raised/40">
+<div class="text-left pl-3 text-ink font-medium">South</div>
+<div class="text-good font-semibold">42.0%</div>
+<div class="text-good">39.4%</div>
+<div class="text-body">36.5%</div>
+<div class="text-warning">32.1%</div>
+</div>
+<!-- Row 3: East -->
+<div class="grid grid-cols-5 text-center font-caption text-[12px] border-b border-hairline py-2 items-center hover:bg-raised/40">
+<div class="text-left pl-3 text-ink font-medium">East</div>
+<div class="text-good font-semibold">40.8%</div>
+<div class="text-good">38.2%</div>
+<div class="text-body">36.8%</div>
+<div class="text-body">33.4%</div>
+</div>
+<!-- Row 4: West (Highlighted Margin Drop) -->
+<div class="grid grid-cols-5 text-center font-caption text-[12px] py-2 items-center bg-bad/5 border-l-2 border-l-bad">
+<div class="text-left pl-2.5 text-bad font-semibold">West *</div>
+<div class="text-good font-semibold">39.5%</div>
+<div class="text-body">35.8%</div>
+<div class="text-warning">31.2%</div>
+<!-- Severe Drop Cell -->
+<div class="text-bad font-bold bg-bad/20 py-0.5 rounded-[2px] mx-1 border border-bad/40">
+                  18.4%
+                </div>
+</div>
+</div>
+<div class="mt-2 text-[10px] text-secondary flex items-center justify-between">
+<span>* West region freight anomaly flagged</span>
+<span class="text-bad">−7.7 pts post Jul 14</span>
+</div>
+</div>
+<!-- Finding Card with Warning Edge -->
+<div class="border-l-4 border-l-warning bg-raised p-4 rounded-[2px] border border-hairline flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-warning text-[18px]">warning</span>
+<span class="font-headline-md text-headline-md font-semibold text-warning">Worth a look</span>
+</div>
+<p class="font-body-md text-body-md text-ink leading-relaxed">
+                Heavy parcels in the West lost 7.7 margin points after Jul 14; Carrier A's freight rose to $14.20 an order.
+              </p>
+<div class="mt-3 p-2 bg-surface rounded-[2px] border border-hairline text-caption font-caption text-secondary flex items-center justify-between">
+<span>Affected Orders: <span class="text-ink font-medium">42,810</span></span>
+<span>Margin Gap: <span class="text-bad font-semibold">-$329.4K</span></span>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-4 pt-3 border-t border-hairline">
+<button class="bg-primary-container text-on-primary-container font-medium px-3 py-1.5 rounded-[2px] hover:opacity-95 font-toolbar-label text-toolbar-label transition-all">
+                Open the rows
+              </button>
+<button class="hover:bg-surface text-body hover:text-ink px-3 py-1.5 rounded-[2px] border border-transparent hover:border-hairline font-toolbar-label text-toolbar-label transition-colors">
+                Dismiss
+              </button>
+</div>
+</div>
+</div>
+<!-- Empty Dashed Slot Card -->
+<div class="border-2 border-dashed border-hairline rounded-[2px] p-8 text-center flex flex-col items-center justify-center hover:border-strong-line hover:bg-surface-container transition-all cursor-pointer group">
+<div class="w-8 h-8 rounded-full border border-hairline flex items-center justify-center text-secondary group-hover:text-ink group-hover:border-strong-line mb-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</div>
+<span class="font-body-md text-body-md text-secondary group-hover:text-ink transition-colors">
+            Add a KPI, chart, table or text
+          </span>
+<span class="font-caption text-caption text-secondary/60 mt-1">Press Space or drag components from toolbar</span>
+</div>
+</div>
+</main>
+<!-- 6. Right Inspector Panel (Shared Component: SideNavBar execution) -->
+<aside class="w-[300px] h-full flex flex-col justify-between p-space-md border-l border-hairline bg-surface shrink-0">
+<!-- Top Inspector Header & Category Tabs -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-hairline pb-2">
+<div>
+<span class="font-headline-md text-headline-md font-medium text-ink">Inspector</span>
+<div class="font-caption text-caption text-secondary">Global Sheet Filters</div>
+</div>
+<div class="w-2 h-2 rounded-full bg-good" title="Inspector Panel Target Status"></div>
+</div>
+<!-- Inspector Tabs (Report, Canvas, Data) -->
+<div class="flex items-center border-b border-hairline">
+<button class="flex-1 py-1 text-center font-caption text-caption text-primary border-b-2 border-primary pb-1">
+            Format
+          </button>
+<button class="flex-1 py-1 text-center font-caption text-caption text-body hover:text-ink">
+            Data
+          </button>
+<button class="flex-1 py-1 text-center font-caption text-caption text-body hover:text-ink">
+            Arrange
+          </button>
+</div>
+<!-- Section 1: PAGE SETUP -->
+<div class="flex flex-col gap-2">
+<div class="font-toolbar-label text-toolbar-label uppercase tracking-wider text-secondary font-semibold">
+            Page Setup
+          </div>
+<div class="flex flex-col gap-1.5">
+<label class="text-[11px] font-caption text-body">Canvas Size</label>
+<div class="flex items-center justify-between bg-surface-container px-2.5 py-1.5 rounded-[2px] border border-hairline font-caption text-caption text-ink cursor-pointer hover:bg-raised">
+<span>Fit to window</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">unfold_more</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-1">
+<div class="flex flex-col gap-1">
+<label class="text-[11px] font-caption text-body">Orientation</label>
+<div class="bg-surface-container px-2 py-1 rounded-[2px] border border-hairline font-caption text-caption text-ink text-center">
+                Landscape
+              </div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[11px] font-caption text-body">Background</label>
+<div class="flex items-center gap-1.5 bg-surface-container px-2 py-1 rounded-[2px] border border-hairline font-caption text-caption text-ink">
+<span class="w-3 h-3 rounded-[1px] bg-page border border-hairline"></span>
+<span>#13141c</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Hairline Divider -->
+<div class="h-[1px] bg-hairline w-full"></div>
+<!-- Section 2: GLOBAL FILTERS -->
+<div class="flex flex-col gap-2.5">
+<div class="flex items-center justify-between">
+<div class="font-toolbar-label text-toolbar-label uppercase tracking-wider text-secondary font-semibold">
+              Global Filters
+            </div>
+<span class="text-[10px] text-secondary">Every Tile</span>
+</div>
+<!-- Quarter Segmented Control -->
+<div class="flex flex-col gap-1">
+<label class="text-[11px] font-caption text-body">Quarter</label>
+<div class="grid grid-cols-4 bg-toolbar p-0.5 rounded-[2px] border border-hairline text-center font-caption text-[11px]">
+<button class="py-0.5 text-secondary hover:text-ink">Q1</button>
+<button class="py-0.5 text-secondary hover:text-ink">Q2</button>
+<button class="py-0.5 bg-raised text-primary font-semibold rounded-[1px] border border-hairline">Q3</button>
+<button class="py-0.5 text-secondary hover:text-ink">Q4</button>
+</div>
+</div>
+<!-- Region Dropdown -->
+<div class="flex flex-col gap-1">
+<label class="text-[11px] font-caption text-body">Region Scope</label>
+<div class="flex items-center justify-between bg-surface-container px-2.5 py-1.5 rounded-[2px] border border-hairline font-caption text-caption text-ink cursor-pointer hover:bg-raised">
+<span>All Regions (4)</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">expand_more</span>
+</div>
+</div>
+<!-- Product Dropdown -->
+<div class="flex flex-col gap-1">
+<label class="text-[11px] font-caption text-body">Product Category</label>
+<div class="flex items-center justify-between bg-surface-container px-2.5 py-1.5 rounded-[2px] border border-hairline font-caption text-caption text-ink cursor-pointer hover:bg-raised">
+<span>All Products</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Hairline Divider -->
+<div class="h-[1px] bg-hairline w-full"></div>
+<!-- Section 3: DATA SOURCE -->
+<div class="flex flex-col gap-2">
+<div class="font-toolbar-label text-toolbar-label uppercase tracking-wider text-secondary font-semibold">
+            Data Source
+          </div>
+<div class="bg-surface-container p-2.5 rounded-[2px] border border-hairline flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-caption text-caption text-ink font-medium flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[15px] text-primary">table_rows</span>
+                orders_2025
+              </span>
+<span class="px-1.5 py-0.2 bg-raised rounded-[2px] text-[10px] text-secondary border border-hairline">Parquet</span>
+</div>
+<div class="flex items-center justify-between text-[11px] font-caption text-secondary">
+<span>Refresh:</span>
+<span class="text-good flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-good"></span>
+                Updated just now
+              </span>
+</div>
+<div class="flex items-center justify-between text-[11px] font-caption text-secondary border-t border-hairline pt-1.5">
+<span>Cache:</span>
+<span class="text-ink">Instant (Local RAM)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Inspector Actions & Footer Tabs -->
+<div class="flex flex-col gap-2 border-t border-hairline pt-3">
+<!-- Action CTA from Shared JSON -->
+<button class="w-full py-1.5 bg-primary-container text-on-primary-container font-medium rounded-[2px] font-toolbar-label text-toolbar-label hover:opacity-95 transition-opacity">
+          Apply Filters
+        </button>
+<!-- Secondary Actions -->
+<div class="grid grid-cols-2 gap-2">
+<button class="py-1 px-2 bg-surface-container hover:bg-raised text-body hover:text-ink font-caption text-caption rounded-[2px] border border-hairline text-center">
+            Export Report
+          </button>
+<button class="py-1 px-2 bg-surface-container hover:bg-raised text-body hover:text-ink font-caption text-caption rounded-[2px] border border-hairline text-center">
+            Duplicate
+          </button>
+</div>
+<!-- Footer Utility Links from JSON: Settings, Terminal -->
+<div class="flex items-center justify-between pt-2 border-t border-hairline text-caption font-caption text-secondary">
+<button class="flex items-center gap-1 hover:text-ink">
+<span class="material-symbols-outlined text-[14px]">settings</span>
+<span>Settings</span>
+</button>
+<button class="flex items-center gap-1 hover:text-ink">
+<span class="material-symbols-outlined text-[14px]">terminal</span>
+<span>Terminal</span>
+</button>
+</div>
+</div>
+</aside>
+</div>
+</body></html>

@@ -2,7 +2,7 @@
 
 Mode: experiment
 Ship: direct
-Design language: Omarchy for the Workbook (the person's current Omarchy theme, JetBrains Mono, flat; owner 2026-10-16), Fluent 2 for the analytics showcase
+Design language: Omarchy for MX Studio and the Workbook (the person's current Omarchy theme, JetBrains Mono, flat; owner 2026-10-16), Fluent 2 for the analytics showcase
 
 Current experiment: `GOAL.md` (goal 13: keys, so the grid feels like a spreadsheet; goals 1–12 in `docs/goals/`; MX Studio, from the owner's handoff, is the killer app). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 

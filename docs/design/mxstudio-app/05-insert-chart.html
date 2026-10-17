@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>orders_2025 — MX Studio</title>
+<!-- JetBrains Mono Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary": "#3f2e00",
+            "surface-container-high": "#282935",
+            "surface-tint": "#aec6ff",
+            "on-primary": "#002e6b",
+            "background": "#12131d",
+            "on-secondary-fixed": "#260059",
+            "tertiary-fixed-dim": "#f1c040",
+            "tertiary": "#f1c040",
+            "outline-variant": "#434751",
+            "on-tertiary-fixed-variant": "#5a4300",
+            "selection": "#292e42",
+            "on-primary-fixed-variant": "#0c4393",
+            "inverse-primary": "#305cac",
+            "surface-container-highest": "#333440",
+            "on-secondary-fixed-variant": "#533687",
+            "warning": "#e0af68",
+            "secondary-fixed": "#ebdcff",
+            "secondary-fixed-dim": "#d4bbff",
+            "surface-variant": "#333440",
+            "outline": "#8d909d",
+            "good": "#9ece6a",
+            "on-surface": "#e2e1f1",
+            "surface-bright": "#383844",
+            "page": "#13141c",
+            "bad": "#f7768e",
+            "ink": "#c0caf5",
+            "on-secondary": "#3c1d6f",
+            "surface-container-low": "#1a1b26",
+            "primary-fixed-dim": "#aec6ff",
+            "strong-line": "#414868",
+            "surface-container-lowest": "#0c0d18",
+            "surface-dim": "#12131d",
+            "on-tertiary-container": "#4a3700",
+            "on-background": "#e2e1f1",
+            "tertiary-container": "#ca9d1c",
+            "on-tertiary-fixed": "#251a00",
+            "hairline": "#2a2e40",
+            "secondary": "#565f89",
+            "body": "#a9b1d6",
+            "on-surface-variant": "#c3c6d3",
+            "on-primary-container": "#00367d",
+            "raised": "#24283b",
+            "primary-container": "#7aa2f7",
+            "tertiary-fixed": "#ffdf98",
+            "primary": "#aec6ff",
+            "on-primary-fixed": "#001a43",
+            "on-secondary-container": "#c8aaff",
+            "inverse-on-surface": "#2f303b",
+            "primary-fixed": "#d8e2ff",
+            "inverse-surface": "#e2e1f1",
+            "error": "#ffb4ab",
+            "error-container": "#93000a",
+            "toolbar": "#0e0e14",
+            "secondary-container": "#56388a",
+            "surface-container": "#1e1f2a",
+            "on-error": "#690005",
+            "surface": "#1a1b26",
+            "on-error-container": "#ffdad6"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-sm": "8px",
+            "space-lg": "16px",
+            "space-xs": "4px",
+            "gutter": "0px",
+            "space-md": "12px",
+            "space-xl": "24px",
+            "margin": "16px"
+          },
+          "fontFamily": {
+            "headline-xl": ["JetBrains Mono"],
+            "headline-md": ["JetBrains Mono"],
+            "body-md": ["JetBrains Mono"],
+            "toolbar-label": ["JetBrains Mono"],
+            "caption": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "headline-xl": ["20px", { "lineHeight": "24px", "fontWeight": "700" }],
+            "headline-md": ["15px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "body-md": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "toolbar-label": ["11px", { "lineHeight": "14px", "fontWeight": "400" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+    }
+    /* Technical canvas subtle pattern */
+    .canvas-dots {
+      background-image: radial-gradient(#2a2e40 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    /* Tabular figures for monospace data */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body-md text-body-md select-none overflow-hidden h-screen flex flex-col antialiased">
+<!-- 1. Top Window Chrome / Titlebar -->
+<header class="h-9 bg-toolbar border-b border-hairline flex items-center justify-between px-space-md z-40 shrink-0">
+<!-- Left: Window Controls -->
+<div class="flex items-center gap-2 w-48">
+<div class="w-3 h-3 rounded-full bg-hairline hover:bg-bad transition-colors cursor-pointer border border-strong-line"></div>
+<div class="w-3 h-3 rounded-full bg-hairline hover:bg-warning transition-colors cursor-pointer border border-strong-line"></div>
+<div class="w-3 h-3 rounded-full bg-hairline hover:bg-good transition-colors cursor-pointer border border-strong-line"></div>
+<span class="ml-3 font-caption text-caption text-secondary">MX Studio</span>
+</div>
+<!-- Center: Document Title & Cloud Sync -->
+<div class="flex items-center gap-2"><span class="font-body-md text-body-md font-medium text-ink">orders_2025</span><span class="font-caption text-caption text-secondary">— MX Studio</span><span class="material-symbols-outlined text-secondary" data-icon="cloud_done" style="font-size: 15px;">cloud_done</span></div>
+<!-- Right: Zoom & View Options -->
+<div class="flex items-center justify-end gap-3 w-48 text-secondary font-caption text-caption">
+<div class="flex items-center gap-1 hover:text-ink cursor-pointer px-1.5 py-0.5 rounded border border-transparent hover:border-hairline">
+<span class="material-symbols-outlined" data-icon="search" style="font-size: 16px;">search</span>
+<span>100%</span>
+<span class="material-symbols-outlined" data-icon="expand_more" style="font-size: 14px;">expand_more</span>
+</div>
+<button class="hover:text-ink p-1 rounded hover:bg-raised transition-colors" title="Toggle Fullscreen">
+<span class="material-symbols-outlined" data-icon="fullscreen" style="font-size: 16px;">fullscreen</span>
+</button>
+</div>
+</header>
+<!-- 2. Desktop Toolbar (Shared Component: TopNavBar execution) -->
+<nav class="w-full flex items-center justify-between px-space-md h-16 border-b border-hairline bg-toolbar dark:bg-toolbar relative z-30 shrink-0">
+<!-- Left Action Group: Creation Modules -->
+<div class="flex items-center h-full gap-0.5">
+<!-- Table Button -->
+<button class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors duration-150 text-body dark:text-body hover:bg-raised dark:hover:bg-raised hover:text-ink dark:hover:text-ink">
+<span class="material-symbols-outlined mb-1" data-icon="table_chart">table_chart</span>
+<span class="font-toolbar-label text-toolbar-label">Table</span>
+</button>
+<!-- Chart Button (Active with indicator & Popover tether) -->
+<div class="relative">
+<button class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors duration-150 bg-raised text-primary-container border-b-2 border-primary-container" id="chartToolbarBtn">
+<span class="material-symbols-outlined mb-1" data-icon="bar_chart" style="font-variation-settings: 'FILL' 1;">bar_chart</span>
+<span class="font-toolbar-label text-toolbar-label font-medium text-ink">Chart</span>
+</button>
+<!-- 3. 'Insert chart' Popover Panel -->
+<div class="absolute top-[62px] left-0 w-80 bg-surface border border-hairline rounded-lg shadow-2xl z-50 p-3 flex flex-col gap-3" id="chartPopover">
+<!-- Popover Pointer Arrow -->
+<div class="absolute -top-[5px] left-7 w-2.5 h-2.5 bg-surface border-t border-l border-hairline rotate-45"></div>
+<!-- Category Tabs -->
+<div class="flex items-center border-b border-hairline pb-2 px-1">
+<button class="font-toolbar-label text-toolbar-label text-ink font-medium border-b-2 border-primary-container px-2 py-0.5 -mb-2">2D</button>
+<button class="font-toolbar-label text-toolbar-label text-secondary hover:text-ink px-2 py-0.5 transition-colors">3D</button>
+<button class="font-toolbar-label text-toolbar-label text-secondary hover:text-ink px-2 py-0.5 transition-colors">Interactive</button>
+</div>
+<!-- Chart Catalog Grid (3-column) -->
+<div class="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+<!-- Column (Vertical Bars) -->
+<button class="flex flex-col items-center p-2 rounded border border-hairline hover:bg-raised hover:border-strong-line transition-colors">
+<div class="h-10 w-full flex items-end justify-center gap-1 mb-1.5 px-2 bg-page rounded-sm">
+<div class="w-2 h-4 bg-secondary"></div>
+<div class="w-2 h-7 bg-primary-container"></div>
+<div class="w-2 h-5 bg-secondary"></div>
+</div>
+<span class="font-toolbar-label text-toolbar-label text-body">Column</span>
+</button>
+<!-- Bar (Horizontal Bars - SELECTED) -->
+<button class="flex flex-col items-center p-2 rounded border-2 border-primary-container bg-raised">
+<div class="h-10 w-full flex flex-col justify-center gap-1 mb-1.5 px-2 bg-page rounded-sm">
+<div class="h-1.5 w-4 bg-primary-container"></div>
+<div class="h-1.5 w-7 bg-primary-container"></div>
+<div class="h-1.5 w-5 bg-primary-container"></div>
+</div>
+<span class="font-toolbar-label text-toolbar-label text-ink font-medium">Bar</span>
+</button>
+<!-- Line (Trendline) -->
+<button class="flex flex-col items-center p-2 rounded border border-hairline hover:bg-raised hover:border-strong-line transition-colors">
+<div class="h-10 w-full flex items-center justify-center mb-1.5 bg-page rounded-sm px-1">
+<svg class="w-full h-6 stroke-primary-container" fill="none" viewbox="0 0 40 24">
+<path d="M2 18 L12 8 L22 14 L38 4" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+</div>
+<span class="font-toolbar-label text-toolbar-label text-body">Line</span>
+</button>
+<!-- Area -->
+<button class="flex flex-col items-center p-2 rounded border border-hairline hover:bg-raised hover:border-strong-line transition-colors">
+<div class="h-10 w-full flex items-center justify-center mb-1.5 bg-page rounded-sm overflow-hidden">
+<svg class="w-full h-8" fill="none" viewbox="0 0 40 30">
+<path d="M2 24 L14 10 L26 16 L38 6 L38 28 L2 28 Z" fill="#7aa2f7" fill-opacity="0.3"></path>
+<path d="M2 24 L14 10 L26 16 L38 6" stroke="#7aa2f7" stroke-width="1.5"></path>
+</svg>
+</div>
+<span class="font-toolbar-label text-toolbar-label text-body">Area</span>
+</button>
+<!-- Pie / Donut -->
+<button class="flex flex-col items-center p-2 rounded border border-hairline hover:bg-raised hover:border-strong-line transition-colors">
+<div class="h-10 w-full flex items-center justify-center mb-1.5 bg-page rounded-sm">
+<div class="w-6 h-6 rounded-full border-4 border-primary-container border-t-secondary border-r-warning"></div>
+</div>
+<span class="font-toolbar-label text-toolbar-label text-body">Pie</span>
+</button>
+<!-- Scatter -->
+<button class="flex flex-col items-center p-2 rounded border border-hairline hover:bg-raised hover:border-strong-line transition-colors">
+<div class="h-10 w-full relative mb-1.5 bg-page rounded-sm">
+<div class="absolute w-1.5 h-1.5 rounded-full bg-primary-container top-2 left-2"></div>
+<div class="absolute w-1.5 h-1.5 rounded-full bg-good top-5 left-4"></div>
+<div class="absolute w-1.5 h-1.5 rounded-full bg-warning top-3 left-6"></div>
+</div>
+<span class="font-toolbar-label text-toolbar-label text-body">Scatter</span>
+</button>
+<!-- Bubble -->
+<button class="flex flex-col items-center p-2 rounded border border-hairline hover:bg-raised hover:border-strong-line transition-colors">
+<div class="h-10 w-full relative mb-1.5 bg-page rounded-sm">
+<div class="absolute w-3 h-3 rounded-full border border-primary-container top-1 left-2"></div>
+<div class="absolute w-5 h-5 rounded-full border border-secondary top-3 left-4"></div>
+</div>
+<span class="font-toolbar-label text-toolbar-label text-body">Bubble</span>
+</button>
+<!-- Heatmap -->
+<button class="flex flex-col items-center p-2 rounded border border-hairline hover:bg-raised hover:border-strong-line transition-colors">
+<div class="h-10 w-full grid grid-cols-3 gap-0.5 p-1 mb-1.5 bg-page rounded-sm">
+<div class="bg-primary-container/20"></div>
+<div class="bg-primary-container/60"></div>
+<div class="bg-primary-container"></div>
+<div class="bg-primary-container/80"></div>
+<div class="bg-primary-container/40"></div>
+<div class="bg-primary-container/20"></div>
+</div>
+<span class="font-toolbar-label text-toolbar-label text-body">Heatmap</span>
+</button>
+<!-- Histogram -->
+<button class="flex flex-col items-center p-2 rounded border border-hairline hover:bg-raised hover:border-strong-line transition-colors">
+<div class="h-10 w-full flex items-end justify-center gap-0.5 mb-1.5 px-1 bg-page rounded-sm">
+<div class="w-1.5 h-2 bg-secondary"></div>
+<div class="w-1.5 h-4 bg-secondary"></div>
+<div class="w-1.5 h-7 bg-primary-container"></div>
+<div class="w-1.5 h-5 bg-secondary"></div>
+<div class="w-1.5 h-2 bg-secondary"></div>
+</div>
+<span class="font-toolbar-label text-toolbar-label text-body">Histogram</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Text Button -->
+<button class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors duration-150 text-body hover:bg-raised hover:text-ink">
+<span class="material-symbols-outlined mb-1" data-icon="title">title</span>
+<span class="font-toolbar-label text-toolbar-label">Text</span>
+</button>
+<!-- Shape Button -->
+<button class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors duration-150 text-body hover:bg-raised hover:text-ink">
+<span class="material-symbols-outlined mb-1" data-icon="square">square</span>
+<span class="font-toolbar-label text-toolbar-label">Shape</span>
+</button>
+<!-- Media Button -->
+<button class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors duration-150 text-body hover:bg-raised hover:text-ink">
+<span class="material-symbols-outlined mb-1" data-icon="image">image</span>
+<span class="font-toolbar-label text-toolbar-label">Media</span>
+</button>
+<!-- Formula Button -->
+<button class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors duration-150 text-body hover:bg-raised hover:text-ink">
+<span class="material-symbols-outlined mb-1" data-icon="functions">functions</span>
+<span class="font-toolbar-label text-toolbar-label">Formula</span>
+</button>
+</div>
+<!-- Center: Brand / Document Indicator -->
+<div class="font-headline-md text-headline-md text-ink font-bold tracking-tight">MX Studio</div>
+<!-- Right Side Utility Cluster -->
+<div class="flex items-center gap-2">
+<!-- Collaborate Button -->
+<!-- Trailing Action Icons -->
+<button class="p-2 text-secondary hover:text-ink rounded hover:bg-raised transition-colors" title="Settings">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+</button>
+<button class="p-2 text-secondary hover:text-ink rounded hover:bg-raised transition-colors" title="Export">
+<span class="material-symbols-outlined" data-icon="ios_share">ios_share</span>
+</button>
+<button class="p-2 text-secondary hover:text-ink rounded hover:bg-raised transition-colors" title="Present Sheet">
+<span class="material-symbols-outlined" data-icon="play_arrow">play_arrow</span>
+</button>
+<div class="h-6 w-px bg-hairline mx-1"></div>
+<!-- Format Inspector Toggle (Active) -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-raised text-primary-container border border-strong-line font-medium transition-colors">
+<span class="material-symbols-outlined" data-icon="brush" style="font-size: 16px;">brush</span>
+<span class="font-toolbar-label text-toolbar-label text-ink">Format</span>
+</button>
+</div>
+</nav>
+<!-- 4. Sheet Tabs Row -->
+<div class="h-8 bg-page border-b border-hairline flex items-center px-4 gap-1 z-20 shrink-0">
+<!-- Orders Tab (Active) -->
+<button class="flex items-center gap-2 px-3 h-full border-b-2 border-primary-container text-ink font-medium transition-colors">
+<span class="font-caption text-caption">Orders</span>
+<span class="material-symbols-outlined text-secondary" data-icon="expand_more" style="font-size: 14px;">expand_more</span>
+</button>
+<!-- Report Tab (Inactive) -->
+<button class="flex items-center gap-2 px-3 h-full text-secondary hover:text-body transition-colors">
+<span class="font-caption text-caption">Report</span>
+</button>
+<!-- Add Sheet '+' Button -->
+<button class="h-6 w-6 ml-1 flex items-center justify-center rounded text-secondary hover:text-ink hover:bg-raised transition-colors" title="Add Sheet">
+<span class="material-symbols-outlined" data-icon="add" style="font-size: 16px;">add</span>
+</button>
+</div>
+<!-- Main Workspace (Canvas + Inspector) -->
+<div class="flex-1 flex overflow-hidden relative">
+<!-- 5. Canvas Area (Scrollable background with subtle technical dots) -->
+<main class="flex-1 bg-page canvas-dots overflow-auto p-8 relative flex gap-8 items-start">
+<!-- LEFT: Table 'orders_2025' -->
+<div class="w-[580px] shrink-0 flex flex-col">
+<!-- Sheet / Table Title Header -->
+<div class="flex items-center justify-between mb-3 px-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container" data-icon="table_rows" style="font-size: 18px;">table_rows</span>
+<h2 class="font-headline-md text-headline-md text-ink">orders_2025</h2>
+</div>
+<span class="font-caption text-caption text-secondary">6 rows × 5 cols</span>
+</div>
+<!-- Flat Technical Table Card -->
+<div class="border border-hairline bg-surface rounded-none overflow-hidden relative">
+<table class="w-full border-collapse text-left">
+<thead>
+<!-- Column Lettering Bar -->
+<tr class="bg-raised border-b border-hairline text-secondary font-caption text-caption">
+<th class="w-12 h-6 text-center border-r border-hairline bg-surface-container-lowest font-normal"></th>
+<th class="h-6 px-3 border-r border-hairline font-normal text-center">A</th>
+<!-- Column B (Selected) Header -->
+<th class="h-6 px-3 border-r border-hairline font-medium text-ink bg-selection relative text-center">
+<div class="absolute top-0 left-0 right-0 h-0.5 bg-primary-container"></div>
+                  B
+                </th>
+<th class="h-6 px-3 border-r border-hairline font-normal text-center">C</th>
+<!-- Column D (Selected) Header -->
+<th class="h-6 px-3 border-r border-hairline font-medium text-ink bg-selection relative text-center">
+<div class="absolute top-0 left-0 right-0 h-0.5 bg-primary-container"></div>
+                  D
+                </th>
+<th class="h-6 px-3 font-normal text-center">E</th>
+</tr>
+<!-- Column Header Labels -->
+<tr class="bg-raised border-b border-hairline text-ink font-body-md text-body-md">
+<th class="w-12 h-7 text-center border-r border-hairline text-secondary bg-surface-container-lowest font-normal text-caption">#</th>
+<th class="h-7 px-3 border-r border-hairline font-medium">Order ID</th>
+<!-- Column B Selected label -->
+<th class="h-7 px-3 border-r border-hairline font-medium bg-selection text-primary-container">Region</th>
+<th class="h-7 px-3 border-r border-hairline font-medium">Category</th>
+<!-- Column D Selected label -->
+<th class="h-7 px-3 border-r border-hairline font-medium text-right bg-selection text-primary-container">Revenue</th>
+<th class="h-7 px-3 font-medium text-right">Units</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-hairline">
+<!-- Row 1 -->
+<tr class="hover:bg-raised/40 transition-colors">
+<td class="w-12 h-8 text-center border-r border-hairline text-secondary bg-surface-container-lowest font-caption text-caption tabular-nums">1</td>
+<td class="px-3 border-r border-hairline text-secondary tabular-nums">#ORD-9821</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 font-medium">West</td>
+<td class="px-3 border-r border-hairline text-body">Enterprise</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 text-right tabular-nums font-medium">$148,200</td>
+<td class="px-3 text-secondary text-right tabular-nums">42</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-raised/40 transition-colors">
+<td class="w-12 h-8 text-center border-r border-hairline text-secondary bg-surface-container-lowest font-caption text-caption tabular-nums">2</td>
+<td class="px-3 border-r border-hairline text-secondary tabular-nums">#ORD-9822</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 font-medium">East</td>
+<td class="px-3 border-r border-hairline text-body">Retail</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 text-right tabular-nums font-medium">$112,450</td>
+<td class="px-3 text-secondary text-right tabular-nums">78</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-raised/40 transition-colors">
+<td class="w-12 h-8 text-center border-r border-hairline text-secondary bg-surface-container-lowest font-caption text-caption tabular-nums">3</td>
+<td class="px-3 border-r border-hairline text-secondary tabular-nums">#ORD-9823</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 font-medium">Central</td>
+<td class="px-3 border-r border-hairline text-body">SMB</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 text-right tabular-nums font-medium">$86,300</td>
+<td class="px-3 text-secondary text-right tabular-nums">35</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-raised/40 transition-colors">
+<td class="w-12 h-8 text-center border-r border-hairline text-secondary bg-surface-container-lowest font-caption text-caption tabular-nums">4</td>
+<td class="px-3 border-r border-hairline text-secondary tabular-nums">#ORD-9824</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 font-medium">South</td>
+<td class="px-3 border-r border-hairline text-body">Enterprise</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 text-right tabular-nums font-medium">$94,150</td>
+<td class="px-3 text-secondary text-right tabular-nums">29</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-raised/40 transition-colors">
+<td class="w-12 h-8 text-center border-r border-hairline text-secondary bg-surface-container-lowest font-caption text-caption tabular-nums">5</td>
+<td class="px-3 border-r border-hairline text-secondary tabular-nums">#ORD-9825</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 font-medium">West</td>
+<td class="px-3 border-r border-hairline text-body">SMB</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 text-right tabular-nums font-medium">$62,800</td>
+<td class="px-3 text-secondary text-right tabular-nums">19</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-raised/40 transition-colors">
+<td class="w-12 h-8 text-center border-r border-hairline text-secondary bg-surface-container-lowest font-caption text-caption tabular-nums">6</td>
+<td class="px-3 border-r border-hairline text-secondary tabular-nums">#ORD-9826</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 font-medium">East</td>
+<td class="px-3 border-r border-hairline text-body">Enterprise</td>
+<td class="px-3 border-r border-hairline text-ink bg-selection/70 text-right tabular-nums font-medium">$135,900</td>
+<td class="px-3 text-secondary text-right tabular-nums">51</td>
+</tr>
+</tbody>
+</table>
+<!-- Add column handle on right -->
+<button class="absolute top-2 -right-3 w-5 h-5 rounded-full bg-raised border border-strong-line text-secondary hover:text-ink flex items-center justify-center transition-colors shadow-sm" title="Add Column">
+<span class="material-symbols-outlined" data-icon="add" style="font-size: 14px;">add</span>
+</button>
+</div>
+<!-- Add row handle below table -->
+<div class="flex items-center justify-center mt-1.5">
+<button class="px-3 py-0.5 rounded bg-surface border border-hairline text-secondary hover:text-ink flex items-center gap-1 font-caption text-caption transition-colors" title="Add Row">
+<span class="material-symbols-outlined" data-icon="add" style="font-size: 14px;">add</span>
+<span>Add row</span>
+</button>
+</div>
+</div>
+<!-- RIGHT: Newly Inserted Bar Chart 'Revenue by region' (Active Selection State) -->
+<div class="relative w-[480px] shrink-0 bg-surface border-2 border-primary-container p-5 rounded-none shadow-lg">
+<!-- 8 Resize Handles (Classic Numbers Canvas Handle Style) -->
+<div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border border-primary-container"></div>
+<div class="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border border-primary-container"></div>
+<div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border border-primary-container"></div>
+<div class="absolute top-1/2 -translate-y-1/2 -left-1.5 w-3 h-3 bg-white border border-primary-container"></div>
+<div class="absolute top-1/2 -translate-y-1/2 -right-1.5 w-3 h-3 bg-white border border-primary-container"></div>
+<div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border border-primary-container"></div>
+<div class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border border-primary-container"></div>
+<div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border border-primary-container"></div>
+<!-- Chart Title & Legend -->
+<div class="flex items-center justify-between mb-4 border-b border-hairline pb-3">
+<div>
+<h3 class="font-headline-md text-headline-md font-bold text-ink tracking-tight">Revenue by region</h3>
+<span class="font-caption text-caption text-secondary">Aggregated series: orders_2025</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-sm bg-primary-container"></span>
+<span class="font-caption text-caption text-body">2025 Revenue</span>
+</div>
+</div>
+<!-- Horizontal Bar Chart Graphic -->
+<div class="flex flex-col gap-3.5 my-2">
+<!-- Bar 1: East ($248,350) -->
+<div class="flex items-center gap-3">
+<span class="w-16 font-body-md text-body-md text-ink text-right">East</span>
+<div class="flex-1 bg-page h-6 rounded-none relative overflow-hidden flex items-center">
+<div class="bg-primary-container h-full w-[88%] transition-all"></div>
+<span class="absolute right-2 font-caption text-caption tabular-nums font-medium text-ink">$248,350</span>
+</div>
+</div>
+<!-- Bar 2: West ($211,000) -->
+<div class="flex items-center gap-3">
+<span class="w-16 font-body-md text-body-md text-ink text-right">West</span>
+<div class="flex-1 bg-page h-6 rounded-none relative overflow-hidden flex items-center">
+<div class="bg-primary-container h-full w-[75%] transition-all"></div>
+<span class="absolute right-2 font-caption text-caption tabular-nums font-medium text-ink">$211,000</span>
+</div>
+</div>
+<!-- Bar 3: South ($94,150) -->
+<div class="flex items-center gap-3">
+<span class="w-16 font-body-md text-body-md text-ink text-right">South</span>
+<div class="flex-1 bg-page h-6 rounded-none relative overflow-hidden flex items-center">
+<div class="bg-primary-container h-full w-[33%] transition-all"></div>
+<span class="absolute right-2 font-caption text-caption tabular-nums font-medium text-ink">$94,150</span>
+</div>
+</div>
+<!-- Bar 4: Central ($86,300) -->
+<div class="flex items-center gap-3">
+<span class="w-16 font-body-md text-body-md text-ink text-right">Central</span>
+<div class="flex-1 bg-page h-6 rounded-none relative overflow-hidden flex items-center">
+<div class="bg-primary-container h-full w-[30%] transition-all"></div>
+<span class="absolute right-2 font-caption text-caption tabular-nums font-medium text-ink">$86,300</span>
+</div>
+</div>
+<!-- Axis Marks / Gridline scale -->
+<div class="flex items-center justify-between text-secondary font-caption text-caption pl-16 pt-2 border-t border-hairline tabular-nums">
+<span>$0</span>
+<span>$75k</span>
+<span>$150k</span>
+<span>$225k</span>
+<span>$300k</span>
+</div>
+</div>
+<!-- Live link hint footer -->
+<div class="mt-4 pt-2 border-t border-hairline flex items-center justify-between text-secondary font-caption text-caption">
+<span class="flex items-center gap-1 text-primary-container">
+<span class="material-symbols-outlined" data-icon="link" style="font-size: 14px;">link</span>
+<span>Linked to Range: B2:D7</span>
+</span>
+<span>Click to edit data</span>
+</div>
+</div>
+</main>
+<!-- 6. Right Inspector Panel (Shared Component: SideNavBar execution) -->
+<aside class="w-[300px] shrink-0 border-l border-hairline bg-surface dark:bg-surface flex flex-col justify-between z-20 overflow-y-auto">
+<!-- Top Section -->
+<div>
+<!-- Inspector Title Header -->
+<div class="px-space-md py-3 border-b border-hairline flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container" data-icon="brush">brush</span>
+<div>
+<h3 class="font-headline-md text-headline-md text-ink dark:text-ink font-medium">Format</h3>
+<p class="font-caption text-caption text-secondary">Bar Chart Selected</p>
+</div>
+</div>
+<button class="font-caption text-caption text-secondary hover:text-bad transition-colors">Reset Style</button>
+</div>
+<!-- Inspector Tabs (Chart, Axis, Series, Arrange) -->
+<div class="grid grid-cols-4 border-b border-hairline text-center bg-toolbar">
+<!-- Tab 1: Chart (Active) -->
+<button class="py-2.5 font-toolbar-label text-toolbar-label text-ink dark:text-ink border-b-2 border-primary-container dark:border-primary-container font-medium flex flex-col items-center justify-center gap-1">
+<span class="material-symbols-outlined" data-icon="bar_chart" style="font-size: 16px;">bar_chart</span>
+<span>Chart</span>
+</button>
+<!-- Tab 2: Axis -->
+<button class="py-2.5 font-toolbar-label text-toolbar-label text-secondary hover:text-ink flex flex-col items-center justify-center gap-1 transition-colors">
+<span class="material-symbols-outlined" data-icon="straighten" style="font-size: 16px;">straighten</span>
+<span>Axis</span>
+</button>
+<!-- Tab 3: Series -->
+<button class="py-2.5 font-toolbar-label text-toolbar-label text-secondary hover:text-ink flex flex-col items-center justify-center gap-1 transition-colors">
+<span class="material-symbols-outlined" data-icon="stacked_bar_chart" style="font-size: 16px;">stacked_bar_chart</span>
+<span>Series</span>
+</button>
+<!-- Tab 4: Arrange -->
+<button class="py-2.5 font-toolbar-label text-toolbar-label text-secondary hover:text-ink flex flex-col items-center justify-center gap-1 transition-colors">
+<span class="material-symbols-outlined" data-icon="layers" style="font-size: 16px;">layers</span>
+<span>Arrange</span>
+</button>
+</div>
+<!-- Inspector Tab Content: Chart -->
+<div class="p-space-md flex flex-col gap-5">
+<!-- Section 1: CHART TYPE -->
+<div>
+<label class="block font-toolbar-label text-toolbar-label uppercase tracking-wider text-secondary mb-1.5">Chart Type</label>
+<div class="w-full flex items-center justify-between px-2.5 py-1.5 bg-raised border border-hairline rounded text-ink cursor-pointer hover:border-strong-line transition-colors">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container" data-icon="bar_chart" style="font-size: 16px;">bar_chart</span>
+<span class="font-body-md text-body-md">Horizontal Bar</span>
+</div>
+<span class="material-symbols-outlined text-secondary" data-icon="unfold_more" style="font-size: 16px;">unfold_more</span>
+</div>
+</div>
+<!-- Section 2: DATA -->
+<div class="border-t border-hairline pt-4">
+<label class="block font-toolbar-label text-toolbar-label uppercase tracking-wider text-secondary mb-2">Data Source</label>
+<div class="bg-page border border-hairline p-2.5 rounded flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-ink font-medium">Revenue by Region</span>
+<span class="material-symbols-outlined text-good" data-icon="link" style="font-size: 14px;">link</span>
+</div>
+<div class="flex items-center gap-1.5 text-secondary font-caption text-caption">
+<span class="w-1.5 h-1.5 rounded-full bg-good"></span>
+<span>Follows edits to orders_2025</span>
+</div>
+</div>
+</div>
+<!-- Section 3: SERIES OPTIONS -->
+<div class="border-t border-hairline pt-4">
+<label class="block font-toolbar-label text-toolbar-label uppercase tracking-wider text-secondary mb-2">Series Options</label>
+<div class="flex items-center justify-between py-1">
+<span class="font-body-md text-body-md text-body">Margin %</span>
+<!-- Flat Toggle Switch (Inactive) -->
+<div class="w-8 h-4 bg-hairline rounded-full relative cursor-pointer border border-strong-line">
+<div class="w-3 h-3 bg-secondary rounded-full absolute top-0.5 left-0.5"></div>
+</div>
+</div>
+</div>
+<!-- Section 4: COLOURS -->
+<div class="border-t border-hairline pt-4">
+<label class="block font-toolbar-label text-toolbar-label uppercase tracking-wider text-secondary mb-2">Tokyo Night Palette</label>
+<div class="flex items-center justify-between p-1 bg-page border border-hairline rounded">
+<!-- Swatch 1 (Active accent #7aa2f7) -->
+<button class="w-6 h-6 rounded-sm bg-[#7aa2f7] ring-2 ring-ink ring-offset-1 ring-offset-surface" title="#7aa2f7"></button>
+<button class="w-6 h-6 rounded-sm bg-[#449dab] hover:opacity-90" title="#449dab"></button>
+<button class="w-6 h-6 rounded-sm bg-[#ad8ee6] hover:opacity-90" title="#ad8ee6"></button>
+<button class="w-6 h-6 rounded-sm bg-[#e0af68] hover:opacity-90" title="#e0af68"></button>
+<button class="w-6 h-6 rounded-sm bg-[#9ece6a] hover:opacity-90" title="#9ece6a"></button>
+<button class="w-6 h-6 rounded-sm bg-[#f7768e] hover:opacity-90" title="#f7768e"></button>
+</div>
+</div>
+<!-- Section 5: DISPLAY TOGGLES -->
+<div class="border-t border-hairline pt-4 flex flex-col gap-2.5">
+<label class="block font-toolbar-label text-toolbar-label uppercase tracking-wider text-secondary">Display Elements</label>
+<!-- Toggle: Title (Checked) -->
+<div class="flex items-center justify-between py-0.5">
+<span class="font-body-md text-body-md text-body">Title</span>
+<div class="w-8 h-4 bg-primary-container rounded-full relative cursor-pointer">
+<div class="w-3 h-3 bg-raised rounded-full absolute top-0.5 right-0.5"></div>
+</div>
+</div>
+<!-- Toggle: Legend (Checked) -->
+<div class="flex items-center justify-between py-0.5">
+<span class="font-body-md text-body-md text-body">Legend</span>
+<div class="w-8 h-4 bg-primary-container rounded-full relative cursor-pointer">
+<div class="w-3 h-3 bg-raised rounded-full absolute top-0.5 right-0.5"></div>
+</div>
+</div>
+<!-- Toggle: Value Labels (Checked) -->
+<div class="flex items-center justify-between py-0.5">
+<span class="font-body-md text-body-md text-body">Value Labels</span>
+<div class="w-8 h-4 bg-primary-container rounded-full relative cursor-pointer">
+<div class="w-3 h-3 bg-raised rounded-full absolute top-0.5 right-0.5"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Tabs (Document, Help) -->
+<div class="border-t border-hairline bg-toolbar p-2 flex items-center justify-around">
+<button class="flex items-center gap-1.5 text-secondary hover:text-ink font-caption text-caption py-1 px-3 transition-colors">
+<span class="material-symbols-outlined" data-icon="description" style="font-size: 15px;">description</span>
+<span>Document</span>
+</button>
+<div class="h-4 w-px bg-hairline"></div>
+<button class="flex items-center gap-1.5 text-secondary hover:text-ink font-caption text-caption py-1 px-3 transition-colors">
+<span class="material-symbols-outlined" data-icon="help" style="font-size: 15px;">help</span>
+<span>Help</span>
+</button>
+</div>
+</aside>
+</div>
+<!-- Inline Script for micro-interactions -->
+<script>
+    // Popover toggle demonstration
+    const chartBtn = document.getElementById('chartToolbarBtn');
+    const popover = document.getElementById('chartPopover');
+
+    chartBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      popover.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!popover.contains(e.target) && e.target !== chartBtn) {
+        popover.classList.add('hidden');
+      }
+    });
+  </script>
+</body></html>
