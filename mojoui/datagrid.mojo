@@ -283,6 +283,7 @@ struct DataGrid(Copyable, Movable):
         self.editing = False
         self.typed = ""
         self.typing = False
+        self.then = "Enter"
         self.redraw()
 
     def cancel_edit(mut self):
@@ -290,6 +291,7 @@ struct DataGrid(Copyable, Movable):
         self.editing = False
         self.typed = ""
         self.typing = False
+        self.then = "Enter"
         self.redraw()
 
     def editor(self, value: String, on_submit: Int, on_cancel: Int) -> View:
