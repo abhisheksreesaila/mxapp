@@ -11,6 +11,8 @@ from mojoui.app import App, Event
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette, skin_palette, skin_name, skin_of
+from mojoui.menus import MenuBar, Menu, Item, Separator, Submenu, ContextMenu
+from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
@@ -82,6 +84,16 @@ comptime OBJ_PICK = 300  # + object: show it in the inspector
 comptime TILE_TAP = 400  # + tile: a chart tile's canvas
 comptime TILE_CLOSE = 500  # + tile
 comptime RESIZE = 36  # a sheet object (or the table) resized by its corner
+comptime SORT_ASC = 37  # the menus' sorts (the context menu's column, else the selected one)
+comptime SORT_DESC = 38
+comptime MENU_CLOSE = 39  # the context menu dismissed
+comptime SETTINGS = 41  # File > Settings…
+comptime ABOUT = 42  # Help > About omxplorer
+comptime SHOW_REPORT = 43  # View > Report / Sheet
+comptime SHOW_SHEET = 44
+comptime FMT_NUMBER = 45  # Format as ▸ (the context menu's column, else the selected one)
+comptime FMT_CURRENCY = 46
+comptime FMT_PERCENT = 47
 comptime MAX_OBJECTS = 40  # per sheet, and tiles per report (canvas ids 10…49, 60…99, 120…159)
 comptime TABLE_H = 400  # the table's height once objects share the sheet
 
@@ -131,6 +143,9 @@ struct Main(App):
     var table_h_set: Int  # 0: automatic
     var reveal: Int  # the sheet child to scroll into view (a new object), and how many times asked
     var reveal_count: Int
+    var ctx_col: Int  # the column a context menu is open for (-1: none), and where it opened on the grid
+    var ctx_x: Int
+    var ctx_y: Int
 
     def __init__(out self):
         self.screen = START_SCREEN
@@ -174,6 +189,9 @@ struct Main(App):
         self.table_h_set = 0
         self.reveal = -1
         self.reveal_count = 0
+        self.ctx_col = -1
+        self.ctx_x = 0
+        self.ctx_y = 0
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -460,6 +478,21 @@ struct Main(App):
         elif m == IMPORT_COLUMN:
             self.import_col = event.number
             self.version += 1
+        elif m == GRID and event.number == SECONDARY:  # a right click: the column's menu where it happened
+            var col = self.grid.header_hit(event.x, event.y, self.frame)
+            if col < 0:
+                var rc = self.grid.cell_hit(event.x, event.y, self.frame)
+                col = rc[1]
+                if rc[0] >= 0 and rc[1] >= 0:
+                    self.grid.select(rc[0], rc[1])
+                    self.select_cell(rc[0], rc[1])
+            self.ctx_col = col
+            self.ctx_x = Int(event.x)
+            self.ctx_y = Int(event.y)
+            self.version += 1
+        elif m == MENU_CLOSE:
+            self.ctx_col = -1
+            self.version += 1
         elif m == GRID:
             var action = self.grid.handle(event, self.frame, self.font, self.pal)
             if action == GRID_SELECTED or action == GRID_EDIT or action == GRID_READ_ONLY or action == GRID_COLUMN:
@@ -565,12 +598,35 @@ struct Main(App):
             except e:
                 self.message = String(e)
             self.version += 1
-        elif m == SORT:
-            var col = self.grid.cur_col
+        elif m == SORT or m == SORT_ASC or m == SORT_DESC:
+            var col = self.ctx_col if self.ctx_col >= 0 else self.grid.cur_col
+            self.ctx_col = -1
             if col >= 0:
                 var desc = (not self.grid.sort_desc) if self.grid.sort_col == col else self.frame.kind(col) != TEXT
+                if m == SORT_ASC:
+                    desc = False
+                elif m == SORT_DESC:
+                    desc = True
                 self.grid.set_order(self.frame.permutation(col, desc), col, desc)
                 self.message = "Sorted by " + self.frame.name(col) + (" (largest first)" if desc else "")
+            self.version += 1
+        elif m == FMT_NUMBER or m == FMT_CURRENCY or m == FMT_PERCENT:
+            var col = self.ctx_col if self.ctx_col >= 0 else self.grid.cur_col
+            self.ctx_col = -1
+            if col >= 0 and self.frame.kind(col) != TEXT and self.frame.kind(col) != DATE:
+                self.grid.select(max(self.grid.cur_row, 0), col)
+                var f = self.frame.format_of(col)
+                f.style = NUMBER if m == FMT_NUMBER else (CURRENCY if m == FMT_CURRENCY else PERCENT)
+                if f.style == CURRENCY and f.decimals < 0:
+                    f.decimals = 2
+                if f.style == PERCENT and f.decimals < 0:
+                    f.decimals = 1
+                self.set_format(f^)
+            else:
+                self.message = "Formats apply to number columns"
+                self.version += 1
+        elif m == SHOW_REPORT or m == SHOW_SHEET:
+            self.sheet_tab = 1 if m == SHOW_REPORT else 0
             self.version += 1
         elif m == SAVE:
             var folder = environment("OMX_DOCUMENTS", environment("HOME", ".") + "/Documents/omxplorer")
@@ -784,7 +840,7 @@ struct Main(App):
             Text(self.message, CAPTION).tone(TONE_WARN) if self.message != "" else Spacer(),
             spacing=18,
         ).padding(28, 48).fill()
-        return VStack(body, Spacer(), StatusBar(["Choose a file, or open the sample"], "omxplorer · omxapp"), spacing=0).fill().grow()
+        return VStack(self.menu_bar(), body, Spacer(), StatusBar(["Choose a file, or open the sample"], "omxplorer · omxapp"), spacing=0).fill().grow()
 
     def import_screen(self) -> View:
         var cols = List[View]()
@@ -817,6 +873,44 @@ struct Main(App):
             spacing=12,
         ).fill()
         return VStack(dialog, spacing=0).padding(24, 48).fill().grow()
+
+    def menu_bar(self) -> View:
+        """The menus every screen carries (on a Mac, the system menu bar): the same actions as the toolbar, with shortcuts."""
+        var on_sheet = self.screen == SHEET
+        var col = self.ctx_col if self.ctx_col >= 0 else self.grid.cur_col
+        var style = self.frame.format_of(col).style if on_sheet and col >= 0 else AUTO
+        var format_as = Submenu("Format as", [Item("Number", FMT_NUMBER, checked=style == NUMBER, disabled=not on_sheet),
+                                               Item("Currency", FMT_CURRENCY, checked=style == CURRENCY, disabled=not on_sheet),
+                                               Item("Percent", FMT_PERCENT, checked=style == PERCENT, disabled=not on_sheet)], icon="format")
+        return MenuBar([
+            Menu("File", [Item("New blank sheet", BLANK, icon="grid", shortcut="Ctrl+N"), Item("Open…", BACK, icon="open", shortcut="Ctrl+O", disabled=not on_sheet),
+                          Separator(), Item("Save", SAVE, icon="save", shortcut="Ctrl+S", disabled=not on_sheet), Separator(),
+                          Item("Settings…", SETTINGS, icon="gear", shortcut="Ctrl+,")]),
+            Menu("Edit", [Item("Undo", UNDO, icon="undo", shortcut="Ctrl+Z", disabled=not on_sheet), Separator(),
+                          Item("Add row", ADD_ROW, icon="row-plus", shortcut="Ctrl+Shift+R", disabled=not on_sheet)]),
+            Menu("View", [Item("Inspector", TOGGLE_INSPECTOR, checked=self.inspector_open, shortcut="Ctrl+Shift+I", disabled=not on_sheet), Separator(),
+                          Item("Sheet", SHOW_SHEET, icon="sheet", checked=on_sheet and self.sheet_tab == 0, disabled=not on_sheet),
+                          Item("Report", SHOW_REPORT, icon="chart-bar", checked=on_sheet and self.sheet_tab == 1, disabled=not on_sheet)]),
+            Menu("Insert", [Item("Chart", INSERT_CHART, icon="chart-bar", shortcut="Ctrl+Shift+C", disabled=not on_sheet),
+                            Item("Pivot table", INSERT_PIVOT, icon="pivot", shortcut="Ctrl+Shift+P", disabled=not on_sheet), Separator(),
+                            Item("Formula column", NEW_FORMULA, icon="formula", checked=self.formula_open, disabled=not on_sheet),
+                            Item("Row", ADD_ROW, icon="row-plus", disabled=not on_sheet)]),
+            Menu("Data", [Item("Sort smallest first", SORT_ASC, icon="sort", shortcut="Ctrl+Shift+↑", disabled=not on_sheet),
+                          Item("Sort largest first", SORT_DESC, shortcut="Ctrl+Shift+↓", disabled=not on_sheet), Separator(), format_as.copy()]),
+            Menu("Format", [format_as.copy(), Separator(), Item("Format inspector", TOGGLE_INSPECTOR, icon="format", checked=self.inspector_open, disabled=not on_sheet)]),
+            Menu("Help", [Item("About omxplorer", ABOUT, icon="file")]),
+        ]).fill().padding(2, 8).tag("menubar")
+
+    def context_menu(self) -> View:
+        """The column's menu, open over the grid where the right click was."""
+        var col = self.ctx_col
+        var numeric = self.frame.kind(col) == INT or self.frame.kind(col) == DECIMAL
+        var style = self.frame.format_of(col).style
+        return ContextMenu("grid", self.ctx_x, self.ctx_y, [
+            Item("Sort smallest first", SORT_ASC, icon="sort"), Item("Sort largest first", SORT_DESC), Separator(),
+            Submenu("Format as", [Item("Number", FMT_NUMBER, checked=style == NUMBER), Item("Currency", FMT_CURRENCY, checked=style == CURRENCY),
+                                  Item("Percent", FMT_PERCENT, checked=style == PERCENT)], icon="format").copy() if numeric else Item("Format as", NO_MSG, icon="format", disabled=True),
+            Separator(), Item("Insert formula column", NEW_FORMULA, icon="formula"), Item("Add row", ADD_ROW, icon="row-plus")], on_close=MENU_CLOSE)
 
     def toolbar(self) -> View:
         var left: List[Tool] = [Tool("Save", "save", SAVE, False), Tool("Undo", "undo", UNDO, False)]
@@ -986,7 +1080,7 @@ struct Main(App):
                           Text(sorted, CAPTION), spacing=12).fill().align(CENTER).height(HEADER_H - 8)
         var th = self.table_h()
         var items = List[View]()  # child 0: the table (its title bar is the drag handle; it stays put); then the objects; then the editor
-        items.append(VStack(head, Canvas(0, self.version + self.grid.version, on_gesture=GRID, keys=True).fill().height(th - HEADER_H), spacing=8)
+        items.append(VStack(head, Canvas(0, self.version + self.grid.version, on_gesture=GRID, keys=True).fill().height(th - HEADER_H).tag("grid"), spacing=8)
                      .at(self.table_x, self.table_y).width(self.table_w if self.table_w > 0 else width).height(th).tag("table"))
         var bottom = self.table_y + th
         for k in range(len(self.objects)):
@@ -1004,11 +1098,13 @@ struct Main(App):
         var names = List[String]()
         names.append(self.name)
         names.append("Report")
-        return VStack(
-            self.toolbar().height(64),
-            HStack(SheetTabs(names, self.sheet_tab, SHEET_TAB), Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), spacing=8).fill().align(CENTER).padding(0, 20).height(36),
-            row^.padding(0, 20),
-            Spacer(),
-            self.status().height(30),
-            spacing=6,
-        ).fill().grow()
+        var parts = List[View]()
+        parts.append(self.menu_bar())
+        parts.append(self.toolbar().height(64))
+        parts.append(HStack(SheetTabs(names, self.sheet_tab, SHEET_TAB), Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), spacing=8).fill().align(CENTER).padding(0, 20).height(36))
+        parts.append(row^.padding(0, 20))
+        parts.append(Spacer())
+        parts.append(self.status().height(30))
+        if self.ctx_col >= 0 and self.sheet_tab == 0:
+            parts.append(self.context_menu())
+        return VStack(parts^, spacing=6).fill().grow()

@@ -35,13 +35,15 @@ from PIL import Image
 
 # Mirrors mojoui/view.mojo and mojoui/diff.mojo.
 (TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
- SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY) = range(1, 27)
+ SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY, MENUBAR, MENU, ITEM) = range(1, 30)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON = 0, 1, 2, 3, 4, 5, 6
 START, CENTER, END = 1, 2, 3
 SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
 KEY = 7  # a canvas gesture: a key pressed while it had focus (text = the key, dx = modifiers)
+SECONDARY = 8  # a right click on a canvas (x, y): where a context menu opens
+CHECKED, DISABLED, DANGER = 1, 2, 4  # menu item flags (mojoui/menus.mojo)
 EVENT_DELAY = float(os.environ.get("MOJOUI_EVENT_DELAY_MS", "0")) / 1000  # checks only: answers events this much later
 JPEG_QUALITY = 85
 MAX_SESSIONS = 200  # oldest tabs are closed beyond this
@@ -126,6 +128,24 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .overlay > .island.h-start { left: 0; } .overlay > .island.h-end { right: 0; }
 .overlay > .island.h-center { left: 50%; transform: translateX(-50%); }
 .overlay > .island.v-start { top: 0; } .overlay > .island.v-end { bottom: 0; }
+.menubar { display: flex; align-items: center; gap: 2px; }
+.menu { position: relative; }
+.menu-title { border: 0; background: transparent; padding: 4px 9px; border-radius: 4px; font: inherit; font-size: 12.5px; cursor: default; color: inherit; }
+.menu.open > .menu-title { background: var(--surface); }
+.menu > .menu-items { display: none; position: absolute; left: 0; top: 100%; z-index: 20; min-width: 270px; padding: 4px; border-radius: 6px;
+  background: light-dark(#fff, #2c2c2e); color: inherit; box-shadow: 0 4px 16px rgba(16,24,40,.12), 0 0 0 1px var(--line); }
+.menu.open > .menu-items, .menu.context > .menu-items { display: block; }
+.menu.context { position: fixed; z-index: 30; }
+.menu.context > .menu-items { position: static; }
+.menu.sub { position: relative; } .menu.sub > .menu-items { left: 100%; top: -4px; }
+.menu.sub:hover > .menu-items { display: block; }
+.mi { display: flex; align-items: center; gap: 10px; width: 100%; height: 28px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent;
+  color: inherit; font: inherit; font-size: 12.5px; text-align: left; white-space: nowrap; cursor: default; }
+.mi:hover:not([disabled]) { background: var(--surface); }
+.mi[disabled] { opacity: .5; } .mi.danger { color: var(--danger); } .mi svg { stroke: currentColor; fill: none; stroke-width: 1.6; flex: none; opacity: .75; }
+.mi .mi-blank { width: 15px; flex: none; } .mi .mi-title { flex: 1; } .mi .mi-key { margin-left: 24px; font-size: 11px; opacity: .6; font-family: "JetBrains Mono", monospace; }
+.menu-sep { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; }
+.menu-label { padding: 6px 10px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; opacity: .6; }
 .board-scroll { overflow: auto; position: relative; min-height: 0; }
 .board { position: relative; flex: none; min-width: 100%; min-height: 100%; box-sizing: border-box; }
 .board > .object[data-tag=cell-editor] { overflow: visible; z-index: 4; }
@@ -153,6 +173,52 @@ button svg { flex: none; }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
 """
 
+
+MENU_JS = r"""
+// Menus (mojoui/menus.mojo, D-154): a bar menu opens on its title and closes on a click elsewhere or Escape; a context
+// menu is placed inside its anchor (the view tagged data-anchor) and asks the app to close it when clicked away; a
+// shortcut ("Ctrl+S") pressed anywhere fires the item that declares it.
+(() => {
+  const menus = window.mojouiMenu = {
+    closeAll() { document.querySelectorAll('.menu.open:not(.context)').forEach(m => m.classList.remove('open')); },
+    // the app's on_close for a context menu (or a popover): its own node and session, never inherited hx-vals
+    dismiss(el) { if (el.dataset.closing) return; el.dataset.closing = '1';
+      htmx.ajax('POST', `/e/${el.dataset.sid}`, { values: { n: Number(el.dataset.node), second: 1, v: document.getElementById('mojoui-v').value }, swap: 'none', source: document.body }); },
+    toggle(title) { const m = title.parentElement, was = m.classList.contains('open'); menus.closeAll(); if (!was) m.classList.add('open'); },
+    place() {
+      document.querySelectorAll('.menu.context').forEach(m => {
+        const a = document.querySelector(`[data-tag="${m.dataset.anchor}"]`), r = a ? a.getBoundingClientRect() : { left: 0, top: 0 };
+        let x = r.left + Number(m.dataset.x), y = r.top + Number(m.dataset.y);
+        const w = m.offsetWidth || 260, h = m.offsetHeight || 200;
+        if (x + w > innerWidth - 8) x = Math.max(8, innerWidth - 8 - w);
+        if (y + h > innerHeight - 8) y = Math.max(8, innerHeight - 8 - h);
+        m.style.left = x + 'px'; m.style.top = y + 'px';
+      });
+    },
+  };
+  document.addEventListener('pointerdown', e => {
+    if (!e.target.closest('.menu')) { menus.closeAll(); document.querySelectorAll('.menu.context').forEach(menus.dismiss); }
+  }, true);
+  document.addEventListener('mouseover', e => {  // an open bar: hovering another title switches menus, as menus do
+    const t = e.target.closest('.menubar > .menu > .menu-title');
+    if (t && document.querySelector('.menubar > .menu.open') && !t.parentElement.classList.contains('open')) { menus.closeAll(); t.parentElement.classList.add('open'); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.querySelector('.menu.open:not(.context)')) { menus.closeAll(); return; }
+    if (e.key === 'Escape') { const c = document.querySelector('.menu.context'); if (c) { menus.dismiss(c); e.preventDefault(); return; } }
+    if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+    const fkey = /^F\d{1,2}$/.test(e.key);
+    if (!(e.ctrlKey || e.metaKey || e.altKey || fkey)) return;
+    const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    const name = (e.ctrlKey || e.metaKey ? 'Ctrl+' : '') + (e.shiftKey ? 'Shift+' : '') + (e.altKey ? 'Alt+' : '') + key;
+    const item = [...document.querySelectorAll('[data-kind=item]:not([disabled])')].find(i => i.dataset.shortcut === name);
+    if (item) { e.preventDefault(); e.stopPropagation(); menus.closeAll(); item.click(); }
+  }, true);
+  document.addEventListener('htmx:afterSettle', menus.place);
+  document.addEventListener('htmx:oobAfterSwap', () => setTimeout(menus.place, 0));
+  addEventListener('load', menus.place); addEventListener('resize', menus.place);
+})();
+"""
 
 BOARD_JS = r"""
 // mojoui Board adapter (fixed, part of the web host). Drag an object's header to move it, its
@@ -227,7 +293,7 @@ CANVAS_JS = r"""
 // its version or size changes. Gestures: drag = PAN, wheel/pinch = ZOOM, click = TAP,
 // sent through htmx like any other event, so the rest of the page updates as usual.
 (() => {
-  const PAN = 1, ZOOM = 2, TAP = 3, PRESS = 4, RELEASE = 5, DOUBLE = 6, KEY = 7;
+  const PAN = 1, ZOOM = 2, TAP = 3, PRESS = 4, RELEASE = 5, DOUBLE = 6, KEY = 7, SECONDARY = 8;
   const shape = () => document.getElementById('mojoui-v').value;
   // keys a canvas uses itself (the page mustn't scroll or move focus on them)
   const OWN_KEYS = new Set(['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'PageDown', 'PageUp', 'Home', 'End', 'Backspace', 'Delete', 'Escape', 'F2', ' ']);
@@ -373,7 +439,9 @@ CANVAS_JS = r"""
         send(KEY, 0, 0, mods, 0, 1, e.key);  // (Ctrl and Alt keys too, as GTK sends them; the page keeps their defaults)
       });
     }
+    cv.addEventListener('contextmenu', e => { e.preventDefault(); const [x, y] = at(e); send(SECONDARY, x, y, 0, 0, 1); });
     cv.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;  // a right click opens a context menu (contextmenu), it doesn't press
       if (keys) cv.focus({ preventScroll: true });
       cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, at(e));
       if (pointers.size === 1) { moved = false; const [x, y] = at(e); send(PRESS, x, y, 0, 0, 1); }  // where a drag (or tap) starts
@@ -592,6 +660,12 @@ body.skin [data-tag=formula-bar] { background: var(--o-card); border-bottom: 1px
 body.skin [data-tag=formula-bar] input[type=text] { font-family: "JetBrains Mono", monospace; font-size: 12.5px; }
 body.skin label.toggle input, body.skin .radio input { accent-color: var(--o-accent); }
 body.skin dialog.alert, body.skin .lazylist { background: var(--o-card); color: var(--o-ink); border-radius: 8px; }
+body.skin .menubar { background: var(--o-chrome); } body.skin .menu-title { color: var(--o-chrome-ink); }
+body.skin .menu.open > .menu-title { background: color-mix(in srgb, var(--o-chrome-ink) 8%, var(--o-chrome)); }
+body.skin .menu > .menu-items { background: var(--o-card); color: var(--o-ink); box-shadow: var(--o-shadow), 0 0 0 1px var(--o-line); }
+body.skin .mi:hover:not([disabled]) { background: var(--o-wash); } body.skin .mi:hover:not([disabled]) svg { color: var(--o-accent); opacity: 1; }
+body.skin .mi.danger, body.skin .mi.danger svg { color: var(--o-bad); } body.skin .mi .mi-key { color: var(--o-ink3); opacity: 1; }
+body.skin .menu-label { color: var(--o-ink3); opacity: 1; } body.skin .menu-sep { border-top-color: var(--o-line); }
 """
 
 
@@ -790,6 +864,31 @@ def render_node(s, i, sid):
         board = Div(*kids, place_mark(s, i), cls="board", id=f"{nid}-board", data_kind="board", data_node=str(i), data_sid=sid,
                     style=f"width:{n['spacing']}px;height:{n['size']}px")
         return Div(board, cls="board-scroll", id=nid)  # the page scrolls when it's bigger than its room
+    if kind == MENUBAR:
+        return Div(*[render(s, c, sid) for c in n["children"]], cls="menubar", id=nid, data_kind="menubar", role="menubar")
+    if kind == MENU:
+        items = Div(*[render(s, c, sid) for c in n["children"]], cls="menu-items", role="menu")
+        if n["style"] == 1:  # a context menu: open where the app said, inside its anchor; closes through on_close
+            return Div(items, cls="menu context open", id=nid, data_kind="menu", data_title="context", data_anchor=n["text"],
+                       data_x=str(n["x"]), data_y=str(n["y"]), data_node=str(i), data_sid=sid)
+        return Div(Button(n["text"], type="button", cls="menu-title", onclick="mojouiMenu.toggle(this)", aria_haspopup="menu"), items,
+                   cls="menu", id=nid, data_kind="menu", data_title=n["text"])
+    if kind == ITEM:
+        if n["style"] == 1:
+            return Hr(cls="menu-sep", id=nid, data_kind="item", data_sep="1")
+        if n["style"] == 2:
+            return Div(n["text"], cls="menu-label", id=nid, data_kind="item", data_label="1")
+        shortcut = n["options"][0] if n["options"] else ""
+        flags = n["value"]
+        lead = NotStr(ICONS.get("check", "").replace('width="24"', 'width="15"').replace('height="24"', 'height="15"')) if flags & CHECKED else \
+            (NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="15"').replace('height="24"', 'height="15"')) if n["hint"] else Span(cls="mi-blank"))
+        if n["children"]:  # a submenu: opens beside the item
+            head = Button(lead, Span(n["text"], cls="mi-title"), Span("›", cls="mi-key"), type="button", cls="mi sub", data_kind="item", data_title=n["text"], data_submenu="1")
+            return Div(head, Div(*[render(s, c, sid) for c in n["children"]], cls="menu-items", role="menu"), cls="menu sub", id=nid)
+        cls = "mi" + (" danger" if flags & DANGER else "") + (" checked" if flags & CHECKED else "")
+        return Button(lead, Span(n["text"], cls="mi-title"), Span(shortcut, cls="mi-key") if shortcut else "", type="button", cls=cls, id=nid,
+                      data_kind="item", data_title=n["text"], data_shortcut=shortcut or None, data_checked="1" if flags & CHECKED else None,
+                      disabled=bool(flags & DISABLED), role="menuitem", onclick="mojouiMenu.closeAll()", **dict(common, hx_vals=json.dumps({"n": i, "second": 0})))
     if kind == OVERLAY:
         kids = []
         for k, c in enumerate(n["children"]):
@@ -897,7 +996,7 @@ def make_app(module_dir):
 
     @app.get("/static/mojoui-canvas.js")
     def canvas_js():
-        return Response(CANVAS_JS + "\n" + BOARD_JS, media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+        return Response(CANVAS_JS + "\n" + BOARD_JS + "\n" + MENU_JS, media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
     @app.get("/static/fonts/{name}")
     def font(name: str):

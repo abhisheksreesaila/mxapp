@@ -10,9 +10,10 @@ from std.ffi import external_call, c_int, c_char, c_uint
 from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
+from mojoui.menus import items_text, CHECKED, DISABLED, DANGER
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
-    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, PAN, ZOOM, TAP,
+    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, SECONDARY, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, KEY, SHIFT, CTRL, ALT,
 )
@@ -350,6 +351,7 @@ struct GtkCanvas(Copyable, Movable):
     var drag: Int  # GtkGestureDrag
     var scroll: Int  # GtkEventControllerScroll
     var click: Int  # GtkGestureClick
+    var secondary: Int  # GtkGestureClick for the right button (SECONDARY: a context menu)
     var keys: Int  # GtkEventControllerKey (the canvas takes focus when pressed)
     var pixels: List[UInt32]
     var wpx: Int
@@ -377,6 +379,7 @@ struct GtkCanvas(Copyable, Movable):
         self.drag = 0
         self.scroll = 0
         self.click = 0
+        self.secondary = 0
         self.keys = 0
         self.pixels = List[UInt32]()
         self.wpx = 0
@@ -434,6 +437,9 @@ struct GtkHost[A: App](Movable):
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
     var dialog: Int  # the open alert dialog, if any
+    var popovers: List[Int]  # context-menu popovers parented to anchors (unparented at the next rebuild)
+    var popups: List[Int]  # popovers to pop up once the new screen is in the window
+    var shortcut_keys: Int  # the window's key controller: menu shortcuts (Ctrl+S) from anywhere
     var skin_provider: Int  # the design's CSS provider (replaced when design() changes: Settings → Appearance)
     var skin_design: Int  # the design that provider is for
     var fonts: Bool  # the app's own fonts (Inter, JetBrains Mono) were handed to fontconfig
@@ -458,6 +464,9 @@ struct GtkHost[A: App](Movable):
         self.window = 0
         self.widgets = List[Int]()
         self.dialog = 0
+        self.popovers = List[Int]()
+        self.popups = List[Int]()
+        self.shortcut_keys = 0
         self.skin_provider = 0
         self.skin_design = -1
         self.fonts = False
@@ -673,6 +682,11 @@ struct GtkHost[A: App](Movable):
             set_index(click, ci)
             connect_any(click, "released", on_click_released[Self.A], self_addr)
             external_call["gtk_widget_add_controller", NoneType](w, click)
+            var secondary = external_call["gtk_gesture_click_new", Int]()  # the right button: SECONDARY (a context menu)
+            external_call["gtk_gesture_single_set_button", NoneType](secondary, c_uint(3))
+            set_index(secondary, ci)
+            connect_any(secondary, "released", on_secondary_released[Self.A], self_addr)
+            external_call["gtk_widget_add_controller", NoneType](w, secondary)
             var keys = 0
             if node.size == 1:  # Canvas(keys=True): a press gives it the keyboard
                 external_call["gtk_widget_set_focusable", NoneType](w, c_int(1))
@@ -683,6 +697,7 @@ struct GtkHost[A: App](Movable):
             c.drag = drag
             c.scroll = scroll
             c.click = click
+            c.secondary = secondary
             c.keys = keys
             self.canvases.append(c^)
             self.arm(ci, self_addr)
@@ -816,6 +831,107 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_scrolled_window_set_propagate_natural_width", NoneType](w, c_int(1))
             for c in node.children:
                 external_call["gtk_scrolled_window_set_child", NoneType](w, self.build(c, self_addr))
+        elif node.kind == MENUBAR:
+            w = external_call["gtk_box_new", Int](c_int(HORIZONTAL), c_int(2))
+            add_class(w, "mui-menubar")
+            for c in node.children:
+                external_call["gtk_box_append", NoneType](w, self.build(c, self_addr))
+        elif node.kind == MENU:
+            var box = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
+            add_class(box, "mui-menu-items")
+            for c in node.children:
+                external_call["gtk_box_append", NoneType](box, self.build(c, self_addr))
+            var popover = external_call["gtk_popover_new", Int]()
+            external_call["gtk_popover_set_child", NoneType](popover, box)
+            external_call["gtk_popover_set_has_arrow", NoneType](popover, c_int(0))
+            external_call["gtk_popover_set_position", NoneType](popover, c_int(3))  # GTK_POS_BOTTOM
+            add_class(popover, "mui-menu-popover")
+            if node.style == 1:  # a context menu: over its anchor at (x, y); closing it (not through an item) is on_close
+                var anchor = self.window
+                for k in range(len(self.rt.shown.nodes)):
+                    if self.rt.shown.nodes[k].name == node.text and k < len(self.widgets) and self.widgets[k] != 0:
+                        anchor = self.widgets[k]
+                var rect = List[Int32](length=4, fill=0)
+                rect[0] = Int32(node.x)
+                rect[1] = Int32(node.y)
+                rect[2] = 1
+                rect[3] = 1
+                external_call["gtk_widget_set_parent", NoneType](popover, anchor)
+                external_call["gtk_popover_set_pointing_to", NoneType](popover, Int(rect.unsafe_ptr()))
+                _ = len(rect)
+                set_node(popover, i)
+                connect(popover, "closed", on_menu_closed[Self.A], self_addr)
+                self.popovers.append(popover)
+                self.popups.append(popover)
+                self.widgets[i] = popover
+                w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))  # nothing in the layout itself
+            else:
+                var t = node.text
+                w = external_call["gtk_menu_button_new", Int]()
+                external_call["gtk_menu_button_set_label", NoneType](w, t.as_c_string_span())
+                external_call["gtk_menu_button_set_popover", NoneType](w, popover)
+                add_class(w, "flat")
+                add_class(w, "mui-menu")
+        elif node.kind == ITEM:
+            if node.style == 1:
+                w = external_call["gtk_separator_new", Int](c_int(HORIZONTAL))
+                add_class(w, "mui-menu-sep")
+            elif node.style == 2:
+                var t = node.text
+                w = external_call["gtk_label_new", Int](t.as_c_string_span())
+                external_call["gtk_label_set_xalign", NoneType](w, Float32(0))
+                add_class(w, "mui-menu-label")
+            else:
+                var row = external_call["gtk_box_new", Int](c_int(HORIZONTAL), c_int(10))
+                var lead: Int
+                if node.value & CHECKED != 0:
+                    var check = String("object-select-symbolic")
+                    lead = external_call["gtk_image_new_from_icon_name", Int](check.as_c_string_span())
+                elif node.hint != "":
+                    var icon = gtk_icon(node.hint)
+                    lead = external_call["gtk_image_new_from_icon_name", Int](icon.as_c_string_span())
+                else:
+                    lead = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
+                external_call["gtk_widget_set_size_request", NoneType](lead, c_int(16), c_int(-1))
+                external_call["gtk_box_append", NoneType](row, lead)
+                var t = node.text
+                var label = external_call["gtk_label_new", Int](t.as_c_string_span())
+                external_call["gtk_label_set_xalign", NoneType](label, Float32(0))
+                external_call["gtk_widget_set_hexpand", NoneType](label, c_int(1))
+                external_call["gtk_box_append", NoneType](row, label)
+                if len(node.children) > 0:  # a submenu: its own popover, opening to the right
+                    var arrow = String("›")
+                    var tail = external_call["gtk_label_new", Int](arrow.as_c_string_span())
+                    add_class(tail, "mui-menu-key")
+                    external_call["gtk_box_append", NoneType](row, tail)
+                    var box = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
+                    add_class(box, "mui-menu-items")
+                    for c in node.children:
+                        external_call["gtk_box_append", NoneType](box, self.build(c, self_addr))
+                    var sub = external_call["gtk_popover_new", Int]()
+                    external_call["gtk_popover_set_child", NoneType](sub, box)
+                    external_call["gtk_popover_set_has_arrow", NoneType](sub, c_int(0))
+                    external_call["gtk_popover_set_position", NoneType](sub, c_int(1))  # GTK_POS_RIGHT
+                    add_class(sub, "mui-menu-popover")
+                    w = external_call["gtk_menu_button_new", Int]()
+                    external_call["gtk_menu_button_set_child", NoneType](w, row)
+                    external_call["gtk_menu_button_set_popover", NoneType](w, sub)
+                    external_call["gtk_menu_button_set_direction", NoneType](w, c_int(1))  # GTK_ARROW_RIGHT
+                else:
+                    if len(node.options) > 0:
+                        var key = node.options[0]
+                        var tail = external_call["gtk_label_new", Int](key.as_c_string_span())
+                        add_class(tail, "mui-menu-key")
+                        external_call["gtk_box_append", NoneType](row, tail)
+                    w = external_call["gtk_button_new", Int]()
+                    external_call["gtk_button_set_child", NoneType](w, row)
+                    connect(w, "clicked", on_item_clicked[Self.A], self_addr)
+                add_class(w, "flat")
+                add_class(w, "mui-menu-item")
+                if node.value & DANGER != 0:
+                    add_class(w, "mui-danger")
+                if node.value & DISABLED != 0:
+                    external_call["gtk_widget_set_sensitive", NoneType](w, c_int(0))
         elif node.kind == OVERLAY:
             w = external_call["gtk_overlay_new", Int]()
             for k in range(len(node.children)):
@@ -918,6 +1034,12 @@ struct GtkHost[A: App](Movable):
             _ = external_call["adw_dialog_force_close", c_int](self.dialog)
             external_call["g_object_unref", NoneType](self.dialog)
             self.dialog = 0
+        for pop in self.popovers:  # and its context menus (parented to anchors, not in the layout)
+            set_node(pop, -1)  # (closing now isn't on_close: the screen is being replaced)
+            external_call["gtk_popover_popdown", NoneType](pop)
+            external_call["gtk_widget_unparent", NoneType](pop)
+        self.popovers = List[Int]()
+        self.popups = List[Int]()
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
         self.canvases = List[GtkCanvas]()
         self.boards = List[BoardChild]()
@@ -937,6 +1059,9 @@ struct GtkHost[A: App](Movable):
             _ = external_call["gtk_widget_add_tick_callback", c_uint](root, on_reveal_tick[Self.A], self_addr, 0)
         if self.dialog != 0 and (getenv("MOJOUI_TEST") == "" or getenv("MOJOUI_SHOT") != ""):  # plain tests drive it unseen
             external_call["adw_dialog_present", NoneType](self.dialog, self.window)
+        for pop in self.popups:  # a context menu opens once its anchor is in the window
+            external_call["gtk_popover_popup", NoneType](pop)
+        self.popups = List[Int]()
         var editor = False
         for k in range(len(self.rt.shown.nodes)):  # an in-place editor (.focused()) takes the keyboard, its text selected
             if self.rt.shown.nodes[k].kind == FIELD and self.rt.shown.nodes[k].value >= 1 and self.widgets[k] != 0:
@@ -1514,6 +1639,77 @@ def on_field_key[A: App](keys: Int, keyval: c_uint, keycode: c_uint, state: c_ui
     return c_int(1)
 
 
+def on_secondary_released[A: App](click: Int, presses: c_int, x: Float64, y: Float64, host_addr: Int) abi("C"):
+    """A right click on a canvas: SECONDARY at (x, y), where the app may open a context menu."""
+    if busy():
+        return
+    var host = host_at[A](host_addr)
+    var ci = get_index(click)
+    if ci < 0 or ci >= len(host[].canvases):
+        return
+    host[].canvas_send(ci, SECONDARY, x, y, 0, 0, 1, host_addr)
+
+
+def on_item_clicked[A: App](button: Int, host_addr: Int) abi("C"):
+    """A menu item: close the menu it's in, then send its message like a button."""
+    if busy():
+        return
+    var host = host_at[A](host_addr)
+    var popover = external_call["gtk_widget_get_ancestor", Int](button, external_call["gtk_popover_get_type", Int]())
+    while popover != 0:  # a submenu's popover sits inside the menu's: close them all
+        var outer = external_call["gtk_widget_get_parent", Int](popover)
+        set_node(popover, -1)  # (closing by choosing isn't on_close)
+        external_call["gtk_popover_popdown", NoneType](popover)
+        popover = external_call["gtk_widget_get_ancestor", Int](outer, external_call["gtk_popover_get_type", Int]()) if outer != 0 else 0
+    var node = get_node(button)
+    if node >= 0:
+        host[].send(node, False, "", 0, host_addr)
+
+
+def on_menu_closed[A: App](popover: Int, host_addr: Int) abi("C"):
+    """A context menu dismissed (a click elsewhere, Escape): the app's on_close takes it out of the view."""
+    if busy():
+        return
+    var node = get_node(popover)
+    if node < 0:
+        return
+    var host = host_at[A](host_addr)
+    if node < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[node].kind == MENU:
+        host[].send(node, True, "", 0, host_addr)
+
+
+def shortcut_name(keyval: Int, state: Int) -> String:
+    """A key press as a menu shortcut ("Ctrl+Shift+S", "F5"); "" when it's plain typing."""
+    var ctrl = state & 4 != 0
+    var shift = state & 1 != 0
+    var alt = state & 8 != 0
+    var name = key_name(keyval)
+    var fkey = name.startswith("F") and name.byte_length() <= 3 and name != "F"
+    if not (ctrl or alt or fkey):
+        return ""
+    if name.byte_length() == 1:
+        name = name.upper()
+    elif name == ",":
+        name = ","
+    return ("Ctrl+" if ctrl else "") + ("Shift+" if shift else "") + ("Alt+" if alt else "") + name
+
+
+def on_shortcut_pressed[A: App](controller: Int, keyval: c_uint, keycode: c_uint, state: c_uint, host_addr: Int) abi("C") -> c_int:
+    """A key pressed anywhere in the window: the menu item declaring it as its shortcut fires (and the key stops here)."""
+    if busy():
+        return 0
+    var name = shortcut_name(Int(keyval), Int(state))
+    if name == "":
+        return 0
+    var host = host_at[A](host_addr)
+    for i in range(len(host[].rt.shown.nodes)):
+        ref n = host[].rt.shown.nodes[i]
+        if n.kind == ITEM and len(n.options) > 0 and n.options[0] == name and n.value & DISABLED == 0 and n.msg != 0:
+            host[].send(i, False, "", 0, host_addr)
+            return 1
+    return 0
+
+
 def on_click_released[A: App](click: Int, presses: c_int, x: Float64, y: Float64, host_addr: Int) abi("C"):
     if busy():
         return
@@ -1794,6 +1990,19 @@ def find(host: GtkHost, kind: Int, label: String, nth: Int, by_hint: Bool = Fals
     return -1
 
 
+def find_item(host: GtkHost, menu: Int, title: String) -> Int:
+    """The ITEM node titled `title` inside menu node `menu` (submenus included)."""
+    for c in host.rt.shown.nodes[menu].children:
+        ref n = host.rt.shown.nodes[c]
+        if n.kind == ITEM and n.text == title and n.style == 0 and len(n.children) == 0:
+            return c
+        if len(n.children) > 0:
+            var inner = find_item(host, c, title)
+            if inner >= 0:
+                return inner
+    return -1
+
+
 def split_at(s: String, sep: String) -> Tuple[String, String]:
     var i = s.find(sep)
     if i < 0:
@@ -1924,6 +2133,63 @@ def run_step[A: App](host_addr: Int, step: String):
         var t = kv[1].replace("\\n", "\n")
         var buffer = external_call["gtk_text_view_get_buffer", Int](host[].widgets[i])
         external_call["gtk_text_buffer_set_text", NoneType](buffer, t.as_c_string_span(), c_int(-1))
+    elif verb == "menu":  # menu:File>Save: the bar's File menu's Save item; menu:>Item: the open context menu's item
+        var t = split_at(rest, ">")
+        var menu = -1
+        for k in range(len(host[].rt.shown.nodes)):
+            ref n = host[].rt.shown.nodes[k]
+            if n.kind == MENU and ((t[0] == "" and n.style == 1) or (t[0] != "" and n.style == 0 and n.text == t[0])):
+                menu = k
+        if menu < 0:
+            print("TEST: no menu", t[0])
+            return
+        var item = find_item(host[], menu, t[1])
+        if item < 0:
+            print("TEST: no menu item", t[1])
+            return
+        var s = String("clicked")
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[item], s.as_c_string_span())
+    elif verb == "shortcut":  # shortcut:Ctrl+S: the window's key controller's own signal, as a real press sends it
+        var name = rest
+        var state = 0
+        while True:
+            if name.startswith("Ctrl+"):
+                state |= 4
+                var cut = String(name[byte=5:])
+                name = cut
+            elif name.startswith("Shift+"):
+                state |= 1
+                var cut = String(name[byte=6:])
+                name = cut
+            elif name.startswith("Alt+"):
+                state |= 8
+                var cut = String(name[byte=4:])
+                name = cut
+            else:
+                break
+        var keyval = gdk_keyval(name.lower() if name.byte_length() == 1 else name)
+        var handled = List[c_int](length=1, fill=0)
+        var signal = String("key-pressed")
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].shortcut_keys, signal.as_c_string_span(), c_uint(keyval), c_uint(0), c_uint(state), Int(handled.unsafe_ptr()))
+        if handled[0] == 0:
+            print("TEST: no item with shortcut", rest)
+        _ = len(handled)
+    elif verb == "rightclick":  # rightclick:K=fx,fy: the right button's click gesture's own signal at (x, y) thousandths
+        var kv = split_at(rest, "=")
+        var node = find(host[], CANVAS, "", to_int(kv[0]))
+        var ci = -1
+        for k in range(len(host[].canvases)):
+            if host[].canvases[k].node == node:
+                ci = k
+        if ci < 0:
+            print("TEST: no canvas", kv[0])
+            return
+        var xy = split_at(kv[1], ",")
+        var cw = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].canvases[ci].widget)))
+        var chh = Float64(Int(external_call["gtk_widget_get_height", c_int](host[].canvases[ci].widget)))
+        var released = String("released")
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].canvases[ci].secondary, released.as_c_string_span(), c_int(1),
+            Float64(to_int(xy[0])) / 1000.0 * cw, Float64(to_int(xy[1])) / 1000.0 * chh)
     elif verb == "alert":
         var i = find(host[], ALERT, "", 0)
         if i < 0:
@@ -2254,6 +2520,8 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
             print("ALERT: " + line)
             if getenv("MOJOUI_SHOT") != "":
                 print("ALERTSHOWN: " + ("yes" if external_call["gtk_widget_get_mapped", c_int](w) != 0 else "no"))
+        elif n.kind == MENU:
+            print("MENU: " + ("context" if n.style == 1 else n.text) + ": " + items_text(host[].rt.shown, i))
         elif n.kind == NAVBAR:
             var title = external_call["gtk_widget_get_last_child", Int](w)
             var has_back = external_call["gtk_widget_get_first_child", Int](w) != title
@@ -2527,6 +2795,21 @@ def skin_css(p: Palette, cls: String) -> String:
         + w + "checkbutton radio { border-radius: 50%; }\n"
         + w + "checkbutton check:checked, " + w + "checkbutton radio:checked { background: " + accent + "; border-color: " + accent + "; color: " + on_accent + "; }\n"
         + w + "switch { background: " + strong + "; } " + w + "switch:checked { background: " + accent + "; }\n"
+        + w + ".mui-menubar { background: " + chrome + "; }\n"
+        + w + "menubutton.mui-menu > button { min-height: 24px; padding: 2px 9px; font-size: 12.5px; font-weight: 400; color: " + chrome_ink + "; border-radius: 4px; }\n"
+        + w + "menubutton.mui-menu > button:checked, " + w + "menubutton.mui-menu > button:hover { background: " + hex_of(mix(p.chrome, p.chrome_ink, 0.08)) + "; }\n"
+        + w + "menubutton.mui-menu arrow { -gtk-icon-size: 0; min-width: 0; min-height: 0; margin: 0; }\n"
+        + "popover.mui-menu-popover > contents { padding: 4px; min-width: 260px; }\n"
+        + "popover.mui-menu-popover button.mui-menu-item { min-height: 28px; padding: 0 10px; border-radius: 4px; font-size: 12.5px; font-weight: 400; color: " + ink + "; }\n"
+        + "popover.mui-menu-popover button.mui-menu-item:hover { background: " + wash + "; }\n"
+        + "popover.mui-menu-popover button.mui-menu-item image { color: " + ink3 + "; -gtk-icon-size: 15px; }\n"
+        + "popover.mui-menu-popover button.mui-menu-item:hover image { color: " + accent + "; }\n"
+        + "popover.mui-menu-popover button.mui-danger, popover.mui-menu-popover button.mui-danger image { color: " + hex_of(p.bad) + "; }\n"
+        + "popover.mui-menu-popover label.mui-menu-key { color: " + ink3 + "; font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-left: 24px; }\n"
+        + "popover.mui-menu-popover label.mui-menu-label { color: " + ink3 + "; font-size: 10.5px; font-weight: 600; letter-spacing: .8px; padding: 6px 10px 4px; }\n"
+        + "popover.mui-menu-popover separator.mui-menu-sep { margin: 4px 6px; background: " + line + "; }\n"
+        + "popover.mui-menu-popover menubutton > button { min-height: 28px; padding: 0 10px; border-radius: 4px; }\n"
+        + "popover.mui-menu-popover menubutton arrow { -gtk-icon-size: 0; min-width: 0; min-height: 0; margin: 0; }\n"
         + "tooltip { background: " + ink + "; color: " + card + "; border-radius: 4px; padding: 6px 10px; font-family: 'Inter', sans-serif; font-size: 12px; }\n"
         + "tooltip > * { color: " + card + "; }\n"
     )
@@ -2539,6 +2822,10 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
     host[].install_fonts()
     host[].apply_design()
+    host[].shortcut_keys = external_call["gtk_event_controller_key_new", Int]()  # menu shortcuts, before anything else sees the key
+    external_call["gtk_event_controller_set_propagation_phase", NoneType](host[].shortcut_keys, c_int(1))  # GTK_PHASE_CAPTURE
+    connect_any(host[].shortcut_keys, "key-pressed", on_shortcut_pressed[A], host_addr)
+    external_call["gtk_widget_add_controller", NoneType](host[].window, host[].shortcut_keys)
     var size = host[].rt.app.window_size()
     var forced = getenv("MOJOUI_WINDOW")  # tests: "1280x800" checks a smaller laptop screen
     if forced != "":

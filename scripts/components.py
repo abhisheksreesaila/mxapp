@@ -29,6 +29,7 @@ COMPONENTS = [
     ("Segmented", "SEGMENTED"), ("Radio", "RADIO"), ("DatePicker", "DATE"), ("ProgressBar", "PROGRESS"),
     ("Image", "IMAGE"), ("Icon", "ICON"), ("Alert", "ALERT"), ("Tabs", "TABS"), ("NavBar", "NAVBAR"),
     ("LazyList", "LAZYLIST"), ("Canvas", "CANVAS"), ("Board", "BOARD"), ("Overlay", "OVERLAY"),
+    ("MenuBar", "MENUBAR"), ("Menu", "MENU"), ("Item", "ITEM"), ("ContextMenu", "MENU"),
 ]
 
 # Which examples each platform's checks actually run (docs/goals/*-check.py): GTK and the web run every
@@ -66,6 +67,10 @@ FEATURES = [
     ("Shared data per process", "App.init_shared()", r"init_shared", "workbook"),
     ("Toolbar button (icon over label)", "Button(style=TOOL / TOOL_ON)", r"mui-tool|button\.tool", "omxplorer"),
     ("File picker", "FilePicker(title, on_pick)", r"gtk_file_dialog_open|/upload/", "omxplorer"),  # (GTK: built, but checks use the pick: step, not the dialog: UNPROVEN)
+    ("Design: Ledger, Graphite, Blueprint (omxplorer's skins)", "design() = LEDGER / GRAPHITE / BLUEPRINT", r"skin_css|SKIN_CSS", "omxplorer"),
+    ("Keyboard shortcuts (menu items)", "Item(shortcut=\"Ctrl+S\")", r"shortcut", "omxplorer"),
+    ("Canvas: right-click", "on_gesture: SECONDARY (event.x, y)", r"\bSECONDARY\b", "omxplorer"),
+    ("Submenus, checked, disabled and danger items", "Submenu(…), Item(checked=, disabled=, danger=)", r"mui-danger|mi-danger|danger", "omxplorer"),
 ]
 
 # Components built in Mojo from the ones above (drawn on a Canvas or assembled from native controls):

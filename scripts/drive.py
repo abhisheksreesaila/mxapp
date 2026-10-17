@@ -36,6 +36,13 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
   if (k === 'tabs') return 'TABS: ' + picked();
   if (k === 'radio') return 'RADIO: ' + picked();
   if (k === 'textarea') return 'TEXTAREA: ' + e.value.split(String.fromCharCode(10)).join(String.fromCharCode(92) + 'n');
+  if (k === 'menubar' || k === 'item') return '';
+  if (k === 'menu') { const items = box => [...box.children].map(c => {
+      if (c.dataset.sep) return '\u2014';
+      if (c.dataset.label) return '[' + c.textContent + ']';
+      if (c.classList.contains('menu')) { const h = c.querySelector(':scope > .mi'); return h.dataset.title + ' \u25b8 (' + items(c.querySelector(':scope > .menu-items')).join(', ') + ')'; }
+      return c.dataset.title + (c.dataset.shortcut ? ' (' + c.dataset.shortcut + ')' : '') + (c.dataset.checked ? ' \u2713' : '') + (c.disabled ? ' (off)' : ''); });
+    return 'MENU: ' + e.dataset.title + ': ' + items(e.querySelector(':scope > .menu-items')).join(', '); }
   if (k === 'alert') return 'ALERT: ' + e.querySelector('h3').textContent + ' | ' + e.querySelector('p').textContent + ' | '
     + [...e.querySelectorAll('button')].map(b => b.textContent).join(', ');
   if (k === 'nav') return 'NAV: ' + e.querySelector('h2').textContent + (e.dataset.back === '1' ? ' (back)' : '');
@@ -127,6 +134,23 @@ def step(page, s):
     elif verb == "textarea":
         k, _, text = rest.partition("=")
         page.locator("textarea[data-kind=textarea]").nth(int(k)).fill(text.replace("\\n", "\n"))
+    elif verb == "menu":  # menu:File>Save: open the bar's File menu and choose Save; menu:>Item: the open context menu's item
+        title, _, item = rest.partition(">")
+        if title:
+            page.locator(f".menubar > .menu[data-title={title!r}] > .menu-title").first.click()
+            page.wait_for_timeout(50)
+            scope = page.locator(f".menubar > .menu[data-title={title!r}]")
+        else:
+            scope = page.locator(".menu.context")
+        scope.locator(f"[data-kind=item][data-title={item!r}]").first.dispatch_event("click")  # (a submenu's item is shown on hover)
+    elif verb == "shortcut":  # shortcut:Ctrl+Shift+S: a real key press anywhere in the window
+        *mods, key = rest.split("+")
+        page.keyboard.press("+".join([{"Ctrl": "Control"}.get(m, m) for m in mods] + [key.lower() if len(key) == 1 else key]))
+    elif verb == "rightclick":  # rightclick:K=fx,fy: a right click at (x, y) thousandths of canvas K
+        k, _, arg = rest.partition("=")
+        box = page.locator("[data-kind=canvas]").nth(int(k)).bounding_box()
+        fx, fy = (int(v) / 1000 for v in arg.split(","))
+        page.mouse.click(box["x"] + fx * box["width"], box["y"] + fy * box["height"], button="right")
     elif verb == "alert":
         if rest == "Escape":
             page.keyboard.press("Escape")  # the dialog's own cancel

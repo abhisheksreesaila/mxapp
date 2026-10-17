@@ -33,6 +33,9 @@ comptime LAZYLIST = 23  # value = row count, msg2 = list id, size = height, spac
 comptime CANVAS = 24  # drawn by the app's draw(): style = canvas id, value = version, msg = on_gesture, msg2 = on_frame
 comptime BOARD = 25  # children at absolute positions (.at(x, y), sized with .width/.height): msg = on_move, msg2 = on_resize; spacing = width, size = height; value = reveal (see Board)
 comptime OVERLAY = 26  # first child fills it; the others float over it, pinned to an edge or corner (.pin(h, v): x = h, y = v)
+comptime MENUBAR = 27  # a row of menus (mojoui.menus): children = MENU nodes
+comptime MENU = 28  # text = title; children = ITEM nodes; style 1 = a context menu: text = the anchor's tag, x/y = where in it, msg2 = on_close
+comptime ITEM = 29  # a menu item: text = title, msg, hint = icon, options[0] = shortcut, value = flags (1 checked, 2 disabled, 4 danger); style 1 = separator, 2 = section label; children = a submenu
 
 # Canvas gestures (event.number)
 comptime PAN = 1  # event.dx, dy: movement in points; event.x, y: where the pointer is
@@ -41,6 +44,7 @@ comptime TAP = 3  # event.x, y
 comptime PRESS = 4  # the pointer went down at event.x, y; a TAP or PANs follow (where a drag starts)
 comptime RELEASE = 5  # a drag (PANs) ended at event.x, y (not sent after a plain TAP)
 comptime DOUBLE = 6  # a double click / double tap at event.x, y (after the TAP of its first click)
+comptime SECONDARY = 8  # a right click (or a long press) at event.x, y: the place to open a context menu
 comptime KEY = 7  # a key pressed while the canvas has focus (a click gives it focus): event.text = the key's name
 #   ("ArrowDown", "Enter", "Escape", "Tab", "Backspace", "Delete", "PageDown", "Home", "F2", …, the web's names)
 #   or the character it typed ("7", "a", " "); event.dx = the modifiers held: SHIFT + CTRL + ALT
