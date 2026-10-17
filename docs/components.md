@@ -18,18 +18,18 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics, workbook, mxstudio, omxplorer |
 | `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | todo, omxplorer |
 | `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, omxplorer |
-| `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, kitchen, expenses, lens, analytics |
+| `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, kitchen, expenses, lens, analytics, omxplorer |
 | `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses, workbook, mxstudio |
 | `TextArea` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook, mxstudio |
 | `Toggle` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, lens, omxplorer |
 | `Dropdown` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, analytics, workbook, mxstudio, omxplorer |
 | `Slider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, gpu, lens |
 | `Segmented` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, lens, analytics, mxstudio, omxplorer |
-| `Radio` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen |
+| `Radio` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, omxplorer |
 | `DatePicker` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `ProgressBar` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses |
 | `Image` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, gpu |
-| `Icon` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
+| `Icon` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, omxplorer |
 | `Alert` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `Tabs` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout, mxstudio |
 | `NavBar` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
@@ -37,6 +37,14 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `Canvas` | ✅ | ✅ | ✅ | 🔨 | 🔨 | lens, analytics, workbook, mxstudio, omxplorer |
 | `Board` | ✅ | ✅ | ❌ | ❌ | ❌ | workbook, mxstudio, omxplorer |
 | `Overlay` | ✅ | ✅ | ❌ | ❌ | ❌ | workbook, mxstudio |
+| `MenuBar` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `Menu` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `Item` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `ContextMenu` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `Dialog` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `Toast` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `Popover` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `Checkbox` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | omxplorer |
 
 ## Variants, gestures, layout, design languages
 
@@ -64,6 +72,11 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | Shared data per process | `App.init_shared()` | ✅ | ✅ | 🔨 | 🔨 | 🔨 |
 | Toolbar button (icon over label) | `Button(style=TOOL / TOOL_ON)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | File picker | `FilePicker(title, on_pick)` | 🔨 | ✅ | ❌ | ❌ | ❌ |
+| Design: Ledger, Graphite, Blueprint (omxplorer's skins) | `design() = LEDGER / GRAPHITE / BLUEPRINT` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Keyboard shortcuts (menu items) | `Item(shortcut="Ctrl+S")` | ✅ | ✅ | ❌ | 🔨 | ❌ |
+| Canvas: right-click | `on_gesture: SECONDARY (event.x, y)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Submenus, checked, disabled and danger items | `Submenu(…), Item(checked=, disabled=, danger=)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Tooltips | `.tooltip(text)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 
 ## Composite components (Mojo, built from the ones above)
 
@@ -86,11 +99,11 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 58 | 1 | 0 |
-| Web | 59 | 0 | 0 |
-| Android | 19 | 13 | 27 |
-| Mac (AppKit) | 0 | 32 | 27 |
-| iPhone (UIKit) | 0 | 32 | 27 |
+| Linux (GTK) | 71 | 1 | 0 |
+| Web | 72 | 0 | 0 |
+| Android | 19 | 14 | 39 |
+| Mac (AppKit) | 0 | 34 | 38 |
+| iPhone (UIKit) | 0 | 33 | 39 |
 
 ## Inside one app, not components yet (the debt)
 

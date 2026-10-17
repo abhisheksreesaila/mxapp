@@ -1078,7 +1078,7 @@ def make_app(module_dir):
         """The page's design: a body class and, for Omarchy and the skins, the palette's CSS variables (from the
         Mojo module). oob: after a change (Settings → Appearance), swapped into the open page (D-156)."""
         if design == 1:
-            parts = (Style("", id="mojoui-skin"), Script("document.body.className = 'fluent'", id="mojoui-skin-js"))
+            parts = (Style("", id="mojoui-skin"), Script("document.body.className = ''; document.body.classList.add('fluent')", id="mojoui-skin-js"))
         elif design in (2, 3, 4, 5):  # Omarchy, or one of omxplorer's skins
             name = {2: "omarchy", 3: "skin ledger", 4: "skin graphite", 5: "skin blueprint"}[design]
             pal = dict(kv.split("=", 1) for kv in mod.palette(design).split(";"))

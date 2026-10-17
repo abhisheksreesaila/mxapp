@@ -80,7 +80,7 @@ def m2():
     if "TEXT TESTS PASSED" not in t.stdout:
         return False, f"text tests: {(t.stdout + t.stderr)[-300:]}"
     from PIL import ImageFont
-    font = ImageFont.truetype("/usr/share/fonts/noto/NotoSans-Regular.ttf", 1000)
+    font = ImageFont.truetype(str(ROOT / "mojoui/hosts/static/fonts/Inter-Regular.ttf"), 1000)  # (the canvas face since D-155; Noto Sans before)
     worst = 0.0
     for line in t.stdout.splitlines():
         if line.startswith("WIDTH: "):

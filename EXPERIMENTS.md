@@ -4,6 +4,26 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-17 · Experiment 17: omxplorer's universal theme and the components it needs (autopilot, afternoon)
+
+**Goal:** one fixed look for omxplorer on every platform (Claude's Ledger by default, Graphite and Blueprint as skins; `docs/design/universal/kit.html`), and the components the kit showed were missing: a menu bar, menus and context menus, keyboard shortcuts, dialogs, toasts, popovers, tooltips, checkboxes, grid badges. Contract: `GOAL.md` (goal 17). Report: `docs/report.md`.
+
+**What worked:**
+- **Skins:** `Palette.ledger/graphite/blueprint` with the kit's exact tokens; GTK CSS and web CSS generated from the same palette; a live switch from Settings (the hosts reload their CSS when `design()` changes); the skin kept in `settings.txt`.
+- **Fonts:** Inter and JetBrains Mono vendored (OFL), baked for canvases, handed to fontconfig on GTK and served to the browser: the same type everywhere.
+- **Menus:** `MenuBar`, `Menu`, `Item`, `Submenu`, `ContextMenu` (mojoui.menus) on GTK (popovers of flat buttons) and the web (positioned divs); shortcuts (Ctrl+S…) from anywhere; a right-click gesture (SECONDARY) on canvases.
+- **Overlays:** `Dialog`, `Toast`, `Popover`, `Checkbox`, `.tooltip()` (mojoui.overlays) on both hosts; omxplorer's Settings, About, sort toast with Undo, toolbar tooltips, ƒx help.
+- **Grid:** a type badge per column and a corner mark on edited cells, read back from pixels.
+- **Start screen** in the Ledger with the menu bar.
+
+**What broke and how it was fixed:** hx-vals inheritance (again) sent a menu's close instead of its item; a message number collided with the recent-files range; a test step iterated the view it was replacing; `H4` unimported. See `docs/journal.md`.
+
+**What it means:** the kit's "in the app" screens exist for real on Linux and the web, from one Mojo model; the remaining gap is the command palette, the Import dialog's streaming (MX frame), the filter popover and the phone sheets.
+
+**Next small step:** goal 16's polish (sheet tabs left, hairlines between toolbar groups, the Σ total row), then own-drawn controls on Mac/iPhone/Android (D-151) once the Apple builds run on hardware.
+
+---
+
 ## 2026-10-17 · Experiment 15: omxplorer's charts, pivots and Report (autopilot, night)
 
 **Goal:** Stitch 05 and 06. Charts and pivots go on the sheet, and a Report is built from scratch. Contract: `GOAL.md` (goal 15). Report: `docs/report.md`.

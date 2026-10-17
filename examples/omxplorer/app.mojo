@@ -867,7 +867,7 @@ struct Main(App):
     def start_screen(self) -> View:
         """The Start screen (docs/design/universal/kit.html, 7): a side column of actions, a drop zone, recent files, samples."""
         var side = List[View]()
-        side.append(Text("OMXPLORER", CAPTION))
+        side.append(Text("omxplorer", HEADLINE).tone(TONE_ACCENT))
         side.append(Button("Start", NO_MSG, SUBTLE, icon="file").fill())
         side.append(Button("New blank sheet", BLANK, SUBTLE, icon="grid").fill())
         side.append(FilePicker("Open file…", PICK, style=SUBTLE, icon="open", accept=".csv,.tsv,.txt,.omx").fill())
@@ -899,6 +899,7 @@ struct Main(App):
             spacing=16,
         )
         var main = VStack(
+            Text("Open a CSV file", HEADLINE),
             drop,
             Text("Recent", HEADLINE),
             Card(VStack(recent^, spacing=8).fill(), spacing=8).fill(),

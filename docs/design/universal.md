@@ -1,6 +1,6 @@
 # omxplorer's universal theme: the hand-off
 
-**Status:** direction approved by the owner (2026-10-17): Claude's **Ledger** is the default, and **Graphite** and **Blueprint** ship as skins people can switch to. The skins get built after the other open decisions (below).
+**Status:** built on Linux and the web (goal 17, 2026-10-17): Claude's **Ledger** is the default, **Graphite** and **Blueprint** switch live from Settings → Appearance. The open decisions below were taken as D-151–D-153 (docs/decisions.md).
 **Look at:** `universal/kit.html` (every component, every state, in all three skins: switch at the top), `universal/claude.html` (sheet, Report, phone), `universal/compare.html` (Stitch vs Claude).
 **Colours:** `universal/ledger.md`, `graphite.md` and `blueprint.md`. The CSS variables in `universal/omx.css` are the source of truth, and `Palette.ledger()` etc. copy them.
 

@@ -158,6 +158,11 @@ Today the stand-in keeps everything in host memory: 100M rows peaked at 26 GB (`
 More than one table and joins; a SQL front end (SQL cells, EXPLAIN); pipelines with cached steps; versioned column
 chunks for a time machine and branches; DuckDB as the test oracle and TPC-H.
 
+## Where the stand-in is called today
+The goal 8–9 struct `MxFrame` in `mojoui/mxframe.mojo` (used by `examples/analytics/app.mojo` and the Workbook) was the
+first shape of this API: columns, a GPU group-by and Arrow hand-over. omxplorer's `Frame`/`GpuFrame` (`mojoui/frame.mojo`,
+`frame_gpu.mojo`) replaced it; both go when `from mxframe import …` lands.
+
 ## Memory rules
 - A shared `Table` is read-only once shared and outlives every `Frame` built on it.
 - Borrowed spans stay valid until the next edit to that column.
