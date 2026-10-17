@@ -37,7 +37,8 @@ build_linux() {
   local out="build/$EX/linux"; mkdir -p "$out"; rm -f "$out/$EX"
   echo "== Linux ($EX): GTK4 + libadwaita"
   mojo_build hosts/linux_main.mojo -o "$out/$EX" \
-    -Xlinker -lgtk-4 -Xlinker -ladwaita-1 -Xlinker -lgobject-2.0 -Xlinker -lglib-2.0 -Xlinker -lgio-2.0
+    -Xlinker -lgtk-4 -Xlinker -ladwaita-1 -Xlinker -lgobject-2.0 -Xlinker -lglib-2.0 -Xlinker -lgio-2.0 -Xlinker -lfontconfig
+  mkdir -p "$out/fonts"; cp mojoui/hosts/static/fonts/*.ttf "$out/fonts/"  # the app's own fonts, beside the binary (D-155)
   stamp "$out"; echo "   $out/$EX"
 }
 

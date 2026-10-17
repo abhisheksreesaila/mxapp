@@ -528,6 +528,73 @@ body.omarchy ::-webkit-scrollbar-track { background: transparent; }
 """
 
 
+# omxplorer's skins (designs 3–5, D-149): the palette's tokens as CSS variables (set per page from the Mojo
+# module), Inter for words, JetBrains Mono for figures, flat controls, a chrome band for the toolbar and bars.
+# The same rules as the GTK skin (skin_css in gtk.mojo). The fonts are the app's own (/static/fonts, D-155).
+SKIN_CSS = """
+@font-face { font-family: Inter; font-weight: 400; src: url(/static/fonts/Inter-Regular.ttf) format("truetype"); }
+@font-face { font-family: Inter; font-weight: 500; src: url(/static/fonts/Inter-Medium.ttf) format("truetype"); }
+@font-face { font-family: Inter; font-weight: 600; src: url(/static/fonts/Inter-SemiBold.ttf) format("truetype"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url(/static/fonts/JetBrainsMono-Regular.ttf) format("truetype"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 700; src: url(/static/fonts/JetBrainsMono-Bold.ttf) format("truetype"); }
+body.skin { background: var(--o-page); color: var(--o-ink2); --accent: var(--o-accent); --line: var(--o-line); --muted: var(--o-ink3);
+  --surface: var(--o-raised); --danger: var(--o-bad); font: 13px/18px Inter, sans-serif; }
+body.skin .num, body.skin .mono { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+body.skin .text { text-align: left; color: var(--o-ink2); }
+body.skin .text.title, body.skin .text.headline { color: var(--o-ink); font-weight: 600; letter-spacing: -0.2px; }
+body.skin .text.title { font-size: 20px; line-height: 26px; font-weight: 700; } body.skin .text.headline { font-size: 15px; line-height: 20px; }
+body.skin .text.caption { font-size: 12px; line-height: 16px; color: var(--o-ink3); }
+body.skin .text.tone-warn { color: var(--o-warn); } body.skin .text.tone-good { color: var(--o-good); }
+body.skin .text.tone-strong { color: var(--o-ink); font-weight: 600; } body.skin .text.tone-accent { color: var(--o-accent); }
+body.skin button { border-radius: 6px; min-height: 30px; padding: 3px 14px; font-weight: 500; background: var(--o-card);
+  color: var(--o-ink); border: 1px solid var(--o-strong); transition: background .12s; font-family: inherit; }
+body.skin button:hover { filter: none; background: var(--o-raised); }
+body.skin button:active { transform: none; background: var(--o-wash); }
+body.skin button:focus-visible { outline: 2px solid var(--o-accent); outline-offset: 1px; }
+body.skin button.prominent { background: var(--o-accent); border-color: transparent; color: var(--o-on-accent); font-weight: 600; }
+body.skin button.prominent:hover { background: color-mix(in srgb, var(--o-accent) 86%, #000); }
+body.skin button.destructive { background: var(--o-bad); border-color: transparent; color: #fff; font-weight: 600; }
+body.skin button.subtle { background: transparent; border-color: transparent; color: var(--o-ink2); }
+body.skin button.subtle:hover { background: var(--o-raised); color: var(--o-ink); }
+body.skin button.icon-only { padding: 3px 6px; min-width: 30px; justify-content: center; }
+body.skin label.picker:not(.tool):not(.subtle) { border: 1px solid var(--o-strong); border-radius: 6px; padding: 3px 14px; min-height: 30px; box-sizing: border-box; color: var(--o-ink); background: var(--o-card); }
+body.skin label.picker.prominent { background: var(--o-accent); color: var(--o-on-accent); border-color: transparent; font-weight: 600; }
+body.skin button.tool, body.skin label.picker.tool { min-width: 64px; min-height: 58px; border-radius: 6px; font-size: 11px; color: var(--o-chrome-ink); }
+body.skin button.tool:hover, body.skin label.picker.tool:hover { background: color-mix(in srgb, var(--o-chrome-ink) 8%, var(--o-chrome)); }
+body.skin button.tool.on { background: var(--o-wash); color: var(--o-accent); }
+body.skin select, body.skin input[type=text], body.skin input[type=date], body.skin textarea { border-radius: 4px; min-height: 30px;
+  border: 1px solid var(--o-strong); background: var(--o-card); color: var(--o-ink); font: inherit; padding: 3px 8px; }
+body.skin input[type=text]:focus, body.skin textarea:focus, body.skin select:focus { outline: none; border-color: var(--o-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--o-accent) 18%, transparent); }
+body.skin .vstack.card { background: var(--o-card); border-radius: 6px; padding: 12px 14px; box-sizing: border-box; box-shadow: inset 0 0 0 1px var(--o-line); }
+body.skin .vstack.card.warn { background: color-mix(in srgb, var(--o-warn) 9%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-warn) 35%, var(--o-card)); }
+body.skin .vstack.card.good { background: color-mix(in srgb, var(--o-good) 8%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-good) 30%, var(--o-card)); }
+body.skin .island > * { background: var(--o-card); border-radius: 6px; padding: 6px 10px; min-height: 32px; align-items: center;
+  box-shadow: inset 0 0 0 1px var(--o-line), var(--o-shadow); }
+body.skin .board { background-color: var(--o-page); }
+body.skin .board > .object::after { border-color: var(--o-strong); }
+body.skin .canvas { background: transparent; }
+body.skin hr { border-top-color: var(--o-line); }
+body.skin input.cell-editor { border-radius: 0; border: 2px solid var(--o-accent); background: var(--o-card); min-height: 0; }
+body.skin ::-webkit-scrollbar { width: 10px; height: 10px; } body.skin ::-webkit-scrollbar-thumb { background: var(--o-strong); border-radius: 5px; }
+body.skin ::-webkit-scrollbar-track { background: transparent; }
+body.skin .segmented, body.skin .tabs { background: transparent; padding: 0; gap: 0; border: 1px solid var(--o-line); border-radius: 6px; overflow: hidden; }
+body.skin .segmented span, body.skin .tabs span { min-height: 26px; padding: 0 10px; border-radius: 0; font-weight: 400; color: var(--o-ink2); font-size: 12px; }
+body.skin .segmented input:checked + span, body.skin .tabs input:checked + span { background: var(--o-accent); color: var(--o-on-accent); font-weight: 600; box-shadow: none; }
+body.skin [data-tag=toolbar] { background: var(--o-chrome); border-bottom: 1px solid var(--o-chrome-line); }
+body.skin [data-tag=toolbar] .text, body.skin [data-tag=toolbar] button { color: var(--o-chrome-ink); }
+body.skin [data-tag=status-bar], body.skin [data-tag=sheet-tabs] { background: var(--o-chrome); color: var(--o-ink3); }
+body.skin [data-tag=status-bar] { border-top: 1px solid var(--o-chrome-line); }
+body.skin [data-tag=status-bar] .text { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--o-ink3); }
+body.skin [data-tag=sheet-tabs] .tabs { border: 0; border-radius: 0; }
+body.skin [data-tag=sheet-tabs] .tabs input:checked + span { background: var(--o-card); color: var(--o-ink); box-shadow: inset 0 2px var(--o-accent); }
+body.skin [data-tag=formula-bar] { background: var(--o-card); border-bottom: 1px solid var(--o-line); }
+body.skin [data-tag=formula-bar] input[type=text] { font-family: "JetBrains Mono", monospace; font-size: 12.5px; }
+body.skin label.toggle input, body.skin .radio input { accent-color: var(--o-accent); }
+body.skin dialog.alert, body.skin .lazylist { background: var(--o-card); color: var(--o-ink); border-radius: 8px; }
+"""
+
+
 def png(rgba, w, h):
     """Encodes RGBA bytes as a PNG (no dependencies: zlib + the PNG chunk format)."""
     def chunk(kind, data):
@@ -806,7 +873,7 @@ def make_app(module_dir):
         # inherited their list's hx-target and silently sent nothing). Note: hx-vals is still
         # merged from ancestors even so, so elements set every key they rely on themselves.
         Meta(name="htmx-config", content='{"disableInheritance": true}'),
-        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS), Style(FLUENT_CSS), Style(OMARCHY_CSS)))
+        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS), Style(FLUENT_CSS), Style(OMARCHY_CSS), Style(SKIN_CSS)))
     sessions = OrderedDict()  # sid → Session, oldest first
     sessions_lock = threading.Lock()
 
@@ -832,6 +899,14 @@ def make_app(module_dir):
     def canvas_js():
         return Response(CANVAS_JS + "\n" + BOARD_JS, media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
+    @app.get("/static/fonts/{name}")
+    def font(name: str):
+        """The app's own fonts (Inter, JetBrains Mono: SIL OFL), so every browser shows the same type (D-155)."""
+        path = STATIC / "fonts" / Path(name).name
+        if path.suffix != ".ttf" or not path.exists():
+            return Response(status_code=404)
+        return Response(path.read_bytes(), media_type="font/ttf", headers={"Cache-Control": "public, max-age=86400"})
+
     @app.get("/")
     def index():
         sid = uuid.uuid4().hex  # one app session per page load (tab)
@@ -845,19 +920,27 @@ def make_app(module_dir):
                     mod.close(old.handle)
                 import shutil  # (its uploads go with it)
                 shutil.rmtree(Path(os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxapp" / "uploads")) / old_sid, ignore_errors=True)
-        design = mod.design(s.handle)
-        body_class = ""
+        s.design = mod.design(s.handle)
+        return Title(mod.title(s.handle)), *root(s, sid), *skin(s.design)
+
+    def skin(design, oob=False):
+        """The page's design: a body class and, for Omarchy and the skins, the palette's CSS variables (from the
+        Mojo module). oob: after a change (Settings → Appearance), swapped into the open page (D-156)."""
         if design == 1:
-            body_class = Script("document.body.classList.add('fluent')")
-        elif design == 2:  # Omarchy: the person's theme colours as CSS variables (read by the Mojo module)
-            pal = dict(kv.split("=", 1) for kv in mod.palette().split(";"))
-            css_vars = "body.omarchy {" + "".join(f"--o-{k}: {v};" for k, v in pal.items() if k != "dark") + \
+            parts = (Style("", id="mojoui-skin"), Script("document.body.className = 'fluent'", id="mojoui-skin-js"))
+        elif design in (2, 3, 4, 5):  # Omarchy, or one of omxplorer's skins
+            name = {2: "omarchy", 3: "skin ledger", 4: "skin graphite", 5: "skin blueprint"}[design]
+            pal = dict(kv.split("=", 1) for kv in mod.palette(design).split(";"))
+            shadow = "0 6px 20px rgba(0,0,0,.55), 0 0 0 1px #34363b" if pal.get("dark") == "1" else "0 4px 16px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08)"
+            css_vars = "body {" + "".join(f"--o-{k}: {v};" for k, v in pal.items() if k != "dark") + f"--o-shadow: {shadow};" + \
                        ("color-scheme: dark;" if pal.get("dark") == "1" else "color-scheme: light;") + "}"
-            body_class = (Style(css_vars), Script("document.body.classList.add('omarchy')"))
+            parts = (Style(css_vars, id="mojoui-skin"), Script(f"document.body.className = '{name}'", id="mojoui-skin-js"))
         else:
-            body_class = ()
-        extra = body_class if isinstance(body_class, tuple) else (body_class,)
-        return Title(mod.title(s.handle)), *root(s, sid), *extra
+            parts = (Style("", id="mojoui-skin"), Script("document.body.className = ''", id="mojoui-skin-js"))
+        if oob:
+            for el in parts:
+                el.attrs["hx-swap-oob"] = "true"
+        return parts
 
     @app.get("/img/{sid}/{n}")
     def image(sid: str, n: int):
@@ -972,7 +1055,12 @@ def make_app(module_dir):
             if d.get("ignored"):
                 return ""
             s.nodes = json.loads(mod.view(s.handle))  # the screen as Mojo now has it
-            return changes(s, sid, d, n, text, number)
+            out = changes(s, sid, d, n, text, number)
+            design = mod.design(s.handle)
+            if design != getattr(s, "design", design):  # a skin picked in Settings: restyle the open page (D-156)
+                s.design = design
+                out = (out if isinstance(out, tuple) else ((out,) if out != "" else ())) + skin(design, oob=True)
+            return out
 
     @app.post("/upload/{sid}")
     async def upload(sid: str, n: int, file: UploadFile, v: int = -1):

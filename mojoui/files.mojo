@@ -1,5 +1,6 @@
-# mojoui.files: small file helpers every document app needs: names from paths, and the recent-files list
-# (one path per line in <config>/recent.txt, newest first, at most 10).
+# mojoui.files: small file helpers every document app needs: names from paths, the recent-files list
+# (one path per line in <config>/recent.txt, newest first, at most 10) and settings (key=value lines in
+# <config>/settings.txt).
 
 from mojoui.shared import environment, make_dir
 
@@ -46,5 +47,44 @@ def remember(app: String, path: String, mut recent: List[String]):
         with open(config_dir(app) + "/recent.txt", "w") as f:
             for p in recent:
                 f.write(p + "\n")
+    except:
+        pass
+
+
+def read_setting(app: String, key: String, fallback: String = "") -> String:
+    """One value from <config>/settings.txt ("skin=graphite"), or the fallback."""
+    try:
+        with open(config_dir(app) + "/settings.txt", "r") as f:
+            for line in f.read().split("\n"):
+                var eq = line.find("=")
+                if eq > 0 and String(line[byte=:eq]).strip() == key:
+                    return String(String(line[byte=eq + 1:]).strip())
+    except:
+        pass
+    return fallback
+
+
+def write_setting(app: String, key: String, value: String):
+    """Sets one value in <config>/settings.txt, keeping the others."""
+    var lines = List[String]()
+    var found = False
+    try:
+        with open(config_dir(app) + "/settings.txt", "r") as f:
+            for line in f.read().split("\n"):
+                var eq = line.find("=")
+                if eq > 0 and String(line[byte=:eq]).strip() == key:
+                    lines.append(key + "=" + value)
+                    found = True
+                elif String(line.strip()) != "":
+                    lines.append(String(line))
+    except:
+        pass
+    if not found:
+        lines.append(key + "=" + value)
+    try:
+        make_dir(config_dir(app))
+        with open(config_dir(app) + "/settings.txt", "w") as f:
+            for l in lines:
+                f.write(l + "\n")
     except:
         pass

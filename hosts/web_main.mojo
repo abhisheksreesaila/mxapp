@@ -6,7 +6,7 @@ from std.python.bindings import PythonModuleBuilder
 
 from app import Main
 from mojoui.shared import shared_loads
-from mojoui.theme import Palette, hex_of
+from mojoui.theme import Palette, hex_of, skin_palette
 from mojoui.hosts.web import web_init_shared, web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design, web_key, web_cancel
 
 
@@ -92,9 +92,12 @@ def design(handle: PythonObject) raises -> PythonObject:
     return PythonObject(web_design[Main](Int(py=handle)))
 
 
-def palette() raises -> PythonObject:
-    var p = Palette.omarchy()
+def palette(design: PythonObject) raises -> PythonObject:
+    """The colours of a design as CSS variables (Omarchy's file, or a skin's tokens)."""
+    var p = skin_palette(Int(py=design))
     return PythonObject("dark=" + ("1" if p.dark else "0") + ";page=" + hex_of(p.page) + ";card=" + hex_of(p.card) + ";raised=" + hex_of(p.raised)
                         + ";ink=" + hex_of(p.ink) + ";ink2=" + hex_of(p.ink2) + ";ink3=" + hex_of(p.ink3) + ";line=" + hex_of(p.line)
                         + ";strong=" + hex_of(p.line_strong) + ";accent=" + hex_of(p.accent) + ";on-accent=" + hex_of(p.accent_ink)
-                        + ";wash=" + hex_of(p.accent_wash) + ";bad=" + hex_of(p.bad) + ";good=" + hex_of(p.good) + ";warn=" + hex_of(p.warn))
+                        + ";wash=" + hex_of(p.accent_wash) + ";bad=" + hex_of(p.bad) + ";good=" + hex_of(p.good) + ";warn=" + hex_of(p.warn)
+                        + ";formula=" + hex_of(p.formula) + ";chrome=" + hex_of(p.chrome) + ";chrome-ink=" + hex_of(p.chrome_ink) + ";chrome-line=" + hex_of(p.chrome_line)
+                        + ";tint=" + hex_of(p.accent_tint))

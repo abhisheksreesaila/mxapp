@@ -1,4 +1,4 @@
-# Text on canvases: anti-aliased glyphs from atlases baked from Noto Sans (mojoui/font_data.mojo,
+# Text on canvases: anti-aliased glyphs from atlases baked from Inter and JetBrains Mono (mojoui/font_data.mojo,
 # made by scripts/bake_font.py). The same pixels on every platform.
 #
 #   var font = Font()                                   # once (decodes the atlases)
@@ -16,7 +16,7 @@ from mojoui.font_data import (
 
 comptime REGULAR = 0
 comptime MEDIUM = 1
-comptime MONO = 2  # JetBrains Mono (the Omarchy look)
+comptime MONO = 2  # JetBrains Mono (figures and code)
 comptime MONO_BOLD = 3
 comptime LEFT = 0
 comptime CENTRE = 1
@@ -176,7 +176,7 @@ struct Face(Movable):
 
 
 struct Font(Movable):
-    """Noto Sans: Regular and Medium for labels, a large Medium for big numbers; JetBrains Mono regular and bold."""
+    """Inter: Regular and Medium for labels, a large SemiBold for big numbers; JetBrains Mono regular and bold."""
 
     var regular: Face
     var medium: Face

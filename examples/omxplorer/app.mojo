@@ -10,14 +10,14 @@ from mojoui.view import (View, Text, Button, FilePicker, TextField, Canvas, Boar
 from mojoui.app import App, Event
 from mojoui.canvas import Surface
 from mojoui.text import Font
-from mojoui.theme import Palette
+from mojoui.theme import Palette, skin_palette, skin_name, skin_of
 from mojoui.charts import grouped, fixed
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
 from mojoui.frame import Frame, Column, Columns, Range, share, release_columns, INT, DECIMAL, TEXT, DATE
 from mojoui.frame_gpu import GpuFrame, group_sum
 from mojoui.shared import keep, at, environment, make_dir
-from mojoui.files import file_name, file_stem, read_recent, remember
+from mojoui.files import file_name, file_stem, read_recent, remember, read_setting, write_setting
 from mojoui.csvio import read_csv, CsvImport, CsvColumn, kind_name
 from mojoui.omxfile import save_omx, open_document
 from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
@@ -105,6 +105,7 @@ struct Main(App):
     var preview: DataGrid  # Import: the first rows, read-only
     var font: Font
     var pal: Palette
+    var skin: Int  # the design (LEDGER by default; Settings → Appearance writes settings.txt, D-156)
     var import_col: Int
     var insp_tab: Int  # 0 Table, 1 Cell
     var inspector_open: Bool
@@ -147,7 +148,8 @@ struct Main(App):
         self.grid = DataGrid()
         self.preview = DataGrid()
         self.font = Font()
-        self.pal = Palette.omarchy()
+        self.skin = skin_of(read_setting(APP, "skin", "ledger"))
+        self.pal = skin_palette(self.skin)
         self.import_col = 0
         self.insp_tab = 1
         self.inspector_open = True
@@ -188,7 +190,7 @@ struct Main(App):
         return (W, 900)
 
     def design(self) -> Int:
-        return OMARCHY
+        return self.skin  # omxplorer's own skin on every platform (D-149), never the desktop's theme
 
     def gf(self) -> Pointer[GpuFrame, MutUntrackedOrigin]:
         return at[GpuFrame](self.gf_addr)

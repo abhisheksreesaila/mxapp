@@ -1,7 +1,8 @@
 # mojoui.theme: the Omarchy palette is read from the person's theme file (Tokyo Night without one).
 #   pixi run mojo build -I . tests/test_theme.mojo -o build/test_theme && build/test_theme
 from std.testing import assert_equal, assert_true
-from mojoui.theme import Palette, hex_rgba, hex_of, mix
+from mojoui.theme import Palette, hex_rgba, hex_of, mix, skin_palette, skin_name, skin_of
+from mojoui.view import LEDGER, GRAPHITE, BLUEPRINT, OMARCHY
 from mojoui.text import MONO, MONO_BOLD, REGULAR
 
 
@@ -29,4 +30,34 @@ def main() raises:
     # contrast: captions on the card must be readable (WCAG 4.5:1)
     assert_true(contrast(p.ink3, p.card) >= 4.5, "captions: " + String(contrast(p.ink3, p.card)))
     assert_true(contrast(p.ink, p.card) >= 7.0, "text")
+    # omxplorer's skins: the kit's exact tokens (docs/design/universal/omx.css), readable, and picked by design
+    var ledger = Palette.ledger()
+    assert_equal(hex_of(ledger.accent), "#0e7c86")
+    assert_equal(hex_of(ledger.page), "#eef0f3")
+    assert_equal(hex_of(ledger.card), "#ffffff")
+    assert_equal(hex_of(ledger.chrome), "#f5f6f8")
+    assert_equal(hex_of(ledger.formula), "#6a4fd6")
+    assert_equal(ledger.regular, REGULAR)
+    assert_true(not ledger.dark)
+    var graphite = Palette.graphite()
+    assert_equal(hex_of(graphite.accent), "#f5a524")
+    assert_equal(hex_of(graphite.card), "#1d1e21")
+    assert_equal(hex_of(graphite.chrome), "#121214")
+    assert_true(graphite.dark)
+    var blueprint = Palette.blueprint()
+    assert_equal(hex_of(blueprint.accent), "#2f6fed")
+    assert_equal(hex_of(blueprint.chrome), "#14213d")
+    assert_equal(hex_of(blueprint.card), "#ffffff")
+    for skin in [ledger.copy(), graphite.copy(), blueprint.copy()]:
+        assert_true(contrast(skin.ink3, skin.card) >= 4.5, "skin captions: " + String(contrast(skin.ink3, skin.card)))
+        assert_true(contrast(skin.ink, skin.card) >= 7.0, "skin text")
+        assert_true(contrast(skin.chrome_ink, skin.chrome) >= 7.0, "skin chrome")
+        assert_true(contrast(skin.accent_ink, skin.accent) >= 3.0, "text on the accent")
+        assert_true(skin.data(0) != skin.data(1) and skin.data(1) != skin.data(2), "series differ")
+    assert_equal(skin_palette(GRAPHITE).skin, GRAPHITE)
+    assert_equal(skin_palette(LEDGER).skin, LEDGER)
+    assert_equal(skin_palette(OMARCHY).skin, 0)
+    assert_equal(skin_name(BLUEPRINT), "blueprint")
+    assert_equal(skin_of("graphite"), GRAPHITE)
+    assert_equal(skin_of("nonsense"), LEDGER)
     print("THEME TESTS PASSED")

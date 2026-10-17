@@ -18,9 +18,9 @@ from mojoui.view import (
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.app import App, Event, Runtime
-from mojoui.canvas import Surface
+from mojoui.canvas import Surface, rgba
 from mojoui.icons_data import LUCIDE_NAMES, lucide_svg
-from mojoui.theme import Palette, hex_of, mix
+from mojoui.theme import Palette, hex_of, mix, skin_palette, skin_name
 from std.math import log2
 from std.time import perf_counter_ns
 
@@ -199,13 +199,14 @@ def gtk_icon(name: String) -> String:
     return "image-missing-symbolic"
 
 
-def install_icons(themed: Bool = False):
-    """Writes the Lucide icons as SVG files (Fluent's neutral foreground, and white for filled
-    buttons) to a cache folder and adds it to the display's icon theme: icons named
+def install_icons(design: Int):
+    """Writes the Lucide icons as SVG files in the design's ink (Fluent's neutral grey, a theme's secondary ink; and
+    the on-accent colour for filled buttons) to a cache folder and adds it to the display's icon theme: icons named
     "mojoui-<name>" and "mojoui-<name>-light"."""
-    var base = c_str(external_call["g_get_user_cache_dir", Int]()) + ("/mojoui/icons-omarchy" if themed else "/mojoui/icons-1")
+    var themed = design == OMARCHY or skin_name(design) != ""
+    var base = c_str(external_call["g_get_user_cache_dir", Int]()) + "/mojoui/icons-" + (skin_name(design) if skin_name(design) != "" else ("omarchy" if themed else "1"))
     _ = external_call["g_mkdir_with_parents", c_int](base.as_c_string_span(), c_int(0o755))
-    var pal = Palette.omarchy()
+    var pal = skin_palette(design)
     var ink = hex_of(pal.ink2) if themed else String("#424242")
     var on_accent = hex_of(pal.accent_ink) if themed else String("#ffffff")
     for n in materialize[LUCIDE_NAMES]():
@@ -433,6 +434,9 @@ struct GtkHost[A: App](Movable):
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
     var dialog: Int  # the open alert dialog, if any
+    var skin_provider: Int  # the design's CSS provider (replaced when design() changes: Settings → Appearance)
+    var skin_design: Int  # the design that provider is for
+    var fonts: Bool  # the app's own fonts (Inter, JetBrains Mono) were handed to fontconfig
     var css: Int  # one GtkCssProvider for padding classes
     var css_rules: String
     var focus: Int  # text field to keep focused across the next rebuild (-1: none)
@@ -454,6 +458,9 @@ struct GtkHost[A: App](Movable):
         self.window = 0
         self.widgets = List[Int]()
         self.dialog = 0
+        self.skin_provider = 0
+        self.skin_design = -1
+        self.fonts = False
         self.css = 0
         self.css_rules = ""
         self.focus = -1
@@ -481,6 +488,8 @@ struct GtkHost[A: App](Movable):
         var node = self.rt.shown.nodes[i].copy()
         if node.pad_v != 0 or node.pad_h != 0:
             add_class(w, self.padding_class(node.pad_v, node.pad_h))
+        if node.name != "":  # a tagged view can be styled by the design's CSS (.mui-tag-toolbar)
+            add_class(w, "mui-tag-" + node.name)
         var want_w = max(node.w, node.min_w)
         if want_w != 0 or node.h != 0:
             external_call["gtk_widget_set_size_request", NoneType](w, c_int(want_w if want_w != 0 else -1), c_int(node.h if node.h != 0 else -1))
@@ -1029,7 +1038,62 @@ struct GtkHost[A: App](Movable):
         sort(out)
         return out^
 
+    def install_fonts(mut self):
+        """Hands the app's own fonts (mojoui/hosts/static/fonts, copied next to the binary by scripts/build.sh as
+        fonts/) to fontconfig, so GTK can use Inter and JetBrains Mono whether or not the system has them (D-155)."""
+        var dir = getenv("MOJOUI_FONTS")
+        if dir == "":
+            var self_exe = String("/proc/self/exe")
+            var exe = c_str(external_call["g_file_read_link", Int](self_exe.as_c_string_span(), 0))
+            var slash = exe.rfind("/")
+            dir = (String(exe[byte=:slash]) if slash > 0 else String(".")) + "/fonts"
+        var config = external_call["FcConfigGetCurrent", Int]()
+        for name in ["Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "JetBrainsMono-Regular.ttf", "JetBrainsMono-Bold.ttf"]:
+            var path = dir + "/" + name
+            if external_call["FcConfigAppFontAddFile", c_int](config, path.as_c_string_span()) != 0:
+                self.fonts = True
+
+    def apply_design(mut self):
+        """Styles the window for the app's design(): once at start, and again when it changes (a skin picked in
+        Settings): the old provider goes, the new one loads, so the switch is live (D-156)."""
+        var design = self.rt.app.design()
+        if design == self.skin_design:
+            return
+        var display = external_call["gdk_display_get_default", Int]()
+        if self.skin_provider != 0:
+            external_call["gtk_style_context_remove_provider_for_display", NoneType](display, self.skin_provider)
+            external_call["g_object_unref", NoneType](self.skin_provider)
+            self.skin_provider = 0
+        for old in ["fluent", "omarchy", "ledger", "graphite", "blueprint"]:
+            var name = String(old)
+            external_call["gtk_widget_remove_css_class", NoneType](self.window, name.as_c_string_span())
+        self.skin_design = design
+        var manager = external_call["adw_style_manager_get_default", Int]()
+        var rules = String("")
+        var cls = String("")
+        if design == FLUENT:  # Fluent 2 tokens on top of libadwaita (a light design)
+            external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(1))  # ADW_COLOR_SCHEME_FORCE_LIGHT
+            rules = String(FLUENT_CSS)
+            cls = "fluent"
+        elif design == OMARCHY:  # the person's Omarchy theme: its colours, JetBrains Mono, flat
+            var pal = Palette.omarchy()
+            external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if pal.dark else 1))  # FORCE_DARK / FORCE_LIGHT
+            rules = omarchy_css(pal)
+            cls = "omarchy"
+        elif skin_name(design) != "":  # omxplorer's skins: the same tokens as the web's CSS
+            var pal = skin_palette(design)
+            external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if pal.dark else 1))
+            rules = skin_css(pal, skin_name(design))
+            cls = skin_name(design)
+        if rules != "":
+            self.skin_provider = external_call["gtk_css_provider_new", Int]()
+            external_call["gtk_css_provider_load_from_string", NoneType](self.skin_provider, rules.as_c_string_span())
+            external_call["gtk_style_context_add_provider_for_display", NoneType](display, self.skin_provider, c_uint(801))
+            add_class(self.window, cls)
+        install_icons(design)
+
     def apply(mut self, d: Diff, self_addr: Int):
+        self.apply_design()
         if d.rebuild:
             # Rebuild on the next idle turn, never inside a signal handler: the widget
             # that sent the signal would be destroyed while GTK is still using it.
@@ -2112,6 +2176,10 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
         print("NATIVE: GTK " + String(external_call["gtk_get_major_version", c_int]()) + "." + String(external_call["gtk_get_minor_version", c_int]()))
         if host[].rt.app.design() == FLUENT:
             print("DESIGN: fluent")
+        elif skin_name(host[].rt.app.design()) != "":
+            print("DESIGN: " + skin_name(host[].rt.app.design()))
+            if host[].fonts:
+                print("FONT: Inter, JetBrains Mono (the app's own)")
         if external_call["gtk_widget_get_mapped", c_int](host[].window) != 0:  # laid out, so measurable
             for i in range(len(host[].rt.shown.nodes)):
                 if host[].rt.shown.nodes[i].name != "":
@@ -2385,31 +2453,92 @@ def omarchy_css(p: Palette) -> String:
     )
 
 
+def skin_css(p: Palette, cls: String) -> String:
+    """omxplorer's skins for GTK (D-149): one look from the palette's tokens (the same values as the web's CSS),
+    Inter for words, JetBrains Mono for figures, flat controls, a chrome band for the toolbar and bars."""
+    var page = hex_of(p.page)
+    var card = hex_of(p.card)
+    var raised = hex_of(p.raised)
+    var ink = hex_of(p.ink)
+    var ink2 = hex_of(p.ink2)
+    var ink3 = hex_of(p.ink3)
+    var line = hex_of(p.line)
+    var strong = hex_of(p.line_strong)
+    var accent = hex_of(p.accent)
+    var wash = hex_of(p.accent_wash)
+    var on_accent = hex_of(p.accent_ink)
+    var chrome = hex_of(p.chrome)
+    var chrome_ink = hex_of(p.chrome_ink)
+    var chrome_line = hex_of(p.chrome_line)
+    var w = "window." + cls + " "
+    var shadow = String("0 4px 16px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08)") if not p.dark else String("0 6px 20px rgba(0,0,0,.55), 0 0 0 1px #34363b")
+    return (
+        ":root { --accent-bg-color: " + accent + "; --accent-color: " + accent + "; --accent-fg-color: " + on_accent + "; }\n"
+        + w + "{ background-color: " + page + "; color: " + ink2 + "; font-family: 'Inter', sans-serif; font-size: 13px; }\n"
+        + w + "label { color: " + ink2 + "; }\n"
+        + w + "label.title-1, " + w + "label.title-4 { color: " + ink + "; font-weight: 600; letter-spacing: -0.2px; }\n"
+        + w + "label.title-1 { font-size: 20px; font-weight: 700; } " + w + "label.title-4 { font-size: 15px; }\n"
+        + w + "label.caption { font-size: 12px; color: " + ink3 + "; } " + w + ".dim-label { opacity: 1; }\n"
+        + w + ".mui-card { background-color: " + card + "; border-radius: 6px; padding: 12px 14px; box-shadow: inset 0 0 0 1px " + line + "; }\n"
+        + w + "label.mui-tone-warn { color: " + hex_of(p.warn) + "; } " + w + "label.mui-tone-good { color: " + hex_of(p.good) + "; }\n"
+        + w + "label.mui-tone-strong { color: " + ink + "; font-weight: 600; } " + w + "label.mui-tone-accent { color: " + accent + "; }\n"
+        + w + ".mui-card.mui-warn { background-color: " + hex_of(mix(p.card, p.warn, 0.09)) + "; box-shadow: inset 0 0 0 1px " + hex_of(mix(p.card, p.warn, 0.35)) + "; }\n"
+        + w + ".mui-card.mui-good { background-color: " + hex_of(mix(p.card, p.good, 0.08)) + "; box-shadow: inset 0 0 0 1px " + hex_of(mix(p.card, p.good, 0.30)) + "; }\n"
+        + w + ".mui-island { background-color: " + card + "; border-radius: 6px; padding: 6px 10px; min-height: 32px; box-shadow: inset 0 0 0 1px " + line + ", " + shadow + "; }\n"
+        + w + ".mui-board { background-color: " + page + "; }\n"
+        # the chrome band: toolbar, sheet tabs, status bar (tagged views)
+        + w + ".mui-tag-toolbar { background-color: " + chrome + "; border-bottom: 1px solid " + chrome_line + "; }\n"
+        + w + ".mui-tag-status-bar, " + w + ".mui-tag-sheet-tabs { background-color: " + chrome + "; color: " + ink3 + "; }\n"
+        + w + ".mui-tag-status-bar { border-top: 1px solid " + chrome_line + "; }\n"
+        + w + ".mui-tag-status-bar label { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: " + ink3 + "; }\n"
+        + w + ".mui-tag-formula-bar { background-color: " + card + "; border-bottom: 1px solid " + line + "; }\n"
+        + w + ".mui-tag-formula-bar entry { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }\n"
+        + w + ".mui-tag-toolbar label, " + w + ".mui-tag-toolbar button { color: " + chrome_ink + "; }\n"
+        # buttons: secondary with a hairline, primary filled, quiet ones flat; hover raised, pressed washed
+        + w + "button { border-radius: 6px; min-height: 30px; padding: 2px 14px; font-weight: 500; background: " + card + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"
+        + w + "button:hover { background: " + raised + "; }\n"
+        + w + "button:active { background: " + wash + "; }\n"
+        + w + "button:focus-visible { outline: 2px solid " + accent + "; outline-offset: 1px; }\n"
+        + w + "button.flat { background: transparent; box-shadow: none; color: " + ink2 + "; }\n"
+        + w + "button.flat:hover { background: " + raised + "; color: " + ink + "; }\n"
+        + w + "button.image-button { min-width: 30px; padding: 2px 6px; }\n"
+        + w + "button label, " + w + "button image { color: inherit; }\n"
+        + w + "button.suggested-action { background: " + accent + "; color: " + on_accent + "; box-shadow: none; font-weight: 600; }\n"
+        + w + "button.suggested-action:hover { background: " + hex_of(mix(p.accent, rgba(0, 0, 0), 0.14)) + "; }\n"
+        + w + "button.destructive-action { background: " + hex_of(p.bad) + "; color: #ffffff; box-shadow: none; font-weight: 600; }\n"
+        + w + "button.mui-tool { min-width: 64px; min-height: 58px; padding: 4px 6px; border-radius: 6px; font-size: 11px; }\n"
+        + w + "button.mui-tool:hover { background: " + hex_of(mix(p.chrome, p.chrome_ink, 0.08)) + "; }\n"
+        + w + "button.mui-tool-on { background: " + wash + "; color: " + accent + "; }\n"
+        + w + "button.mui-tool-on label, " + w + "button.mui-tool-on image { color: " + accent + "; }\n"
+        + w + "label.mui-tool-label { font-size: 11px; }\n"
+        # fields and choices: hairline, accent ring on focus
+        + w + "entry, " + w + "textview, " + w + "dropdown > button { border-radius: 4px; background: " + card + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; min-height: 30px; }\n"
+        + w + "entry:focus-within { box-shadow: inset 0 0 0 1px " + accent + ", 0 0 0 3px " + hex_of(mix(p.card, p.accent, 0.18)) + "; outline: none; }\n"
+        + w + "textview text { background: " + card + "; color: " + ink + "; }\n"
+        + w + "dropdown > button { padding: 2px 8px; font-weight: 400; }\n"
+        + w + "popover > contents, popover.menu > contents { background: " + card + "; color: " + ink + "; border-radius: 6px; box-shadow: inset 0 0 0 1px " + line + ", " + shadow + "; }\n"
+        + w + "scrollbar slider { min-width: 6px; min-height: 6px; background-color: " + strong + "; border-radius: 3px; }\n"
+        + w + "entry.mui-cell-editor { border-radius: 0; box-shadow: inset 0 0 0 2px " + accent + "; background: " + card + "; }\n"
+        + w + "toggle-group { background: transparent; }\n"
+        + w + "toggle-group > toggle { border-radius: 4px; min-height: 26px; padding: 0 10px; color: " + ink2 + "; }\n"
+        + w + "toggle-group > toggle:checked { background: " + accent + "; color: " + on_accent + "; font-weight: 600; }\n"
+        + w + ".mui-tag-sheet-tabs toggle-group > toggle:checked { background: " + card + "; color: " + ink + "; box-shadow: inset 0 2px " + accent + "; border-radius: 0; }\n"
+        + w + "checkbutton check, " + w + "checkbutton radio { border-radius: 3px; border: 1.5px solid " + strong + "; background: " + card + "; min-width: 15px; min-height: 15px; -gtk-icon-size: 12px; }\n"
+        + w + "checkbutton radio { border-radius: 50%; }\n"
+        + w + "checkbutton check:checked, " + w + "checkbutton radio:checked { background: " + accent + "; border-color: " + accent + "; color: " + on_accent + "; }\n"
+        + w + "switch { background: " + strong + "; } " + w + "switch:checked { background: " + accent + "; }\n"
+        + "tooltip { background: " + ink + "; color: " + card + "; border-radius: 4px; padding: 6px 10px; font-family: 'Inter', sans-serif; font-size: 12px; }\n"
+        + "tooltip > * { color: " + card + "; }\n"
+    )
+
+
 def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     var host = host_at[A](host_addr)
     host[].window = external_call["gtk_application_window_new", Int](gapp)
     var title = host[].rt.app.title()
     external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
-    if host[].rt.app.design() == FLUENT:  # Fluent 2 tokens on top of libadwaita (a light design)
-        var manager = external_call["adw_style_manager_get_default", Int]()
-        external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(1))  # ADW_COLOR_SCHEME_FORCE_LIGHT
-        var provider = external_call["gtk_css_provider_new", Int]()
-        var rules = String(FLUENT_CSS)
-        external_call["gtk_css_provider_load_from_string", NoneType](provider, rules.as_c_string_span())
-        var display = external_call["gdk_display_get_default", Int]()
-        external_call["gtk_style_context_add_provider_for_display", NoneType](display, provider, c_uint(801))
-        add_class(host[].window, "fluent")
-    elif host[].rt.app.design() == OMARCHY:  # the person's Omarchy theme: its colours, JetBrains Mono, flat
-        var pal = Palette.omarchy()
-        var manager = external_call["adw_style_manager_get_default", Int]()
-        external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if pal.dark else 1))  # FORCE_DARK / FORCE_LIGHT
-        var provider = external_call["gtk_css_provider_new", Int]()
-        var rules = omarchy_css(pal)
-        external_call["gtk_css_provider_load_from_string", NoneType](provider, rules.as_c_string_span())
-        var display = external_call["gdk_display_get_default", Int]()
-        external_call["gtk_style_context_add_provider_for_display", NoneType](display, provider, c_uint(801))
-        add_class(host[].window, "omarchy")
-    install_icons(host[].rt.app.design() == OMARCHY)
+    host[].install_fonts()
+    host[].apply_design()
     var size = host[].rt.app.window_size()
     var forced = getenv("MOJOUI_WINDOW")  # tests: "1280x800" checks a smaller laptop screen
     if forced != "":

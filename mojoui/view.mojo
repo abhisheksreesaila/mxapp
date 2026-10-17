@@ -79,6 +79,10 @@ comptime CARD_GOOD = 3  # a card that confirms something went right: the theme's
 comptime NATIVE = 0  # each platform's own look, untouched
 comptime FLUENT = 1  # Fluent 2 tokens (neutral greys, brand blue, rounded panels) wherever the host can apply them
 comptime OMARCHY = 2  # the person's Omarchy theme (mojoui.theme.Palette.omarchy()): its colours, JetBrains Mono, flat controls
+# omxplorer's own skins (D-149): the same colours, Inter and JetBrains Mono on every platform, never the desktop's theme
+comptime LEDGER = 3  # light: a white sheet, grey chrome, deep teal (the default)
+comptime GRAPHITE = 4  # dark and neutral, amber
+comptime BLUEPRINT = 5  # light with a navy band, blue
 
 # Button styles
 comptime PLAIN = 0

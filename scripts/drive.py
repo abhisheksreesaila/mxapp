@@ -67,7 +67,9 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
 }).filter(Boolean).concat([...document.querySelectorAll('[data-tag]')].map(e => {
   const r = e.getBoundingClientRect();
   return 'BOX: ' + e.dataset.tag + ' ' + [r.x, r.y, r.width, r.height].map(v => v.toFixed(1)).join(' ');
-})).concat(['PAGE: ' + document.documentElement.scrollWidth + 'x' + document.documentElement.scrollHeight
+})).concat([...document.body.classList].filter(c => c !== 'skin').map(c => 'DESIGN: ' + c)).concat(
+  document.body.classList.contains('skin') && document.fonts.check('13px Inter') && document.fonts.check('13px "JetBrains Mono"') ? ["FONT: Inter, JetBrains Mono (the app's own)"] : []
+).concat(['PAGE: ' + document.documentElement.scrollWidth + 'x' + document.documentElement.scrollHeight
   + ' in ' + innerWidth + 'x' + innerHeight]).join(String.fromCharCode(10))"""
 
 
