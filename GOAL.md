@@ -1,37 +1,36 @@
-# GOAL 17: omxplorer's universal theme (Ledger) and the components it needs (Linux + web)
+# GOAL 18: omxapp on the iPad: the kit app, and the UIKit and AppKit hosts catch up (builds here, runs at the weekend)
 
-**End goal (owner's words, 2026-10-17):** "I want this to have universal theme on all platforms just for this app, think EXCEL, same theme on all"; "I am fan of ledger produced by CLAUDE… we can use that as default, but ship all skins for people to change"; "dont you need additional components like menu bar etc"; "please continue with building additional components needed to make this UI happen". Design: `docs/design/universal.md` and `docs/design/universal/kit.html` (Ledger default; Graphite and Blueprint as skins).
+**End goal (owner's words, 2026-10-17):** "the only target we definitely want is iPadOS"; while MX frame "is still cooking", "work on other things". So: everything omxplorer's screens use (goal 17's components, the Board and Overlay, the skins) exists in the iPad host too, the iPad's own way (hardware keyboard shortcuts, pointer tooltips, popovers, a context menu on right-click or long press), proven as far as Linux can prove it: a kit app that runs on GTK and the web, and links, bundles and signs for iPad and Mac. The owner runs the Apple builds on hardware at the weekend; until then every Apple cell stays 🔨 (built, never run).
 
 ## Components this needs (from `docs/components.md`, before the build)
-| Component | Before | Plan |
+| Component | iPhone/iPad today | Plan |
 |---|---|---|
-| A fixed skin: colours, Inter and JetBrains Mono shipped with the app | Fluent and Omarchy (the desktop's theme) | `Palette.ledger/graphite/blueprint`, `design() = LEDGER…`; one CSS per host from the palette; the fonts in `mojoui/hosts/static/fonts/`, baked for canvases |
-| Menu bar, menus, context menu, keyboard shortcuts | nothing | `mojoui/menus.mojo`: `MenuBar`, `Menu`, `Item`, `ContextMenu`; a `SECONDARY` canvas gesture; shortcuts bound by the host |
-| Dialog with a scrim, Toast with an action, Tooltip, Checkbox, Popover | `Alert` only | `mojoui/overlays.mojo`: `Dialog`, `Toast`, `Popover`; `.tooltip()`; `Checkbox` |
-| Grid states: a type badge per column, a corner mark on edited cells | names only; a sort triangle | `DataGrid` draws them |
-| Settings → Appearance (skin picker, saved), About, the Start screen | the Omarchy start screen | omxplorer composites from the above; `settings.txt` in the config folder |
+| MenuBar, Menu, Item, ContextMenu | ❌ | UIKit: a menu button per menu (UIMenu of UIActions with key commands); the context menu as a popover of items at the right-click point (D-158); AppKit: the real NSMenu bar (D-150) |
+| Dialog, Toast, Popover, Checkbox, tooltips | ❌ | UIKit: a form-sheet view controller, an overlay label, UIPopoverPresentationController, a checkmark button, UIToolTipInteraction; AppKit: a sheet, an overlay, NSPopover, a checkbox, setToolTip: |
+| Board, Overlay | ❌ | UIKit/AppKit: a scroll view with framed children; a view with pinned subviews |
+| Button styles (SUBTLE, ICON_ONLY, TOOL), text tones, icons | ❌ | UIButtonConfiguration variants with SF Symbols; label colours |
+| Canvas: PRESS, RELEASE, DOUBLE, SECONDARY, KEY | ❌ | pan began/ended, a two-tap recogniser, a secondary-button tap and a long press, pressesBegan for hardware keys |
+| Design: the skins (colours, Inter and JetBrains Mono) | ❌ | `design()` → UIColor/NSColor from the palette; the bundled fonts registered from the app bundle (D-155) |
+| A kit app (every component on one screen set) | — | `examples/kit`: the proving ground for every host (D-157) |
 
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M1 | The skins | `Palette.ledger()`, `graphite()`, `blueprint()` with the kit's exact colours (test); the fonts are in the repo with their licences and the canvas atlases are baked from them; omxplorer on both hosts reports `DESIGN: ledger` with a light sheet, and `skin=graphite` in the config folder's `settings.txt` gives `DESIGN: graphite` with a dark one (screenshot brightness); the web page loads Inter |
-| M2 | Menus | `MenuBar`, `Menu`, `Item`, `ContextMenu` in mojoui with a test; omxplorer's menu bar on both hosts lists the same menus and items; `menu:Data>Sort largest first` sorts the sheet; `shortcut:Ctrl+S` saves the document; a right-click on a column header opens a context menu (`rightclick:` step) whose `Sort largest first` sorts; identical dumps on GTK and web |
-| M3 | Dialogs, toasts, tooltips, checkboxes, popovers | in mojoui with a test; `menu:File>Settings…` opens a Settings dialog on both hosts; `radio:0=Graphite` switches the skin live (`DESIGN: graphite`, dark screenshot) and writes `settings.txt`; a sort shows a toast with Undo and `toast:Undo` undoes it; every toolbar button has a tooltip (`TIP:` lines); the Settings checkboxes report `CHECK:`; the formula bar's ƒx opens a popover (`POPOVER:`) that closes; identical on GTK and web |
-| M4 | Grid states | the header shows a type badge per column (`#`, `$`, `Aa`, `date`, `ƒx`) and an edited cell gets an accent corner mark (test_datagrid draws and reads the pixels) |
-| M5 | omxplorer in the Ledger | the Start screen (drop zone, recent files, samples) and the sheet carry the menu bar; `menu:Help>About omxplorer` opens the About dialog; the start and sheet dumps are identical on GTK and web |
-| M6 | Nothing regressed | goal 15's checks (and every earlier goal's inside them) still pass; the matrix is current and lists the new components ✅ on Linux and web |
+| M1 | The kit app on Linux and the web | `examples/kit` shows a menu bar, tool buttons with tooltips, a canvas with a context menu, a dialog, a toast, a popover, checkboxes, a Board with an Overlay island, and a skin switch; driven on both hosts (menu, rightclick, dialog, toast, popover, skin steps) with identical dumps; Ledger light and Graphite dark screenshots |
+| M2 | The UIKit host catches up | `uikit.mojo` builds every kind the kit uses (a script lists each `kind ==` branch), the button styles, tones, tooltips, the canvas gestures and the skins; `scripts/build.sh kit ios` links, bundles and signs with only the allowed symbols; the matrix shows the new components 🔨 on iPhone |
+| M3 | iPad | Info.plist allows every iPad orientation and multitasking; shortcuts from Items become UIKeyCommands (Ctrl = ⌘, D-159); tooltips use UIToolTipInteraction; a secondary-button tap or long press sends SECONDARY; the bundled fonts go into the .app and are registered at start; the build links |
+| M4 | The AppKit host catches up | the same kinds on the Mac, the menu bar as the system menu bar with ⌘ shortcuts; `scripts/build.sh kit mac` links, bundles and signs; the matrix shows them 🔨 on Mac |
+| M5 | Nothing regressed | goal 17's checks (and every earlier goal's inside them) still pass; the matrix is current |
 
 ## Done means
-`scripts/check` prints PASS for M1–M6; push to `origin` after (the owner allowed pushes at stopping points).
+`scripts/check` prints PASS for M1–M5; push to `origin` after. `docs/report.md` says plainly that the Apple builds haven't run on hardware.
 
 ## Out of bounds
-The command palette, the Import dialog's streaming (waits for MX frame), the column filter popover (needs row masks in the engine), phone bottom sheets, column header histograms, own-drawn controls on Mac, iPhone and Android (D-151). No deploying, no paid services, no secrets, nothing outside this repo. Omarchy stays the look of the other examples.
+Running on Apple hardware (the owner's weekend); omxplorer itself on the iPad (its CSV and .omx shims need Python until MX frame lands); Android parity; the WebAssembly target (D-90: waits for a wasm32 Mojo); no deploying, no paid services, no secrets, nothing outside this repo; `../mojo-ui-apple-test` stays untouched.
 
 ## Assumptions
-- D-151: Mac, iPhone and Android keep native controls for now; omxplorer draws its own there later.
-- D-152: Windows is covered by the web host until there's a Windows host.
-- D-153: the phone uses the same skins, with bottom sheets instead of menus, later.
-- D-154: menus are built from the hosts' own popovers and buttons (not GMenu models), so the skin styles them and tests can read them.
-- D-155: Inter replaces Noto Sans for canvas text on every design, and JetBrains Mono replaces the Nerd Font build; both are vendored (SIL OFL).
-- D-156: the skin lives in `<config>/settings.txt` (`skin=ledger`); the hosts reload their CSS when `design()` changes, so the switch is live.
-- Budget: the rest of today (about 120 turns).
+- D-157: the kit app is the components' proving ground on every host (components first).
+- D-158: on iPad, context menus and popovers are popover-presented controllers of the app's own items (no public API presents a UIMenu at a point); the menu bar's menus are UIMenus on menu buttons.
+- D-159: "Ctrl" in a shortcut means ⌘ on Apple platforms.
+- Objective-C calls follow objc.mojo's style; new C functions go through `cfunc` (dlsym), so the .tbd stubs and ALLOWED don't change.
+- Budget: the evening (about 100 turns).
