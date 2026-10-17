@@ -29,7 +29,7 @@ from pathlib import Path
 
 from fasthtml.common import (
     Button, Canvas, Dialog, Div, FastHTML, Form, H1, H2, H3, Header, Hr, I, Img, Input, Label, Main, Meta, NotStr,
-    Option, P, Progress, Response, Script, Select, Span, Style, Textarea, Title,
+    Option, P, Progress, Response, Script, Select, Span, Style, Textarea, Title, UploadFile,
 )
 from PIL import Image
 
@@ -38,7 +38,7 @@ from PIL import Image
  SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY) = range(1, 27)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
-PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY = 0, 1, 2, 3, 4
+PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON = 0, 1, 2, 3, 4, 5, 6
 START, CENTER, END = 1, 2, 3
 SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
 KEY = 7  # a canvas gesture: a key pressed while it had focus (text = the key, dx = modifiers)
@@ -488,6 +488,13 @@ body.omarchy button.prominent { background: var(--o-accent); border-color: trans
 body.omarchy button.subtle { border-color: transparent; color: var(--o-ink2); }
 body.omarchy button.subtle:hover { background: var(--o-raised); color: var(--o-ink); }
 body.omarchy button.icon-only { padding: 3px 5px; min-width: 28px; justify-content: center; }
+label.picker { position: relative; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+label.picker.tool { flex-direction: column; } label.picker input.picker-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+body.omarchy label.picker:not(.tool):not(.subtle) { border: 1px solid var(--o-strong); border-radius: 3px; padding: 3px 10px; min-height: 28px; box-sizing: border-box; color: var(--o-ink); }
+body.omarchy label.picker.prominent { background: var(--o-accent); color: var(--o-on-accent); border-color: transparent; font-weight: 700; }
+button.tool { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 58px; min-height: 48px; padding: 4px 6px; }
+button.tool span { font-size: 11px; line-height: 13px; }
+body.omarchy button.tool { border-radius: 6px; } body.omarchy button.tool.on { background: var(--o-raised); color: var(--o-accent); }
 body.omarchy select, body.omarchy input[type=text], body.omarchy input[type=date], body.omarchy textarea { border-radius: 3px; min-height: 28px;
   border: 1px solid var(--o-strong); background: var(--o-page); color: var(--o-ink); font: inherit; }
 body.omarchy select { padding: 2px 4px; }
@@ -612,7 +619,19 @@ def render_node(s, i, sid):
         tag = H1 if n["style"] == TITLE else (H3 if n["style"] == HEADLINE else P)
         return tag(n["text"], cls=cls, id=nid, data_kind="label")
     if kind == BUTTON:
-        cls = {PROMINENT: "prominent", DESTRUCTIVE: "destructive", SUBTLE: "subtle", ICON_ONLY: "subtle icon-only"}.get(n["style"], "")
+        cls = {PROMINENT: "prominent", DESTRUCTIVE: "destructive", SUBTLE: "subtle", ICON_ONLY: "subtle icon-only",
+               TOOL: "subtle tool", TOOL_ON: "subtle tool on"}.get(n["style"], "")
+        if n["msg2"]:  # a FilePicker: a file input styled as the button; the file uploads, then on_pick gets its path
+            svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"')) if n["hint"] else ""
+            accept = n["options"][0] if n["options"] else ""
+            picker = Input(type="file", name="file", accept=accept or None, cls="picker-input", data_kind="picker", data_title=n["text"],
+                           hx_post=f"/upload/{sid}", hx_encoding="multipart/form-data", hx_trigger="change", hx_swap="none",
+                           hx_vals=json.dumps({"n": i}), hx_include="#mojoui-v")
+            kids = [svg, Span(n["text"]), picker] if svg else [Span(n["text"]), picker]
+            return Label(*kids, id=nid, cls=f"button picker {cls}" + (" with-icon" if svg and n["style"] not in (TOOL, TOOL_ON) else ""), data_kind="button", tabindex="0")
+        if n["style"] in (TOOL, TOOL_ON):  # the icon above a small title
+            svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"'))
+            return Button(svg, Span(n["text"]), id=nid, cls=cls, data_kind="button", **common)
         if not n["hint"]:
             return Button(n["text"], id=nid, cls=cls, data_kind="button", **common)
         svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"'))
@@ -945,6 +964,27 @@ def make_app(module_dir):
                 return ""
             s.nodes = json.loads(mod.view(s.handle))  # the screen as Mojo now has it
             return changes(s, sid, d, n, text, number)
+
+    @app.post("/upload/{sid}")
+    async def upload(sid: str, n: int, file: UploadFile, v: int = -1):
+        """A FilePicker's file: saved where the app runs (~/.cache/omxapp/uploads), then on_pick gets its path."""
+        s = sessions.get(sid)
+        if s is None:
+            return Main(P("This page expired: reload it.", cls="text caption"), id="mojoui-root", hx_swap_oob="true")
+        folder = Path.home() / ".cache" / "omxapp" / "uploads"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / Path(file.filename or "upload").name
+        with open(path, "wb") as out:
+            while chunk := await file.read(1 << 20):
+                out.write(chunk)
+        with s.lock:
+            if v != s.shape or not 0 <= n < len(s.nodes) or not s.nodes[n]["msg2"]:
+                return ""
+            d = json.loads(mod.event(s.handle, n, 1, str(path), 0))
+            if d.get("ignored"):
+                return ""
+            s.nodes = json.loads(mod.view(s.handle))
+            return changes(s, sid, d, n, str(path), 0)
 
     @app.get("/frame/{sid}/{n}")
     def frame(sid: str, n: int, w: int = 0, h: int = 0, scale: float = 1, v: int = -1, tick: int = 0):

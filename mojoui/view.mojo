@@ -54,6 +54,7 @@ comptime ICON_NAMES: List[String] = [
     "travel", "food", "fun", "chart",
     # Lucide icons drawn the same on every host (GTK loads the same SVGs)
     "table", "pivot", "chart-bar", "note", "undo", "save", "open", "close", "sort", "filter-off", "row-plus", "row-minus",
+    "view", "zoom", "category", "formula", "comment", "shape", "text", "organise", "format", "share", "import", "database", "sample", "grid", "sheet", "file", "export", "upload", "chevron",
 ]
 
 # Text styles (each platform maps them to its own type scale)
@@ -85,6 +86,8 @@ comptime PROMINENT = 1
 comptime DESTRUCTIVE = 2
 comptime SUBTLE = 3  # quiet: no fill until hovered (toolbars, card actions)
 comptime ICON_ONLY = 4  # quiet and only its icon shows; the title is its tooltip and accessible name
+comptime TOOL = 5  # a toolbar button: the icon above a small title (Numbers, Keynote)
+comptime TOOL_ON = 6  # the same, shown as the active tool
 
 comptime NO_MSG = 0
 
@@ -317,9 +320,15 @@ def Text(text: String, style: Int = BODY) -> View:
 
 
 def Button(title: String, on_tap: Int, style: Int = PLAIN, icon: String = "") -> View:
-    """Sends `on_tap` when tapped. Styles: PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY.
+    """Sends `on_tap` when tapped. Styles: PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON.
     `icon`: one of ICON_NAMES, shown before the title (or alone, with ICON_ONLY)."""
     return _one(Node(BUTTON, title, on_tap, style=style, hint=icon))
+
+
+def FilePicker(title: String, on_pick: Int, style: Int = PLAIN, icon: String = "", accept: String = "") -> View:
+    """A button that asks for a file: the platform's own file dialog (GTK), an upload (web). Sends `on_pick`
+    with event.text = the file's path on the machine the app runs on. `accept`: extensions, e.g. ".csv,.parquet"."""
+    return _one(Node(BUTTON, title, NO_MSG, style=style, hint=icon, msg2=on_pick, options=[accept]))
 
 
 def TextField(value: String, placeholder: String = "", on_change: Int = NO_MSG, on_submit: Int = NO_MSG, on_cancel: Int = NO_MSG) -> View:
@@ -490,6 +499,12 @@ def Card(*items: View, spacing: Int = 12, tone: Int = CARD) -> View:
     for item in items:
         list.append(item.copy())
     var v = _container(Node(VSTACK, spacing=spacing, style=tone), list)
+    return v^.padding(16).align(START)
+
+
+def Card(items: List[View], spacing: Int = 12, tone: Int = CARD) -> View:
+    """A card from a list of children (for panels whose rows come and go)."""
+    var v = _container(Node(VSTACK, spacing=spacing, style=tone), items)
     return v^.padding(16).align(START)
 
 

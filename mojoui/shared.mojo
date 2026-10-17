@@ -9,7 +9,7 @@
 #   def __init__(out self):
 #       self.frame = Frame(get_shared(0))
 
-from std.os import getenv, setenv
+from std.os import getenv, setenv, makedirs
 from std.ffi import external_call, c_int
 from std.memory.alloc import alloc, Layout
 
@@ -56,3 +56,11 @@ def keep[T: Movable](var value: T) -> Int:
 
 def at[T: Movable](addr: Int) -> Pointer[T, MutUntrackedOrigin]:
     return Pointer[T, MutUntrackedOrigin](unsafe_from_address=addr)
+
+
+def make_dir(path: String):
+    """Makes a folder (and its parents) if it isn't there: apps keep their settings with it (no std imports in apps)."""
+    try:
+        makedirs(path, exist_ok=True)
+    except:
+        pass

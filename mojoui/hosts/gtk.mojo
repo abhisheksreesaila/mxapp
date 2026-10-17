@@ -14,7 +14,7 @@ from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, KEY, SHIFT, CTRL, ALT,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, KEY, SHIFT, CTRL, ALT,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.app import App, Event, Runtime
@@ -439,6 +439,7 @@ struct GtkHost[A: App](Movable):
     var key_node: Int  # the canvas node that had the keyboard last (it gets it back when an in-place editor closes)
     var editor_keys: Int  # the in-place editor's key controller (test steps press Escape through it)
     var editor_open: Bool  # the last build showed an in-place editor
+    var picker_node: Int  # the FilePicker whose dialog is open
     var editor_node: Int  # (its node there)
 
     def __init__(out self, var app: Self.A):
@@ -459,6 +460,7 @@ struct GtkHost[A: App](Movable):
         self.key_node = -1
         self.editor_keys = 0
         self.editor_open = False
+        self.picker_node = -1
         self.editor_node = -1
 
     def padding_class(mut self, v: Int, h: Int) -> String:
@@ -544,6 +546,19 @@ struct GtkHost[A: App](Movable):
                 var icon = gtk_icon(node.hint)
                 w = external_call["gtk_button_new_from_icon_name", Int](icon.as_c_string_span())
                 external_call["gtk_widget_set_tooltip_text", NoneType](w, t.as_c_string_span())
+            elif node.style == TOOL or node.style == TOOL_ON:  # the icon above a small title
+                w = external_call["gtk_button_new", Int]()
+                var box = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(2))
+                if node.hint != "":
+                    var icon = gtk_icon(node.hint)
+                    _ = external_call["gtk_box_append", NoneType](box, external_call["gtk_image_new_from_icon_name", Int](icon.as_c_string_span()))
+                var label = external_call["gtk_label_new", Int](t.as_c_string_span())
+                add_class(label, "mui-tool-label")
+                external_call["gtk_box_append", NoneType](box, label)
+                external_call["gtk_button_set_child", NoneType](w, box)
+                add_class(w, "mui-tool")
+                if node.style == TOOL_ON:
+                    add_class(w, "mui-tool-on")
             elif node.hint != "":  # icon + title
                 w = external_call["gtk_button_new", Int]()
                 var content = external_call["adw_button_content_new", Int]()
@@ -559,7 +574,7 @@ struct GtkHost[A: App](Movable):
                     add_class(w, "pill")
             elif node.style == DESTRUCTIVE:
                 add_class(w, "destructive-action")
-            elif node.style == SUBTLE or node.style == ICON_ONLY:
+            elif node.style == SUBTLE or node.style == ICON_ONLY or node.style == TOOL or node.style == TOOL_ON:
                 add_class(w, "flat")
             connect(w, "clicked", on_clicked[Self.A], self_addr)
         elif node.kind == FIELD:
@@ -1021,7 +1036,9 @@ struct GtkHost[A: App](Movable):
                 if kind == TEXT:
                     external_call["gtk_label_set_text", NoneType](w, t.as_c_string_span())
                 elif kind == BUTTON and self.rt.shown.nodes[p.node].hint != "":
-                    if self.rt.shown.nodes[p.node].style == ICON_ONLY:
+                    if self.rt.shown.nodes[p.node].style == TOOL or self.rt.shown.nodes[p.node].style == TOOL_ON:
+                        external_call["gtk_label_set_text", NoneType](external_call["gtk_widget_get_last_child", Int](external_call["gtk_button_get_child", Int](w)), t.as_c_string_span())
+                    elif self.rt.shown.nodes[p.node].style == ICON_ONLY:
                         external_call["gtk_widget_set_tooltip_text", NoneType](w, t.as_c_string_span())
                     else:
                         external_call["adw_button_content_set_label", NoneType](external_call["gtk_button_get_child", Int](w), t.as_c_string_span())
@@ -1504,7 +1521,30 @@ def on_board_drag_end[A: App](drag: Int, off_x: Float64, off_y: Float64, host_ad
 def on_clicked[A: App](button: Int, host_addr: Int) abi("C"):
     if busy():
         return
-    host_at[A](host_addr)[].send(get_node(button), False, "", 0, host_addr)
+    var host = host_at[A](host_addr)
+    var node = get_node(button)
+    if 0 <= node < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[node].msg2 != 0:  # a FilePicker: the platform's file dialog
+        host[].picker_node = node
+        var dialog = external_call["gtk_file_dialog_new", Int]()
+        var title = host[].rt.shown.nodes[node].text
+        external_call["gtk_file_dialog_set_title", NoneType](dialog, title.as_c_string_span())
+        external_call["gtk_file_dialog_open", NoneType](dialog, host[].window, 0, on_file_picked[A], host_addr)
+        return
+    host[].send(node, False, "", 0, host_addr)
+
+
+def on_file_picked[A: App](dialog: Int, result: Int, host_addr: Int) abi("C"):
+    """The file dialog closed: its file's path goes to the FilePicker's on_pick (nothing if cancelled)."""
+    var host = host_at[A](host_addr)
+    var err = List[Int](length=1, fill=0)
+    var file = external_call["gtk_file_dialog_open_finish", Int](dialog, result, Int(err.unsafe_ptr()))
+    _ = len(err)
+    if file == 0:
+        return
+    var path = c_str(external_call["g_file_get_path", Int](file))
+    var node = host[].picker_node
+    if path != "" and 0 <= node < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[node].msg2 != 0:
+        host[].send(node, True, path, 0, host_addr)
 
 
 def on_field_changed[A: App](entry: Int, host_addr: Int) abi("C"):
@@ -1715,6 +1755,13 @@ def run_step[A: App](host_addr: Int, step: String):
             return
         var s = String("clicked")
         external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span())
+    elif verb == "pick":  # pick:Title=/path: a FilePicker's dialog returning that file (a native dialog can't be driven)
+        var kv = split_at(rest, "=")
+        var i = find(host[], BUTTON, kv[0], 0)
+        if i < 0 or host[].rt.shown.nodes[i].msg2 == 0:
+            print("TEST: no file picker", kv[0])
+            return
+        host[].send(i, True, kv[1], 0, host_addr)
     elif verb == "type" or verb == "submit" or verb == "enter":
         var kv = split_at(rest, "=")
         var i = find(host[], FIELD, kv[0], 0, by_hint=True)
@@ -2073,7 +2120,9 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
             if tone != "":
                 print("TONE: " + c_str(external_call["gtk_label_get_text", Int](w)) + " = " + tone)
         elif n.kind == BUTTON:
-            if n.hint != "" and n.style == ICON_ONLY:
+            if n.style == TOOL or n.style == TOOL_ON:
+                print("BUTTON: " + c_str(external_call["gtk_label_get_text", Int](external_call["gtk_widget_get_last_child", Int](external_call["gtk_button_get_child", Int](w)))))
+            elif n.hint != "" and n.style == ICON_ONLY:
                 print("BUTTON: " + c_str(external_call["gtk_widget_get_tooltip_text", Int](w)))
             elif n.hint != "":
                 print("BUTTON: " + c_str(external_call["adw_button_content_get_label", Int](external_call["gtk_button_get_child", Int](w))))
@@ -2305,6 +2354,9 @@ def omarchy_css(p: Palette) -> String:
         + "window.omarchy popover > contents { background: " + card + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"
         + "window.omarchy scrollbar slider { min-width: 6px; min-height: 6px; background-color: " + strong + "; border-radius: 3px; }\n"
         + "window.omarchy entry.mui-cell-editor { border-radius: 0; box-shadow: inset 0 0 0 2px " + accent + "; background: " + card + "; }\n"
+        + "window.omarchy button.mui-tool { min-width: 58px; min-height: 48px; padding: 4px 6px; border-radius: 6px; }\n"
+        + "window.omarchy button.mui-tool-on { background: " + raised + "; color: " + accent + "; }\n"
+        + "window.omarchy label.mui-tool-label { font-size: 11px; }\n"
     )
 
 

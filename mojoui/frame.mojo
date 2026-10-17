@@ -13,6 +13,7 @@ from std.collections import Dict, Set
 from std.memory import Pointer, stack_allocation
 from std.memory.alloc import alloc, Layout
 from mojoui.datagrid import GridSource
+from mojoui.numformat import ColumnFormat, format_number, format_date, AUTO, NUMBER
 
 comptime INT = 0
 comptime DECIMAL = 1
@@ -477,6 +478,7 @@ struct Frame(Movable, GridSource):
     var log: List[Edit]
     var aliases: Dict[Int, Int64]  # (col << 32) | code → the code it was merged into, always final (no chains)
     var edits: Int  # count of edits applied (for hosts to know when to re-aggregate)
+    var formats: List[ColumnFormat]  # per column (stored, then formulas): how its values read; AUTO = by type
 
     def __init__(out self, base_addr: Int):
         self.base_addr = base_addr
@@ -490,6 +492,7 @@ struct Frame(Movable, GridSource):
         self.log = List[Edit]()
         self.aliases = Dict[Int, Int64]()
         self.edits = 0
+        self.formats = List[ColumnFormat]()
 
     def base(self) -> Pointer[Columns, MutUntrackedOrigin]:
         return base_at(self.base_addr)
@@ -617,11 +620,38 @@ struct Frame(Movable, GridSource):
         var extra = c - len(dictionary)
         return self.words[col][extra] if extra < len(self.words[col]) else "?"
 
+    # ---- formats (per column; applied only to what's shown) ----
+
+    def format_of(self, col: Int) -> ColumnFormat:
+        return self.formats[col].copy() if 0 <= col < len(self.formats) else ColumnFormat.auto()
+
+    def set_format(mut self, col: Int, f: ColumnFormat):
+        while len(self.formats) <= col:
+            self.formats.append(ColumnFormat.auto())
+        self.formats[col] = f.copy()
+
+    def format_value(self, col: Int, v: Int64, total: Bool = False) -> String:
+        """A value of column col (as stored, scaled) as the column's format shows it: cells, totals, pivots, charts.
+        total: a sum or an average (a column without a format still gets thousands separators there)."""
+        var kind = self.kind(col)
+        var f = self.format_of(col)
+        if total and f.is_auto() and (kind == INT or kind == DECIMAL):
+            f = ColumnFormat(NUMBER, -1, True, False, "$")
+        if kind == DATE:
+            return date_text(v) if f.is_auto() else format_date(v, f)
+        if kind == TEXT:
+            return String(v)
+        if f.is_auto():
+            return decimal_text(v, self.scale(col)) if kind == DECIMAL else String(v)
+        return format_number(v, self.scale(col) if kind == DECIMAL else 0, f)
+
     def display(self, col: Int, row: Int) -> String:
         var v = self.get(col, row)
         var kind = self.kind(col)
         if kind == TEXT and col < self.stored():
             return self.text_of(col, self.alias(col, v))
+        if not self.format_of(col).is_auto():
+            return self.format_value(col, v)
         if kind == DATE:
             return date_text(v)
         if kind == DECIMAL:

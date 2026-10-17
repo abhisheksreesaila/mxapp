@@ -143,6 +143,9 @@ def step(page, s):
     elif verb == "row":
         k, _, row = rest.partition("=")
         page.locator("[data-kind=list]").nth(int(k)).locator(f'[data-row="{int(row)}"]').click()
+    elif verb == "pick":  # pick:Title=/path: choose that file in the FilePicker (a real file input; it uploads)
+        title, _, path = rest.partition("=")
+        page.locator(f"input.picker-input[data-title={title!r}]").first.set_input_files(path)
     elif verb == "key":  # key:K=shift+ctrl+Name: a real key press, to whatever has the keyboard (a tapped canvas, an open editor)
         _, _, name = rest.partition("=")
         *mods, key = name.split("+")
