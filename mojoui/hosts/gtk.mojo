@@ -13,7 +13,7 @@ from std.memory.alloc import alloc, Layout
 from mojoui.menus import items_text, CHECKED, DISABLED, DANGER
 from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
-    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, SECONDARY, PAN, ZOOM, TAP,
+    SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, SECONDARY, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, KEY, SHIFT, CTRL, ALT,
 )
@@ -440,6 +440,10 @@ struct GtkHost[A: App](Movable):
     var popovers: List[Int]  # context-menu popovers parented to anchors (unparented at the next rebuild)
     var popups: List[Int]  # popovers to pop up once the new screen is in the window
     var shortcut_keys: Int  # the window's key controller: menu shortcuts (Ctrl+S) from anywhere
+    var toast_overlay: Int  # AdwToastOverlay around the screen (toasts float over it)
+    var toast: Int  # the toast showing, if any (kept across rebuilds while its node stays)
+    var toast_text: String
+    var toast_claimed: Bool  # the new screen still has the toast's node
     var skin_provider: Int  # the design's CSS provider (replaced when design() changes: Settings → Appearance)
     var skin_design: Int  # the design that provider is for
     var fonts: Bool  # the app's own fonts (Inter, JetBrains Mono) were handed to fontconfig
@@ -467,6 +471,10 @@ struct GtkHost[A: App](Movable):
         self.popovers = List[Int]()
         self.popups = List[Int]()
         self.shortcut_keys = 0
+        self.toast_overlay = 0
+        self.toast = 0
+        self.toast_text = ""
+        self.toast_claimed = False
         self.skin_provider = 0
         self.skin_design = -1
         self.fonts = False
@@ -499,6 +507,9 @@ struct GtkHost[A: App](Movable):
             add_class(w, self.padding_class(node.pad_v, node.pad_h))
         if node.name != "":  # a tagged view can be styled by the design's CSS (.mui-tag-toolbar)
             add_class(w, "mui-tag-" + node.name)
+        if node.tip != "":
+            var tip = node.tip
+            external_call["gtk_widget_set_tooltip_text", NoneType](w, tip.as_c_string_span())
         var want_w = max(node.w, node.min_w)
         if want_w != 0 or node.h != 0:
             external_call["gtk_widget_set_size_request", NoneType](w, c_int(want_w if want_w != 0 else -1), c_int(node.h if node.h != 0 else -1))
@@ -831,6 +842,100 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_scrolled_window_set_propagate_natural_width", NoneType](w, c_int(1))
             for c in node.children:
                 external_call["gtk_scrolled_window_set_child", NoneType](w, self.build(c, self_addr))
+        elif node.kind == DIALOG:
+            var dlg = external_call["adw_dialog_new", Int]()
+            var title = node.text
+            external_call["adw_dialog_set_title", NoneType](dlg, title.as_c_string_span())
+            external_call["adw_dialog_set_content_width", NoneType](dlg, c_int(node.w if node.w > 0 else 560))
+            var box = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
+            add_class(box, "mui-dialog")
+            var head = external_call["gtk_box_new", Int](c_int(HORIZONTAL), c_int(12))
+            add_class(head, "mui-dialog-head")
+            var label = external_call["gtk_label_new", Int](title.as_c_string_span())
+            add_class(label, "title-4")
+            external_call["gtk_label_set_xalign", NoneType](label, Float32(0))
+            external_call["gtk_widget_set_hexpand", NoneType](label, c_int(1))
+            external_call["gtk_box_append", NoneType](head, label)
+            var close_icon = String("window-close-symbolic")
+            var close = external_call["gtk_button_new_from_icon_name", Int](close_icon.as_c_string_span())
+            add_class(close, "flat")
+            add_class(close, "circular")
+            var close_tip = String("Close")
+            external_call["gtk_widget_set_tooltip_text", NoneType](close, close_tip.as_c_string_span())
+            set_node(close, i)
+            connect(close, "clicked", on_overlay_close[Self.A], self_addr)
+            external_call["gtk_box_append", NoneType](head, close)
+            external_call["gtk_box_append", NoneType](box, head)
+            for c in node.children:
+                var content = self.build(c, self_addr)
+                add_class(content, "mui-dialog-body")
+                external_call["gtk_box_append", NoneType](box, content)
+            external_call["adw_dialog_set_child", NoneType](dlg, box)
+            set_node(dlg, i)
+            connect(dlg, "closed", on_dialog_closed[Self.A], self_addr)
+            _ = external_call["g_object_ref_sink", Int](dlg)
+            self.dialog = dlg
+            self.widgets[i] = dlg
+            w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))  # nothing in the layout itself
+        elif node.kind == TOAST:
+            if self.toast != 0 and self.toast_text == node.text:  # the same toast, still up: keep it
+                set_node(self.toast, i)
+            else:
+                if self.toast != 0:
+                    set_node(self.toast, -1)
+                    external_call["adw_toast_dismiss", NoneType](self.toast)
+                    external_call["g_object_unref", NoneType](self.toast)
+                var t = node.text
+                var toast = external_call["adw_toast_new", Int](t.as_c_string_span())
+                if len(node.options) > 0:
+                    var action = node.options[0]
+                    external_call["adw_toast_set_button_label", NoneType](toast, action.as_c_string_span())
+                external_call["adw_toast_set_timeout", NoneType](toast, c_uint(node.size if node.size > 0 else 6))
+                _ = external_call["g_object_ref", Int](toast)
+                set_node(toast, i)
+                connect(toast, "button-clicked", on_toast_action[Self.A], self_addr)
+                connect(toast, "dismissed", on_toast_dismissed[Self.A], self_addr)
+                self.toast = toast
+                self.toast_text = node.text
+                if self.toast_overlay != 0:
+                    external_call["adw_toast_overlay_add_toast", NoneType](self.toast_overlay, toast)
+            self.toast_claimed = True
+            self.widgets[i] = self.toast
+            w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
+        elif node.kind == POPOVER:
+            var box = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(8))
+            add_class(box, "mui-popover")
+            if node.hint != "":
+                var title = node.hint
+                var label = external_call["gtk_label_new", Int](title.as_c_string_span())
+                add_class(label, "title-4")
+                external_call["gtk_label_set_xalign", NoneType](label, Float32(0))
+                external_call["gtk_box_append", NoneType](box, label)
+            for c in node.children:
+                external_call["gtk_box_append", NoneType](box, self.build(c, self_addr))
+            var popover = external_call["gtk_popover_new", Int]()
+            external_call["gtk_popover_set_child", NoneType](popover, box)
+            external_call["gtk_popover_set_position", NoneType](popover, c_int(3))  # GTK_POS_BOTTOM
+            add_class(popover, "mui-popover-surface")
+            var anchor = self.window
+            for k in range(len(self.rt.shown.nodes)):
+                if self.rt.shown.nodes[k].name == node.text and k < len(self.widgets) and self.widgets[k] != 0:
+                    anchor = self.widgets[k]
+            external_call["gtk_widget_set_parent", NoneType](popover, anchor)
+            if node.x != 0 or node.y != 0:
+                var rect = List[Int32](length=4, fill=0)
+                rect[0] = Int32(node.x)
+                rect[1] = Int32(node.y)
+                rect[2] = 1
+                rect[3] = 1
+                external_call["gtk_popover_set_pointing_to", NoneType](popover, Int(rect.unsafe_ptr()))
+                _ = len(rect)
+            set_node(popover, i)
+            connect(popover, "closed", on_menu_closed[Self.A], self_addr)
+            self.popovers.append(popover)
+            self.popups.append(popover)
+            self.widgets[i] = popover
+            w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
         elif node.kind == MENUBAR:
             w = external_call["gtk_box_new", Int](c_int(HORIZONTAL), c_int(2))
             add_class(w, "mui-menubar")
@@ -1030,7 +1135,8 @@ struct GtkHost[A: App](Movable):
     def show(mut self, self_addr: Int):
         """(Re)builds the window's content from rt.shown."""
         set_busy(True)
-        if self.dialog != 0:  # the previous screen's alert goes with it
+        if self.dialog != 0:  # the previous screen's alert (or dialog) goes with it
+            set_node(self.dialog, -1)  # (closing now isn't on_close: the screen is being replaced)
             _ = external_call["adw_dialog_force_close", c_int](self.dialog)
             external_call["g_object_unref", NoneType](self.dialog)
             self.dialog = 0
@@ -1054,7 +1160,17 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_widget_set_margin_bottom", NoneType](root, c_int(32))
             external_call["gtk_widget_set_margin_start", NoneType](root, c_int(32))
             external_call["gtk_widget_set_margin_end", NoneType](root, c_int(32))
-        external_call["gtk_window_set_child", NoneType](self.window, root)
+        if self.toast_overlay == 0:  # toasts float over whatever screen is up
+            self.toast_overlay = external_call["adw_toast_overlay_new", Int]()
+            external_call["gtk_window_set_child", NoneType](self.window, self.toast_overlay)
+        external_call["adw_toast_overlay_set_child", NoneType](self.toast_overlay, root)
+        if self.toast != 0 and not self.toast_claimed:  # the new screen has no toast: the old one goes
+            set_node(self.toast, -1)
+            external_call["adw_toast_dismiss", NoneType](self.toast)
+            external_call["g_object_unref", NoneType](self.toast)
+            self.toast = 0
+            self.toast_text = ""
+        self.toast_claimed = False
         if self.reveal_pending >= 0:
             _ = external_call["gtk_widget_add_tick_callback", c_uint](root, on_reveal_tick[Self.A], self_addr, 0)
         if self.dialog != 0 and (getenv("MOJOUI_TEST") == "" or getenv("MOJOUI_SHOT") != ""):  # plain tests drive it unseen
@@ -1667,14 +1783,54 @@ def on_item_clicked[A: App](button: Int, host_addr: Int) abi("C"):
 
 
 def on_menu_closed[A: App](popover: Int, host_addr: Int) abi("C"):
-    """A context menu dismissed (a click elsewhere, Escape): the app's on_close takes it out of the view."""
+    """A context menu or popover dismissed (a click elsewhere, Escape): the app's on_close takes it out of the view."""
     if busy():
         return
     var node = get_node(popover)
     if node < 0:
         return
     var host = host_at[A](host_addr)
-    if node < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[node].kind == MENU:
+    if node < len(host[].rt.shown.nodes) and (host[].rt.shown.nodes[node].kind == MENU or host[].rt.shown.nodes[node].kind == POPOVER):
+        host[].send(node, True, "", 0, host_addr)
+
+
+def on_overlay_close[A: App](button: Int, host_addr: Int) abi("C"):
+    """A dialog's ✕: on_close."""
+    if busy():
+        return
+    var node = get_node(button)
+    var host = host_at[A](host_addr)
+    if node >= 0:
+        host[].send(node, True, "", 0, host_addr)
+
+
+def on_dialog_closed[A: App](dialog: Int, host_addr: Int) abi("C"):
+    """A dialog closed by Escape (or its ✕): on_close, unless the screen is being replaced."""
+    if busy():
+        return
+    var node = get_node(dialog)
+    if node < 0:
+        return
+    var host = host_at[A](host_addr)
+    if node < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[node].kind == DIALOG:
+        host[].send(node, True, "", 0, host_addr)
+
+
+def on_toast_action[A: App](toast: Int, host_addr: Int) abi("C"):
+    if busy():
+        return
+    var node = get_node(toast)
+    if node >= 0:
+        host_at[A](host_addr)[].send(node, False, "", 0, host_addr)
+
+
+def on_toast_dismissed[A: App](toast: Int, host_addr: Int) abi("C"):
+    """The toast's time ran out (or its ✕): on_close takes it out of the view."""
+    if busy():
+        return
+    var node = get_node(toast)
+    var host = host_at[A](host_addr)
+    if node >= 0 and node < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[node].kind == TOAST:
         host[].send(node, True, "", 0, host_addr)
 
 
@@ -2149,6 +2305,28 @@ def run_step[A: App](host_addr: Int, step: String):
             return
         var s = String("clicked")
         external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[item], s.as_c_string_span())
+    elif verb == "toast":  # toast:Undo: the toast's button, through its own signal
+        var i = find(host[], TOAST, "", 0)
+        if i < 0 or host[].toast == 0 or len(host[].rt.shown.nodes[i].options) == 0 or host[].rt.shown.nodes[i].options[0] != rest:
+            print("TEST: no toast with", rest)
+            return
+        var s = String("button-clicked")
+        external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].toast, s.as_c_string_span())
+    elif verb == "dismiss":  # dismiss: Escape on what floats: a popover or context menu closes, else the dialog
+        var done = False
+        var floating = List[Int]()  # (closing one sends on_close, which replaces the screen: collect first)
+        for k in range(len(host[].rt.shown.nodes)):
+            ref n = host[].rt.shown.nodes[k]
+            if (n.kind == POPOVER or (n.kind == MENU and n.style == 1)) and k < len(host[].widgets) and host[].widgets[k] != 0:
+                floating.append(host[].widgets[k])
+        for pop in floating:
+            external_call["gtk_popover_popdown", NoneType](pop)
+            done = True
+        if not done and host[].dialog != 0:
+            _ = external_call["adw_dialog_close", c_int](host[].dialog)
+            done = True
+        if not done:
+            print("TEST: nothing to dismiss")
     elif verb == "shortcut":  # shortcut:Ctrl+S: the window's key controller's own signal, as a real press sends it
         var name = rest
         var state = 0
@@ -2487,11 +2665,13 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
                 print("BUTTON: " + c_str(external_call["adw_button_content_get_label", Int](external_call["gtk_button_get_child", Int](w))))
             else:
                 print("BUTTON: " + c_str(external_call["gtk_button_get_label", Int](w)))
+            if n.tip != "":
+                print("TIP: " + n.text + " = " + n.tip)
         elif n.kind == FIELD:
             print("FIELD: " + c_str(external_call["gtk_editable_get_text", Int](w)))
         elif n.kind == TOGGLE:
             var on = external_call["gtk_check_button_get_active", c_int](w) != 0
-            print("TOGGLE: " + c_str(external_call["gtk_check_button_get_label", Int](w)) + ("=on" if on else "=off"))
+            print(("CHECK: " if n.style == 1 else "TOGGLE: ") + c_str(external_call["gtk_check_button_get_label", Int](w)) + ("=on" if on else "=off"))
         elif n.kind == DROPDOWN:
             var model = external_call["gtk_drop_down_get_model", Int](w)
             var sel = external_call["gtk_drop_down_get_selected", c_uint](w)
@@ -2520,8 +2700,20 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
             print("ALERT: " + line)
             if getenv("MOJOUI_SHOT") != "":
                 print("ALERTSHOWN: " + ("yes" if external_call["gtk_widget_get_mapped", c_int](w) != 0 else "no"))
+        elif n.kind == DIALOG:
+            print("DIALOG: " + n.text)
+            if getenv("MOJOUI_SHOT") != "":
+                print("DIALOGSHOWN: " + ("yes" if external_call["gtk_widget_get_mapped", c_int](w) != 0 else "no"))
+        elif n.kind == TOAST:
+            print("TOAST: " + n.text + (" | " + n.options[0] if len(n.options) > 0 else ""))
+        elif n.kind == POPOVER:
+            print("POPOVER: " + n.hint)
+            if getenv("MOJOUI_SHOT") != "":
+                print("POPOVERSHOWN: " + ("yes" if external_call["gtk_widget_get_mapped", c_int](w) != 0 else "no"))
         elif n.kind == MENU:
             print("MENU: " + ("context" if n.style == 1 else n.text) + ": " + items_text(host[].rt.shown, i))
+            if n.style == 1 and getenv("MOJOUI_SHOT") != "":  # (a popover is its own surface: not in the window's screenshot)
+                print("MENUSHOWN: " + ("yes" if external_call["gtk_widget_get_mapped", c_int](w) != 0 else "no"))
         elif n.kind == NAVBAR:
             var title = external_call["gtk_widget_get_last_child", Int](w)
             var has_back = external_call["gtk_widget_get_first_child", Int](w) != title
@@ -2796,7 +2988,7 @@ def skin_css(p: Palette, cls: String) -> String:
         + w + "checkbutton check:checked, " + w + "checkbutton radio:checked { background: " + accent + "; border-color: " + accent + "; color: " + on_accent + "; }\n"
         + w + "switch { background: " + strong + "; } " + w + "switch:checked { background: " + accent + "; }\n"
         + w + ".mui-menubar { background: " + chrome + "; }\n"
-        + w + "menubutton.mui-menu > button { min-height: 24px; padding: 2px 9px; font-size: 12.5px; font-weight: 400; color: " + chrome_ink + "; border-radius: 4px; }\n"
+        + w + "menubutton.mui-menu > button { min-height: 24px; padding: 2px 9px; font-size: 12.5px; font-weight: 400; color: " + chrome_ink + "; border-radius: 4px; background: transparent; box-shadow: none; }\n"
         + w + "menubutton.mui-menu > button:checked, " + w + "menubutton.mui-menu > button:hover { background: " + hex_of(mix(p.chrome, p.chrome_ink, 0.08)) + "; }\n"
         + w + "menubutton.mui-menu arrow { -gtk-icon-size: 0; min-width: 0; min-height: 0; margin: 0; }\n"
         + "popover.mui-menu-popover > contents { padding: 4px; min-width: 260px; }\n"
@@ -2810,6 +3002,14 @@ def skin_css(p: Palette, cls: String) -> String:
         + "popover.mui-menu-popover separator.mui-menu-sep { margin: 4px 6px; background: " + line + "; }\n"
         + "popover.mui-menu-popover menubutton > button { min-height: 28px; padding: 0 10px; border-radius: 4px; }\n"
         + "popover.mui-menu-popover menubutton arrow { -gtk-icon-size: 0; min-width: 0; min-height: 0; margin: 0; }\n"
+        + "dialog.mui-dialog-surface, " + w + "dialog, dialog > sheet { border-radius: 8px; }\n"
+        + ".mui-dialog { background: " + card + "; color: " + ink + "; border-radius: 8px; }\n"
+        + ".mui-dialog-head { padding: 14px 16px 14px 20px; border-bottom: 1px solid " + line + "; }\n"
+        + ".mui-dialog-body { padding: 16px 20px; }\n"
+        + ".mui-dialog label { color: " + ink2 + "; } .mui-dialog label.title-4 { color: " + ink + "; font-weight: 600; font-size: 15px; }\n"
+        + "popover.mui-popover-surface > contents { padding: 12px 14px; min-width: 260px; }\n"
+        + "toast { background: " + ink + "; color: " + card + "; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 12.5px; }\n"
+        + "toast label, toast button { color: " + card + "; } toast button.flat { color: " + hex_of(mix(p.accent, p.card, 0.55)) + "; font-weight: 600; }\n"
         + "tooltip { background: " + ink + "; color: " + card + "; border-radius: 4px; padding: 6px 10px; font-family: 'Inter', sans-serif; font-size: 12px; }\n"
         + "tooltip > * { color: " + card + "; }\n"
     )

@@ -13,12 +13,14 @@ struct Tool(Copyable, Movable):
     var icon: String
     var message: Int
     var on: Bool
+    var tip: String  # the tooltip ("Save the document (Ctrl+S)"); "" for none
 
 
 def tool_views(tools: List[Tool]) -> List[View]:
     var out = List[View]()
     for t in tools:
-        out.append(Button(t.title, t.message, TOOL_ON if t.on else TOOL, icon=t.icon))
+        var b = Button(t.title, t.message, TOOL_ON if t.on else TOOL, icon=t.icon)
+        out.append(b^.tooltip(t.tip) if t.tip != "" else b^)
     return out^
 
 
@@ -47,9 +49,12 @@ def SheetTabs(names: List[String], selected: Int, on_select: Int, on_add: Int = 
     return HStack(items^, spacing=4).fill().align(CENTER).tag("sheet-tabs")
 
 
-def FormulaBar(cell: String, text: String, on_submit: Int, on_cancel: Int = NO_MSG, placeholder: String = "Value or =formula") -> View:
-    """ƒx, the selected cell's name, and its value or formula (Enter writes it, Escape puts it back)."""
-    return HStack(Text("ƒx").tone(4), Text(cell, CAPTION).width(72),
+def FormulaBar(cell: String, text: String, on_submit: Int, on_cancel: Int = NO_MSG, placeholder: String = "Value or =formula",
+               on_help: Int = NO_MSG) -> View:
+    """ƒx, the selected cell's name, and its value or formula (Enter writes it, Escape puts it back). With `on_help`,
+    ƒx is a button (a popover listing what formulas can do)."""
+    var fx = Button("ƒx", on_help, SUBTLE).tooltip("What formulas can do") if on_help != NO_MSG else Text("ƒx").tone(4)
+    return HStack(fx^, Text(cell, CAPTION).width(72),
                   TextField(text, placeholder=placeholder, on_submit=on_submit, on_cancel=on_cancel).grow(),
                   spacing=10).fill().align(CENTER).padding(4, 12).tag("formula-bar")
 

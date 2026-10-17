@@ -136,6 +136,8 @@ def m2():
             problems.append(f"{host}: Data > Sort largest first didn't sort")
         if not any(m.startswith("context:") and "Sort largest first" in m for m in lines(ctx[k], "MENU: ")):
             problems.append(f"{host}: a right-click on the header opened no context menu ({lines(ctx[k], 'MENU: ')[-1:]})")
+        if host == "GTK" and "MENUSHOWN: yes" not in ctx[k]:
+            problems.append("GTK: the context menu's popover isn't on screen")
         if not any(l.startswith("sorted by ") and l.endswith("↓") for l in labels(ctx_sort[k])):
             problems.append(f"{host}: the context menu's Sort largest first didn't sort")
         if any(m.startswith("context:") for m in lines(ctx_sort[k], "MENU: ")):

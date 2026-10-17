@@ -35,6 +35,9 @@ comptime BOARD = 25  # children at absolute positions (.at(x, y), sized with .wi
 comptime OVERLAY = 26  # first child fills it; the others float over it, pinned to an edge or corner (.pin(h, v): x = h, y = v)
 comptime MENUBAR = 27  # a row of menus (mojoui.menus): children = MENU nodes
 comptime MENU = 28  # text = title; children = ITEM nodes; style 1 = a context menu: text = the anchor's tag, x/y = where in it, msg2 = on_close
+comptime DIALOG = 30  # a modal panel over a dimmed page (mojoui.overlays): text = title, child = content, msg2 = on_close, w = width
+comptime TOAST = 31  # a short message at the bottom: text, options[0] = action title, msg = on_action, msg2 = on_close, size = seconds
+comptime POPOVER = 32  # a panel attached to the view tagged `text`: hint = title, child = content, msg2 = on_close, x/y = where in the anchor
 comptime ITEM = 29  # a menu item: text = title, msg, hint = icon, options[0] = shortcut, value = flags (1 checked, 2 disabled, 4 danger); style 1 = separator, 2 = section label; children = a submenu
 
 # Canvas gestures (event.number)
@@ -139,6 +142,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
     var height_from_parent: Bool
     var x: Int  # position inside a Board
     var y: Int
+    var tip: String  # a tooltip (.tooltip())
 
     def __init__(
         out self,
@@ -182,6 +186,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
         self.height_from_parent = False
         self.x = 0
         self.y = 0
+        self.tip = ""
 
     def __eq__(self, other: Self) -> Bool:
         return (
@@ -208,7 +213,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
             and self.justify_items == other.justify_items and self.name == other.name
             and self.width_from_parent == other.width_from_parent
             and self.height_from_parent == other.height_from_parent
-            and self.x == other.x and self.y == other.y
+            and self.x == other.x and self.y == other.y and self.tip == other.tip
         )
 
     def sized_width(self) -> Bool:
@@ -289,6 +294,11 @@ struct View(Copyable, Movable):
         """Where an Overlay island floats: h = START, CENTER or END; v = START or END."""
         self.nodes[0].x = h
         self.nodes[0].y = v
+        return self^
+
+    def tooltip(var self, text: String) -> View:
+        """A short explanation shown when the pointer rests on the view (hosts print it as TIP: in tests)."""
+        self.nodes[0].tip = text
         return self^
 
     def tone(var self, t: Int) -> View:

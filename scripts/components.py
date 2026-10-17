@@ -30,6 +30,7 @@ COMPONENTS = [
     ("Image", "IMAGE"), ("Icon", "ICON"), ("Alert", "ALERT"), ("Tabs", "TABS"), ("NavBar", "NAVBAR"),
     ("LazyList", "LAZYLIST"), ("Canvas", "CANVAS"), ("Board", "BOARD"), ("Overlay", "OVERLAY"),
     ("MenuBar", "MENUBAR"), ("Menu", "MENU"), ("Item", "ITEM"), ("ContextMenu", "MENU"),
+    ("Dialog", "DIALOG"), ("Toast", "TOAST"), ("Popover", "POPOVER"), ("Checkbox", "TOGGLE"),
 ]
 
 # Which examples each platform's checks actually run (docs/goals/*-check.py): GTK and the web run every
@@ -71,6 +72,7 @@ FEATURES = [
     ("Keyboard shortcuts (menu items)", "Item(shortcut=\"Ctrl+S\")", r"shortcut", "omxplorer"),
     ("Canvas: right-click", "on_gesture: SECONDARY (event.x, y)", r"\bSECONDARY\b", "omxplorer"),
     ("Submenus, checked, disabled and danger items", "Submenu(…), Item(checked=, disabled=, danger=)", r"mui-danger|mi-danger|danger", "omxplorer"),
+    ("Tooltips", ".tooltip(text)", r"node\.tip|data-tip|\"tip\"", "omxplorer"),
 ]
 
 # Components built in Mojo from the ones above (drawn on a Canvas or assembled from native controls):

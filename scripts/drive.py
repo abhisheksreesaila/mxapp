@@ -24,9 +24,12 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
   const k = e.dataset.kind;
   if (k === 'label') { const tone = ['warn', 'good', 'strong', 'accent'].find(t => e.classList.contains('tone-' + t));
     return 'LABEL: ' + e.textContent + (tone ? String.fromCharCode(10) + 'TONE: ' + e.textContent + ' = ' + tone : ''); }
-  if (k === 'button') return 'BUTTON: ' + e.textContent.trim();
+  if (k === 'button') return 'BUTTON: ' + e.textContent.trim() + (e.dataset.tip ? String.fromCharCode(10) + 'TIP: ' + e.textContent.trim() + ' = ' + e.dataset.tip : '');
+  if (k === 'dialog') return 'DIALOG: ' + e.dataset.title;
+  if (k === 'toast') return 'TOAST: ' + e.dataset.title + (e.dataset.action ? ' | ' + e.dataset.action : '');
+  if (k === 'popover') return 'POPOVER: ' + e.dataset.title;
   if (k === 'field') return 'FIELD: ' + e.value;
-  if (k === 'toggle') return 'TOGGLE: ' + e.querySelector('span').textContent + (e.querySelector('input').checked ? '=on' : '=off');
+  if (k === 'toggle') return (e.dataset.check ? 'CHECK: ' : 'TOGGLE: ') + e.querySelector('span').textContent + (e.querySelector('input').checked ? '=on' : '=off');
   if (k === 'dropdown') return 'DROPDOWN: ' + e.options[e.selectedIndex].text;
   if (k === 'slider') return 'SLIDER: ' + e.value;
   if (k === 'progress') return 'PROGRESS: ' + e.value;
@@ -143,6 +146,10 @@ def step(page, s):
         else:
             scope = page.locator(".menu.context")
         scope.locator(f"[data-kind=item][data-title={item!r}]").first.dispatch_event("click")  # (a submenu's item is shown on hover)
+    elif verb == "toast":  # toast:Undo: the toast's action button
+        page.locator("[data-kind=toast] button[data-action]").filter(has_text=exact(rest)).first.click()
+    elif verb == "dismiss":  # dismiss: Escape on what floats (a popover, a context menu, else the dialog)
+        page.keyboard.press("Escape")
     elif verb == "shortcut":  # shortcut:Ctrl+Shift+S: a real key press anywhere in the window
         *mods, key = rest.split("+")
         page.keyboard.press("+".join([{"Ctrl": "Control"}.get(m, m) for m in mods] + [key.lower() if len(key) == 1 else key]))

@@ -94,9 +94,9 @@ def main() raises:
     assert_equal(insp.nodes[0].w, 300)
 
     # ---- the sheet chrome ----
-    var left: List[Tool] = [Tool("View", "view", 1, False), Tool("Zoom", "zoom", 2, False)]
-    var middle: List[Tool] = [Tool("Table", "table", 3, True), Tool("Chart", "chart-bar", 4, False)]
-    var right: List[Tool] = [Tool("Format", "format", 5, True)]
+    var left: List[Tool] = [Tool("View", "view", 1, False, ""), Tool("Zoom", "zoom", 2, False, "")]
+    var middle: List[Tool] = [Tool("Table", "table", 3, True, "Show as a table"), Tool("Chart", "chart-bar", 4, False, "")]
+    var right: List[Tool] = [Tool("Format", "format", 5, True, "")]
     var bar = Toolbar(left, middle, right)
     var tools = 0
     var on = 0

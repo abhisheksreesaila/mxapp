@@ -12,6 +12,8 @@ from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette, skin_palette, skin_name, skin_of
 from mojoui.menus import MenuBar, Menu, Item, Separator, Submenu, ContextMenu
+from mojoui.overlays import Dialog, Toast, Popover, Checkbox
+from mojoui.view import Radio, LEDGER, GRAPHITE, BLUEPRINT
 from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
@@ -65,7 +67,7 @@ comptime UNDO = 21
 comptime TOGGLE_INSPECTOR = 22
 comptime SAVE = 24
 comptime IMPORT_COLUMN = 23  # Import: the column whose details show
-comptime RECENT = 40  # + index: open a recent file
+comptime RECENT = 40  # + index (40–49): open a recent file
 comptime INSERT_CHART = 25
 comptime INSERT_PIVOT = 26
 comptime MOVE = 27  # a sheet object dragged by its title bar
@@ -87,13 +89,23 @@ comptime RESIZE = 36  # a sheet object (or the table) resized by its corner
 comptime SORT_ASC = 37  # the menus' sorts (the context menu's column, else the selected one)
 comptime SORT_DESC = 38
 comptime MENU_CLOSE = 39  # the context menu dismissed
-comptime SETTINGS = 41  # File > Settings…
-comptime ABOUT = 42  # Help > About omxplorer
-comptime SHOW_REPORT = 43  # View > Report / Sheet
-comptime SHOW_SHEET = 44
-comptime FMT_NUMBER = 45  # Format as ▸ (the context menu's column, else the selected one)
-comptime FMT_CURRENCY = 46
-comptime FMT_PERCENT = 47
+comptime SETTINGS = 64  # File > Settings…
+comptime ABOUT = 65  # Help > About omxplorer
+comptime SHOW_REPORT = 66  # View > Report / Sheet
+comptime SHOW_SHEET = 67
+comptime FMT_NUMBER = 68  # Format as ▸ (the context menu's column, else the selected one)
+comptime FMT_CURRENCY = 69
+comptime FMT_PERCENT = 70
+comptime UNDO_SORT = 71  # the sort toast's Undo
+comptime TOAST_CLOSE = 72
+comptime SETTINGS_CLOSE = 73
+comptime SKIN = 74  # Settings: the skin picked (event.number)
+comptime TIMINGS = 75  # Settings: show GPU timings in the status bar
+comptime KEEP_INSPECTOR = 76  # Settings: the inspector opens with a sheet
+comptime ABOUT_CLOSE = 77
+comptime FX_HELP = 78  # the formula bar's ƒx: what formulas can do
+comptime HELP_CLOSE = 79
+comptime SKINS: List[String] = ["Ledger", "Graphite", "Blueprint"]
 comptime MAX_OBJECTS = 40  # per sheet, and tiles per report (canvas ids 10…49, 60…99, 120…159)
 comptime TABLE_H = 400  # the table's height once objects share the sheet
 
@@ -146,6 +158,12 @@ struct Main(App):
     var ctx_col: Int  # the column a context menu is open for (-1: none), and where it opened on the grid
     var ctx_x: Int
     var ctx_y: Int
+    var settings_open: Bool  # File > Settings…
+    var about_open: Bool  # Help > About
+    var help_open: Bool  # ƒx's popover
+    var toast: String  # the toast showing ("" none) and what its Undo does
+    var toast_undo: Int
+    var show_timings: Bool  # Settings: the GPU time in the status bar (settings.txt: timings)
 
     def __init__(out self):
         self.screen = START_SCREEN
@@ -167,7 +185,7 @@ struct Main(App):
         self.pal = skin_palette(self.skin)
         self.import_col = 0
         self.insp_tab = 1
-        self.inspector_open = True
+        self.inspector_open = read_setting(APP, "inspector", "yes") != "no"
         self.formula_open = False
         self.edit_text = ""
         self.message = ""
@@ -192,6 +210,12 @@ struct Main(App):
         self.ctx_col = -1
         self.ctx_x = 0
         self.ctx_y = 0
+        self.settings_open = False
+        self.about_open = False
+        self.help_open = False
+        self.toast = ""
+        self.toast_undo = NO_MSG
+        self.show_timings = read_setting(APP, "timings", "yes") != "no"
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -493,6 +517,39 @@ struct Main(App):
         elif m == MENU_CLOSE:
             self.ctx_col = -1
             self.version += 1
+        elif m == SETTINGS or m == SETTINGS_CLOSE:
+            self.settings_open = m == SETTINGS
+            self.version += 1
+        elif m == ABOUT or m == ABOUT_CLOSE:
+            self.about_open = m == ABOUT
+            self.version += 1
+        elif m == FX_HELP or m == HELP_CLOSE:
+            self.help_open = m == FX_HELP and not self.help_open
+            self.version += 1
+        elif m == SKIN:
+            if 0 <= event.number < 3:
+                self.skin = LEDGER if event.number == 0 else (GRAPHITE if event.number == 1 else BLUEPRINT)
+                self.pal = skin_palette(self.skin)
+                write_setting(APP, "skin", skin_name(self.skin))
+                self.grid.redraw()
+                self.preview.redraw()
+            self.version += 1
+        elif m == TIMINGS:
+            self.show_timings = event.number == 1
+            write_setting(APP, "timings", "yes" if self.show_timings else "no")
+            self.version += 1
+        elif m == KEEP_INSPECTOR:
+            self.inspector_open = event.number == 1
+            write_setting(APP, "inspector", "yes" if self.inspector_open else "no")
+            self.version += 1
+        elif m == TOAST_CLOSE:
+            self.toast = ""
+            self.version += 1
+        elif m == UNDO_SORT:
+            self.grid.clear_order()
+            self.toast = ""
+            self.message = "Sort undone"
+            self.version += 1
         elif m == GRID:
             var action = self.grid.handle(event, self.frame, self.font, self.pal)
             if action == GRID_SELECTED or action == GRID_EDIT or action == GRID_READ_ONLY or action == GRID_COLUMN:
@@ -609,6 +666,8 @@ struct Main(App):
                     desc = True
                 self.grid.set_order(self.frame.permutation(col, desc), col, desc)
                 self.message = "Sorted by " + self.frame.name(col) + (" (largest first)" if desc else "")
+                self.toast = "Sorted by " + self.frame.name(col) + (", largest first" if desc else ", smallest first")
+                self.toast_undo = UNDO_SORT
             self.version += 1
         elif m == FMT_NUMBER or m == FMT_CURRENCY or m == FMT_PERCENT:
             var col = self.ctx_col if self.ctx_col >= 0 else self.grid.cur_col
@@ -840,7 +899,14 @@ struct Main(App):
             Text(self.message, CAPTION).tone(TONE_WARN) if self.message != "" else Spacer(),
             spacing=18,
         ).padding(28, 48).fill()
-        return VStack(self.menu_bar(), body, Spacer(), StatusBar(["Choose a file, or open the sample"], "omxplorer · omxapp"), spacing=0).fill().grow()
+        var parts = List[View]()
+        parts.append(self.menu_bar())
+        parts.append(body^)
+        parts.append(Spacer())
+        parts.append(StatusBar(["Choose a file, or open the sample"], "omxplorer · omxapp"))
+        for o in self.overlays():
+            parts.append(o.copy())
+        return VStack(parts^, spacing=0).fill().grow()
 
     def import_screen(self) -> View:
         var cols = List[View]()
@@ -912,14 +978,45 @@ struct Main(App):
                                   Item("Percent", FMT_PERCENT, checked=style == PERCENT)], icon="format").copy() if numeric else Item("Format as", NO_MSG, icon="format", disabled=True),
             Separator(), Item("Insert formula column", NEW_FORMULA, icon="formula"), Item("Add row", ADD_ROW, icon="row-plus")], on_close=MENU_CLOSE)
 
+    def overlays(self) -> List[View]:
+        """What floats over the screen right now: a dialog, the toast, ƒx's popover (each is in the view only while open)."""
+        var out = List[View]()
+        if self.settings_open:
+            var at = 0 if self.skin == LEDGER else (1 if self.skin == GRAPHITE else 2)
+            out.append(Dialog("Settings", VStack(
+                Text("Appearance", HEADLINE), Text("The same on every computer, whatever the system theme.", CAPTION),
+                Radio(materialize[SKINS](), at, SKIN),
+                Divider().fill(),
+                Checkbox("Show GPU timings in the status bar", self.show_timings, TIMINGS),
+                Checkbox("Open the inspector with a sheet", self.inspector_open, KEEP_INSPECTOR),
+                HStack(Text("Kept in settings.txt in your config folder, so every launch looks the same.", CAPTION), Spacer(), Button("Done", SETTINGS_CLOSE, PROMINENT), spacing=10).fill().align(CENTER),
+                spacing=12).align(START), on_close=SETTINGS_CLOSE))
+        if self.about_open:
+            out.append(Dialog("About omxplorer", VStack(
+                Text("omxplorer", TITLE).tone(TONE_ACCENT), Text("open data, shape it, report on it, on your GPU", CAPTION),
+                Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD),
+                Text("Written once in Mojo with omxapp: the same app, the same look, on Linux, the web, Mac, iPhone and Android.", CAPTION),
+                HStack(Spacer(), Button("Done", ABOUT_CLOSE, PROMINENT), spacing=10).fill(),
+                spacing=10).align(START), on_close=ABOUT_CLOSE, width=480))
+        if self.help_open:
+            out.append(Popover("formula-bar", "Formulas", VStack(
+                Text("A formula makes a whole column from other columns: margin = revenue - cost", CAPTION),
+                Text("+  −  ×  ÷  //  %   and parentheses", CAPTION), Text("min(a, b)   max(a, b)   −a", CAPTION),
+                Text("Money keeps its decimals; division rounds the way the column does.", CAPTION), spacing=6).align(START).max_width(420), on_close=HELP_CLOSE))
+        if self.toast != "":
+            out.append(Toast(self.toast, "Undo" if self.toast_undo != NO_MSG else "", self.toast_undo, on_close=TOAST_CLOSE))
+        return out^
+
     def toolbar(self) -> View:
-        var left: List[Tool] = [Tool("Save", "save", SAVE, False), Tool("Undo", "undo", UNDO, False)]
-        var middle: List[Tool] = [Tool("Pivot", "pivot", INSERT_PIVOT, False), Tool("Chart", "chart-bar", INSERT_CHART, False),
-                                  Tool("Add row", "row-plus", ADD_ROW, False), Tool("Formula", "formula", NEW_FORMULA, self.formula_open),
-                                  Tool("Sort", "sort", SORT, self.grid.sort_col >= 0)]
-        var right: List[Tool] = [Tool("Format", "format", TOGGLE_INSPECTOR, self.inspector_open)]
+        var left: List[Tool] = [Tool("Save", "save", SAVE, False, "Save the document (Ctrl+S)"), Tool("Undo", "undo", UNDO, False, "Undo the last edit (Ctrl+Z)")]
+        var middle: List[Tool] = [Tool("Pivot", "pivot", INSERT_PIVOT, False, "A pivot table of the selected column (Ctrl+Shift+P)"),
+                                  Tool("Chart", "chart-bar", INSERT_CHART, False, "A chart of the selected column (Ctrl+Shift+C)"),
+                                  Tool("Add row", "row-plus", ADD_ROW, False, "A new row at the end (Ctrl+Shift+R)"),
+                                  Tool("Formula", "formula", NEW_FORMULA, self.formula_open, "A new column computed from others"),
+                                  Tool("Sort", "sort", SORT, self.grid.sort_col >= 0, "Sort by the selected column; again to flip")]
+        var right: List[Tool] = [Tool("Format", "format", TOGGLE_INSPECTOR, self.inspector_open, "Show or hide the inspector (Ctrl+Shift+I)")]
         var extra = List[View]()
-        extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt,.omx"))
+        extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt,.omx").tooltip("Open a CSV or .omx file"))
         return Toolbar(left, middle, right, extra)
 
     def report_inspector(self) -> View:
@@ -1040,7 +1137,7 @@ struct Main(App):
             items.append("Average " + self.frame.format_average(col, self.sum, self.count))
         if self.message != "":
             items.append(self.message)
-        return StatusBar(items, fixed(self.milliseconds, 1) + " ms on " + (self.gf()[].device_name() if self.gf_addr != 0 else "CPU"))
+        return StatusBar(items, (fixed(self.milliseconds, 1) + " ms on " + (self.gf()[].device_name() if self.gf_addr != 0 else "CPU")) if self.show_timings else "")
 
     def sheet_width(self) -> Int:
         return W - 40 - (INSPECTOR_W + 16 if self.inspector_open else 0)
@@ -1074,7 +1171,7 @@ struct Main(App):
     def sheet_screen(self) -> View:
         var width = self.sheet_width()
         var cell = (self.frame.name(self.grid.cur_col) if self.grid.cur_col >= 0 else "") + (" " + String(self.grid.cur_row + 1) if self.grid.cur_row >= 0 else "")
-        var fx = FormulaBar("New column", "", FORMULA_SUBMIT, placeholder="A new column: its name, then its formula") if self.formula_open else FormulaBar(cell, self.edit_text, FX_COMMIT, CELL_CANCEL)
+        var fx = FormulaBar("New column", "", FORMULA_SUBMIT, placeholder="A new column: its name, then its formula", on_help=FX_HELP) if self.formula_open else FormulaBar(cell, self.edit_text, FX_COMMIT, CELL_CANCEL, on_help=FX_HELP)
         var sorted = ("sorted by " + self.frame.name(self.grid.sort_col) + (" ↓" if self.grid.sort_desc else " ↑")) if self.grid.sort_col >= 0 else String("")
         var head = HStack(Text(self.name, HEADLINE), Text(grouped(self.frame.rows()) + " rows", CAPTION).tone(TONE_ACCENT), Spacer(),
                           Text(sorted, CAPTION), spacing=12).fill().align(CENTER).height(HEADER_H - 8)
@@ -1107,4 +1204,6 @@ struct Main(App):
         parts.append(self.status().height(30))
         if self.ctx_col >= 0 and self.sheet_tab == 0:
             parts.append(self.context_menu())
+        for o in self.overlays():
+            parts.append(o.copy())
         return VStack(parts^, spacing=6).fill().grow()

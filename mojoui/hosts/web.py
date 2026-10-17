@@ -28,14 +28,15 @@ from collections import OrderedDict
 from pathlib import Path
 
 from fasthtml.common import (
-    Button, Canvas, Dialog, Div, FastHTML, Form, H1, H2, H3, Header, Hr, I, Img, Input, Label, Main, Meta, NotStr,
+    Button, Canvas, Dialog, Div, FastHTML, Form, H1, H2, H3, H4, Header, Hr, I, Img, Input, Label, Main, Meta, NotStr,
     Option, P, Progress, Response, Script, Select, Span, Style, Textarea, Title, UploadFile,
 )
 from PIL import Image
 
 # Mirrors mojoui/view.mojo and mojoui/diff.mojo.
 (TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
- SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY, MENUBAR, MENU, ITEM) = range(1, 30)
+ SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY, MENUBAR, MENU, ITEM,
+ DIALOG, TOAST, POPOVER) = range(1, 33)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON = 0, 1, 2, 3, 4, 5, 6
@@ -146,6 +147,22 @@ dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .mi .mi-blank { width: 15px; flex: none; } .mi .mi-title { flex: 1; } .mi .mi-key { margin-left: 24px; font-size: 11px; opacity: .6; font-family: "JetBrains Mono", monospace; }
 .menu-sep { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; }
 .menu-label { padding: 6px 10px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; opacity: .6; }
+.dialog-layer { position: fixed; inset: 0; z-index: 40; display: grid; place-items: start center; padding-top: 80px; }
+.dialog-layer .scrim { position: absolute; inset: 0; background: rgba(17,22,28,.32); }
+.dialog { position: relative; max-width: calc(100vw - 32px); max-height: calc(100vh - 100px); display: flex; flex-direction: column; border-radius: 8px;
+  background: light-dark(#fff, #2c2c2e); color: inherit; box-shadow: 0 16px 48px rgba(0,0,0,.28); overflow: hidden; }
+.dialog-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px 20px; border-bottom: 1px solid var(--line); }
+.dialog-head h3 { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
+.dialog-close, .toast-close { border: 0; background: transparent; font: inherit; padding: 2px 8px; min-height: 0; border-radius: 4px; color: inherit; opacity: .7; }
+.dialog-body { padding: 16px 20px; overflow: auto; display: flex; flex-direction: column; }
+.toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 45; display: flex; align-items: center; gap: 12px;
+  padding: 10px 10px 10px 14px; border-radius: 6px; background: #1b1f24; color: #fff; font-size: 12.5px; box-shadow: 0 4px 16px rgba(16,24,40,.25); white-space: nowrap; }
+.toast-action { border: 0; background: transparent; color: #7fd1d8; font: inherit; font-weight: 600; min-height: 0; padding: 2px 6px; }
+.toast .toast-close { color: #fff; }
+.popover { position: fixed; z-index: 35; min-width: 260px; padding: 12px 14px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px;
+  background: light-dark(#fff, #2c2c2e); color: inherit; box-shadow: 0 4px 16px rgba(16,24,40,.12), 0 0 0 1px var(--line); }
+.popover-title { margin: 0; font-size: 13px; font-weight: 600; }
+label.toggle.check input { accent-color: var(--accent); }
 .board-scroll { overflow: auto; position: relative; min-height: 0; }
 .board { position: relative; flex: none; min-width: 100%; min-height: 100%; box-sizing: border-box; }
 .board > .object[data-tag=cell-editor] { overflow: visible; z-index: 4; }
@@ -186,18 +203,23 @@ MENU_JS = r"""
       htmx.ajax('POST', `/e/${el.dataset.sid}`, { values: { n: Number(el.dataset.node), second: 1, v: document.getElementById('mojoui-v').value }, swap: 'none', source: document.body }); },
     toggle(title) { const m = title.parentElement, was = m.classList.contains('open'); menus.closeAll(); if (!was) m.classList.add('open'); },
     place() {
-      document.querySelectorAll('.menu.context').forEach(m => {
-        const a = document.querySelector(`[data-tag="${m.dataset.anchor}"]`), r = a ? a.getBoundingClientRect() : { left: 0, top: 0 };
-        let x = r.left + Number(m.dataset.x), y = r.top + Number(m.dataset.y);
+      document.querySelectorAll('.menu.context, .popover').forEach(m => {
+        const a = document.querySelector(`[data-tag="${m.dataset.anchor}"]`), r = a ? a.getBoundingClientRect() : { left: 0, top: 0, bottom: 0 };
+        const at = Number(m.dataset.x) || Number(m.dataset.y);  // a popover with no point sits under its anchor
+        let x = at || m.classList.contains('menu') ? r.left + Number(m.dataset.x) : r.left, y = at || m.classList.contains('menu') ? r.top + Number(m.dataset.y) : r.bottom + 4;
         const w = m.offsetWidth || 260, h = m.offsetHeight || 200;
         if (x + w > innerWidth - 8) x = Math.max(8, innerWidth - 8 - w);
         if (y + h > innerHeight - 8) y = Math.max(8, innerHeight - 8 - h);
         m.style.left = x + 'px'; m.style.top = y + 'px';
       });
+      document.querySelectorAll('.toast:not([data-timer])').forEach(t => {  // a toast leaves by itself
+        t.dataset.timer = setTimeout(() => { if (document.body.contains(t)) menus.dismiss(t); }, Number(t.dataset.seconds) * 1000);
+      });
     },
   };
   document.addEventListener('pointerdown', e => {
     if (!e.target.closest('.menu')) { menus.closeAll(); document.querySelectorAll('.menu.context').forEach(menus.dismiss); }
+    if (!e.target.closest('.popover')) document.querySelectorAll('.popover').forEach(menus.dismiss);
   }, true);
   document.addEventListener('mouseover', e => {  // an open bar: hovering another title switches menus, as menus do
     const t = e.target.closest('.menubar > .menu > .menu-title');
@@ -205,7 +227,8 @@ MENU_JS = r"""
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && document.querySelector('.menu.open:not(.context)')) { menus.closeAll(); return; }
-    if (e.key === 'Escape') { const c = document.querySelector('.menu.context'); if (c) { menus.dismiss(c); e.preventDefault(); return; } }
+    if (e.key === 'Escape') { const c = document.querySelector('.menu.context, .popover') || document.querySelector('.dialog-layer');
+      if (c) { menus.dismiss(c); e.preventDefault(); e.stopPropagation(); return; } }
     if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
     const fkey = /^F\d{1,2}$/.test(e.key);
     if (!(e.ctrlKey || e.metaKey || e.altKey || fkey)) return;
@@ -660,7 +683,13 @@ body.skin [data-tag=formula-bar] { background: var(--o-card); border-bottom: 1px
 body.skin [data-tag=formula-bar] input[type=text] { font-family: "JetBrains Mono", monospace; font-size: 12.5px; }
 body.skin label.toggle input, body.skin .radio input { accent-color: var(--o-accent); }
 body.skin dialog.alert, body.skin .lazylist { background: var(--o-card); color: var(--o-ink); border-radius: 8px; }
-body.skin .menubar { background: var(--o-chrome); } body.skin .menu-title { color: var(--o-chrome-ink); }
+body.skin .dialog, body.skin .popover { background: var(--o-card); color: var(--o-ink); }
+body.skin .dialog-layer .scrim { background: color-mix(in srgb, var(--o-ink) 32%, transparent); }
+body.skin .dialog-head { border-bottom-color: var(--o-line); } body.skin .dialog-head h3, body.skin .popover-title { color: var(--o-ink); }
+body.skin .popover { box-shadow: var(--o-shadow), 0 0 0 1px var(--o-line); }
+body.skin .toast { background: var(--o-ink); color: var(--o-card); } body.skin .toast .toast-close { color: var(--o-card); }
+body.skin .toast-action { color: color-mix(in srgb, var(--o-accent) 55%, var(--o-card)); }
+body.skin .menubar { background: var(--o-chrome); } body.skin .menu-title { color: var(--o-chrome-ink); border: 0; background: transparent; min-height: 0; padding: 4px 9px; box-shadow: none; }
 body.skin .menu.open > .menu-title { background: color-mix(in srgb, var(--o-chrome-ink) 8%, var(--o-chrome)); }
 body.skin .menu > .menu-items { background: var(--o-card); color: var(--o-ink); box-shadow: var(--o-shadow), 0 0 0 1px var(--o-line); }
 body.skin .mi:hover:not([disabled]) { background: var(--o-wash); } body.skin .mi:hover:not([disabled]) svg { color: var(--o-accent); opacity: 1; }
@@ -751,6 +780,9 @@ def render(s, i, sid):
         el.attrs["style"] = (old + ";" if old else "") + ";".join(css)
     if n["name"]:
         el.attrs["data-tag"] = n["name"]
+    if n.get("tip"):
+        el.attrs["title"] = n["tip"]
+        el.attrs["data-tip"] = n["tip"]
     return el
 
 
@@ -805,6 +837,8 @@ def render_node(s, i, sid):
                     hx_swap="none", hx_include="#mojoui-v", hx_sync="this:queue all")
     if kind == TOGGLE:
         box = Input(type="checkbox", name="on", checked=bool(n["value"]), hx_trigger="change", **common)
+        if n["style"] == 1:  # a Checkbox: a box with a tick (reported as CHECK:)
+            return Label(box, Span(n["text"]), cls="toggle check", id=nid, data_kind="toggle", data_check="1")
         return Label(box, Span(n["text"]), cls="toggle", id=nid, data_kind="toggle")
     if kind == DROPDOWN:
         opts = [Option(o, value=str(j), selected=(j == n["value"])) for j, o in enumerate(n["options"])]
@@ -864,6 +898,24 @@ def render_node(s, i, sid):
         board = Div(*kids, place_mark(s, i), cls="board", id=f"{nid}-board", data_kind="board", data_node=str(i), data_sid=sid,
                     style=f"width:{n['spacing']}px;height:{n['size']}px")
         return Div(board, cls="board-scroll", id=nid)  # the page scrolls when it's bigger than its room
+    if kind == DIALOG:  # modal over a scrim; ✕ and Escape are on_close (its content's own buttons close it otherwise)
+        close = Button("✕", type="button", cls="dialog-close", title="Close", aria_label="Close", **dict(common, hx_vals=json.dumps({"n": i, "second": 1})))
+        head = Div(H3(n["text"], id=f"{nid}-t"), close, cls="dialog-head")
+        body = Div(*[render(s, c, sid) for c in n["children"]], cls="dialog-body")
+        panel = Div(head, body, cls="dialog", role="dialog", aria_modal="true", aria_labelledby=f"{nid}-t", style=f"width:{n['w'] or 560}px")
+        return Div(Div(cls="scrim"), panel, cls="dialog-layer", id=nid, data_kind="dialog", data_title=n["text"], data_node=str(i), data_sid=sid)
+    if kind == TOAST:  # bottom centre; its action is msg, ✕ and its time running out are on_close
+        action = n["options"][0] if n["options"] else ""
+        parts = [Span(n["text"], cls="toast-text")]
+        if action:
+            parts.append(Button(action, type="button", cls="toast-action", data_action="1", **dict(common, hx_vals=json.dumps({"n": i, "second": 0}))))
+        parts.append(Button("✕", type="button", cls="toast-close", aria_label="Close", **dict(common, hx_vals=json.dumps({"n": i, "second": 1}))))
+        return Div(*parts, cls="toast", id=nid, data_kind="toast", data_title=n["text"], data_action=action, data_node=str(i), data_sid=sid,
+                   data_seconds=str(n["size"] or 6), role="status")
+    if kind == POPOVER:  # a panel under (or at x, y inside) the view tagged text; placed by mojouiMenu.place
+        head = (H4(n["hint"], cls="popover-title"),) if n["hint"] else ()
+        return Div(*head, *[render(s, c, sid) for c in n["children"]], cls="popover", id=nid, data_kind="popover", data_title=n["hint"],
+                   data_anchor=n["text"], data_x=str(n["x"]), data_y=str(n["y"]), data_node=str(i), data_sid=sid, role="dialog")
     if kind == MENUBAR:
         return Div(*[render(s, c, sid) for c in n["children"]], cls="menubar", id=nid, data_kind="menubar", role="menubar")
     if kind == MENU:
