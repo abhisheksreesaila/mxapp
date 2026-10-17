@@ -82,7 +82,7 @@ def m1():
     if r.returncode != 0:
         problems.append("docs/components.md is stale")
     doc = (ROOT / "docs/components.md").read_text()
-    for name in ("Canvas: keys", "TextField: Escape cancels", "Editor: caret after the text"):
+    for name in ("Canvas: keys", "TextField: Escape cancels", "Editor that echoes the grid's typing"):
         row = next((l for l in doc.splitlines() if l.startswith(f"| {name}")), "")
         cells = [c.strip() for c in row.split("|")[3:5]]
         if cells != ["✅", "✅"]:

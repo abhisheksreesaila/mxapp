@@ -624,15 +624,15 @@ def render_node(s, i, sid):
         # the form's queue, so a fast Return can't overtake the typing it follows.
         # hx-vals is inherited from ancestors, so the input says second=0 explicitly
         # (otherwise it would pick up the form's second=1 and every keystroke would "submit").
-        editor = n["value"] in (1, 2, 3)  # .focused(): an in-place editor takes the keyboard, its text selected (1) or the caret after it (2); .echo() (3): it doesn't
+        editor = n["value"] in (1, 3)  # an in-place editor: .focused() (1) takes the keyboard, its text selected; .echo() (3) doesn't
         at_end = "const k = this.value.length; this.setSelectionRange(k, k)"
         cancel = (f"if (event.key === 'Escape') {{ event.preventDefault(); htmx.ajax('POST', '{post}', "
                   f"{{ values: {{ n: {i}, second: 2, text: this.value, v: document.getElementById('mojoui-v').value }}, swap: 'none', source: document.body }}); }}"  # (not the input: its hx-vals would win)
                   if n["size"] else None)
         field = Input(type="text", name="text", value=n["text"], placeholder=n["hint"], data_kind="field",
-                      cls="cell-editor" if editor else None, onfocus=(at_end if n["value"] in (2, 3) else "this.select()") if editor else None,
+                      cls="cell-editor" if editor else None, onfocus=(at_end if n["value"] == 3 else "this.select()") if editor else None,
                       onkeydown=cancel,
-                      autocomplete="off", autofocus=(s.focus == i or n["value"] in (1, 2)), hx_trigger="input",
+                      autocomplete="off", autofocus=(s.focus == i or n["value"] == 1), hx_trigger="input",
                       hx_sync="closest form:queue all", **dict(common, hx_vals=json.dumps({"n": i, "second": 0})))
         return Form(field, cls="field", id=nid, hx_post=post, hx_vals=json.dumps({"n": i, "second": 1}),
                     hx_swap="none", hx_include="#mojoui-v", hx_sync="this:queue all")

@@ -285,10 +285,9 @@ struct View(Copyable, Movable):
         self.nodes[0].value = t
         return self^
 
-    def focused(var self, select_all: Bool = True) -> View:
-        """A TextField that takes the keyboard when it appears (an in-place editor): its text selected, or
-        (select_all=False) the caret after it, so typing goes on from what's there (a key that opened it)."""
-        self.nodes[0].value = 1 if select_all else 2
+    def focused(var self) -> View:
+        """A TextField that takes the keyboard when it appears, its text selected (an in-place editor)."""
+        self.nodes[0].value = 1
         return self^
 
     def echo(var self) -> View:

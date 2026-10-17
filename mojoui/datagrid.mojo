@@ -87,6 +87,7 @@ struct DataGrid(Copyable, Movable):
     var editing: Bool
     var typed: String  # what's been typed since a character opened the editor (GRID_TYPED)
     var typing: Bool  # the editor was opened by typing: the grid keeps the keyboard and the text (the editor echoes it)
+    var then: String  # the key that ended the typing (GRID_COMMIT): where committed() moves
     var bar_drag: Bool
     var bar_grab: Float64
     var resize_col: Int
@@ -112,6 +113,7 @@ struct DataGrid(Copyable, Movable):
         self.editing = False
         self.typed = ""
         self.typing = False
+        self.then = "Enter"
         self.bar_drag = False
         self.bar_grab = 0
         self.resize_col = -1
@@ -404,11 +406,22 @@ struct DataGrid(Copyable, Movable):
             i += 1
 
     def committed[S: GridSource](mut self, src: S):
-        """After the app wrote the editor's value: close it and select the cell below (as a spreadsheet does)."""
-        var below = self.next_row(self.cur_row, src)
+        """After the app wrote the editor's value: close it and move on as a spreadsheet does: down after Enter, right
+        after Tab (left with Shift), along an arrow that ended the typing."""
+        var how = self.then
+        self.then = "Enter"
+        var row = self.cur_row
         var col = self.cur_col
         self.editing = False
-        self.select(below if below >= 0 else self.cur_row, col)
+        if how == "Tab" or how == "ArrowRight":
+            _ = self.move_to(row, min(col + 1, src.grid_columns() - 1), src)
+        elif how == "ShiftTab" or how == "ArrowLeft":
+            _ = self.move_to(row, max(col - 1, 0), src)
+        elif how == "ArrowUp":
+            _ = self.move_to(self.step_row(row, -1, src), col, src)
+        else:
+            var below = self.next_row(row, src)
+            _ = self.move_to(below if below >= 0 else row, col, src)
 
     # ---------- events ----------
 
@@ -601,8 +614,9 @@ struct DataGrid(Copyable, Movable):
         for _ in name.codepoint_slices():
             chars += 1
         var printable = chars == 1 and not ctrl and (mods & ALT) == 0
-        if self.editing and self.typing:  # a value being typed: Enter writes it, Backspace takes a character off
-            if name == "Enter" or name == "Tab":
+        if self.editing and self.typing:  # a value being typed: Enter, Tab or an arrow writes it (and moves), Backspace takes a character off
+            if name == "Enter" or name == "Tab" or name == "ArrowDown" or name == "ArrowUp" or name == "ArrowLeft" or name == "ArrowRight":
+                self.then = "ShiftTab" if (name == "Tab" and shift) else ("ArrowUp" if (name == "Enter" and shift) else name)
                 return GRID_COMMIT
             if name == "Backspace":
                 var kept = String("")
