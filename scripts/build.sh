@@ -104,6 +104,7 @@ build_mac() {
   pixi run ld64.lld -arch arm64 -e _mojo_entry -dead_strip -no_adhoc_codesign \
     -platform_version macos 14.0 26.0 -o "$app/Contents/MacOS/$NAME" "$out"/*.o apple/sdk/macos/*.tbd
   plist apple/mac/Info.plist "$app/Contents/Info.plist"
+  mkdir -p "$app/Contents/Resources/fonts"; cp mojoui/hosts/static/fonts/*.ttf "$app/Contents/Resources/fonts/"
   printf 'APPL????' > "$app/Contents/PkgInfo"
   sign "$app"
   rm -f "$out/$NAME-mac.zip"; (cd "$out" && zip -qry "$NAME-mac.zip" "$NAME.app")
@@ -118,6 +119,7 @@ build_ios() {
   pixi run ld64.lld -arch arm64 -e _mojo_entry -dead_strip -no_adhoc_codesign \
     -platform_version ios 17.0 26.0 -o "$app/$NAME" "$out"/*.o apple/sdk/ios/*.tbd
   plist apple/ios/Info.plist "$app/Info.plist"
+  mkdir -p "$app/fonts"; cp mojoui/hosts/static/fonts/*.ttf "$app/fonts/"  # the app's own fonts (D-155), registered at start
   printf 'APPL????' > "$app/PkgInfo"
   sign "$app"
   (cd "$out" && zip -qry "$NAME.ipa" Payload)

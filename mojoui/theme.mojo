@@ -11,6 +11,7 @@ from mojoui.canvas import rgba
 from mojoui.text import REGULAR, MEDIUM, MONO, MONO_BOLD
 from mojoui.shared import environment
 from mojoui.view import FLUENT, OMARCHY, LEDGER, GRAPHITE, BLUEPRINT
+from std.sys import CompilationTarget
 
 comptime OMARCHY_COLORS = "/.local/state/omarchy/current/theme/colors.toml"
 
@@ -87,6 +88,35 @@ def luminance(c: UInt32) -> Float64:
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
 
 
+def _read_omarchy(mut keys: List[String], mut vals: List[String]):
+    """Reads ~/.local/state/omarchy/current/theme/colors.toml as key=value lines (Linux only: the iPad and Mac hosts
+    never see an Omarchy theme, and file IO doesn't compile for their targets)."""
+    comptime if CompilationTarget.is_linux():
+        try:
+            with open(environment("HOME", ".") + OMARCHY_COLORS, "r") as f:
+                for line in f.read().split("\n"):
+                    var text = String(line.strip())
+                    var eq = text.find("=")
+                    if text.startswith("#") or eq < 0:
+                        continue
+                    # the value: a quoted string, or the first word (either way a trailing # comment is dropped)
+                    var value = String(String(text[byte=eq + 1:]).strip())
+                    if value.startswith('"') or value.startswith("'"):
+                        var quote = String(value[byte=0:1])
+                        var end = value.find(quote, 1)
+                        var inner = String(value[byte=1:end]) if end > 0 else String(value[byte=1:])
+                        value = inner
+                    else:
+                        var space = value.find(" ")
+                        if space > 0:
+                            var word = String(value[byte=0:space])
+                            value = word
+                    keys.append(String(String(text[byte=0:eq]).strip()))
+                    vals.append(value)
+        except:
+            pass
+
+
 @fieldwise_init
 struct Palette(Copyable, Movable):
     var dark: Bool
@@ -155,29 +185,7 @@ struct Palette(Copyable, Movable):
         """The current Omarchy theme's colours (Tokyo Night if the file isn't there)."""
         var keys = List[String]()
         var vals = List[String]()
-        try:
-            with open(environment("HOME", ".") + OMARCHY_COLORS, "r") as f:
-                for line in f.read().split("\n"):
-                    var text = String(line.strip())
-                    var eq = text.find("=")
-                    if text.startswith("#") or eq < 0:
-                        continue
-                    # the value: a quoted string, or the first word (either way a trailing # comment is dropped)
-                    var value = String(String(text[byte=eq + 1:]).strip())
-                    if value.startswith('"') or value.startswith("'"):
-                        var quote = String(value[byte=0:1])
-                        var end = value.find(quote, 1)
-                        var inner = String(value[byte=1:end]) if end > 0 else String(value[byte=1:])
-                        value = inner
-                    else:
-                        var space = value.find(" ")
-                        if space > 0:
-                            var word = String(value[byte=0:space])
-                            value = word
-                    keys.append(String(String(text[byte=0:eq]).strip()))
-                    vals.append(value)
-        except:
-            pass
+        _read_omarchy(keys, vals)
 
         # Missing keys are derived from the two every theme has (background, foreground), so a partial theme
         # still reads well; light or dark comes from `mode`, else from how bright the background is.

@@ -35,48 +35,48 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `NavBar` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `LazyList` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout |
 | `Canvas` | ✅ | ✅ | ✅ | 🔨 | 🔨 | lens, analytics, workbook, mxstudio, omxplorer |
-| `Board` | ✅ | ✅ | ❌ | ❌ | ❌ | workbook, mxstudio, omxplorer |
-| `Overlay` | ✅ | ✅ | ❌ | ❌ | ❌ | workbook, mxstudio |
-| `MenuBar` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
-| `Menu` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
-| `Item` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
-| `ContextMenu` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
-| `Dialog` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
-| `Toast` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
-| `Popover` | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `Board` | ✅ | ✅ | ❌ | ❌ | 🔨 | workbook, mxstudio, omxplorer |
+| `Overlay` | ✅ | ✅ | ❌ | ❌ | 🔨 | workbook, mxstudio |
+| `MenuBar` | ✅ | ✅ | ❌ | ❌ | 🔨 | omxplorer |
+| `Menu` | ✅ | ✅ | ❌ | ❌ | 🔨 | omxplorer |
+| `Item` | ✅ | ✅ | ❌ | ❌ | 🔨 | omxplorer |
+| `ContextMenu` | ✅ | ✅ | ❌ | ❌ | 🔨 | omxplorer |
+| `Dialog` | ✅ | ✅ | ❌ | ❌ | 🔨 | omxplorer |
+| `Toast` | ✅ | ✅ | ❌ | ❌ | 🔨 | omxplorer |
+| `Popover` | ✅ | ✅ | ❌ | ❌ | 🔨 | omxplorer |
 | `Checkbox` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | omxplorer |
 
 ## Variants, gestures, layout, design languages
 
 | Feature | API | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) |
 |---|---|---|---|---|---|---|
-| Button with an icon | `Button(icon=…)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Card tones | `Card(tone=CARD_WARN / CARD_GOOD)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Button with an icon | `Button(icon=…)` | ✅ | ✅ | ❌ | ❌ | 🔨 |
+| Card tones | `Card(tone=CARD_WARN / CARD_GOOD)` | ✅ | ✅ | ❌ | ❌ | 🔨 |
 | Text tones | `Text(…).tone(TONE_WARN…)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Quiet buttons | `style=SUBTLE / ICON_ONLY` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Quiet buttons | `style=SUBTLE / ICON_ONLY` | ✅ | ✅ | ❌ | ❌ | 🔨 |
 | Lucide icon set | `Button(icon="table")…` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| In-place editor | `TextField(…).focused()` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| In-place editor | `TextField(…).focused()` | ✅ | ✅ | ❌ | ❌ | 🔨 |
 | Layout modifiers | `.padding .width .grow .fill .align .justify` | ✅ | ✅ | ✅ | 🔨 | 🔨 |
 | Canvas: pan, zoom, tap | `on_gesture: PAN, ZOOM, TAP` | ✅ | ✅ | ✅ | 🔨 | 🔨 |
-| Canvas: press, release, double | `PRESS, RELEASE, DOUBLE` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Canvas: press, release, double | `PRESS, RELEASE, DOUBLE` | ✅ | ✅ | ❌ | ❌ | 🔨 |
 | Canvas frames (animation) | `on_frame` | ✅ | ✅ | ✅ | 🔨 | 🔨 |
 | Canvas: keys (focus on press) | `on_gesture: KEY (event.text, modifiers)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | TextField: Escape cancels | `TextField(on_cancel=)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Editor that echoes the grid's typing | `TextField(…).echo()` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Board: drag, resize, snap | `Board(on_move, on_resize)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Board: drag, resize, snap | `Board(on_move, on_resize)` | ✅ | ✅ | ❌ | ❌ | 🔨 |
 | Board: scrolls, reveals a child | `Board(reveal=, reveal_count=)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Board: phone-width list | `(automatic under 720 pt)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Overlay islands | `Overlay(base, *islands) + .pin(h, v)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Overlay islands | `Overlay(base, *islands) + .pin(h, v)` | ✅ | ✅ | ❌ | ❌ | 🔨 |
 | Design: Fluent 2 | `design() = FLUENT` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Design: Omarchy (your theme) | `design() = OMARCHY` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Shared data per process | `App.init_shared()` | ✅ | ✅ | 🔨 | 🔨 | 🔨 |
 | Toolbar button (icon over label) | `Button(style=TOOL / TOOL_ON)` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | File picker | `FilePicker(title, on_pick)` | 🔨 | ✅ | ❌ | ❌ | ❌ |
 | Design: Ledger, Graphite, Blueprint (omxplorer's skins) | `design() = LEDGER / GRAPHITE / BLUEPRINT` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Keyboard shortcuts (menu items) | `Item(shortcut="Ctrl+S")` | ✅ | ✅ | ❌ | 🔨 | ❌ |
-| Canvas: right-click | `on_gesture: SECONDARY (event.x, y)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Submenus, checked, disabled and danger items | `Submenu(…), Item(checked=, disabled=, danger=)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Tooltips | `.tooltip(text)` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Keyboard shortcuts (menu items) | `Item(shortcut="Ctrl+S")` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
+| Canvas: right-click | `on_gesture: SECONDARY (event.x, y)` | ✅ | ✅ | ❌ | ❌ | 🔨 |
+| Submenus, checked, disabled and danger items | `Submenu(…), Item(checked=, disabled=, danger=)` | ✅ | ✅ | ❌ | ❌ | 🔨 |
+| Tooltips | `.tooltip(text)` | ✅ | ✅ | ❌ | ❌ | 🔨 |
 
 ## Composite components (Mojo, built from the ones above)
 
@@ -89,10 +89,10 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | `ChartView` | `mojoui/chartview.mojo` | Canvas, Canvas: pan, zoom, tap | ✅ | ✅ | 🔨 | 🔨 | 🔨 | mxstudio, omxplorer, workbook |
 | `KpiView` | `mojoui/kpi.mojo` | Card tones, Text tones, Canvas | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio |
 | `FindingCard` | `mojoui/finding.mojo` | Card tones, Text tones, Quiet buttons | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio |
-| `Inspector` | `mojoui/inspector.mojo` | Segmented, Dropdown, Toggle, Card, Quiet buttons | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
-| `Toolbar · FormulaBar · StatusBar` | `mojoui/sheetchrome.mojo` | Toolbar button (icon over label), TextField, Text | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `Inspector` | `mojoui/inspector.mojo` | Segmented, Dropdown, Toggle, Card, Quiet buttons | ✅ | ✅ | ❌ | ❌ | 🔨 | omxplorer |
+| `Toolbar · FormulaBar · StatusBar` | `mojoui/sheetchrome.mojo` | Toolbar button (icon over label), TextField, Text | ✅ | ✅ | ❌ | ❌ | ❌ | kit, omxplorer |
 | `Column number formats` | `mojoui/numformat.mojo` | Canvas, Text | ✅ | ✅ | 🔨 | 🔨 | 🔨 | omxplorer |
-| `Sheet objects (charts, pivots)` | `mojoui/sheetpage.mojo` | Board: drag, resize, snap, Canvas, Card, Grid | ✅ | ✅ | ❌ | ❌ | ❌ | omxplorer |
+| `Sheet objects (charts, pivots)` | `mojoui/sheetpage.mojo` | Board: drag, resize, snap, Canvas, Card, Grid | ✅ | ✅ | ❌ | ❌ | 🔨 | omxplorer |
 | `Report page (KPI and chart tiles, filters)` | `mojoui/reportpage.mojo` | Grid, Card, Dropdown, Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | omxplorer |
 
 ## Totals
@@ -103,7 +103,7 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | Web | 72 | 0 | 0 |
 | Android | 19 | 14 | 39 |
 | Mac (AppKit) | 0 | 34 | 38 |
-| iPhone (UIKit) | 0 | 33 | 39 |
+| iPhone (UIKit) | 0 | 55 | 17 |
 
 ## Inside one app, not components yet (the debt)
 

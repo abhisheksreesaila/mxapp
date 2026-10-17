@@ -27,6 +27,7 @@ def load(name, path):
 g17 = load("goal17", "docs/goals/17-check.py")
 g05 = load("goal05", "docs/goals/05-check.py")
 run, BUILD, brightness = g17.run, g17.BUILD, g17.brightness
+g05.ROOT, g05.BUILD = ROOT, BUILD  # (the archived checker's paths, from here)
 EXAMPLES = g17.EXAMPLES + ["kit"]
 SHOWN = g17.SHOWN
 TIMING = re.compile(r"[\d.]+ ms on ")
@@ -190,7 +191,7 @@ def m3():
     if 2 not in plist.get("UIDeviceFamily", []):
         problems.append("Info.plist doesn't list the iPad")
     src = (ROOT / "mojoui/hosts/uikit.mojo").read_text()
-    for needle, what in (("UIKeyCommand", "keyboard shortcuts"), ("UIToolTipInteraction", "pointer tooltips"), ("buttonMaskRequired", "a secondary-button tap"),
+    for needle, what in (("UIKeyCommand", "keyboard shortcuts"), ("UIToolTipInteraction", "pointer tooltips"), ("ButtonMaskRequired", "a secondary-button tap"),
                          ("UILongPressGestureRecognizer", "a long press"), ("CTFontManagerRegisterFontsForURL", "the bundled fonts"),
                          ("UIPopoverPresentationController", "popovers"), ("pressesBegan", "hardware keys on a canvas")):
         if needle not in src:
