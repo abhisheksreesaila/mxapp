@@ -33,15 +33,16 @@ struct SheetObject(Copyable, Movable):
     var labels: List[String]  # (computed) the groups' texts
     var cols: List[String]  # (computed) pivots: the columns' texts
     var sums: List[Int]  # (computed) per group (pivots: rows × columns), in the value column's stored units
+    var counts: List[Int]  # (computed) how many rows fell in each
     var milliseconds: Float64
 
     @staticmethod
     def chart(value: Int, group: Int, x: Int, y: Int, w: Int = 520, h: Int = 320) -> SheetObject:
-        return SheetObject(OBJ_CHART, x, y, w, h, value, group, -1, CHART_BAR, -1, List[String](), List[String](), List[Int](), 0)
+        return SheetObject(OBJ_CHART, x, y, w, h, value, group, -1, CHART_BAR, -1, List[String](), List[String](), List[Int](), List[Int](), 0)
 
     @staticmethod
     def pivot(value: Int, rows: Int, across: Int, x: Int, y: Int, w: Int = 640, h: Int = 320) -> SheetObject:
-        return SheetObject(OBJ_PIVOT, x, y, w, h, value, rows, across, CHART_BAR, -1, List[String](), List[String](), List[Int](), 0)
+        return SheetObject(OBJ_PIVOT, x, y, w, h, value, rows, across, CHART_BAR, -1, List[String](), List[String](), List[Int](), List[Int](), 0)
 
 
 def value_program(frame: Frame, col: Int) -> List[Int64]:
@@ -79,6 +80,7 @@ def compute(mut obj: SheetObject, frame: Frame, gf: GpuFrame, ranges: List[Range
         groups = ng * nc
     var r = group_sum(frame, gf, key, value_program(frame, obj.value), ranges, groups)
     obj.sums = r.sums.copy()
+    obj.counts = r.counts.copy()
     obj.milliseconds = r.milliseconds
 
 
@@ -91,10 +93,10 @@ def object_title(obj: SheetObject, frame: Frame) -> String:
 def chart_view(obj: SheetObject, frame: Frame) -> ChartView:
     """The chart, drawn by mojoui.charts: values in the column's units (money as cents when it's Currency)."""
     var scale = frame.scale(obj.value) if frame.kind(obj.value) == DECIMAL else 0
-    var money = frame.format_of(obj.value).style == CURRENCY and scale == 2
+    var money = frame.format_of(obj.value).style == CURRENCY
     var values = List[Float64]()
-    for s in obj.sums:
-        values.append(Float64(s) if money else Float64(s) / Float64(10 ** scale))
+    for s in obj.sums:  # (money: cents, whatever the column's own scale)
+        values.append(Float64(s) * (10.0 ** Float64(2 - scale)) if money else Float64(s) / Float64(10 ** scale))
     var cv = ChartView(object_title(obj, frame), obj.labels.copy(), values^, frame.name(obj.value), money, obj.selected)
     if obj.style == CHART_LINE:
         cv.kind = "Line Chart"
@@ -118,12 +120,14 @@ def pivot_view(obj: SheetObject, frame: Frame, height: Int) -> View:
     var grand = 0
     for r in range(len(obj.labels)):
         var row_sum = 0
+        var rows_in = 0
         for c in range(nc):
             var v = obj.sums[r * nc + c] if r * nc + c < len(obj.sums) else 0
+            rows_in += obj.counts[r * nc + c] if r * nc + c < len(obj.counts) else 0
             row_sum += v
             col_sums[c] += v
-        if row_sum == 0:
-            continue  # (a value no row uses any more)
+        if rows_in == 0:
+            continue  # (a value no row uses any more; a row whose values cancel out still shows)
         rows.append(obj.labels[r])
         for c in range(nc):
             var v = obj.sums[r * nc + c] if r * nc + c < len(obj.sums) else 0

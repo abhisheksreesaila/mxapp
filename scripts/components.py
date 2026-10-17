@@ -90,6 +90,8 @@ APP_LOCAL = [
     ("Toolbar / StatusBar islands", "examples/workbook", "the island contents (title, Insert buttons, status) are assembled by the app; migrate to mojoui.sheetchrome"),
     ("Selection totals (sum, average of a column on the GPU)", "examples/omxplorer", "the status bar's numbers: a group-by with one group, formatted by the column"),
     ("Import review (columns, types, empties, first rows)", "examples/omxplorer", "the Import step's table; a component once a second app imports files"),
+    ("Chart / pivot inspector sections", "examples/omxplorer", "type, value, group by, rows and columns as Inspector sections; belongs beside mojoui.sheetpage"),
+    ("Report filter inspector and add-tile row", "examples/omxplorer", "the filter (column, value) and the Sum / Average / Count / Chart tile buttons; belongs in mojoui.reportpage"),
 ]
 
 

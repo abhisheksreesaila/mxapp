@@ -81,6 +81,8 @@ comptime OBJ_CLOSE = 200  # + object
 comptime OBJ_PICK = 300  # + object: show it in the inspector
 comptime TILE_TAP = 400  # + tile: a chart tile's canvas
 comptime TILE_CLOSE = 500  # + tile
+comptime RESIZE = 36  # a sheet object (or the table) resized by its corner
+comptime MAX_OBJECTS = 40  # per sheet, and tiles per report (canvas ids 10…49, 60…99, 120…159)
 comptime TABLE_H = 400  # the table's height once objects share the sheet
 
 comptime APP = "omxapp"  # (settings live in ~/.config/omxapp)
@@ -121,6 +123,13 @@ struct Main(App):
     var tiles: List[ReportTile]
     var filter: ReportFilter
     var report_col: Int  # the column new tiles use
+    var seen_edits: Int  # the frame's edit count when the objects and tiles were last computed
+    var table_x: Int  # the table's place and size on the sheet (it moves and resizes like any object)
+    var table_y: Int
+    var table_w: Int
+    var table_h_set: Int  # 0: automatic
+    var reveal: Int  # the sheet child to scroll into view (a new object), and how many times asked
+    var reveal_count: Int
 
     def __init__(out self):
         self.screen = START_SCREEN
@@ -156,6 +165,13 @@ struct Main(App):
         self.tiles = List[ReportTile]()
         self.filter = ReportFilter(-1, 0)
         self.report_col = -1
+        self.seen_edits = 0
+        self.table_x = 0
+        self.table_y = 0
+        self.table_w = 0
+        self.table_h_set = 0
+        self.reveal = -1
+        self.reveal_count = 0
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -281,7 +297,14 @@ struct Main(App):
         self.tiles = List[ReportTile]()
         self.filter = ReportFilter(-1, 0)
         self.sheet_tab = 0
-        self.report_col = self.first_number()
+        var nums = self.numbers()
+        var money = self.first_number()  # (the first decimal column: revenue rather than an order number)
+        self.report_col = money if self.frame.kind(money) == DECIMAL else (nums[0] if len(nums) > 0 else -1)
+        self.table_x = 0
+        self.table_y = 0
+        self.table_w = 0
+        self.table_h_set = 0
+        self.seen_edits = self.frame.edits
         self.grid = DataGrid()
         self.grid.prepare(self.frame, self.font, self.pal)
         for c in range(self.frame.stored()):
@@ -339,6 +362,7 @@ struct Main(App):
 
     def refresh(mut self):
         """Every chart, pivot and tile again (after an edit or a change to one): GPU group-bys."""
+        self.seen_edits = self.frame.edits
         for k in range(len(self.objects)):
             compute(self.objects[k], self.frame, self.gf()[])
         for k in range(len(self.tiles)):
@@ -346,6 +370,8 @@ struct Main(App):
         self.version += 1
 
     def table_h(self) -> Int:
+        if self.table_h_set > 0:
+            return self.table_h_set
         return TABLE_H if len(self.objects) > 0 else GRID_H
 
     def first_number(self) -> Int:
@@ -376,22 +402,6 @@ struct Main(App):
         self.count = r.counts[0]
         self.milliseconds = r.milliseconds
 
-    def average_text(self, col: Int) -> String:
-        """sum ÷ count as the column's format shows it, rounded (not cut), with two more places to work in:
-        qty's 4.8 reads 4.80, not 4."""
-        var scale = self.frame.scale(col) if self.frame.kind(col) == DECIMAL else 0
-        var f = self.frame.format_of(col)
-        if f.is_auto():
-            f = ColumnFormat(NUMBER, -1, True, False, "$")
-        if f.decimals < 0:
-            f.decimals = scale if scale > 0 else 2
-        # one rounding, in integers: sum ÷ count at f.decimals places, half away from zero
-        var places = f.decimals + (2 if f.style == PERCENT else 0)  # (a percent shows two places more of the value)
-        var num = Int(self.sum) * Int(10 ** places)
-        var den = max(self.count, 1) * Int(10 ** scale)
-        var q = (abs(num) + den // 2) // den
-        return format_number(Int64(q if num >= 0 else -q), places, f)
-
     def column_format(self) -> ColumnFormat:
         return self.frame.format_of(self.grid.cur_col) if self.grid.cur_col >= 0 else ColumnFormat.auto()
 
@@ -417,13 +427,17 @@ struct Main(App):
                 self.message = self.frame.name(col) + " on row " + grouped(row + 1) + ": " + before + " → " + self.frame.display(col, row)
                 self.grid.committed(self.frame)
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
-                self.refresh()
             except e:
                 self.edit_text = text
                 self.message = String(e) + " (fix it and press Enter)"
         self.version += 1
 
     def update(mut self, event: Event):
+        self.handle(event)
+        if self.has_table and self.frame.edits != self.seen_edits:  # the table changed (any way): every object and tile again
+            self.refresh()
+
+    def handle(mut self, event: Event):
         var m = event.message
         if m != CELL_COMMIT and m != CELL_CANCEL and m != GRID and self.grid.editing:
             self.grid.cancel_edit()
@@ -530,7 +544,6 @@ struct Main(App):
                 self.grid.keep_in_view(row, max(self.grid.cur_col, 0), self.frame)
                 self.select_cell(row, max(self.grid.cur_col, 0))
                 self.message = "Row " + grouped(row + 1) + " added: type to fill it"
-                self.refresh()
             except e:
                 self.message = String(e)
             self.version += 1
@@ -571,7 +584,9 @@ struct Main(App):
             self.version += 1
         elif m == INSERT_CHART or m == INSERT_PIVOT:
             var texts = self.groupings()
-            if len(texts) == 0 or len(self.numbers()) == 0:
+            if len(self.objects) >= MAX_OBJECTS:
+                self.message = "A sheet holds up to " + String(MAX_OBJECTS) + " charts and pivots: remove one first"
+            elif len(texts) == 0 or len(self.numbers()) == 0:
                 self.message = "A chart needs a number column and a text column to group by"
             else:
                 var value = self.grid.cur_col if self.grid.cur_col >= 0 and (self.frame.kind(self.grid.cur_col) == INT or self.frame.kind(self.grid.cur_col) == DECIMAL) else self.numbers()[0]
@@ -583,14 +598,27 @@ struct Main(App):
                 self.objects.append(obj^)
                 self.active = len(self.objects) - 1
                 self.insp_tab = 2
+                self.reveal = self.active + 1  # (child 0 is the table)
+                self.reveal_count += 1
                 self.message = ("Chart: " if m == INSERT_CHART else "Pivot: ") + object_title(self.objects[self.active], self.frame) + " (" + fixed(self.objects[self.active].milliseconds, 1) + " ms on the GPU)"
             self.version += 1
-        elif m == MOVE:  # a sheet object dragged by its title bar (child 0 is the table: it stays put)
+        elif m == MOVE or m == RESIZE:  # a sheet object (child 0: the table) dragged by its title bar, or by its corner
             var k = event.number - 1
-            if 0 <= k < len(self.objects):
-                self.objects[k].x = max(0, self.objects[k].x + Int(event.dx))
-                self.objects[k].y = max(TABLE_H + 16, self.objects[k].y + Int(event.dy))
-                self.version += 1
+            if k == -1:
+                if m == MOVE:
+                    self.table_x = max(0, self.table_x + Int(event.dx))
+                    self.table_y = max(0, self.table_y + Int(event.dy))
+                else:
+                    self.table_w = max(360, (self.table_w if self.table_w > 0 else self.sheet_width()) + Int(event.dx))
+                    self.table_h_set = max(200, self.table_h() + Int(event.dy))
+            elif 0 <= k < len(self.objects):
+                if m == MOVE:
+                    self.objects[k].x = max(0, self.objects[k].x + Int(event.dx))
+                    self.objects[k].y = max(0, self.objects[k].y + Int(event.dy))
+                else:
+                    self.objects[k].w = max(320, self.objects[k].w + Int(event.dx))
+                    self.objects[k].h = max(220, self.objects[k].h + Int(event.dy))
+            self.version += 1
         elif m >= OBJ_TAP and m < OBJ_TAP + 100:
             var k = m - OBJ_TAP
             if k < len(self.objects) and event.number == TAP:
@@ -604,7 +632,10 @@ struct Main(App):
             var k = m - OBJ_CLOSE
             if k < len(self.objects):
                 _ = self.objects.pop(k)
-                self.active = -1 if len(self.objects) == 0 else min(self.active, len(self.objects) - 1)
+                if self.active == k:
+                    self.active = -1  # (the one shown was removed: show none)
+                elif self.active > k:
+                    self.active -= 1  # (the same object, one place earlier)
                 if self.active < 0 and self.insp_tab == 2:
                     self.insp_tab = 1
                 self.version += 1
@@ -617,14 +648,16 @@ struct Main(App):
         elif m == CHART_STYLE or m == OBJ_VALUE or m == OBJ_GROUP or m == OBJ_ACROSS:
             if 0 <= self.active < len(self.objects):
                 ref o = self.objects[self.active]
+                var nums = self.numbers()
+                var texts = self.texts()
                 if m == CHART_STYLE:
                     o.style = CHART_LINE if event.number == 1 else CHART_BAR
-                elif m == OBJ_VALUE:
-                    o.value = self.numbers()[event.number]
-                elif m == OBJ_GROUP:
-                    o.group = self.texts()[event.number]
-                else:
-                    o.across = self.texts()[event.number - 1] if event.number > 0 else -1
+                elif m == OBJ_VALUE and 0 <= event.number < len(nums):
+                    o.value = nums[event.number]
+                elif m == OBJ_GROUP and 0 <= event.number < len(texts):
+                    o.group = texts[event.number]
+                elif m == OBJ_ACROSS and 0 <= event.number <= len(texts):
+                    o.across = texts[event.number - 1] if event.number > 0 else -1
                 o.selected = -1
                 compute(o, self.frame, self.gf()[])
                 self.message = object_title(o, self.frame)
@@ -633,13 +666,19 @@ struct Main(App):
             self.sheet_tab = event.number
             self.version += 1
         elif m == REPORT_COL:
-            self.report_col = self.numbers()[event.number]
+            var nums = self.numbers()
+            if 0 <= event.number < len(nums):
+                self.report_col = nums[event.number]
             self.version += 1
         elif m >= ADD_TILE and m <= ADD_TILE + TILE_CHART:
             var texts = self.groupings()
-            var col = self.report_col if self.report_col >= 0 else self.first_number()
+            var col = self.report_col
             var t = new_tile(m - ADD_TILE, col, texts[0] if len(texts) > 0 else -1)
-            if t.kind == TILE_CHART and len(texts) == 0:
+            if col < 0:
+                self.message = "A tile needs a number column"
+            elif len(self.tiles) >= MAX_OBJECTS:
+                self.message = "A report holds up to " + String(MAX_OBJECTS) + " tiles: remove one first"
+            elif t.kind == TILE_CHART and len(texts) == 0:
                 self.message = "A chart tile needs a text column to group by"
             else:
                 compute_tile(t, self.frame, self.gf()[], self.filter)
@@ -659,11 +698,13 @@ struct Main(App):
                     self.version += 1
         elif m == FILTER_COL:
             var texts = self.texts()
-            self.filter = ReportFilter(texts[event.number - 1] if event.number > 0 else -1, 0)
-            self.refresh()
+            if 0 <= event.number <= len(texts):
+                self.filter = ReportFilter(texts[event.number - 1] if event.number > 0 else -1, 0)
+                self.refresh()
         elif m == FILTER_VALUE:
-            self.filter.code = event.number
-            self.refresh()
+            if self.filter.col >= 0 and 0 <= event.number < groups_of(self.frame, self.filter.col):
+                self.filter.code = event.number
+                self.refresh()
         elif m == UNDO:
             if self.frame.undo():
                 self.grid.redraw()
@@ -900,7 +941,7 @@ struct Main(App):
         items.append("Columns " + String(self.frame.columns()))
         if col >= 0 and (self.frame.kind(col) == INT or self.frame.kind(col) == DECIMAL):
             items.append("Sum " + self.frame.format_value(col, Int64(self.sum), total=True))
-            items.append("Average " + self.average_text(col))
+            items.append("Average " + self.frame.format_average(col, self.sum, self.count))
         if self.message != "":
             items.append(self.message)
         return StatusBar(items, fixed(self.milliseconds, 1) + " ms on " + (self.gf()[].device_name() if self.gf_addr != 0 else "CPU"))
@@ -944,8 +985,8 @@ struct Main(App):
         var th = self.table_h()
         var items = List[View]()  # child 0: the table (its title bar is the drag handle; it stays put); then the objects; then the editor
         items.append(VStack(head, Canvas(0, self.version + self.grid.version, on_gesture=GRID, keys=True).fill().height(th - HEADER_H), spacing=8)
-                     .at(0, 0).width(width).height(th).tag("table"))
-        var bottom = th
+                     .at(self.table_x, self.table_y).width(self.table_w if self.table_w > 0 else width).height(th).tag("table"))
+        var bottom = self.table_y + th
         for k in range(len(self.objects)):
             ref o = self.objects[k]
             items.append(object_card(o, self.frame, 10 + k, self.version, OBJ_TAP + k, OBJ_CLOSE + k, OBJ_PICK + k)
@@ -953,8 +994,9 @@ struct Main(App):
             bottom = max(bottom, o.y + o.h)
         var ed = self.grid.editor_place(self.frame)
         if ed[2] > 0:
-            items.append(self.grid.editor(self.edit_text, CELL_COMMIT, CELL_CANCEL).at(ed[0], HEADER_H + ed[1]).width(ed[2]).height(30))
-        var area = Board(items^, width, bottom + 24, on_move=MOVE).width(width).height(GRID_H + 30) if self.sheet_tab == 0 else self.report_view()
+            items.append(self.grid.editor(self.edit_text, CELL_COMMIT, CELL_CANCEL).at(self.table_x + ed[0], self.table_y + HEADER_H + ed[1]).width(ed[2]).height(30))
+        var area = (Board(items^, width, bottom + 24, on_move=MOVE, on_resize=RESIZE, reveal=self.reveal, reveal_count=self.reveal_count)
+                    .width(width).height(GRID_H + 30)) if self.sheet_tab == 0 else self.report_view()
         var main = VStack(fx, area^, spacing=6).width(width) if self.sheet_tab == 0 else VStack(area^, spacing=6).width(width)
         var row = HStack(main, self.inspector(), spacing=16).align(START) if self.inspector_open else HStack(main, spacing=0)
         var names = List[String]()

@@ -63,18 +63,17 @@ def compute_tile(mut t: ReportTile, frame: Frame, gf: GpuFrame, filter: ReportFi
 
 
 def tile_value(t: ReportTile, frame: Frame) -> String:
-    """The KPI's number in its column's format (an average keeps two more places of the value; counts are plain)."""
+    """The KPI's number in its column's format (an average as the status bar shows it; counts are plain)."""
     if t.kind == TILE_COUNT:
         return grouped(t.count)
     if t.kind == TILE_SUM:
         return frame.format_value(t.col, Int64(t.total), total=True)
-    var v = Int64((abs(t.total) + max(t.count, 1) // 2) // max(t.count, 1))  # (rounded half away from zero)
-    return frame.format_value(t.col, v if t.total >= 0 else -v, total=True)
+    return frame.format_average(t.col, t.total, t.count)
 
 
 def tile_label(t: ReportTile, frame: Frame) -> String:
     if t.kind == TILE_COUNT:
-        return "Rows"
+        return "Count of rows"
     return materialize[TILE_NAMES]()[t.kind] + " of " + frame.name(t.col)
 
 

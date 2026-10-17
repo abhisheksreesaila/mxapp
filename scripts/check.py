@@ -33,7 +33,7 @@ def oracle(path):
     """Independent sums over the CSV (Python's csv module): revenue (cents) by carrier, by region, by carrier ×
     region, and for West only: sum, rows, by carrier."""
     by_carrier, by_region, pivot, west_by_carrier = {}, {}, {}, {}
-    west_sum = west_rows = 0
+    west_sum = west_rows = west_qty = 0
     with open(path, newline="") as f:
         for rec in csv.DictReader(f):
             cents = round(float(rec["revenue"]) * 100)
@@ -44,9 +44,16 @@ def oracle(path):
             if r == "West":
                 west_sum += cents
                 west_rows += 1
+                west_qty += int(rec["qty"])
                 west_by_carrier[c] = west_by_carrier.get(c, 0) + cents
-    return {"carrier": by_carrier, "region": by_region, "pivot": pivot, "west_sum": west_sum, "west_rows": west_rows,
+    return {"carrier": by_carrier, "region": by_region, "pivot": pivot, "west_sum": west_sum, "west_rows": west_rows, "west_qty": west_qty,
             "west_carrier": west_by_carrier}
+
+
+def kpi(out, name):
+    """A tile's value: the label right after its name (the inspector's own labels never sit there)."""
+    got = labels(out)
+    return got[got.index(name) + 1] if name in got and got.index(name) + 1 < len(got) else None
 
 
 def readout_ok(out, totals):
@@ -155,26 +162,29 @@ def m4():
     problems = []
     every = both(OPEN + ";tab:0=Report;tap:Sum tile;tap:Count tile", "report-all")
     west = both(REPORT + ";tapat:3=500,200", "report-west")
-    for r in (every, west):
+    qty = both(OPEN + ";tab:0=Report;select:0=qty;tap:Average tile;tap:Sum tile;select:1=region;select:2=West", "report-qty")  # (another column)
+    for r in (every, west, qty):
         if r[0] is None:
             return False, r[1]
     total = sum(o["region"].values())
     rows = sum(1 for _ in open(CSV_1M)) - 1
     for host, k in (("GTK", 0), ("web", 1)):
-        if not has(every[k], money(total, "$")) or not has(every[k], f"{rows:,}"):
+        if not has(every[k], money(total, "$")) or kpi(every[k], "Count of rows") != f"{rows:,}":
             problems.append(f"{host}: the unfiltered tiles aren't the CSV's ({money(total, '$')}, {rows:,})")
         if not has(west[k], money(o["west_sum"], "$")):
             problems.append(f"{host}: Sum of revenue for West isn't {money(o['west_sum'], '$')}")
-        if not has(west[k], f"{o['west_rows']:,}"):
-            problems.append(f"{host}: Rows for West isn't {o['west_rows']:,}")
-        if not has(west[k], "$" + average(o["west_sum"], o["west_rows"] * 100)):
+        if kpi(west[k], "Count of rows") != f"{o['west_rows']:,}":
+            problems.append(f"{host}: the Count tile for West isn't {o['west_rows']:,} ({kpi(west[k], 'Count of rows')})")
+        if kpi(qty[k], "Average of qty") != average(o["west_qty"], o["west_rows"]) or kpi(qty[k], "Sum of qty") != f"{o['west_qty']:,}":
+            problems.append(f"{host}: qty's tiles for West aren't the CSV's ({kpi(qty[k], 'Average of qty')} vs {average(o['west_qty'], o['west_rows'])}, {kpi(qty[k], 'Sum of qty')})")
+        if kpi(west[k], "Average of revenue") != "$" + average(o["west_sum"], o["west_rows"] * 100):
             problems.append(f"{host}: Average of revenue for West isn't ${average(o['west_sum'], o['west_rows'] * 100)}")
         if labels(west[k]).count("region = West") < 3 or not has(west[k], "orders_1m · region = West"):
             problems.append(f"{host}: the tiles don't say they're filtered to West")
         good, l = readout_ok(west[k], o["west_carrier"])
         if not good:
             problems.append(f"{host}: the chart tile's picked bar read {l} (want West's total for that carrier)")
-    for name, r in (("all", every), ("west", west)):
+    for name, r in (("all", every), ("west", west), ("qty", qty)):
         if shown(r[0]) != shown(r[1]):
             problems.append(f"{name}: GTK and web differ: {sorted(set(shown(r[0])) ^ set(shown(r[1])))[:4]}")
     return not problems, "; ".join(problems) or f"a Report from scratch: Sum, Average, Count and a chart tile; the West filter changes every tile (sum {money(o['west_sum'], '$')}, {o['west_rows']:,} rows), all equal to the CSV's; identical on GTK and web"
@@ -203,8 +213,10 @@ def m5():
             where = f"{host}'s file on {viewer}"
             if "BOARD: chart0 at 0,416 520x340" not in sheet[k] or "BOARD: pivot1 at 536,416" not in sheet[k]:
                 problems.append(f"{where}: the chart and the pivot didn't come back where they were")
-            if not has(report[k], money(o["west_sum"], "$")) or not has(report[k], "orders_1m · region = West"):
+            if kpi(report[k], "Sum of revenue") != money(o["west_sum"], "$") or not has(report[k], "orders_1m · region = West"):
                 problems.append(f"{where}: the Report's tiles or its West filter didn't come back")
+            if "BUTTON: revenue by carrier" not in sheet[k] or "BUTTON: revenue · carrier × region" not in sheet[k] or not has(report[k], "revenue by carrier"):  # (an object's title is the button that selects it)
+                problems.append(f"{where}: the objects' value, grouping or the chart tile didn't come back")
     return not problems, "; ".join(problems) or "an .omx document keeps the sheet's chart and pivot (where they were) and the Report's tiles and West filter; both hosts' files reopen on both hosts"
 
 

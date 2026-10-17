@@ -13,7 +13,7 @@ from std.collections import Dict, Set
 from std.memory import Pointer, stack_allocation
 from std.memory.alloc import alloc, Layout
 from mojoui.datagrid import GridSource
-from mojoui.numformat import ColumnFormat, format_number, format_date, AUTO, NUMBER
+from mojoui.numformat import ColumnFormat, format_number, format_date, AUTO, NUMBER, PERCENT
 
 comptime INT = 0
 comptime DECIMAL = 1
@@ -682,6 +682,21 @@ struct Frame(Movable, GridSource):
         if kind == DECIMAL:
             return decimal_text(v, self.scale(col))
         return String(v)
+
+    def format_average(self, col: Int, total: Int, count: Int) -> String:
+        """total ÷ count of column col in its format, rounded once (half away from zero), with two more places
+        than a whole-number column has (qty's 4.8 reads 4.80) and two more for a percent (36.42%)."""
+        var scale = self.scale(col) if self.kind(col) == DECIMAL else 0
+        var f = self.format_of(col)
+        if f.is_auto():
+            f = ColumnFormat(NUMBER, -1, True, False, "$")
+        if f.decimals < 0:
+            f.decimals = scale if scale > 0 else 2
+        var places = f.decimals + (2 if f.style == PERCENT else 0)
+        var num = total * Int(10 ** places)
+        var den = max(count, 1) * Int(10 ** scale)
+        var q = (abs(num) + den // 2) // den
+        return format_number(Int64(q if num >= 0 else -q), places, f)
 
     def display(self, col: Int, row: Int) -> String:
         var v = self.get(col, row)

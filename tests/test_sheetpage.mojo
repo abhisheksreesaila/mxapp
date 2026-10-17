@@ -4,7 +4,8 @@
 from std.testing import assert_equal, assert_true
 from mojoui.frame import Frame, Range, share, TEXT, DECIMAL
 from mojoui.frame_gpu import GpuFrame
-from mojoui.orders import order_columns, REGION, PRODUCT, REVENUE, CARRIER
+from mojoui.orders import order_columns, REGION, PRODUCT, REVENUE, CARRIER, QTY, CUSTOMER
+from mojoui.sheetpage import pivot_view
 from mojoui.numformat import ColumnFormat, CURRENCY
 from mojoui.sheetpage import SheetObject, compute, readout, free_spot, chart_view, OBJ_CHART, OBJ_PIVOT, CHART_LINE
 from mojoui.reportpage import ReportFilter, new_tile, compute_tile, tile_value, TILE_SUM, TILE_AVERAGE, TILE_COUNT, TILE_CHART
@@ -87,4 +88,41 @@ def main() raises:
     for k in range(len(by_carrier)):
         assert_equal(bars.chart.sums[k], by_carrier[k])
     assert_equal(filter.words(frame), "region = " + frame.text_of(REGION, 0))
+    # the Average tile reads as the status bar does: one rounding, two more places for a whole-number column
+    assert_equal(tile_value(avg, frame), frame.format_average(REVENUE, region0, rows0))
+    var qty_avg = new_tile(TILE_AVERAGE, QTY, -1)
+    compute_tile(qty_avg, frame, gf, filter)
+    var qty0 = 0
+    for r in range(frame.rows()):
+        if Int(frame.get(REGION, r)) == 0:
+            qty0 += Int(frame.get(QTY, r))
+    var hundredths = (qty0 * 100 + rows0 // 2) // rows0
+    assert_equal(tile_value(qty_avg, frame), String(hundredths // 100) + "." + ("0" if hundredths % 100 < 10 else "") + String(hundredths % 100))
+    assert_equal(tile_value(count, frame), frame.format_value(QTY, Int64(rows0), total=True).replace(".00", ""))
+
+    # a formula value column, and a word typed this session (a new group)
+    var margin = frame.formula("half = revenue / 2")
+    frame.set_text(CUSTOMER, 1, "Zed Co")
+    var by_customer = SheetObject.chart(margin, CUSTOMER, 0, 0)
+    compute(by_customer, frame, gf)
+    var halves = cpu_sums(frame, CUSTOMER, margin)
+    assert_equal(len(by_customer.sums), len(halves))
+    for k in range(len(halves)):
+        assert_equal(by_customer.sums[k], halves[k])
+    assert_equal(by_customer.labels[len(by_customer.labels) - 1], "Zed Co")
+
+    # a pivot row whose values cancel out still shows (rows fell in it); a group no row uses doesn't
+    var tiny = Frame(share(order_columns(20_000)))
+    tiny.set_text(REVENUE, 0, "-" + tiny.plain_text(REVENUE, 1))  # (row 0 cancels row 1 when both share a region × product)
+    tiny.set_text(REGION, 0, tiny.display(REGION, 1))
+    tiny.set_text(PRODUCT, 0, tiny.display(PRODUCT, 1))
+    var tgf = GpuFrame(tiny.base_addr)
+    var cancel = SheetObject.pivot(REVENUE, REGION, PRODUCT, 0, 0)
+    compute(cancel, tiny, tgf)
+    var shown = 0
+    for k in range(len(cancel.counts)):
+        if cancel.counts[k] > 0:
+            shown += 1
+    assert_true(shown > 0, "rows fell in the pivot")
+    _ = pivot_view(cancel, tiny, 200)
     print("SHEETPAGE TESTS PASSED")

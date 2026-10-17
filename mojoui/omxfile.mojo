@@ -9,7 +9,7 @@ from std.ffi import external_call
 from mojoui.frame import Frame, Column, Columns, Edit, share, INT, DECIMAL, TEXT, DATE, MAX_COLS
 from mojoui.numformat import ColumnFormat
 from mojoui.workbook import json_string
-from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT
+from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT, groups_of
 from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_CHART
 
 comptime OMX_BRIDGE = """
@@ -163,6 +163,14 @@ def format_from(o: PythonObject) raises -> ColumnFormat:
     return f^ if f.valid() else ColumnFormat.auto()
 
 
+def is_number(frame: Frame, c: Int) -> Bool:
+    return 0 <= c < frame.columns() and (frame.kind(c) == INT or frame.kind(c) == DECIMAL)
+
+
+def is_text(frame: Frame, c: Int) -> Bool:
+    return 0 <= c < frame.stored() and frame.kind(c) == TEXT
+
+
 def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[ReportTile], mut filter: ReportFilter) raises -> Frame:
     """Reads `path` (.omx): returns the table and fills in the sheet's objects and the Report. An object or tile
     that names a column the table doesn't have (or a kind this code doesn't know) is left out rather than trusted."""
@@ -171,6 +179,7 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
     var meta = py.meta_of(path)
     var columns = frame.columns()
     var stored = frame.stored()
+
     objects = List[SheetObject]()
     var specs = meta.get("objects", Python.list())
     for k in range(Int(py=specs.__len__())):
@@ -179,7 +188,7 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         var value = Int(py=o["value"])
         var group = Int(py=o["group"])
         var across = Int(py=o["across"])
-        if (kind != OBJ_CHART and kind != OBJ_PIVOT) or not (0 <= value < columns) or not (0 <= group < stored) or not (-1 <= across < stored):
+        if (kind != OBJ_CHART and kind != OBJ_PIVOT) or not is_number(frame, value) or not is_text(frame, group) or not (across == -1 or is_text(frame, across)):
             continue
         var obj = SheetObject.chart(value, group, Int(py=o["x"]), Int(py=o["y"]), Int(py=o["w"]), Int(py=o["h"]))
         obj.kind = kind
@@ -194,12 +203,12 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         var kind = Int(py=t["kind"])
         var col = Int(py=t["col"])
         var group = Int(py=t["group"])
-        if not (TILE_SUM <= kind <= TILE_CHART) or not (0 <= col < columns) or (kind == TILE_CHART and not (0 <= group < stored)):
+        if not (TILE_SUM <= kind <= TILE_CHART) or not is_number(frame, col) or (kind == TILE_CHART and not is_text(frame, group)):
             continue
         tiles.append(new_tile(kind, col, group))
     var f = report.get("filter", Python.dict())
     filter = ReportFilter(Int(py=f.get("col", -1)), Int(py=f.get("code", 0)))
-    if not (-1 <= filter.col < stored):
+    if not (filter.col == -1 or (is_text(frame, filter.col) and 0 <= filter.code < groups_of(frame, filter.col))):
         filter = ReportFilter(-1, 0)
     return frame^
 
