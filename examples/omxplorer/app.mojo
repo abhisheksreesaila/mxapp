@@ -5,8 +5,8 @@
 #   Sheet  → toolbar, sheet tabs, formula bar, the table, the format inspector, the status bar
 
 from mojoui.view import (View, Text, Button, FilePicker, TextField, Canvas, Board, VStack, HStack, Card, Spacer, Divider,
-                         Dropdown, Segmented, Toggle, Tabs, Grid, Scroll, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
-                         BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, TOOL, ICON_ONLY)
+                         Dropdown, Segmented, Toggle, Tabs, Grid, Scroll, Icon, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
+                         BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, CARD_GOOD, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, TOOL, ICON_ONLY)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface
 from mojoui.text import Font
@@ -865,45 +865,53 @@ struct Main(App):
         return "● GPU ready" if self.gf_addr == 0 else "● CPU"
 
     def start_screen(self) -> View:
-        var tiles = HStack(
-            Card(Text("Blank sheet", HEADLINE), Text("An empty table to type into", CAPTION), Spacer(),
-                 Button("New blank sheet", BLANK, icon="grid"), spacing=8).width(316).height(170),
-            Card(Text("Import a file", HEADLINE), Text("CSV now · Parquet, Excel, JSON next", CAPTION), Spacer(),
-                 FilePicker("Choose a file…", PICK, icon="import", accept=".csv,.tsv,.txt,.omx"), spacing=8).width(316).height(170),
-            Card(Text("Connect a database", HEADLINE), Text("Postgres · DuckDB · SQLite (with MX frame)", CAPTION), Spacer(),
-                 Text("Coming next", CAPTION), spacing=8).width(316).height(170),
-            Card(Text("Sample · 1M orders", HEADLINE), Text("A year of orders with a story in them", CAPTION), Spacer(),
-                 Button("Open the sample", SAMPLE, icon="sample"), spacing=8).width(316).height(170),
-            spacing=16,
-        )
+        """The Start screen (docs/design/universal/kit.html, 7): a side column of actions, a drop zone, recent files, samples."""
+        var side = List[View]()
+        side.append(Text("OMXPLORER", CAPTION))
+        side.append(Button("Start", NO_MSG, SUBTLE, icon="file").fill())
+        side.append(Button("New blank sheet", BLANK, SUBTLE, icon="grid").fill())
+        side.append(FilePicker("Open file…", PICK, style=SUBTLE, icon="open", accept=".csv,.tsv,.txt,.omx").fill())
+        side.append(Text("Connect a database · with MX frame, next", CAPTION))
+        side.append(Divider().fill())
+        side.append(Button("Settings…", SETTINGS, SUBTLE, icon="gear").fill())
+        side.append(Spacer())
+        side.append(Card(Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), Text("Files bigger than memory open too, with MX frame.", CAPTION), spacing=4, tone=CARD_GOOD).fill())
+        var sidebar = Card(VStack(side^, spacing=6).fill().grow().align(START), spacing=0).width(300).fill()
         var drop = Card(
-            Text("Open a CSV file", HEADLINE),
-            Text("It opens as a table you can sort, format, add formulas to and report on, on your GPU.", CAPTION),
-            FilePicker("Choose a CSV file", PICK, style=PROMINENT, icon="import", accept=".csv,.tsv,.txt,.omx"),
-            spacing=12,
-        ).fill().height(200).align(CENTER).justify(CENTER)
+            HStack(Icon("upload", 28),
+                   VStack(Text("Drop a CSV or .omx file here", HEADLINE),
+                          Text("or choose a file. A million rows is fine: you see a preview first, and the rest loads while you work.", CAPTION), spacing=4).align(START),
+                   Spacer(), FilePicker("Choose a CSV file", PICK, style=PROMINENT, icon="import", accept=".csv,.tsv,.txt,.omx"), spacing=16).fill().align(CENTER),
+            spacing=0,
+        ).fill()
         var recent = List[View]()
-        recent.append(HStack(Text("RECENT", CAPTION), Spacer()).fill())
         if len(self.recent) == 0:
             recent.append(HStack(Text("Files you open show up here.", CAPTION), Spacer()).fill())
         for k in range(min(len(self.recent), 6)):
-            recent.append(HStack(Text(file_name(self.recent[k])), Text(self.recent[k], CAPTION), Spacer(),
+            recent.append(HStack(Icon("file", 16), Text(file_name(self.recent[k])), Text(self.recent[k], CAPTION), Spacer(),
                                  Button("Open", RECENT + k, SUBTLE), spacing=12).fill().align(CENTER))
-        var body = VStack(
-            HStack(Text("omxplorer", TITLE).tone(TONE_ACCENT), Text("open data, shape it, report on it, on your GPU", CAPTION),
-                   Spacer(), Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), spacing=14).fill().align(CENTER),
-            HStack(Text("START", CAPTION), Spacer()).fill(),
-            tiles,
+        var samples = HStack(
+            Card(Text("Orders", HEADLINE), Text("1M rows · a year of sales by region, product and carrier", CAPTION), Spacer(),
+                 Button("Open the sample", SAMPLE, icon="sample"), spacing=8).width(330).height(150),
+            Card(Text("Blank sheet", HEADLINE), Text("An empty table to type into", CAPTION), Spacer(),
+                 Button("New blank sheet", BLANK, icon="grid"), spacing=8).width(330).height(150),
+            Card(Text("Taxi trips", HEADLINE), Text("100M rows · a GPU workout (docs/scale.md)", CAPTION), Spacer(), Text("Coming with MX frame", CAPTION), spacing=8).width(330).height(150),
+            spacing=16,
+        )
+        var main = VStack(
             drop,
+            Text("Recent", HEADLINE),
             Card(VStack(recent^, spacing=8).fill(), spacing=8).fill(),
+            Text("Try a sample", HEADLINE),
+            samples,
             Text(self.message, CAPTION).tone(TONE_WARN) if self.message != "" else Spacer(),
-            spacing=18,
-        ).padding(28, 48).fill()
+            spacing=16,
+        ).grow().align(START)
+        var body = HStack(sidebar, main, spacing=24).padding(24, 32).fill().grow().align(STRETCH)
         var parts = List[View]()
         parts.append(self.menu_bar())
         parts.append(body^)
-        parts.append(Spacer())
-        parts.append(StatusBar(["Choose a file, or open the sample"], "omxplorer · omxapp"))
+        parts.append(StatusBar(["Ready"], "omxplorer · omxapp"))
         for o in self.overlays():
             parts.append(o.copy())
         return VStack(parts^, spacing=0).fill().grow()
