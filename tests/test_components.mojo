@@ -8,6 +8,9 @@ from mojoui.text import Font
 from mojoui.theme import Palette
 from mojoui.pivot import PivotTable
 from mojoui.chartview import ChartView
+from mojoui.kpi import KpiView
+from mojoui.finding import FindingCard
+from mojoui import CARD_WARN, CARD_GOOD, TONE_GOOD, BUTTON
 
 
 def main() raises:
@@ -52,8 +55,52 @@ def main() raises:
     assert_equal(cv.selected, 0)
     assert_true(cv.tap(200, 30, font, pal))
     assert_equal(cv.selected, -1)
+    assert_true(cv.tap(200, 150, font, pal))  # the third bar's row
+    assert_equal(cv.selected, 2)
     assert_false(cv.tap(200, 500, font, pal))  # below the chart: nothing
     var spec = cv.flint(pal).to_json()
     assert_true(spec.find('"chartType": "Bar Chart"') >= 0)
+    # a line with a second series and an event marker draws the marker (the warning colour) where the event is
+    var labels = List[String]()
+    var vals = List[Float64]()
+    var shares = List[Float64]()
+    for i in range(20):
+        labels.append("W" + String(i) if i % 5 == 0 else "")
+        vals.append(Float64(1000 + i * 50))
+        shares.append(0.40 - (0.03 if i >= 10 else 0.0))
+    var line = ChartView.line("Revenue and margin", labels^, vals^, shares^, 10, "rate table v7")
+    line.draw(s, font, pal)
+    var warn_px = 0  # pixels close to the warning colour (lines and text are anti-aliased)
+    for i in range(w * h):
+        var d = 0
+        for shift in [0, 8, 16]:
+            d += abs(Int((px[i] >> UInt32(shift)) & 255) - Int((pal.warn >> UInt32(shift)) & 255))
+        if d < 90:
+            warn_px += 1
+    assert_true(warn_px > 20, "the marker is drawn: " + String(warn_px))
+    # a heatmap: a tap picks the cell under it; the second tap lets go
+    var heat = ChartView.heatmap("Margin", ["West", "East"], ["Tent", "Pack", "Stove"], [0.31, 0.40, 0.39, 0.41, 0.43, 0.40])
+    heat.draw(s, font, pal)
+    assert_true(heat.tap(Float64(w) - 10, Float64(h) - 10, font, pal))
+    assert_equal(heat.selected, 5)  # bottom-right: East × Stove
+    assert_true(heat.tap(Float64(w) - 10, Float64(h) - 10, font, pal))
+    assert_equal(heat.selected, -1)
+    # a KPI tile draws its accent when it's the focal one
+    KpiView("Revenue", "$1.11B", "+4.2% vs Q2", [1.0, 2.0, 3.0], True).draw(s, font, pal)
+    var accent_px = 0
+    for i in range(w * h):
+        if px[i] == pal.accent:
+            accent_px += 1
+    assert_true(accent_px > w * h // 4, "the focal tile is filled with the accent")
+    # FindingCard: warning while open, good once resolved; its first action is the main button
+    var open_card = FindingCard("Agent noticed", "3 spellings", ["Merge", "Show the rows"], [6, 8], note="or by hand", again=12)
+    assert_equal(open_card.nodes[0].style, CARD_WARN)
+    var first_button = -1
+    for i in range(len(open_card.nodes)):
+        if open_card.nodes[i].kind == BUTTON and open_card.nodes[i].text == "Merge":
+            first_button = i
+    assert_true(first_button >= 0 and open_card.nodes[first_button].msg == 6)
+    var done = FindingCard("Names are clean", "regrouped", resolved=True)
+    assert_equal(done.nodes[0].style, CARD_GOOD)
     _ = len(px)
     print("COMPONENT TESTS PASSED")

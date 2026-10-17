@@ -21,11 +21,11 @@ run, BUILD = g10.run, g10.BUILD
 import drive  # noqa: E402
 
 EXAMPLES = g10.EXAMPLES + ["mxstudio"]
-SHOWN = r"^(LABEL|SEGMENTED|TABS|DROPDOWN|BUTTON|FIELD|TEXTAREA|BOARD): "
+SHOWN = r"^(LABEL|TONE|SEGMENTED|TABS|DROPDOWN|BUTTON|FIELD|TEXTAREA|BOARD): "
 TIMING = re.compile(r"^LABEL: [\d.]+ ms on ")
 
 # Steps on the Sheet (grid = canvas 0; positions in thousandths of it). Row 7 of the ledger is "Acme Corp.".
-EDIT = "doubletap:0=352,509;enter:Cell=Acme Corp;doubletap:0=870,509;enter:Cell=50000"  # rename, then $50,000 on the same order
+EDIT = "doubletap:0=352,509;enter:Cell=Acme Corp;doubletap:0=875,509;enter:Cell=50000"  # rename, then $50,000 on the same order
 MERGE = "tap:Merge into “Acme Corp”"
 UNDO = MERGE + ";tap:Undo all edits"
 
@@ -177,6 +177,13 @@ def m5():
     for host, o in (("GTK", start[0]), ("web", start[1])):
         if "Agent noticed" not in labels(o) or label(o, "3 spellings of one customer") is None:
             problems.append(f"{host}: no finding at start")
+        if not re.search(r"^TONE: Acme Corp\. = warn$", o, re.M):  # the host really colours the duplicate's pivot row
+            problems.append(f"{host}: the duplicate spelling's pivot row isn't in the warning tone")
+    for host, o in (("GTK", merged[0]), ("web", merged[1])):
+        if re.search(r"^TONE: .* = warn$", o, re.M) and not re.search(r"^TONE: Agent", o, re.M):
+            warn_rows = re.findall(r"^TONE: (.*) = warn$", o, re.M)
+            if any(w.startswith("Acme") for w in warn_rows):
+                problems.append(f"{host}: rows still in the warning tone after the merge: {warn_rows[:3]}")
     for host, o in (("GTK", merged[0]), ("web", merged[1])):
         if "Names are clean" not in labels(o) or label(o, "Distinct customers 18") is None:
             problems.append(f"{host}: the merge didn't regroup ({[l for l in labels(o) if 'Distinct' in l]})")

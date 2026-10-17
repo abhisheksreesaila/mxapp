@@ -15,3 +15,4 @@ One line per rule that prevents a mistake that happened.
 - Look at every screenshot a check takes: a missing glyph (▲/▼ drew as a box) and a page wider than a 1280-pt window both passed the state checks.
 
 - `Int(X)` of a comptime float constant (`comptime ROW_H = 26.0`) fails to compile ("the SIMD type must be floating point"): keep an Int constant beside it, or convert through `Float64(X)`.
+- Never edit source while a full check runs: it rebuilds from the working tree, so half-written code turns into false failures (goal 11's first full run).

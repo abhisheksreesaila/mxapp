@@ -45,8 +45,8 @@ RUN_ON = {
 # the example whose checks exercise it).
 FEATURES = [
     ("Button with an icon", "Button(icon=…)", r"node\.hint != \"\"|n\[\"hint\"\]|adw_button_content", "workbook"),
-    ("Card tones", "Card(tone=CARD_WARN / CARD_GOOD)", r"CARD_WARN|card warn|mui-warn", "workbook"),
-    ("Text tones", "Text(…).tone(TONE_WARN…)", r"mui-tone|tone-warn", "workbook"),
+    ("Card tones", "Card(tone=CARD_WARN / CARD_GOOD)", r"CARD_WARN|card warn|mui-warn", "mxstudio"),
+    ("Text tones", "Text(…).tone(TONE_WARN…)", r"mui-tone|tone-warn", "mxstudio"),
     ("Quiet buttons", "style=SUBTLE / ICON_ONLY", r"\bSUBTLE\b|\bICON_ONLY\b", "workbook"),
     ("Lucide icon set", "Button(icon=\"table\")…", r"lucide|mojoui-", "workbook"),
     ("In-place editor", "TextField(…).focused()", r"value == 1|cell-editor", "workbook"),
@@ -68,14 +68,14 @@ FEATURES = [
 COMPOSITES = [
     ("DataGrid", "mojoui/datagrid.mojo", ["Canvas", "Canvas: press, release, double", "In-place editor", "Board: drag, resize, snap"], "DataGrid("),
     ("PivotTable", "mojoui/pivot.mojo", ["Grid", "Scroll", "Text tones"], "PivotTable("),
-    ("ChartView", "mojoui/chartview.mojo", ["Canvas", "Canvas: pan, zoom, tap"], "ChartView("),
+    ("ChartView", "mojoui/chartview.mojo", ["Canvas", "Canvas: pan, zoom, tap"], "ChartView"),
+    ("KpiView", "mojoui/kpi.mojo", ["Canvas"], "KpiView("),
+    ("FindingCard", "mojoui/finding.mojo", ["Card tones", "Text tones", "Quiet buttons"], "FindingCard("),
 ]
 
 # Built inside one app, not in mojoui yet: each should become a component before another app needs it.
 APP_LOCAL = [
-    ("KPI tile", "examples/analytics", "a headline number with a sparkline (mojoui.charts.KpiTile, but placed by the app on a Canvas)"),
     ("FormulaBar", "examples/workbook", "what's selected, its value, a formula field"),
-    ("FindingCard", "examples/mxstudio", "an agent's finding: what it noticed, the rows behind it, act / show rows / look again (Report's 'Worth a look' and Docs' mismatch card need it too)"),
     ("Inspector", "examples/mxstudio", "the side panel: Comes from, Feeds, Your edits, Undo all (lineage and the edit log as a reusable panel)"),
     ("Toolbar / StatusBar islands", "examples/workbook", "the island contents (title, Insert buttons, status) are assembled by the app"),
 ]

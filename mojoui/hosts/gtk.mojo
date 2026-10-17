@@ -78,6 +78,30 @@ def connect_any[F: AnyType](obj: Int, signal: String, callback: F, data: Int):
     _ = ccall("g_signal_connect_data", obj, s.as_c_string_span(), callback, data, 0, 0)
 
 
+def remove_class(widget: Int, name: String):
+    var n = name
+    external_call["gtk_widget_remove_css_class", NoneType](widget, n.as_c_string_span())
+
+
+def set_tone(widget: Int, tone: Int):
+    """A label's tone class (Text(…).tone()): one of mui-tone-warn/good/strong/accent, or none."""
+    var names: List[String] = ["", "mui-tone-warn", "mui-tone-good", "mui-tone-strong", "mui-tone-accent"]
+    for k in range(1, 5):
+        remove_class(widget, names[k])
+    if 1 <= tone <= 4:
+        add_class(widget, names[tone])
+
+
+def tone_of(widget: Int) -> String:
+    """The tone a label shows (for the test report): "warn", "good", "strong", "accent" or ""."""
+    var names: List[String] = ["warn", "good", "strong", "accent"]
+    for n in names:
+        var cls = "mui-tone-" + n
+        if external_call["gtk_widget_has_css_class", c_int](widget, cls.as_c_string_span()) != 0:
+            return n
+    return ""
+
+
 def add_class(widget: Int, name: String):
     var n = name
     external_call["gtk_widget_add_css_class", NoneType](widget, n.as_c_string_span())
@@ -503,14 +527,7 @@ struct GtkHost[A: App](Movable):
             elif node.style == CAPTION:
                 add_class(w, "caption")
                 add_class(w, "dim-label")
-            if node.value == 1:
-                add_class(w, "mui-tone-warn")
-            elif node.value == 2:
-                add_class(w, "mui-tone-good")
-            elif node.value == 3:
-                add_class(w, "mui-tone-strong")
-            elif node.value == 4:
-                add_class(w, "mui-tone-accent")
+            set_tone(w, node.value)
         elif node.kind == BUTTON:
             var t = node.text
             if node.hint != "" and node.style == ICON_ONLY:  # just the icon; the title is the tooltip
@@ -992,6 +1009,8 @@ struct GtkHost[A: App](Movable):
                     external_call["gtk_check_button_set_active", NoneType](b, c_int(1 if j == p.number else 0))
                     b = external_call["gtk_widget_get_next_sibling", Int](b)
                     j += 1
+            elif p.op == SET_VALUE and kind == TEXT:  # a label's tone changed
+                set_tone(w, self.rt.shown.nodes[p.node].value)
             elif p.op == SET_VALUE and kind == BOARD:
                 var token = self.rt.shown.nodes[p.node].value
                 if token != 0 and token != self.revealed:
@@ -1846,6 +1865,9 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
             continue
         if n.kind == TEXT:
             print("LABEL: " + c_str(external_call["gtk_label_get_text", Int](w)))
+            var tone = tone_of(w)
+            if tone != "":
+                print("TONE: " + c_str(external_call["gtk_label_get_text", Int](w)) + " = " + tone)
         elif n.kind == BUTTON:
             if n.hint != "" and n.style == ICON_ONLY:
                 print("BUTTON: " + c_str(external_call["gtk_widget_get_tooltip_text", Int](w)))
@@ -2004,7 +2026,7 @@ window.fluent label.caption { font-size: 12px; }
 window.fluent .mui-card { background-color: #ffffff; border-radius: 8px; padding: 12px 14px;
   box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
 /* islands: the chrome floating over the page */
-window.fluent label.mui-tone-warn { color: #C2410C; } window.fluent label.mui-tone-good { color: #0F766E; }
+window.fluent label.mui-tone-warn { color: #EA580C; } window.fluent label.mui-tone-good { color: #0F766E; }
 window.fluent label.mui-tone-strong { font-weight: 700; } window.fluent label.mui-tone-accent { color: #0F6CBD; }
 window.fluent .mui-card.mui-warn { background-color: #FFF7ED; box-shadow: inset 0 0 0 1px #FED7AA; }
 window.fluent .mui-card.mui-good { background-color: #F0FDF4; box-shadow: inset 0 0 0 1px #BBF7D0; }

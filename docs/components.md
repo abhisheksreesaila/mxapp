@@ -20,9 +20,9 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, kitchen, expenses, lens, analytics |
 | `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses, workbook, mxstudio |
-| `TextArea` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook |
+| `TextArea` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook, mxstudio |
 | `Toggle` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, lens |
-| `Dropdown` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, analytics, workbook |
+| `Dropdown` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, analytics, workbook, mxstudio |
 | `Slider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, gpu, lens |
 | `Segmented` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, lens, analytics, mxstudio |
 | `Radio` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen |
@@ -69,24 +69,24 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | `DataGrid` | `mojoui/datagrid.mojo` | Canvas, Canvas: press, release, double, In-place editor, Board: drag, resize, snap | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
 | `PivotTable` | `mojoui/pivot.mojo` | Grid, Scroll, Text tones | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
 | `ChartView` | `mojoui/chartview.mojo` | Canvas, Canvas: pan, zoom, tap | ✅ | ✅ | 🔨 | 🔨 | 🔨 | mxstudio, workbook |
+| `KpiView` | `mojoui/kpi.mojo` | Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | mxstudio |
+| `FindingCard` | `mojoui/finding.mojo` | Card tones, Text tones, Quiet buttons | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio |
 
 ## Totals
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 47 | 0 | 0 |
-| Web | 47 | 0 | 0 |
-| Android | 19 | 11 | 17 |
-| Mac (AppKit) | 0 | 30 | 17 |
-| iPhone (UIKit) | 0 | 30 | 17 |
+| Linux (GTK) | 49 | 0 | 0 |
+| Web | 49 | 0 | 0 |
+| Android | 19 | 12 | 18 |
+| Mac (AppKit) | 0 | 31 | 18 |
+| iPhone (UIKit) | 0 | 31 | 18 |
 
 ## Inside one app, not components yet (the debt)
 
 | Should become | Lives in | What it is |
 |---|---|---|
-| `KPI tile` | examples/analytics | a headline number with a sparkline (mojoui.charts.KpiTile, but placed by the app on a Canvas) |
 | `FormulaBar` | examples/workbook | what's selected, its value, a formula field |
-| `FindingCard` | examples/mxstudio | an agent's finding: what it noticed, the rows behind it, act / show rows / look again (Report's 'Worth a look' and Docs' mismatch card need it too) |
 | `Inspector` | examples/mxstudio | the side panel: Comes from, Feeds, Your edits, Undo all (lineage and the edit log as a reusable panel) |
 | `Toolbar / StatusBar islands` | examples/workbook | the island contents (title, Insert buttons, status) are assembled by the app |
 

@@ -22,7 +22,8 @@ CHROMIUM = "/usr/bin/chromium"
 
 DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui-overlay [data-kind]')].map(e => {
   const k = e.dataset.kind;
-  if (k === 'label') return 'LABEL: ' + e.textContent;
+  if (k === 'label') { const tone = ['warn', 'good', 'strong', 'accent'].find(t => e.classList.contains('tone-' + t));
+    return 'LABEL: ' + e.textContent + (tone ? String.fromCharCode(10) + 'TONE: ' + e.textContent + ' = ' + tone : ''); }
   if (k === 'button') return 'BUTTON: ' + e.textContent;
   if (k === 'field') return 'FIELD: ' + e.value;
   if (k === 'toggle') return 'TOGGLE: ' + e.querySelector('span').textContent + (e.querySelector('input').checked ? '=on' : '=off');

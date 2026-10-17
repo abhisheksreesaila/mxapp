@@ -82,7 +82,20 @@ def main() raises:
     app.update(Event(CELL_COMMIT, "7", 0))
     assert_equal(app.frame.display(c, row), "7.00")
     assert_true(not app.grid.editing)
-    assert_equal(app.grid.cur_row, app.grid.next_row(row, app.frame), "the selection moved to the next row")
+    # the row below, worked out from the shown order here (not by the grid): the next alive row after `row`
+    var expected = -1
+    var at = -1
+    for i in range(len(app.grid.order)):
+        if app.grid.order[i] == row:
+            at = i
+    var j = at + 1
+    while 0 <= j < len(app.grid.order):
+        if app.frame.alive(app.grid.order[j]):
+            expected = app.grid.order[j]
+            break
+        j += 1
+    assert_true(len(app.grid.order) > 0 and at >= 0, "the table is sorted here (the sorted case is the one to prove)")
+    assert_equal(app.grid.cur_row, expected, "the selection moved to the next row in the sorted order")
     app.update(Event(CELL_COMMIT, "8", 0))  # a second Enter after the editor closed writes nothing
     assert_equal(app.frame.display(c, app.grid.cur_row) != "8.00", True)
     # a click anywhere else closes the editor without writing

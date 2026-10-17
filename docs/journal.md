@@ -148,3 +148,12 @@ Newest last. What was tried, what happened, dead ends.
 - Engine untouched (bench_workbook): recompute 7.8–8.0 ms, grid redraw 4.4–5.8 ms, group-by ≤ 0.93 ms, sort 0.4–1.98 s.
 - Machine note: /tmp is near its quota (another project's Claude scratchpad holds ~13 GB of speech models), which made some tool outputs fail to save; outputs go to build/ instead. Not deleted (not ours).
 
+## Goal 11: MX Studio's Sheet, components first (2026-10-16 evening, owner away)
+- Handoff read (docs/mx-studio/): PLAN.md's ladder (data + 2D → 3D → animation → characters), MX_STUDIO.md (engine first, agent-native, one plan), SCREENS.md (Sheet, Report, Explore, Query; the planted story). Scoped to the Sheet + the duplicate-names finding (D-109).
+- Components first: DataGrid extracted from the Workbook into mojoui/datagrid.mojo behind GridSource (Frame implements it); the Workbook's 400 lines of grid code became ~40 lines of calls; header histograms added for the Sheet. PivotTable (native labels in a Grid), ChartView (Flint on a Canvas, tap-to-select), Card tones and Text tones on both hosts. Each has its own test; the matrix gained a "composites" section (a composite is only as proven as its weakest part).
+- Engine: Frame.merge() folds spellings by alias (one MERGE step in the log, undone together), display and aggregation fold through it (D-113).
+- Data: examples/mxstudio/orders.mojo. First cut gave a 1.1-point Q3 margin drop; a quick Python simulation over mixes and carrier shares picked [10,6,10,10,24,6,24,10] with Carrier A on 75% of heavy parcels → 3.08 points (D-114). test_orders proves every planted fact exactly.
+- The Sheet compiled first time; first screenshots: inspector text centred (fixed: align start), an empty message island (default hint), customer names cut (fitted at start).
+- M4's first failure was honest: renaming one $116 order's customer can't show in pivot cells formatted "$4.03M"; the check now also edits that order's revenue to $50,000 (visible in the pivot and the exact sum). The money columns moved next to the customer so revenue is on screen without scrolling sideways.
+- M1–M5 pass headless on GTK and web (also a 20M-row start). Full check + review running.
+

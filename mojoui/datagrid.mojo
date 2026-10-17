@@ -18,6 +18,7 @@ from mojoui.text import Font, MONO, RIGHT
 from mojoui.draw import rect, hline, line
 from mojoui.theme import Palette
 from mojoui.maths import log2
+from mojoui.charts import grouped
 
 comptime GRID_ROW_H = 26.0
 comptime GRID_HEADER_H = 30.0
@@ -77,6 +78,7 @@ struct DataGrid(Copyable, Movable):
     var cur_col: Int
     var widths: List[Float64]  # per column, points (0 = its default)
     var min_widths: List[Float64]  # per column: its header's width (from prepare())
+    var type_widths: List[Float64]  # per column: the source's default width for its values (from prepare())
     var histograms: List[List[Float64]]  # per column: bar heights 0–1 (empty: none drawn)
     var editing: Bool
     var bar_drag: Bool
@@ -99,6 +101,7 @@ struct DataGrid(Copyable, Movable):
         self.cur_col = -1
         self.widths = List[Float64]()
         self.min_widths = List[Float64]()
+        self.type_widths = List[Float64]()
         self.histograms = List[List[Float64]]()
         self.editing = False
         self.bar_drag = False
@@ -122,15 +125,18 @@ struct DataGrid(Copyable, Movable):
         if len(self.min_widths) == n:
             return
         self.min_widths = List[Float64](capacity=n)
+        self.type_widths = List[Float64](capacity=n)
         for c in range(n):
             var name = src.grid_name(c) + ("" if src.grid_editable(c) else "ƒ ")
             self.min_widths.append(font.measure(name, 12.5, pal.medium) + 26)
+            self.type_widths.append(src.grid_type_width(c))  # (once: it may scan a dictionary)
 
     def col_width[S: GridSource](self, c: Int, src: S) -> Float64:
         if c < len(self.widths) and self.widths[c] > 0:
             return self.widths[c]
         var header = self.min_widths[c] if c < len(self.min_widths) else 0.0
-        return max(src.grid_type_width(c), header)
+        var typed = self.type_widths[c] if c < len(self.type_widths) else src.grid_type_width(c)
+        return max(typed, header)
 
     def col_left[S: GridSource](self, c: Int, src: S) -> Float64:
         """Where column c starts (points), the sideways scroll applied."""
@@ -198,7 +204,7 @@ struct DataGrid(Copyable, Movable):
     def position_text[S: GridSource](self, src: S) -> String:
         """ "Rows 1–8 of 20,000,000" """
         var count = self.shown_count(src)
-        return "Rows " + _grouped(min(self.top + 1, count)) + "–" + _grouped(min(self.top + self.rows_in(self.size[1]), count)) + " of " + _grouped(count)
+        return "Rows " + grouped(min(self.top + 1, count)) + "–" + grouped(min(self.top + self.rows_in(self.size[1]), count)) + " of " + grouped(count)
 
     # ---------- hit tests ----------
 
@@ -587,7 +593,7 @@ struct DataGrid(Copyable, Movable):
                 else:
                     font.draw(s, text, x + 8 * k, base, 13 * k, color, p.regular)
             rect(s, 0, y, gut, GRID_ROW_H * k, p.accent_wash if row == self.cur_row else p.card)
-            font.draw(s, _grouped(row + 1), (GRID_GUTTER - 10) * k, base, 12 * k, p.ink3, p.regular, RIGHT)
+            font.draw(s, grouped(row + 1), (GRID_GUTTER - 10) * k, base, 12 * k, p.ink3, p.regular, RIGHT)
             y += GRID_ROW_H * k
             hline(s, 0, right, y, p.line)
             shown += 1
@@ -596,19 +602,3 @@ struct DataGrid(Copyable, Movable):
         var t = self.thumb(h / k, src)
         rect(s, right, head, GRID_BAR_W * k, h - head, p.card)
         rect(s, right + 3 * k, t[0] * k + 2 * k, (GRID_BAR_W - 6) * k, t[1] * k - 4 * k, p.ink3 if self.bar_drag else p.line_strong)
-
-
-def _grouped(n: Int) -> String:
-    """12345678 → "12,345,678" """
-    var digits = String(n if n >= 0 else -n)
-    var out = String("")
-    var count = 0
-    var cs = List[String]()
-    for c in digits.codepoint_slices():
-        cs.append(String(c))
-    for i in range(len(cs) - 1, -1, -1):
-        out = cs[i] + out
-        count += 1
-        if count % 3 == 0 and i > 0:
-            out = "," + out
-    return ("-" if n < 0 else "") + out

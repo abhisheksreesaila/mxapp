@@ -162,4 +162,35 @@ def main() raises:
     assert_false(f.alive(5))  # the undone row is gone: not alive, not editable
     f.set(1, 5, 99)
     assert_equal(len(f.cells), 0)
+    # merging text values: one undoable step, no chains, sorted and shown as the value they joined
+    var names = Columns()
+    var nc = Column("customer", TEXT)
+    nc.dictionary = ["Acme", "Acme Corp.", "ACME Inc", "Globex", "Zed"]
+    nc.values = [0, 1, 2, 3, 1, 4, 2]
+    names.add(nc^)
+    var mf = Frame(share(names^))
+    assert_equal(mf.merge(0, [Int64(1)], Int64(4)), 1)  # Acme Corp. → Zed (a mistake, kept for the test)
+    assert_equal(mf.display(0, 1), "Zed")
+    assert_equal(mf.merge(0, [Int64(4)], Int64(0)), 1)  # Zed → Acme: Acme Corp. follows (no chain)
+    assert_equal(mf.display(0, 1), "Acme")
+    assert_equal(mf.display(0, 5), "Acme")
+    assert_equal(mf.alias(0, 1), Int64(0))
+    assert_equal(mf.merge(0, [Int64(2)], Int64(4)), 1)  # into a merged value lands on its final one
+    assert_equal(mf.alias(0, 2), Int64(0))
+    # sorting folds merges: every Acme-ish row comes before Globex
+    var merged_order = mf.permutation(0)
+    assert_equal(mf.display(0, merged_order[5]), "Acme")
+    assert_equal(mf.display(0, merged_order[6]), "Globex")
+    # undo walks back one merge at a time, exactly
+    assert_true(mf.undo())  # ACME Inc → (Acme) undone
+    assert_equal(mf.display(0, 2), "ACME Inc")
+    assert_equal(mf.display(0, 1), "Acme")
+    assert_true(mf.undo())  # Zed → Acme undone: Zed is Zed again, Acme Corp. back under Zed
+    assert_equal(mf.display(0, 5), "Zed")
+    assert_equal(mf.display(0, 1), "Zed")
+    assert_true(mf.undo())
+    assert_equal(mf.display(0, 1), "Acme Corp.")
+    assert_equal(len(mf.aliases), 0)
+    # keys never collide across columns, even past 65,536 codes
+    assert_true(Frame.alias_key(2, 70000) != Frame.alias_key(3, 4464))
     print("FRAME TESTS PASSED")

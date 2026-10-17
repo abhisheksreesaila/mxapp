@@ -281,6 +281,9 @@ struct LineChart(Movable):
     var labels: List[String]  # x labels ("" = no label at that point)
     var values: List[Float64]  # in cents
     var selected: Int
+    var second: List[Float64]  # an optional second series, a share 0–1 (e.g. margin), on its own right-hand axis
+    var marker: Int  # an event to mark (index into values), or -1
+    var marker_text: String
 
     var pal: Palette  # the colours and canvas font it draws with
 
@@ -288,7 +291,21 @@ struct LineChart(Movable):
         self.labels = labels^
         self.values = values^
         self.selected = selected
+        self.second = List[Float64]()
+        self.marker = -1
+        self.marker_text = ""
         self.pal = Palette.fluent()
+
+    def with_second(var self, var values: List[Float64]) -> Self:
+        """A second line (a share 0–1, e.g. margin) on its own percent axis at the right."""
+        self.second = values^
+        return self^
+
+    def with_marker(var self, index: Int, text: String) -> Self:
+        """A vertical line at an event (e.g. "Jul 14 · rate table v7")."""
+        self.marker = index
+        self.marker_text = text
+        return self^
 
     def themed(var self, pal: Palette) -> Self:
         """The same chart in another palette (Palette.omarchy())."""
@@ -300,7 +317,8 @@ struct LineChart(Movable):
         var step = nice_step(self.max_value())
         var top_value = step * Float64(max(Int(self.max_value() / step + 0.999), 1))
         var axis_w = font.measure(axis_money(Int(top_value)), 12 * k, self.pal.regular) + 10 * k
-        return SIMD[DType.float64, 4](axis_w, 10 * k, w - 8 * k, h - 26 * k)
+        var right_w = (font.measure("100%", 12 * k, self.pal.regular) + 12 * k) if len(self.second) > 1 else 8 * k
+        return SIMD[DType.float64, 4](axis_w, 10 * k + (16 * k if self.marker >= 0 else 0.0), w - right_w, h - 26 * k)
 
     def max_value(self) -> Float64:
         var top = 0.0
@@ -337,6 +355,34 @@ struct LineChart(Movable):
         area(s, xs, ys, bottom, with_alpha(self.pal.accent, 0.22), with_alpha(self.pal.accent, 0.0))
         for i in range(n - 1):
             line(s, xs[i], ys[i], xs[i + 1], ys[i + 1], 2.25 * k, self.pal.accent)
+        if len(self.second) == n:  # the share, on its own axis (rounded to whole percent steps)
+            var lo = 1.0
+            var hi = 0.0
+            for v in self.second:
+                lo = min(lo, v)
+                hi = max(hi, v)
+            lo = Float64(Int(lo * 100.0 - 1)) / 100.0
+            hi = Float64(Int(hi * 100.0 + 2)) / 100.0
+            var col = self.pal.data(3)
+            var prev_y = 0.0
+            for i in range(n):
+                var y2 = bottom - (bottom - top) * (self.second[i] - lo) / max(hi - lo, 0.0001)
+                if i > 0:
+                    line(s, xs[i - 1], prev_y, xs[i], y2, 2 * k, col)
+                prev_y = y2
+            for g in range(3):
+                var share = lo + (hi - lo) * Float64(g) / 2.0
+                var gy = bottom - (bottom - top) * Float64(g) / 2.0
+                font.draw(s, String(Int(share * 100.0 + 0.5)) + "%", right + 6 * k, gy + 4 * k, 12 * k, col, self.pal.regular)
+        if 0 <= self.marker < n:  # an event, marked across the plot
+            var mx = xs[self.marker]
+            var dash = top
+            while dash < bottom:
+                line(s, mx, dash, mx, min(dash + 4 * k, bottom), 1.5 * k, self.pal.warn)
+                dash += 8 * k
+            var tw = font.measure(self.marker_text, 11.5 * k, self.pal.medium)
+            var tx = min(max(mx - tw / 2, left), right - tw)
+            font.draw(s, self.marker_text, tx, top - 5 * k, 11.5 * k, self.pal.warn, self.pal.medium)
         if 0 <= self.selected < n:
             var x = xs[self.selected]
             var y = ys[self.selected]
@@ -431,3 +477,83 @@ struct ColumnChart(Movable):
         if n == 0 or x_pt < 4 or x_pt > width_pt - 4:
             return -1
         return min(Int((x_pt - 4) / ((width_pt - 8) / Float64(n))), n - 1)
+
+
+# ---------- heatmap ----------
+
+struct Heatmap(Movable):
+    """Values on a rows × columns grid, each cell tinted by its value (low: the warning colour; high: the
+    accent), the value written in it. For shares (margin %) or counts."""
+
+    var rows: List[String]
+    var cols: List[String]
+    var values: List[Float64]  # row-major
+    var percent: Bool  # values are shares 0–1
+    var selected: Int  # a highlighted cell (row * len(cols) + col), or -1
+    var pal: Palette
+
+    def __init__(out self, var rows: List[String], var cols: List[String], var values: List[Float64], percent: Bool = True, selected: Int = -1):
+        self.rows = rows^
+        self.cols = cols^
+        self.values = values^
+        self.percent = percent
+        self.selected = selected
+        self.pal = Palette.fluent()
+
+    def themed(var self, pal: Palette) -> Self:
+        self.pal = pal.copy()
+        return self^
+
+    def label_w(self, font: Font, k: Float64) -> Float64:
+        var w = 0.0
+        for r in self.rows:
+            w = max(w, font.measure(r, 12 * k, self.pal.regular))
+        return w + 12 * k
+
+    def draw(self, mut s: Surface, font: Font):
+        var k = s.scale
+        s.fill(self.pal.card)
+        var nr = len(self.rows)
+        var nc = len(self.cols)
+        if nr == 0 or nc == 0:
+            return
+        var lo = 1e18
+        var hi = -1e18
+        for v in self.values:
+            lo = min(lo, v)
+            hi = max(hi, v)
+        var left = self.label_w(font, k)
+        var head = 22 * k
+        var cw = (Float64(s.width) - left) / Float64(nc)
+        var ch = (Float64(s.height) - head) / Float64(nr)
+        for c in range(nc):
+            font.draw(s, self.cols[c], left + cw * (Float64(c) + 0.5), 15 * k, 12 * k, self.pal.ink2, self.pal.regular, CENTRE)
+        for r in range(nr):
+            var y = head + ch * Float64(r)
+            font.draw(s, self.rows[r], left - 8 * k, y + ch / 2 + 4 * k, 12 * k, self.pal.ink2, self.pal.regular, RIGHT)
+            for c in range(nc):
+                var i = r * nc + c
+                var v = self.values[i] if i < len(self.values) else 0.0
+                var t = (v - lo) / (hi - lo) if hi > lo else 0.5
+                var fill = with_alpha(self.pal.accent, 0.15 + 0.7 * t) if t >= 0.35 else with_alpha(self.pal.warn, 0.15 + 0.6 * (0.35 - t) / 0.35)
+                rect(s, left + cw * Float64(c) + 2 * k, y + 2 * k, cw - 4 * k, ch - 4 * k, fill, 4 * k)
+                if i == self.selected:
+                    rect(s, left + cw * Float64(c) + 1 * k, y + 1 * k, cw - 2 * k, 2 * k, self.pal.ink)
+                var text = (String(Int(v * 1000.0 + 0.5) // 10) + "." + String(Int(v * 1000.0 + 0.5) % 10) + "%") if self.percent else compact(v)
+                font.draw(s, text, left + cw * (Float64(c) + 0.5), y + ch / 2 + 4.5 * k, 12.5 * k, self.pal.ink, self.pal.medium, CENTRE)
+
+    def hit(self, width_pt: Float64, height_pt: Float64, font: Font, x_pt: Float64, y_pt: Float64) -> Int:
+        """The cell under a tap (row * columns + column), or -1."""
+        var nr = len(self.rows)
+        var nc = len(self.cols)
+        if nr == 0 or nc == 0:
+            return -1
+        var left = self.label_w(font, 1.0)
+        if x_pt < left or y_pt < 22:
+            return -1
+        var c = Int((x_pt - left) / ((width_pt - left) / Float64(nc)))
+        var r = Int((y_pt - 22) / ((height_pt - 22) / Float64(nr)))
+        if r >= nr or c >= nc:
+            return -1
+        return r * nc + c
+

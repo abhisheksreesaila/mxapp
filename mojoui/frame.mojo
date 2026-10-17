@@ -44,6 +44,7 @@ comptime SET = 0
 comptime APPEND = 1
 comptime REMOVE = 2
 comptime MERGE = 3  # a text value folded into another (an alias): col, row = the merge's number, old = the code, new = the code it joins
+comptime REPOINT = 4  # part of a merge: an earlier alias moved along (old = the code, new = where it pointed before)
 
 
 @always_inline
@@ -474,7 +475,7 @@ struct Frame(Movable, GridSource):
     var removed: Set[Int]
     var words: List[List[String]]  # per stored column: texts added by this session (codes continue after the dictionary)
     var log: List[Edit]
-    var aliases: Dict[Int, Int64]  # col * 65536 + code → the code it was merged into (a text column's spellings)
+    var aliases: Dict[Int, Int64]  # (col << 32) | code → the code it was merged into, always final (no chains)
     var edits: Int  # count of edits applied (for hosts to know when to re-aggregate)
 
     def __init__(out self, base_addr: Int):
@@ -690,11 +691,12 @@ struct Frame(Movable, GridSource):
                 _ = self.cells.pop(key, 0)
             else:
                 self.cells[key] = e.old
-        elif e.kind == MERGE:  # the whole merge comes undone (its spellings share e.row)
-            _ = self.aliases.pop(e.col * 65536 + Int(e.old), 0)
-            while len(self.log) > 0 and self.log[len(self.log) - 1].kind == MERGE and self.log[len(self.log) - 1].row == e.row:
+        elif e.kind == MERGE or e.kind == REPOINT:  # the whole merge comes undone (its steps share e.row), newest first
+            self.unmerge_step(e)
+            while len(self.log) > 0 and (self.log[len(self.log) - 1].kind == MERGE or self.log[len(self.log) - 1].kind == REPOINT) \
+                    and self.log[len(self.log) - 1].row == e.row:
                 var more = self.log.pop()
-                _ = self.aliases.pop(more.col * 65536 + Int(more.old), 0)
+                self.unmerge_step(more)
         elif e.kind == APPEND:
             _ = self.added.pop()
         else:
@@ -702,11 +704,21 @@ struct Frame(Movable, GridSource):
         self.edits += 1
         return True
 
+    @staticmethod
+    def alias_key(col: Int, code: Int64) -> Int:
+        return (col << 32) | Int(code)
+
+    def unmerge_step(mut self, e: Edit):
+        if e.kind == MERGE:
+            _ = self.aliases.pop(Self.alias_key(e.col, e.old), 0)
+        else:  # REPOINT: back to where it pointed before
+            self.aliases[Self.alias_key(e.col, e.old)] = e.new
+
     def alias(self, col: Int, code: Int64) -> Int64:
-        """The code a text value shows as (itself, or the one it was merged into)."""
+        """The code a text value shows as (itself, or the one it was merged into; merges never chain)."""
         if len(self.aliases) == 0:
             return code
-        var hit = self.aliases.get(col * 65536 + Int(code))
+        var hit = self.aliases.get(Self.alias_key(col, code))
         return hit.value() if hit else code
 
     def merge(mut self, col: Int, codes: List[Int64], into: Int64) -> Int:
@@ -715,14 +727,28 @@ struct Frame(Movable, GridSource):
         how many rows; aggregations fold the groups (alias()). Returns how many values were merged."""
         var number = 0
         for e in self.log:
-            if e.kind == MERGE:
+            if e.kind == MERGE or e.kind == REPOINT:
                 number = max(number, e.row + 1)
+        var target = self.alias(col, into)  # merging into a merged value means into its final one
         var count = 0
         for c in codes:
-            if c == into or (col * 65536 + Int(c)) in self.aliases:
+            if c == target or self.alias(col, c) == target:
                 continue
-            self.aliases[col * 65536 + Int(c)] = into
-            self.log.append(Edit(MERGE, col, number, c, into))
+            # earlier merges into c now land on the target too (so aliases stay one step deep)
+            var moved = List[Int64]()
+            for item in self.aliases.items():
+                if (item.key >> 32) == col and item.value == c:
+                    moved.append(Int64(item.key & 0xFFFFFFFF))
+            for m in moved:
+                self.aliases[Self.alias_key(col, m)] = target
+                self.log.append(Edit(REPOINT, col, number, m, c))
+            var was = self.aliases.get(Self.alias_key(col, c))
+            if was:  # c itself was merged elsewhere: move it along
+                self.aliases[Self.alias_key(col, c)] = target
+                self.log.append(Edit(REPOINT, col, number, c, was.value()))
+            else:
+                self.aliases[Self.alias_key(col, c)] = target
+                self.log.append(Edit(MERGE, col, number, c, target))
             count += 1
         if count > 0:
             self.edits += 1
@@ -886,6 +912,9 @@ struct Frame(Movable, GridSource):
         A radix sort: linear in the rows however few distinct values the column has (a comparison
         sort goes quadratic on 20M rows of 8 categories)."""
         var values = self.column_values(col)
+        if self.kind(col) == TEXT and len(self.aliases) > 0:  # merged spellings sort as the value they joined
+            for i in range(len(values)):
+                values[i] = self.alias(col, values[i])
         var rows = List[Int32](capacity=len(values))
         for row in range(len(values)):
             if len(self.removed) == 0 or row not in self.removed:

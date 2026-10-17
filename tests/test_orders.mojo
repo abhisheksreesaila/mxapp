@@ -5,6 +5,8 @@ from std.testing import assert_equal, assert_true
 from orders import (order_columns, ORDER, DAY, CUSTOMER, PRODUCT, CARRIER, ZIP, WEIGHT, REVENUE, COST, FREIGHT,
                     YEAR_START, RATE_CHANGE, DUPLICATES, DUP_ZIP, FLAT_FREIGHT)
 from mojoui.frame import share, Frame
+from mojoui.frame_gpu import GpuFrame
+from ops import histogram
 from std.collections import Dict
 
 
@@ -20,7 +22,10 @@ def main() raises:
     assert_equal(cols[CUSTOMER].dictionary[0], "Acme Corp")
     assert_equal(cols[CUSTOMER].dictionary[1], "Acme Corp.")
     assert_equal(cols[CUSTOMER].dictionary[2], "ACME Corporation")
-    assert_true(spell[0] > 0 and spell[1] > 0 and spell[2] > 0)
+    # exact (the generator is deterministic): a change to it shows here first
+    assert_equal(spell[0], 239567)
+    assert_equal(spell[1], 99713)
+    assert_equal(spell[2], 59670)
     var acme = spell[0] + spell[1] + spell[2]
     var top_other = 0
     for c in range(3, 20):
@@ -43,6 +48,7 @@ def main() raises:
                 flat_before += 1
     assert_equal(flat_before, 0)
     assert_equal(flat_after, heavy_a_after)
+    assert_equal(flat_after, 286625)  # (and not 0 == 0: there are heavy Carrier A parcels after Jul 14)
     # 3. Q3's gross margin ~3 points below Q2's
     var rev = List[Int](length=4, fill=0)
     var margin = List[Int](length=4, fill=0)
@@ -69,6 +75,26 @@ def main() raises:
             at_zip += 1
     assert_equal(twice, DUPLICATES)
     assert_equal(at_zip, 2 * DUPLICATES)
+    # the header histograms (GPU, every row) match counts made here on the CPU
+    var addr = f.base_addr
+    var gf = GpuFrame(addr)
+    var counts = List[Int](length=4, fill=0)
+    for i in range(n):
+        counts[Int(cols[3].values[i])] += 1  # region
+    var top = 0
+    for c in counts:
+        top = max(top, c)
+    var bars = histogram(f, gf, 3, 0, 3)
+    assert_equal(len(bars), 4)
+    for r in range(4):
+        assert_true(abs(bars[r] - Float64(counts[r]) / Float64(top)) < 1e-12, "region histogram bar " + String(r))
+    var revenue_bars = histogram(f, gf, 6, 0, 168000)  # 16 bins of revenue
+    var in_bins = 0
+    for b in revenue_bars:
+        assert_true(0.0 <= b <= 1.0)
+        if b > 0:
+            in_bins += 1
+    assert_true(in_bins >= 3, "revenue spreads over several bins")
     print("ORDERS: " + String(n) + " rows; Acme " + String(acme) + " under 3 spellings; " + String(flat_after) +
           " parcels at the flat $14.20 from Jul 14; " + String(twice) + " duplicates at ZIP 94110")
     print("ORDERS TESTS PASSED")

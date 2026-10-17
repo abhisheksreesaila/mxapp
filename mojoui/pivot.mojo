@@ -9,7 +9,7 @@ from mojoui.view import View, Text, Grid, Scroll, CAPTION, BODY, TONE_WARN, TONE
 
 def PivotTable(row_labels: List[String], col_labels: List[String], cells: List[String], totals: Bool = False,
                row_totals: List[String] = [], col_totals: List[String] = [], grand: String = "",
-               highlight: List[Bool] = [], height: Int = 220, corner: String = "") -> View:
+               highlight: List[Bool] = [], height: Int = 220, corner: String = "", total_label: String = "Total") -> View:
     """cells: row-major (len(row_labels) × len(col_labels)) formatted values. totals: a Total column and a
     Total row (row_totals, col_totals, grand). highlight: rows drawn in the warning tone (e.g. near-duplicates)."""
     var n_cols = len(col_labels) + 1 + (1 if totals else 0)
@@ -28,7 +28,7 @@ def PivotTable(row_labels: List[String], col_labels: List[String], cells: List[S
         if totals:
             items.append(Text(row_totals[r] if r < len(row_totals) else "").tone(TONE_STRONG))
     if totals:
-        items.append(Text("Total", style=CAPTION).tone(TONE_STRONG))
+        items.append(Text(total_label, style=CAPTION).tone(TONE_STRONG))  # (e.g. "Top 8" when the rows are a top-n)
         for c in range(len(col_labels)):
             items.append(Text(col_totals[c] if c < len(col_totals) else "").tone(TONE_STRONG))
         items.append(Text(grand).tone(TONE_STRONG))

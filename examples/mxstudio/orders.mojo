@@ -89,14 +89,16 @@ def order_columns(n: Int) -> Columns:
             product += 1
         var qty = 1 if uniform(i, 3) < 0.7 else (2 if uniform(i, 4) < 0.7 else 3)
         var grams = materialize[GRAMS]()[product] * qty
-        var a_share = 0.75 if grams > 4000 else 0.45  # Carrier A carries most heavy parcels
+        var region = Int(uniform(i, 7) * 4.0)
+        # Carrier A carries most heavy parcels, nearly all of them in the West (where the story's margin falls)
+        var a_share = (0.92 if region == 0 else 0.68) if grams > 4000 else 0.45
         var carrier = 0 if uniform(i, 5) < a_share else (1 if uniform(i, 6) < 0.6 else 2)
         var revenue = materialize[PRICE]()[product] * qty
         var cost = revenue * materialize[COST_PCT]()[product] // 100
         cols[ORDER][i] = Int64(100000 + i)
         cols[DAY][i] = Int64(YEAR_START + day)
         cols[CUSTOMER][i] = Int64(customer_of(i))
-        cols[REGION][i] = Int64(Int(uniform(i, 7) * 4.0))
+        cols[REGION][i] = Int64(region)
         cols[PRODUCT][i] = Int64(product)
         cols[CARRIER][i] = Int64(carrier)
         cols[ZIP][i] = Int64(10001 + Int(uniform(i, 8) * 89000.0))

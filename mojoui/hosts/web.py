@@ -411,7 +411,7 @@ body.omarchy input[type=text]:focus, body.omarchy textarea:focus, body.omarchy s
 body.omarchy .vstack.card { background: var(--o-card); border-radius: 4px; padding: 12px 14px; box-sizing: border-box; box-shadow: inset 0 0 0 1px var(--o-line); }
 body.omarchy .text.tone-warn { color: var(--o-warn); } body.omarchy .text.tone-good { color: var(--o-good); }
 body.omarchy .text.tone-strong { color: var(--o-ink); font-weight: 700; } body.omarchy .text.tone-accent { color: var(--o-accent); }
-body.fluent .text.tone-warn { color: #C2410C; } body.fluent .text.tone-good { color: #0F766E; }
+body.fluent .text.tone-warn { color: #EA580C; } body.fluent .text.tone-good { color: #0F766E; }
 body.fluent .text.tone-strong { font-weight: 700; } body.fluent .text.tone-accent { color: #0F6CBD; }
 body.omarchy .vstack.card.warn { background: color-mix(in srgb, var(--o-warn) 12%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-warn) 55%, var(--o-card)); }
 body.omarchy .vstack.card.good { background: color-mix(in srgb, var(--o-good) 10%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-good) 50%, var(--o-card)); }
