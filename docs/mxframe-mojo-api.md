@@ -136,7 +136,23 @@ dictionary code (the order values first appeared), a known gap. Today: a radix s
 - A device copy of a table, **uploaded once per process**, shared by every session; `release()` to give it back when a document closes.
 - Values over 32 bits must not break it (today the stand-in uploads int32 and refuses to upload otherwise; a single amount over $21.4M, stored in cents, doesn't fit).
 - Share the app's `DeviceContext` so the app's own kernels (charts, point clouds) and MX frame's use the same device memory.
-- Later: data bigger than GPU or host memory (chunked, streamed); Apple GPUs (Metal) without Python.
+- Later: Apple GPUs (Metal) without Python.
+
+## 7a. Data bigger than memory (being built in MX frame)
+MX frame is implementing out-of-core execution itself; omxapp doesn't need to know how. What the app relies on, so
+the same screens work on a 1B-row file as on a 1M-row one:
+
+| The app does | It needs from MX frame |
+|---|---|
+| The grid draws ~40 visible rows while you scroll | `rows(start, count)` reads a window fast, from whatever is resident, without loading the column |
+| Sort, then scroll the sorted view | `permutation()` may spill; reading row `k` of the sorted order is still a window read |
+| Charts, pivots, Report tiles, the status bar | aggregations stream over chunks and return the same exact totals as in-memory |
+| Import shows a preview before the table exists | the reader reports kinds, samples and empty counts from a first pass, and the rest loads in the background |
+| Long operations (import, sort, a 1B-row total) | progress (`done`, `total`) and **cancel**, so the UI can show a bar and stay responsive |
+| Edits, formulas and undo | the session's edit overlay works the same over spilled columns (§3) |
+| One machine, other workloads | a memory budget the app can set (host and GPU), and an error, not a crash, when it can't fit |
+
+Today the stand-in keeps everything in host memory: 100M rows peaked at 26 GB (`docs/scale.md`).
 
 ## 8. Later (Query and Explore modes)
 More than one table and joins; a SQL front end (SQL cells, EXPLAIN); pipelines with cached steps; versioned column

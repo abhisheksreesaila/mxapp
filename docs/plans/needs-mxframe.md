@@ -15,7 +15,7 @@ covers MX Studio's Sheet and Report. These need MX frame and are skipped or stub
 | Reading real files (E2): CSV, Parquet, Arrow, XLSX | readers with type inference and bad-row reports | the planted-story ledger is generated in Mojo; the Workbook's Parquet goes through pyarrow (a labelled shim) |
 | A second table (Sheet's Insert → Table) | multiple tables and joins in one workbook | Insert Table explains it comes with Explore (D-116) |
 | Versions, branches, diff, the time machine (C1, X) | versioned column chunks shared between versions | one undo log per session (edits and merges) |
-| Data bigger than GPU or host memory (E8) | chunked, streamed execution | 20M rows in memory; MOJOUI_ROWS caps it |
+| Data bigger than GPU or host memory (E8) | chunked, streamed execution: **being built in MX frame**; what the app needs is `docs/mxframe-mojo-api.md` §7a | everything in host memory (100M rows peak at 26 GB); MOJOUI_ROWS caps the generated tables |
 | The DuckDB test oracle and TPC-H (P3–P5, E5) | the engine those tests are for | the stand-in is checked against its own CPU path (GPU = CPU exactly) |
 | Count distinct, percentiles, top-k, binning as engine operations (E5, C5) | aggregate operators | done in app code over GPU group-by results (histograms, top customers) |
 | CSV, Parquet, Excel and JSON readers (omxplorer's import; pyarrow stands in, `mojoui/csvio.mojo`) | streaming typed readers | pyarrow parses, Mojo copies column by column; 100M rows import in ~106 s on a loaded machine (docs/scale.md) |
