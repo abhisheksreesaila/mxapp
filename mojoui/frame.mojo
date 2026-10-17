@@ -13,7 +13,7 @@ from std.collections import Dict, Set
 from std.memory import Pointer, stack_allocation
 from std.memory.alloc import alloc, Layout
 from mojoui.datagrid import GridSource
-from mojoui.numformat import ColumnFormat, format_number, format_date, AUTO, NUMBER, PERCENT
+from mojoui.numformat import ColumnFormat, format_number, format_date, AUTO, NUMBER, PERCENT, CURRENCY
 
 comptime INT = 0
 comptime DECIMAL = 1
@@ -547,6 +547,22 @@ struct Frame(Movable, GridSource):
 
     def grid_text(self, c: Int, row: Int) -> String:
         return self.display(c, row)
+
+    def grid_badge(self, c: Int) -> String:
+        if c >= self.stored():
+            return "ƒx"
+        var kind = self.kind(c)
+        if kind == TEXT:
+            return "Aa"
+        if kind == DATE:
+            return "date"
+        if kind == INT:
+            return "#"
+        var f = self.format_of(c)
+        return (f.symbol if f.symbol != "" else "$") if f.style == CURRENCY else ("%" if f.style == PERCENT else "0.0")
+
+    def grid_edited(self, c: Int, row: Int) -> Bool:
+        return (row * MAX_COLS + c) in self.cells
 
     def grid_type_width(self, c: Int) -> Float64:
         var kind = self.kind(c)

@@ -48,6 +48,13 @@ struct People(GridSource, Movable):
     def grid_type_width(self, c: Int) -> Float64:
         return 120 if c == 0 else 72
 
+    def grid_badge(self, c: Int) -> String:
+        var badges: List[String] = ["Aa", "#", "ƒx"]
+        return badges[c]
+
+    def grid_edited(self, c: Int, row: Int) -> Bool:
+        return c == 1 and row == 2  # one cell changed this session
+
 
 def key(name: String, mods: Int = 0) -> Event:
     return Event(MSG, name, KEY, 0, 0, Float64(mods), 0)

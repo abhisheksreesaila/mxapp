@@ -71,6 +71,14 @@ trait GridSource:
         """A sensible default width for the column's values (points)."""
         ...
 
+    def grid_badge(self, c: Int) -> String:
+        """The column's type, as the small badge beside its name: "#", "$", "0.0", "Aa", "date", "ƒx"."""
+        ...
+
+    def grid_edited(self, c: Int, row: Int) -> Bool:
+        """True for a cell changed in this session (it gets a corner mark)."""
+        ...
+
 
 struct DataGrid(Copyable, Movable):
     var top: Int  # first shown row (an index into `order`, or a row number)
@@ -697,6 +705,13 @@ struct DataGrid(Copyable, Movable):
             out += String(ch)
         return out + "…"
 
+    def badge_x[S: GridSource](self, c: Int, src: S, font: Font) -> Float64:
+        """Where column c's type badge starts (points): after its name."""
+        var name = src.grid_name(c)
+        if not src.grid_editable(c):
+            name = "ƒ " + name
+        return self.col_left(c, src) + 8 + font.measure(name, 12.5) + 6
+
     def draw[S: GridSource](mut self, mut s: Surface, src: S, font: Font, p: Palette):
         self.prepare(src, font, p)
         self.size = (s.points_width(), s.points_height())
@@ -735,7 +750,17 @@ struct DataGrid(Copyable, Movable):
             if not src.grid_editable(c):
                 name = "ƒ " + name
             var ink = p.accent_ink if c == col_pick else (p.accent if c == self.sort_col else p.ink2)
-            font.draw(s, self.clip(name, cw - 26 * k, 12.5 * k, p.medium, font), x + 8 * k, 20 * k, 12.5 * k, ink, p.medium)
+            var badge = src.grid_badge(c)
+            var bw = (font.measure(badge, 9.5 * k, MONO) + 8 * k) if badge != "" else 0.0
+            var shown_name = self.clip(name, cw - 26 * k - bw, 12.5 * k, p.medium, font)
+            font.draw(s, shown_name, x + 8 * k, 20 * k, 12.5 * k, ink, p.medium)
+            if badge != "" and shown_name == name:  # the type badge, after the name (when the name fits whole)
+                var bx = x + 8 * k + font.measure(name, 12.5 * k, p.medium) + 6 * k
+                if bx + bw <= x + cw - 18 * k:
+                    var badge_ink = p.accent_ink if c == col_pick else (p.formula if badge == "ƒx" else p.ink3)
+                    rect(s, bx, 9 * k, bw, 14 * k, p.accent_ink if c == col_pick else p.line)
+                    rect(s, bx + 1, 9 * k + 1, bw - 2, 14 * k - 2, p.accent if c == col_pick else p.card)
+                    font.draw(s, badge, bx + 4 * k, 19.5 * k, 9.5 * k, badge_ink, MONO)
             if c == self.sort_col:  # a small triangle (the font has no arrows): ▼ largest first, ▲ smallest first
                 var ax = x + cw - 14 * k
                 var ay = 15 * k
@@ -786,6 +811,9 @@ struct DataGrid(Copyable, Movable):
                 if row == self.cur_row and c == self.cur_col:
                     rect(s, x, y, cw, GRID_ROW_H * k, p.accent)
                     rect(s, x + 2 * k, y + 2 * k, cw - 4 * k, GRID_ROW_H * k - 4 * k, p.card)
+                if src.grid_edited(c, row):  # changed this session: a small accent triangle in the corner
+                    for r in range(Int(6 * k)):
+                        rect(s, x + cw - 6 * k + Float64(r), y + Float64(r), 6 * k - Float64(r), 1, p.accent)
                 if src.grid_numeric(c):
                     font.draw(s, text, x + cw - 8 * k, base, 13 * k, color, p.regular, RIGHT)
                 else:

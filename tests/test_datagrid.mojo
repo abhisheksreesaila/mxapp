@@ -47,6 +47,13 @@ struct People(GridSource, Movable):
     def grid_type_width(self, c: Int) -> Float64:
         return 120 if c == 0 else 72
 
+    def grid_badge(self, c: Int) -> String:
+        var badges: List[String] = ["Aa", "#", "ƒx"]
+        return badges[c]
+
+    def grid_edited(self, c: Int, row: Int) -> Bool:
+        return c == 1 and row == 2  # one cell changed this session
+
 
 def ev(kind: Int, x: Float64, y: Float64, dx: Float64 = 0, dy: Float64 = 0) -> Event:
     return Event(MSG, "", kind, x, y, dx, dy)
@@ -150,5 +157,25 @@ def main() raises:
     g.draw(s, src, font, pal)
     assert_equal(g.rows_in(Float64(h)), Int((Float64(h) - GRID_HEADER_H - GRID_HISTOGRAM_H) / GRID_ROW_H))
     assert_equal(g.handle(ev(TAP, g.col_left(1, src) + 5, GRID_HEADER_H + 5), src, font, pal), GRID_COLUMN)  # (still header)
+    # the header's type badge: a small box after the name (drawn in the line colour on the card)
+    g.histograms = List[List[Float64]]()
+    g.select(-1, -1)
+    g.draw(s, src, font, pal)
+    var bx = Int(g.badge_x(0, src, font))
+    assert_true(bx > Int(g.col_left(0, src)) + 30, "the badge sits after the name")
+    assert_equal(px[9 * w + bx + 6], pal.line)  # its top edge
+    assert_equal(px[16 * w + bx + 1], pal.card)  # its inside (the badge text is further right)
+    var mid = Int(g.badge_x(0, src, font)) + 6
+    var inked = 0
+    for yy in range(10, 22):
+        if px[yy * w + mid] != pal.card and px[yy * w + mid] != pal.line:
+            inked += 1
+    assert_true(inked > 0, "the badge shows its text")
+    # an edited cell's corner mark: an accent triangle at the top right of (age, row 2); other cells have none
+    var top = Int(Float64(GRID_HEADER_H) + 2.0 * Float64(GRID_ROW_H))
+    var right_edge = Int(g.col_left(2, src)) - 2
+    assert_equal(px[(top + 1) * w + right_edge], pal.accent)
+    assert_equal(px[(top + 1) * w + right_edge - 8], pal.card)  # (left of the corner: plain cell)
+    assert_equal(px[(top + Int(Float64(GRID_ROW_H)) + 1) * w + right_edge], pal.card)  # (the row below: not edited)
     _ = len(px)
     print("DATAGRID TESTS PASSED")
