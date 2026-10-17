@@ -19,6 +19,17 @@
 
 ## 🎬 The showcase
 
+### 🧭 omxplorer, the killer app
+Open a CSV (or the 1M-order sample), check its columns, and get a Numbers-style sheet on your GPU. Format columns as currency, percent or compact, add formula columns and rows, sort, and save one `.omx` file that opens again. It runs on Linux and the web, from one Mojo file built only from omxapp components. Measured up to 100 million rows ([docs/scale.md](docs/scale.md)).
+
+![omxplorer: 1M orders, revenue formatted as currency, the format inspector, totals on the GPU](docs/img/omxplorer-sheet.png)
+
+```
+scripts/omxplorer.sh                  # the Linux app (Start screen)
+scripts/omxplorer.sh orders.csv       # open a file straight away
+scripts/omxplorer.sh web              # http://127.0.0.1:5001
+```
+
 ![The Workbook: select a column, sort 20 million rows, edit a cell in place, insert a pivot, crossfilter a chart](docs/img/workbook.gif)
 
 <table>
@@ -43,11 +54,11 @@ Every ✅ below is run by `scripts/check` on that platform; 🔨 builds but hasn
 
 | Platform | ✅ proven | 🔨 built, not run | ❌ missing | Notes |
 |---|---|---|---|---|
-| 🐧 **Linux** (GTK 4) | 52 | 0 | 0 | every component, gesture and theme; your Omarchy theme; spreadsheet keys |
-| 🌐 **Web** (FastHTML) | 52 | 0 | 0 | the same results as Linux, checked in Chromium |
-| 🤖 **Android** (views over JNI) | 19 | 11 | 22 | runs the classic controls on the emulator; the Workbook's new components not yet |
-| 🍎 **Mac** (AppKit) | 0 | 30 | 22 | builds and signs; not run on a Mac yet |
-| 📱 **iPhone** (UIKit) | 0 | 30 | 22 | builds and signs; not run on an iPhone yet |
+| 🐧 **Linux** (GTK 4) | 56 | 1 | 0 | every component, gesture and theme; your Omarchy theme; spreadsheet keys; the file dialog is built but not driven by a check |
+| 🌐 **Web** (FastHTML) | 57 | 0 | 0 | the same results as Linux, checked in Chromium |
+| 🤖 **Android** (views over JNI) | 19 | 12 | 26 | runs the classic controls on the emulator; the Workbook's new components not yet |
+| 🍎 **Mac** (AppKit) | 0 | 31 | 26 | builds and signs; not run on a Mac yet |
+| 📱 **iPhone** (UIKit) | 0 | 31 | 26 | builds and signs; not run on an iPhone yet |
 | ⚡ **GPU** | NVIDIA | | | Apple and phone GPUs use the CPU path for now |
 
 Measured on this machine: a page recompute in ~8 ms, a grid redraw in ~6 ms, a GPU group-by under 1 ms, a sort of 20M rows in 0.3–2 s.

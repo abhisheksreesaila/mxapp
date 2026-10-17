@@ -16,7 +16,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `HStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
 | `Spacer` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics, mxstudio, omxplorer |
 | `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics, workbook, mxstudio, omxplorer |
-| `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | todo |
+| `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | todo, omxplorer |
 | `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, omxplorer |
 | `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, kitchen, expenses, lens, analytics |
 | `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses, workbook, mxstudio |

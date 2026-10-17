@@ -151,7 +151,8 @@ def m1():
     if not ok:
         return False, msg
     for src, name, marker, args in (("tests/test_omx_components.mojo", "test_omx_components", "OMX COMPONENT TESTS PASSED", []),
-                                    ("tests/test_csvio.mojo", "test_csvio", "CSVIO TESTS PASSED", [str(CSV_1M)])):
+                                    ("tests/test_csvio.mojo", "test_csvio", "CSVIO TESTS PASSED", [str(CSV_1M)]),
+                                    ("tests/test_omx_files.mojo", "test_omx_files", "OMX FILE TESTS PASSED", [str(BUILD / "omx-files")])):
         b = run(["pixi", "run", "mojo", "build", "-I", ".", src, "-o", str(BUILD / name)], timeout=900)
         t = run(["pixi", "run", str(BUILD / name)] + args, timeout=600) if b.returncode == 0 else b
         if marker not in t.stdout:
@@ -223,11 +224,13 @@ def m3():
     pick = f"pick:Choose a CSV file={CSV_1M};tap:Create table"
     fmt = both(pick + ";select:0=Currency;tap:−;segment:1=(1,234)", "format")
     cpt = both(pick + ";select:0=Compact (1.2M)", "compact")
+    pct = both(pick + ";select:0=Percent", "percent")
+    plain = both(pick + ";select:0=Currency;toggle:", "thousands-off")
     neg = both(pick + f";tap:Formula;enter:{FX}=loss = cost + freight - revenue;select:0=Currency;segment:1=(1,234)", "negatives")
     ops = both(pick + f";tap:Formula;enter:{FX}={MARGIN}", "formula")
     sort = both(pick + f";tap:Formula;enter:{FX}={MARGIN};tap:Sort", "sort")
     add = both(pick + ";tap:Add row", "add-row")
-    for r in (fmt, cpt, neg, ops, sort, add):
+    for r in (fmt, cpt, pct, plain, neg, ops, sort, add):
         if r[0] is None:
             return False, r[1]
     first = o["first"][0]
@@ -240,6 +243,10 @@ def m3():
             problems.append(f"{host}: the inspector doesn't show the format it applied")
         if not has(cpt[k], "Sum " + compact(o["revenue"])):
             problems.append(f"{host}: Compact didn't reach the total ({label(cpt[k], 'Sum')} vs {compact(o['revenue'])})")
+        if not has(pct[k], f"Sum {o['revenue']:,}.0%"):  # (revenue in dollars × 100 is its cents)
+            problems.append(f"{host}: Percent didn't reach the total ({label(pct[k], 'Sum')} vs {o['revenue']:,}.0%)")
+        if not has(plain[k], "Sum $" + money(o["revenue"]).replace(",", "")) or "TOGGLE: =off" not in plain[k]:
+            problems.append(f"{host}: Thousands off didn't drop the separators ({label(plain[k], 'Sum')})")
         if not has(neg[k], "Sum " + money(loss, "$", 2, parens=True)):
             problems.append(f"{host}: a negative total isn't in parentheses ({label(neg[k], 'Sum')} vs {money(loss, '$', 2, parens=True)})")
         if not has(ops[k], "Sum " + money(o["margin"])) or label(ops[k], "New column margin") is None:
@@ -251,10 +258,10 @@ def m3():
         for tool in ("Save", "Undo", "Add row", "Formula", "Sort", "Format", "Open"):
             if f"BUTTON: {tool}" not in add[k]:
                 problems.append(f"{host}: no {tool} in the toolbar")
-    for name, r in (("format", fmt), ("compact", cpt), ("negatives", neg), ("formula", ops), ("sort", sort), ("add", add)):
+    for name, r in (("format", fmt), ("compact", cpt), ("percent", pct), ("thousands-off", plain), ("negatives", neg), ("formula", ops), ("sort", sort), ("add", add)):
         if shown(r[0]) != shown(r[1]):
             problems.append(f"{name}: GTK and web differ: {sorted(set(shown(r[0])) ^ set(shown(r[1])))[:4]}")
-    return not problems, "; ".join(problems) or f"the sheet on both hosts: Currency, decimals, parentheses (a negative total), Compact reach the cells and the totals; a formula column sums to the file's {money(o['margin'])}; Sort; Add row; identical on GTK and web"
+    return not problems, "; ".join(problems) or f"the sheet on both hosts: Currency, decimals, Thousands off, Percent, parentheses (a negative total), Compact reach the cells and the totals; a formula column sums to the file's {money(o['margin'])}; Sort; Add row; identical on GTK and web"
 
 
 EDITS = (f"pick:Choose a CSV file={CSV_1M};tap:Create table;select:0=Currency;typekeys:0=99999⏎;key:0=ArrowUp;"
@@ -297,7 +304,14 @@ def m4():
                 problems.append(f"{where}: the formula column or the Currency format didn't come back")
         if shown(top[0]) != shown(top[1]) or shown(cust[0]) != shown(cust[1]):
             problems.append(f"{host}'s file: GTK and web differ: {sorted(set(shown(top[0])) ^ set(shown(top[1])))[:4]}")
-    return not problems, "; ".join(problems) or f"GTK and the web each edit (a number, a new name), add a row and a formula column, and Save one .omx file ({max(sizes) // 1_000_000} MB); both files reopen on both hosts with the edits, the row, the formula and the format"
+    bad = BUILD / "omx-files" / "nulls.omx"  # (written by tests/test_omx_files.mojo in M1)
+    kept = both(f"tap:Open the sample;pick:Open={bad}", "open-bad")
+    if kept[0] is None:
+        return False, kept[1]
+    for viewer, k in (("GTK", 0), ("web", 1)):
+        if label(kept[k], "can't open") is None or not has(kept[k], f"Rows {rows:,}"):
+            problems.append(f"{viewer}: a bad file opened from a loaded sheet didn't leave the sheet as it was ({label(kept[k], 'Rows')}, {label(kept[k], 'can')})")
+    return not problems, "; ".join(problems) or f"GTK and the web each edit (a number, a new name), add a row and a formula column, and Save one .omx file ({max(sizes) // 1_000_000} MB); both files reopen on both hosts with the edits, the row, the formula and the format; a bad file leaves the open sheet intact"
 
 
 def m5():

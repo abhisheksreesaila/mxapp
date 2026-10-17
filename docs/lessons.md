@@ -18,3 +18,4 @@ One line per rule that prevents a mistake that happened.
 - Never edit source while a full check runs: it rebuilds from the working tree, so half-written code turns into false failures (goal 11's first full run).
 - Archived checkers (docs/goals/NN-check.py) ignore milestone arguments, rebuild everything and don't start the headless display: call their functions from a script that runs headless.ensure() first, never the file directly.
 - To stop a check use scripts/stop-check (by argv and directory); never pkill -f / pgrep -f on its command line: it matched and killed my own shell twice.
+- On the Android emulator, heavy load can leave a "System UI isn't responding" dialog over the app ("no Button #0"): scripts/android_drive.py closes system dialogs before each launch.

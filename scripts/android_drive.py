@@ -240,6 +240,9 @@ def android_run(example, steps, shot=None, landscape=False, dpi=None):
     adb("shell", "settings", "put", "system", "user_rotation", "1" if landscape else "0")
     adb("shell", "wm", "density", str(dpi) if dpi else "reset")  # dpi: a "bigger" screen in dp (more fits)
     adb("shell", "am", "force-stop", pkg)
+    # a loaded machine can leave a "System UI isn't responding" dialog over everything: close it, or every
+    # later tap lands on the dialog (seen twice: docs/lessons.md)
+    adb("shell", "am", "broadcast", "-a", "android.intent.action.CLOSE_SYSTEM_DIALOGS")
     adb("logcat", "-c")
     adb("shell", "am", "start", "-W", "-n", f"{pkg}/dev.mojoui.MojoActivity", check=True, timeout=120)
     # Until the app's own views are up: a fresh (cold-booted) emulator takes several seconds for

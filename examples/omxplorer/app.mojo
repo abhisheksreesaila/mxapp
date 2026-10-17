@@ -141,24 +141,27 @@ struct Main(App):
 
     # ---------- data in ----------
 
-    def close_table(mut self):
-        """Gives the open table's memory back (CPU and GPU) before another is opened: at 100M rows that's ~26 GB."""
-        if self.gf_addr != 0:
-            self.gf()[].release()
-        if self.has_table:
-            release_columns(self.frame.base_addr)
-        self.has_table = False
+    def use_table(mut self, var frame: Frame):
+        """The new table takes over; only then is the old one's memory given back (CPU and GPU: ~26 GB at 100M
+        rows). A file that fails to open never gets here, so the sheet on screen stays intact."""
+        var old_base = self.frame.base_addr
+        var old_gf = self.gf_addr
+        var had = self.has_table
+        self.gf_addr = keep(GpuFrame(frame.base_addr))
+        self.frame = frame^
+        self.has_table = True
+        if old_gf != 0:
+            at[GpuFrame](old_gf)[].release()
+        if had and old_base != self.frame.base_addr:
+            release_columns(old_base)
 
     def open_path(mut self, path: String):
         """A CSV file → the Import step (its columns as read); an .omx document → straight to its sheet."""
-        self.close_table()
         if path.endswith(".omx"):
             try:
-                self.frame = open_omx(path)
-                self.gf_addr = keep(GpuFrame(self.frame.base_addr))
+                self.use_table(open_omx(path))
                 self.source = path
                 self.name = file_stem(path)
-                self.has_table = True
                 remember(APP, path, self.recent)
                 self.to_sheet()
                 self.message = "Opened " + file_name(path) + " · " + grouped(self.frame.rows()) + " rows"
@@ -167,12 +170,11 @@ struct Main(App):
             self.version += 1
             return
         try:
-            self.imp = read_csv(path)
-            self.frame = Frame(self.imp.base_addr)
-            self.gf_addr = keep(GpuFrame(self.imp.base_addr))
+            var imp = read_csv(path)
+            self.use_table(Frame(imp.base_addr))
+            self.imp = imp^
             self.source = path
             self.name = file_stem(path)
-            self.has_table = True
             self.preview = DataGrid()
             self.preview.prepare(self.frame, self.font, self.pal)
             for c in range(self.frame.stored()):
@@ -198,7 +200,6 @@ struct Main(App):
         return histogram(self.frame, self.gf()[], c, lo, hi)
 
     def open_sample(mut self):
-        self.close_table()
         var rows = 1_000_000
         var asked = environment("OMX_ROWS")
         if asked != "":
@@ -206,16 +207,12 @@ struct Main(App):
                 rows = max(Int(asked), 1000)
             except:
                 pass
-        var addr = share(order_columns(rows))
-        self.frame = Frame(addr)
-        self.gf_addr = keep(GpuFrame(addr))
+        self.use_table(Frame(share(order_columns(rows))))
         self.source = "sample"
         self.name = "orders"
-        self.has_table = True
         self.to_sheet()
 
     def open_blank(mut self):
-        self.close_table()
         var cols = Columns()
         var names: List[String] = ["Item", "Amount", "Date"]
         var kinds: List[Int] = [TEXT, DECIMAL, DATE]
@@ -226,12 +223,9 @@ struct Main(App):
             for _ in range(20):
                 c.values.append(Int64(20089 if kinds[k] == DATE else 0))
             cols.add(c^)
-        var addr = share(cols^)
-        self.frame = Frame(addr)
-        self.gf_addr = keep(GpuFrame(addr))
+        self.use_table(Frame(share(cols^)))
         self.source = "blank"
         self.name = "Table 1"
-        self.has_table = True
         self.to_sheet()
 
     def to_sheet(mut self):
@@ -283,9 +277,12 @@ struct Main(App):
             f = ColumnFormat(NUMBER, -1, True, False, "$")
         if f.decimals < 0:
             f.decimals = scale if scale > 0 else 2
-        var exact = Float64(self.sum) * 100.0 / Float64(max(self.count, 1))  # (at scale + 2)
-        var v = Int64(exact + (0.5 if exact >= 0 else -0.5))
-        return format_number(v, scale + 2, f)
+        # one rounding, in integers: sum ÷ count at f.decimals places, half away from zero
+        var places = f.decimals + (2 if f.style == PERCENT else 0)  # (a percent shows two places more of the value)
+        var num = Int(self.sum) * Int(10 ** places)
+        var den = max(self.count, 1) * Int(10 ** scale)
+        var q = (abs(num) + den // 2) // den
+        return format_number(Int64(q if num >= 0 else -q), places, f)
 
     def column_format(self) -> ColumnFormat:
         return self.frame.format_of(self.grid.cur_col) if self.grid.cur_col >= 0 else ColumnFormat.auto()
