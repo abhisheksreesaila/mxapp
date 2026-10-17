@@ -86,7 +86,7 @@ def ReportPage(title: String, subtitle: String, kpis: List[View], charts: List[V
     var parts = List[View]()
     parts.append(HStack(Text(title, TITLE), Text(subtitle, CAPTION), spacing=14).align(CENTER))
     if len(kpis) > 0:
-        parts.append(Grid(kpis, 4, spacing=14).fill())
+        parts.append(Grid(kpis, max(1, min(4, len(kpis))), spacing=14).fill())  # (packed: as many across as there are, up to four)
     if len(charts) > 0:
         parts.append(Grid(charts, 2, spacing=14).fill())
     parts.append(add_row.copy())

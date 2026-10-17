@@ -4,6 +4,33 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-17 · Experiment 15: omxplorer's charts, pivots and Report (autopilot, night)
+
+**Goal:** Stitch 05 and 06. Charts and pivots go on the sheet, and a Report is built from scratch. Contract: `GOAL.md` (goal 15). Report: `docs/report.md`.
+
+**What worked:**
+- **Charts and pivots:** Chart and Pivot place a GPU group-by beside the table in the column's format, and a tapped bar reads its total. Objects move and resize, and the inspector regroups or restyles them.
+- **The Report:** Sum, Average, Count and chart tiles, with one filter that recomputes every tile.
+- **Documents:** `.omx` keeps the objects and the Report, checked by kind on open.
+- **Checks:** every number on both hosts is checked against Python's csv module.
+
+**What broke and how it was fixed:**
+- Free-space placement scanned in steps and missed the spot that fit.
+- Two buttons were both named "Chart".
+- Mojo can't move single fields out of a struct here.
+- Two review rounds caught:
+  - an Average tile rounded to whole numbers
+  - a Count check the inspector could satisfy
+  - documents naming wrong-kind columns
+  - pivot rows hidden by sum
+  - ID collisions
+  - a clear that didn't refresh the tiles
+  - a test that couldn't fail
+
+**Next:** more Report filters (quarter, product), a column chart and a date axis, and Stitch 05's type picker and inspector tabs. Then rung 2, data in 3D.
+
+---
+
 ## 2026-10-17 · Experiment 14: omxplorer, the data app from scratch (autopilot, night)
 
 **Goal (owner's words):** "I should be able to install this Linux app, load some data from CSV… use it from scratch"; "follow [Stitch], the classic design"; "this product will be called [omxplorer]… all small case"; "load one million… then try 10, 50, 100 million". Contract: `docs/goals/14-omxplorer.md` once archived. Report: `docs/report.md`.

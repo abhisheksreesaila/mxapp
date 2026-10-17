@@ -111,18 +111,22 @@ def main() raises:
         assert_equal(by_customer.sums[k], halves[k])
     assert_equal(by_customer.labels[len(by_customer.labels) - 1], "Zed Co")
 
-    # a pivot row whose values cancel out still shows (rows fell in it); a group no row uses doesn't
-    var tiny = Frame(share(order_columns(20_000)))
-    tiny.set_text(REVENUE, 0, "-" + tiny.plain_text(REVENUE, 1))  # (row 0 cancels row 1 when both share a region × product)
-    tiny.set_text(REGION, 0, tiny.display(REGION, 1))
-    tiny.set_text(PRODUCT, 0, tiny.display(PRODUCT, 1))
-    var tgf = GpuFrame(tiny.base_addr)
-    var cancel = SheetObject.pivot(REVENUE, REGION, PRODUCT, 0, 0)
-    compute(cancel, tiny, tgf)
-    var shown = 0
-    for k in range(len(cancel.counts)):
-        if cancel.counts[k] > 0:
-            shown += 1
-    assert_true(shown > 0, "rows fell in the pivot")
-    _ = pivot_view(cancel, tiny, 200)
+    # a pivot row whose whole total is 0 still shows when rows fell in it (a profit that nets to nothing); a row
+    # no row uses doesn't; the column totals are the cells you can see
+    var hand = SheetObject.pivot(REVENUE, REGION, PRODUCT, 0, 0)
+    hand.labels = ["Nets to zero", "Unused", "Plain"]
+    hand.cols = ["A", "B"]
+    hand.sums = [500, -500, 0, 0, 300, 200]
+    hand.counts = [1, 1, 0, 0, 2, 3]
+    var view = pivot_view(hand, frame, 200)
+    var texts = List[String]()
+    for node in view.nodes:
+        if node.text != "":
+            texts.append(node.text)
+    var listed = String("|")
+    for t in texts:
+        listed += t + "|"
+    assert_true("|Nets to zero|" in listed, "a row that nets to zero shows")
+    assert_true("|Unused|" not in listed, "a row with no rows doesn't")
+    assert_true("|$8.00|" in listed and "|−$3.00|" in listed and "|$5.00|" in listed, "column totals and grand total: " + listed)
     print("SHEETPAGE TESTS PASSED")

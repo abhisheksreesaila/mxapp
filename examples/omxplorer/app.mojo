@@ -592,7 +592,7 @@ struct Main(App):
                 var value = self.grid.cur_col if self.grid.cur_col >= 0 and (self.frame.kind(self.grid.cur_col) == INT or self.frame.kind(self.grid.cur_col) == DECIMAL) else self.numbers()[0]
                 var width = self.sheet_width()
                 var w = 520 if m == INSERT_CHART else max(width - 520 - 16, 520)  # (a chart and a pivot side by side)
-                var spot = free_spot(self.objects, TABLE_H, width, w, 340)
+                var spot = free_spot(self.objects, self.table_y + (self.table_h_set if self.table_h_set > 0 else TABLE_H), width, w, 340)  # (below the table as it'll be once objects share the sheet, wherever it is)
                 var obj = SheetObject.chart(value, texts[0], spot[0], spot[1], w, 340) if m == INSERT_CHART else SheetObject.pivot(value, texts[0], texts[1] if len(texts) > 1 else -1, spot[0], spot[1], w, 340)
                 compute(obj, self.frame, self.gf()[])
                 self.objects.append(obj^)
@@ -962,8 +962,8 @@ struct Main(App):
                                    Canvas(60 + k, self.version, on_gesture=TILE_TAP + k).fill().height(240),
                                    Text(readout(t.chart, self.frame), CAPTION), spacing=6).fill())
             else:
-                kpis.append(VStack(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version),
-                                   Button("Remove", TILE_CLOSE + k, SUBTLE), spacing=2).fill())
+                kpis.append(HStack(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version).fill(),
+                                   Button("Remove", TILE_CLOSE + k, ICON_ONLY, icon="close"), spacing=2).fill().align(START))
                 first_kpi = False
         var nums = self.numbers()
         var add = HStack(Text("Add a tile", CAPTION), Dropdown(self.names_of(nums), self.index_in(nums, self.report_col), REPORT_COL),

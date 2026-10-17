@@ -20,9 +20,11 @@
 ## 🎬 The showcase
 
 ### 🧭 omxplorer, the killer app
-Open a CSV (or the 1M-order sample), check its columns, and get a Numbers-style sheet on your GPU. Format columns as currency, percent or compact, add formula columns and rows, sort, and save one `.omx` file that opens again. It runs on Linux and the web, from one Mojo file built only from omxapp components. Measured up to 100 million rows ([docs/scale.md](docs/scale.md)).
+Open a CSV (or the 1M-order sample), check its columns, and get a Numbers-style sheet on your GPU. Format columns as currency, percent or compact, add formula columns and rows, and sort. Place charts and pivots beside the table, and build a Report of KPI and chart tiles that one filter recomputes. Save it all in one `.omx` file that opens again. It runs on Linux and the web, from one Mojo file built only from omxapp components. Measured up to 100 million rows ([docs/scale.md](docs/scale.md)).
 
 ![omxplorer: 1M orders, revenue formatted as currency, the format inspector, totals on the GPU](docs/img/omxplorer-sheet.png)
+
+![omxplorer's Report: KPI tiles and a chart tile, filtered to West](docs/img/omxplorer-report.png)
 
 ```
 scripts/omxplorer.sh                  # the Linux app (Start screen)
