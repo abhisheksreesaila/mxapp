@@ -439,6 +439,7 @@ struct GtkHost[A: App](Movable):
     var key_node: Int  # the canvas node that had the keyboard last (it gets it back when an in-place editor closes)
     var editor_keys: Int  # the in-place editor's key controller (test steps press Escape through it)
     var editor_open: Bool  # the last build showed an in-place editor
+    var editor_node: Int  # (its node there)
 
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
@@ -458,6 +459,7 @@ struct GtkHost[A: App](Movable):
         self.key_node = -1
         self.editor_keys = 0
         self.editor_open = False
+        self.editor_node = -1
 
     def padding_class(mut self, v: Int, h: Int) -> String:
         """A CSS class giving `v`/`h` padding (GTK has no padding setter; CSS does it)."""
@@ -915,6 +917,7 @@ struct GtkHost[A: App](Movable):
         for k in range(len(self.rt.shown.nodes)):  # an in-place editor (.focused()) takes the keyboard, its text selected
             if self.rt.shown.nodes[k].kind == FIELD and self.rt.shown.nodes[k].value >= 1 and self.widgets[k] != 0:
                 editor = True
+                self.editor_node = k
                 if self.rt.shown.nodes[k].value == 1:
                     _ = external_call["gtk_widget_grab_focus", c_int](self.widgets[k])
                     external_call["gtk_editable_select_region", NoneType](self.widgets[k], c_int(0), c_int(-1))
@@ -924,8 +927,8 @@ struct GtkHost[A: App](Movable):
                 self.focus = -1
         if not editor:
             self.editor_keys = 0
-            if self.editor_open:  # an in-place editor closed: the keyboard goes back to the canvas it came from
-                self.focus = -1  # (not to the field that sent Enter: it's gone)
+            if self.editor_open and (self.focus < 0 or self.focus == self.editor_node):  # an in-place editor closed (not
+                self.focus = -1  # by someone typing in another field): the keyboard goes back to the canvas it came from
                 for c in self.canvases:
                     if c.node == self.key_node:
                         _ = external_call["gtk_widget_grab_focus", c_int](c.widget)
@@ -1848,7 +1851,7 @@ def run_step[A: App](host_addr: Int, step: String):
         var state = 0
         if verb == "typekeys":  # typekeys:K=text: one press per character
             for ch in kv[1].codepoint_slices():
-                presses.append(String(ch))
+                presses.append("Enter" if String(ch) == "⏎" else String(ch))  # (⏎: Enter, as in drive.py)
         else:  # key:K=shift+ctrl+Name
             var name = kv[1]
             while True:

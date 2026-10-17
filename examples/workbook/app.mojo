@@ -347,7 +347,7 @@ struct Main(App):
     def update(mut self, event: Event):
         var m = event.message
         if m != CELL_COMMIT and m != CELL_CANCEL and self.grid.editing and not (GRID_GESTURE <= m < GRID_GESTURE + MAX_OBJECTS):
-            self.grid.editing = False  # anything else closes the in-place editor (its edit isn't written)
+            self.grid.cancel_edit()  # anything else closes the in-place editor (its edit isn't written)
             self.version += 1
         if GRID_GESTURE <= m < GRID_GESTURE + MAX_OBJECTS:
             self.grid_k = m - GRID_GESTURE

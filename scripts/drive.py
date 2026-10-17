@@ -148,7 +148,7 @@ def step(page, s):
         page.keyboard.press("+".join([m.capitalize() if m != "ctrl" else "Control" for m in mods] + [key]))
     elif verb == "typekeys":  # typekeys:K=text: real key presses at a fast typist's pace (30 ms apart, no waiting
         _, _, text = rest.partition("=")  # for the editor the first one opens: the keys after it mustn't be lost)
-        page.keyboard.type(text, delay=30)
+        page.keyboard.type(text.replace("⏎", "\n"), delay=30)  # (⏎: Enter)
     elif verb in ("drag", "dragat", "doubletap", "zoom", "frames", "tapat"):  # canvas steps: real mouse input on the canvas
         k, _, arg = rest.partition("=")
         canvas = page.locator("[data-kind=canvas]").nth(int(k))

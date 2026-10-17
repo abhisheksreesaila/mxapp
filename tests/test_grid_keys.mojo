@@ -148,6 +148,12 @@ def main() raises:
     assert_equal(g.typed, "78")
     _ = g.handle(key("Escape"), src, font, pal)
     assert_equal(g.typed, "")
+    # F2 after typing (or anything that closed the editor) selects the value again: nothing typed comes back
+    _ = g.handle(key("5"), src, font, pal)
+    g.cancel_edit()
+    assert_equal(g.handle(key("F2"), src, font, pal), GRID_EDIT)
+    assert_equal(g.typed, "")
+    _ = g.handle(key("Escape"), src, font, pal)
     # Ctrl+a character isn't typing
     assert_equal(g.handle(key("c", CTRL), src, font, pal), GRID_NONE)
     assert_false(g.editing)

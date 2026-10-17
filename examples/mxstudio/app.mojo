@@ -460,7 +460,7 @@ struct Main(App):
     def update(mut self, event: Event):
         var m = event.message
         if m != CELL_COMMIT and m != CELL_CANCEL and m != GRID and self.grid.editing:
-            self.grid.editing = False
+            self.grid.cancel_edit()
             self.version += 1
         if m == GRID:
             var action = self.grid.handle(event, self.frame, self.font, self.pal)

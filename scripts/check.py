@@ -104,7 +104,10 @@ def m3():
         kept = both(app, a["tap"] + ";key:0=ArrowDown;typekeys:0=Zed;key:0=Escape;key:0=F2", "keys-kept")  # the cell after Escape
         plain = both(app, a["tap"] + ";key:0=ArrowDown;key:0=F2", "keys-plain")  # the same cell, never typed in
         cleared = both(app, a["tap"] + ";key:0=ArrowDown;key:0=Delete", "keys-delete")
-        for o in (typed, onward, escaped, back, kept, plain, cleared):
+        # data entry at a typist's pace: value, Enter, the next value, Enter (keys typed while Enter is answered wait)
+        entry = both(app, a["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;typekeys:0=Zed Co⏎AB⏎", "keys-entry")
+        entry_up = both(app, a["tap"] + ";key:0=ArrowDown;key:0=ArrowDown;typekeys:0=Zed Co⏎AB⏎;key:0=ArrowUp;key:0=ArrowUp;key:0=F2", "keys-entry-up")
+        for o in (typed, onward, escaped, back, kept, plain, cleared, entry, entry_up):
             if o[0] is None:
                 return False, o[1]
         for host, k in (("GTK", 0), ("web", 1)):
@@ -120,9 +123,13 @@ def m3():
                 problems.append(f"{app} {host}: after Escape the cell isn't what it was: {fields(kept[k])} vs {fields(plain[k])}")
             if first(a["editing"], back[k]) != a["start"] + 1:
                 problems.append(f"{app} {host}: after Escape the keyboard isn't back on the grid ({first(a['editing'], back[k])})")
+            if first(a["written"].replace("Zed Co", "AB"), entry[k]) != a["start"] + 2:
+                problems.append(f"{app} {host}: typing 'AB' straight after Enter didn't write it on the next row ({first(a['written'].replace('Zed Co', 'AB'), entry[k])})")
+            if "FIELD: Zed Co" not in entry_up[k]:
+                problems.append(f"{app} {host}: the first value of the run wasn't kept (two rows up: {[l for l in entry_up[k].splitlines() if l.startswith('FIELD: ')]})")
             if first(a["cleared"], cleared[k]) != a["start"]:
                 problems.append(f"{app} {host}: Delete didn't clear the text cell on row {a['start']} ({first(a['cleared'], cleared[k])})")
-        for name, o in (("type", typed), ("onward", onward), ("escape", escaped), ("back", back), ("kept", kept), ("delete", cleared)):
+        for name, o in (("type", typed), ("onward", onward), ("escape", escaped), ("back", back), ("kept", kept), ("delete", cleared), ("entry", entry), ("entry-up", entry_up)):
             if shown(o[0]) != shown(o[1]):
                 problems.append(f"{app} {name}: GTK and web differ: {sorted(set(shown(o[0])) ^ set(shown(o[1])))[:3]}")
     return not problems, "; ".join(problems) or "MX Studio and the Workbook on both hosts: typing replaces and Enter writes (selection moves down), Escape cancels, Delete clears, the keyboard returns to the grid; identical on GTK and web"

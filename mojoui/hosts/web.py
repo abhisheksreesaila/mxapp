@@ -232,22 +232,43 @@ CANVAS_JS = r"""
   // Keys typed on a canvas before the in-place editor they open has appeared (a round trip later) wait here, then
   // go into it in order (Enter and Escape act as in it); with no editor (a read-only cell) they go to the canvas.
   // Page-wide: the screen that shows the editor replaces the canvas element that sent the first key.
-  const early = { typing: false, inflight: 0, keys: [] };
+  // While a key's answer is on its way (a key typed on a cell opens an editor; Enter or Escape in the editor closes
+  // it), the keys pressed meanwhile wait here, page-wide (the next screen replaces the elements that would have
+  // got them), and are replayed in order once the screen they were meant for is up: into the editor if there is
+  // one, else to the canvas. A replayed key that itself waits for an answer (a character that opens an editor,
+  // Enter, Escape) holds the rest back again. So "Zed Co⏎AB⏎" typed at full speed writes two cells, as in Excel.
+  const isChar = (k, m) => [...k].length === 1 && !(m & 6);
+  const early = { typing: false, inflight: 0, from: null, keys: [] };
+  const hold = from => { early.typing = true; early.from = from; early.since = performance.now(); if (from) setTimeout(release, 1600); };
   function release() {
     if (!early.typing || early.inflight) return;
-    early.typing = false;
-    const keys = early.keys.splice(0), editor = document.querySelector('input.cell-editor');
+    const editor = document.querySelector('input.cell-editor');
+    // the editor's Enter/Escape not answered yet (an editor still there after 1.5 s: the value was refused, it stays open)
+    if (early.from && early.from.isConnected && editor === early.from && performance.now() - early.since < 1500) return;
+    early.typing = false; early.from = null;
     const div = document.querySelector(`[data-kind=canvas][data-node="${window.mojouiKeyCanvas}"]`);
-    if (!editor) { for (const [k, m] of keys) if (div && div.mojoui) div.mojoui.sendKey(k, m); return; }
-    editor.focus();
-    for (const [k] of keys) {
-      if (k === 'Enter') { editor.form.requestSubmit(); return; }
-      if (k === 'Escape') { editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return; }
-      if (k === 'Backspace') editor.value = editor.value.slice(0, -1);
-      else if ([...k].length === 1) editor.value += k;
+    while (early.keys.length) {
+      const [k, m] = early.keys.shift();
+      if (editor) {
+        editor.focus();
+        if (k === 'Enter') { hold(editor); editor.form.requestSubmit(); return; }
+        if (k === 'Escape') { hold(editor); editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return; }
+        if (k === 'Backspace') editor.value = editor.value.slice(0, -1);
+        else if (isChar(k, m)) editor.value += k;
+        const end = editor.value.length; editor.setSelectionRange(end, end);
+      } else if (div && div.mojoui) {
+        div.mojoui.sendKey(k, m);
+        if (isChar(k, m)) { hold(null); return; }  // it opens an editor: the rest wait for it
+      }
     }
-    const end = editor.value.length; editor.setSelectionRange(end, end);
   }
+  // Enter or Escape pressed in an in-place editor: its answer replaces the editor, so hold what comes next.
+  document.addEventListener('keydown', e => {
+    if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+    const m = (e.shiftKey ? 1 : 0) + (e.ctrlKey || e.metaKey ? 2 : 0) + (e.altKey ? 4 : 0);
+    if (early.typing) { e.preventDefault(); e.stopPropagation(); early.keys.push([e.key, m]); return; }
+    if (e.target.matches && e.target.matches('input.cell-editor') && (e.key === 'Enter' || e.key === 'Escape')) hold(e.target);
+  }, true);
   function attach(div) {
     if (div.mojoui) return;
     const cv = div.querySelector('canvas'), g = cv.getContext('2d');
@@ -332,8 +353,7 @@ CANVAS_JS = r"""
         if ((OWN_KEYS.has(e.key) && !(mods & 6)) || typed || (mods & 2 && ['Home', 'End'].includes(e.key))) e.preventDefault();
         // a key typed on a cell opens an editor a round trip later: keys pressed meanwhile wait for it (not lost,
         // not sent to the grid), then go into the editor in order
-        if (early.typing) { early.keys.push([e.key, mods]); return; }
-        if (typed) early.typing = true;
+        if (typed) hold(null);  // (keys pressed while it's answered wait: the listener on the page above)
         send(KEY, 0, 0, mods, 0, 1, e.key);  // (Ctrl and Alt keys too, as GTK sends them; the page keeps their defaults)
       });
     }

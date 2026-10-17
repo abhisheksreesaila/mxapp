@@ -409,6 +409,7 @@ struct DataGrid(Copyable, Movable):
         var head = self.header_h()
         if event.number == PRESS:
             self.editing = False
+            self.typed = ""
             if self.edge_hit(event.x, event.y, src) >= 0:  # a header's edge: resize that column
                 self.resize_col = self.edge_hit(event.x, event.y, src)
                 self.resize_x0 = event.x
@@ -619,6 +620,7 @@ struct DataGrid(Copyable, Movable):
             if not editable:
                 return GRID_READ_ONLY
             self.keep_in_view(row, col, src)
+            self.typed = ""  # (F2: the value selected, typing replaces it)
             self.editing = True
             return GRID_EDIT
         if name == "Delete" or name == "Backspace":
