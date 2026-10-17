@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>omxplorer - orders.omx</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS Play CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration matching Design System -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "chart-8": "#c45cb5",
+            "secondary-fixed-dim": "#cabeff",
+            "on-secondary": "#ffffff",
+            "surface": "#ffffff",
+            "chart-3": "#5b5fc7",
+            "on-surface-variant": "#3e494a",
+            "on-error-container": "#93000a",
+            "on-tertiary-fixed": "#311300",
+            "status-bad": "#c8364c",
+            "status-warning": "#b7791f",
+            "surface-container-low": "#f1f4f4",
+            "chart-7": "#7a8594",
+            "raised": "#f0f2f5",
+            "background": "#f7fafa",
+            "error": "#ba1a1a",
+            "surface-container-highest": "#dfe3e3",
+            "inverse-on-surface": "#eef1f2",
+            "chart-5": "#2e9e5b",
+            "primary": "#00626a",
+            "secondary-container": "#785ee5",
+            "on-error": "#ffffff",
+            "tertiary-fixed-dim": "#ffb688",
+            "surface-variant": "#dfe3e3",
+            "on-tertiary": "#ffffff",
+            "tertiary-container": "#a26031",
+            "secondary": "#5f43ca",
+            "body-text": "#3d434c",
+            "on-tertiary-container": "#fff3ee",
+            "outline": "#6e797a",
+            "error-container": "#ffdad6",
+            "on-primary-container": "#ddfbff",
+            "page-bg": "#eef0f3",
+            "chart-4": "#d6455d",
+            "on-primary": "#ffffff",
+            "selection-fill": "#e3f2f3",
+            "primary-fixed-dim": "#7cd4df",
+            "on-background": "#181c1d",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-high": "#e5e9e9",
+            "on-primary-fixed-variant": "#004f56",
+            "inverse-surface": "#2d3132",
+            "chart-1": "#0e7c86",
+            "outline-variant": "#bdc9ca",
+            "on-secondary-container": "#fffbff",
+            "chart-6": "#b8892d",
+            "ink": "#1b1f24",
+            "chart-2": "#e8833a",
+            "strong-line": "#c9ced6",
+            "on-surface": "#181c1d",
+            "on-secondary-fixed": "#1c0061",
+            "surface-tint": "#006972",
+            "surface-container": "#ebeeef",
+            "primary-container": "#0e7c86",
+            "on-primary-fixed": "#001f23",
+            "primary-fixed": "#98f0fb",
+            "secondary-fixed": "#e6deff",
+            "surface-dim": "#d7dbdb",
+            "on-secondary-fixed-variant": "#4928b4",
+            "inverse-primary": "#7cd4df",
+            "tertiary": "#85481b",
+            "on-tertiary-fixed-variant": "#6f380b",
+            "surface-bright": "#f7fafa",
+            "secondary-text": "#6b7380",
+            "hairline": "#e1e4e8",
+            "formula-value": "#6a4fd6",
+            "tertiary-fixed": "#ffdbc7",
+            "status-good": "#1f8a4c",
+            "window-chrome": "#f5f6f8"
+          },
+          borderRadius: {
+            DEFAULT: "0.125rem",
+            lg: "0.25rem",
+            xl: "0.5rem",
+            full: "0.75rem"
+          },
+          spacing: {
+            "space-md": "0.75rem",
+            "margin": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "gutter": "1rem",
+            "space-lg": "1rem",
+            "space-xl": "1.5rem"
+          },
+          fontFamily: {
+            "toolbar-label": ["Inter"],
+            "section-title": ["Inter"],
+            "page-title": ["Inter"],
+            "caption": ["Inter"],
+            "body": ["Inter"],
+            "tabular-data": ["JetBrains Mono"]
+          },
+          fontSize: {
+            "toolbar-label": ["11px", { lineHeight: "14px", fontWeight: "500" }],
+            "section-title": ["15px", { lineHeight: "22px", fontWeight: "600" }],
+            "page-title": ["20px", { lineHeight: "28px", fontWeight: "700" }],
+            "caption": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+            "body": ["13px", { lineHeight: "18px", fontWeight: "400" }],
+            "tabular-data": ["13px", { lineHeight: "18px", fontWeight: "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+    }
+    /* Subtle custom scrollbars for precise tabular feel */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f5f6f8;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c9ced6;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #6e797a;
+    }
+  </style>
+</head>
+<body class="h-full bg-window-chrome text-ink font-body text-body overflow-hidden select-none flex flex-col antialiased">
+<!-- ==================== TOP WINDOW CHROME & APP BAR ==================== -->
+<header class="w-full flex flex-col bg-window-chrome border-b border-hairline flex-shrink-0 z-40">
+<!-- Window Title Bar -->
+<div class="h-9 px-3 flex items-center justify-between border-b border-hairline">
+<!-- Window Controls & Brand Logo -->
+<div class="flex items-center gap-3 w-72">
+<div class="flex items-center gap-1.5 mr-2">
+<span class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] inline-block"></span>
+<span class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] inline-block"></span>
+<span class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] inline-block"></span>
+</div>
+<span class="text-section-title font-section-title font-bold text-primary tracking-tight">omxplorer</span>
+</div>
+<!-- Centered Document Title -->
+<div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded hover:bg-raised cursor-pointer transition-colors duration-150">
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 16px;">table_chart</span>
+<span class="text-caption font-caption font-medium text-ink">orders.omx</span>
+<span class="text-[10px] px-1 bg-surface-container rounded font-tabular-data text-secondary-text">PARQUET</span>
+</div>
+<!-- Right App Chrome Actions -->
+<div class="flex items-center justify-end gap-2 w-72">
+<button class="px-2.5 py-1 text-toolbar-label font-toolbar-label bg-surface border border-strong-line rounded text-ink hover:bg-raised flex items-center gap-1.5 shadow-none transition-colors duration-150">
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 15px;">file_download</span>
+          Export
+        </button>
+<button class="px-2.5 py-1 text-toolbar-label font-toolbar-label bg-primary text-on-primary rounded hover:bg-primary-container flex items-center gap-1.5 transition-colors duration-150 font-medium">
+<span class="material-symbols-outlined text-on-primary" style="font-size: 15px;">play_arrow</span>
+          Run Query
+        </button>
+<div class="h-4 w-[1px] bg-hairline mx-1"></div>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-raised text-secondary-text hover:text-ink">
+<span class="material-symbols-outlined">share</span>
+</button>
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-[11px] font-bold">
+          DS
+        </div>
+</div>
+</div>
+<!-- Application Menu Bar -->
+<nav class="h-6 px-3 flex items-center gap-4 bg-window-chrome text-toolbar-label font-toolbar-label border-b border-hairline text-body-text">
+<span class="hover:text-ink cursor-pointer">File</span>
+<span class="hover:text-ink cursor-pointer">Edit</span>
+<span class="hover:text-ink cursor-pointer">View</span>
+<span class="hover:text-ink cursor-pointer">Insert</span>
+<span class="hover:text-ink cursor-pointer">Data</span>
+<span class="text-primary font-semibold border-b-2 border-primary">Calculate</span>
+<span class="hover:text-ink cursor-pointer">Window</span>
+<span class="hover:text-ink cursor-pointer">Help</span>
+</nav>
+<!-- Spreadsheet Classic Toolbar -->
+<div class="h-[52px] px-2 flex items-center bg-surface border-b border-hairline overflow-x-auto">
+<!-- Group 1: File/History -->
+<div class="flex items-center">
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="text-toolbar-label font-toolbar-label">Open</span>
+</button>
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">save</span>
+<span class="text-toolbar-label font-toolbar-label">Save</span>
+</button>
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">undo</span>
+<span class="text-toolbar-label font-toolbar-label">Undo</span>
+</button>
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">redo</span>
+<span class="text-toolbar-label font-toolbar-label">Redo</span>
+</button>
+</div>
+<div class="h-7 w-[1px] bg-hairline mx-1"></div>
+<!-- Group 2: Analysis Tools -->
+<div class="flex items-center">
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">grid_on</span>
+<span class="text-toolbar-label font-toolbar-label">Table</span>
+</button>
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">show_chart</span>
+<span class="text-toolbar-label font-toolbar-label">Chart</span>
+</button>
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">pivot_table_chart</span>
+<span class="text-toolbar-label font-toolbar-label">Pivot</span>
+</button>
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">functions</span>
+<span class="text-toolbar-label font-toolbar-label">Formula</span>
+</button>
+</div>
+<div class="h-7 w-[1px] bg-hairline mx-1"></div>
+<!-- Group 3: Tiles (KPI Active) -->
+<div class="flex items-center">
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded bg-selection-fill text-chart-1 font-semibold border border-primary/20 transition-colors duration-150">
+<span class="material-symbols-outlined text-chart-1">speed</span>
+<span class="text-toolbar-label font-toolbar-label">KPI</span>
+</button>
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-toolbar-label font-toolbar-label">Chart tile</span>
+</button>
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">title</span>
+<span class="text-toolbar-label font-toolbar-label">Text</span>
+</button>
+</div>
+<div class="h-7 w-[1px] bg-hairline mx-1"></div>
+<!-- Group 4: Styling -->
+<div class="flex items-center">
+<button class="w-16 h-[46px] flex flex-col items-center justify-center gap-0.5 rounded text-body-text hover:bg-raised hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">palette</span>
+<span class="text-toolbar-label font-toolbar-label">Format</span>
+</button>
+</div>
+<div class="ml-auto flex items-center gap-2 pr-3">
+<span class="text-toolbar-label font-toolbar-label text-secondary-text">Engine:</span>
+<span class="text-[11px] font-tabular-data px-2 py-0.5 bg-raised text-primary border border-hairline rounded font-medium">DuckDB-WASM · Active</span>
+</div>
+</div>
+</header>
+<!-- ==================== MAIN WORK AREA ==================== -->
+<div class="flex-1 flex overflow-hidden relative">
+<!-- 1. Central Canvas Viewport -->
+<main class="flex-1 bg-page-bg overflow-y-auto p-8 flex justify-center">
+<!-- Centered Report Page Sheet -->
+<div class="w-full max-w-[960px] bg-surface border border-hairline rounded shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-8 flex flex-col gap-6 self-start mb-12">
+<!-- Sheet Header -->
+<div class="flex flex-col gap-1 border-b border-hairline pb-4">
+<div class="flex items-center justify-between">
+<h1 class="text-page-title font-page-title text-ink font-bold tracking-tight">Q3 orders</h1>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-good animate-pulse"></span>
+<span class="text-caption font-caption text-secondary-text">Live Sync</span>
+</div>
+</div>
+<div class="text-caption font-caption text-secondary-text flex items-center gap-2">
+<span>Updated just now</span>
+<span class="text-hairline">•</span>
+<span class="font-tabular-data text-ink font-medium">1,000,000</span> rows
+            <span class="text-hairline">•</span>
+<span class="font-tabular-data text-primary font-medium">4.1 ms</span> on the GPU
+          </div>
+</div>
+<!-- Filter Chips Row -->
+<div class="flex flex-wrap items-center gap-2">
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-selection-fill text-chart-1 rounded text-caption font-caption font-medium border border-primary/20">
+<span>region = West</span>
+<button class="hover:text-ink text-chart-1 flex items-center">
+<span class="material-symbols-outlined" style="font-size: 14px;">close</span>
+</button>
+</div>
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-raised text-ink rounded text-caption font-caption font-medium border border-hairline">
+<span>date: Jul–Sep 2026</span>
+<button class="hover:text-status-bad text-secondary-text flex items-center">
+<span class="material-symbols-outlined" style="font-size: 14px;">close</span>
+</button>
+</div>
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface text-body-text rounded text-caption font-caption border border-strong-line">
+<span>carrier: all</span>
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 14px;">arrow_drop_down</span>
+</div>
+<button class="inline-flex items-center gap-1 px-2.5 py-1 border border-dashed border-strong-line text-secondary-text hover:text-ink hover:border-ink rounded text-caption font-caption transition-colors duration-150">
+<span class="material-symbols-outlined" style="font-size: 14px;">add</span>
+            Filter
+          </button>
+</div>
+<!-- KPI Cards Grid (4 items) -->
+<div class="grid grid-cols-4 gap-3">
+<!-- Card 1 (SELECTED TILE) -->
+<div class="bg-surface rounded border-2 border-chart-1 bg-selection-fill/30 p-3.5 flex flex-col justify-between relative cursor-pointer shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<span class="text-caption font-caption font-medium text-chart-1">Revenue</span>
+<span class="material-symbols-outlined text-chart-1" style="font-size: 16px;">verified</span>
+</div>
+<div class="text-[24px] leading-tight font-bold font-tabular-data text-ink mb-2">$18.4M</div>
+<div class="flex items-end justify-between">
+<!-- Inline Sparkline -->
+<svg class="w-24 h-6 text-chart-1" fill="none" viewbox="0 0 96 24">
+<path d="M1 18 L16 14 L32 19 L48 10 L64 12 L80 4 L95 2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M1 18 L16 14 L32 19 L48 10 L64 12 L80 4 L95 2 V 24 H 1 Z" fill="currentColor" fill-opacity="0.08"></path>
+</svg>
+<span class="inline-flex items-center text-[11px] font-tabular-data font-semibold text-status-good bg-[#eaf5ee] px-1.5 py-0.5 rounded">
+                +4.2%
+              </span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface rounded border border-hairline p-3.5 flex flex-col justify-between hover:border-strong-line transition-colors duration-150 cursor-pointer">
+<div class="flex items-center justify-between mb-1">
+<span class="text-caption font-caption font-medium text-secondary-text">Orders</span>
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 16px;">receipt_long</span>
+</div>
+<div class="text-[24px] leading-tight font-bold font-tabular-data text-ink mb-2">255,102</div>
+<div class="flex items-end justify-between">
+<svg class="w-24 h-6 text-secondary-text" fill="none" viewbox="0 0 96 24">
+<path d="M1 16 L20 12 L40 15 L60 8 L80 9 L95 5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+</svg>
+<span class="inline-flex items-center text-[11px] font-tabular-data font-semibold text-status-good bg-[#eaf5ee] px-1.5 py-0.5 rounded">
+                +1.1%
+              </span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface rounded border border-hairline p-3.5 flex flex-col justify-between hover:border-strong-line transition-colors duration-150 cursor-pointer">
+<div class="flex items-center justify-between mb-1">
+<span class="text-caption font-caption font-medium text-secondary-text">Average order</span>
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 16px;">shopping_bag</span>
+</div>
+<div class="text-[24px] leading-tight font-bold font-tabular-data text-ink mb-2">$72.06</div>
+<div class="flex items-end justify-between">
+<svg class="w-24 h-6 text-status-bad" fill="none" viewbox="0 0 96 24">
+<path d="M1 6 L24 8 L48 5 L72 16 L95 20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+</svg>
+<span class="inline-flex items-center text-[11px] font-tabular-data font-semibold text-status-bad bg-[#fde8eb] px-1.5 py-0.5 rounded">
+                -0.8%
+              </span>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface rounded border border-hairline p-3.5 flex flex-col justify-between hover:border-strong-line transition-colors duration-150 cursor-pointer">
+<div class="flex items-center justify-between mb-1">
+<span class="text-caption font-caption font-medium text-secondary-text">Margin</span>
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 16px;">donut_small</span>
+</div>
+<div class="text-[24px] leading-tight font-bold font-tabular-data text-ink mb-2">31.4%</div>
+<div class="flex items-end justify-between">
+<svg class="w-24 h-6 text-status-good" fill="none" viewbox="0 0 96 24">
+<path d="M1 14 L20 15 L40 11 L60 12 L80 6 L95 4" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+</svg>
+<span class="inline-flex items-center text-[11px] font-tabular-data font-semibold text-status-good bg-[#eaf5ee] px-1.5 py-0.5 rounded">
+                +0.6 pts
+              </span>
+</div>
+</div>
+</div>
+<!-- Two Charts Side-by-Side (2 Column Grid) -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Chart 1: Revenue by month -->
+<div class="bg-surface border border-hairline rounded p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-3">
+<span class="text-caption font-caption font-semibold text-ink">Revenue by month</span>
+<span class="text-toolbar-label font-toolbar-label text-secondary-text font-tabular-data">USD Millions</span>
+</div>
+<!-- Canvas Graph Simulation with Crisp Hairlines & Hover Tooltip -->
+<div class="relative h-44 w-full flex flex-col justify-between pt-2">
+<!-- Horizontal Gridlines -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+<div class="border-b border-hairline w-full"></div>
+<div class="border-b border-hairline w-full"></div>
+<div class="border-b border-hairline w-full"></div>
+<div class="border-b border-hairline w-full"></div>
+</div>
+<!-- SVG Path Line Chart -->
+<svg class="w-full h-full relative z-10 overflow-visible" preserveaspectratio="none" viewbox="0 0 360 140">
+<defs>
+<lineargradient id="areaGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#0e7c86" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#0e7c86" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<path d="M 10 110 L 50 100 L 90 95 L 135 85 L 180 70 L 225 65 L 270 45 L 315 22 L 350 18" fill="none" stroke="#0e7c86" stroke-linecap="round" stroke-width="2.2"></path>
+<path d="M 10 110 L 50 100 L 90 95 L 135 85 L 180 70 L 225 65 L 270 45 L 315 22 L 350 18 L 350 140 L 10 140 Z" fill="url(#areaGradient)"></path>
+<!-- Data Nodes -->
+<circle cx="270" cy="45" fill="#ffffff" r="3.5" stroke="#0e7c86" stroke-width="2"></circle>
+<circle cx="315" cy="22" fill="#0e7c86" r="4.5" stroke="#ffffff" stroke-width="2"></circle>
+</svg>
+<!-- Active Tooltip Callout on August Point -->
+<div class="absolute left-[285px] top-[4px] z-20 -translate-x-1/2 flex flex-col items-center pointer-events-none">
+<div class="bg-ink text-surface px-2 py-1 rounded text-[11px] font-tabular-data font-medium shadow-md whitespace-nowrap">
+                  Aug · $6.3M
+                </div>
+<div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-ink"></div>
+</div>
+</div>
+<!-- Chart X Axis Labels -->
+<div class="flex justify-between items-center text-[10px] text-secondary-text font-tabular-data pt-2 border-t border-hairline mt-1">
+<span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span class="text-chart-1 font-bold">Aug</span><span>Sep</span>
+</div>
+</div>
+<!-- Chart 2: Revenue by carrier -->
+<div class="bg-surface border border-hairline rounded p-4 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-3">
+<span class="text-caption font-caption font-semibold text-ink">Revenue by carrier</span>
+<span class="text-toolbar-label font-toolbar-label text-secondary-text font-tabular-data">Top 4</span>
+</div>
+<!-- Horizontal Bar Chart -->
+<div class="space-y-3.5 py-1">
+<!-- UPS -->
+<div>
+<div class="flex justify-between text-caption font-caption mb-1">
+<span class="font-medium text-ink">UPS</span>
+<span class="font-tabular-data font-medium text-ink">$7.8M</span>
+</div>
+<div class="w-full bg-raised rounded h-2.5 overflow-hidden">
+<div class="bg-chart-1 h-full rounded" style="width: 78%;"></div>
+</div>
+</div>
+<!-- FedEx -->
+<div>
+<div class="flex justify-between text-caption font-caption mb-1">
+<span class="font-medium text-ink">FedEx</span>
+<span class="font-tabular-data font-medium text-ink">$5.4M</span>
+</div>
+<div class="w-full bg-raised rounded h-2.5 overflow-hidden">
+<div class="bg-chart-2 h-full rounded" style="width: 54%;"></div>
+</div>
+</div>
+<!-- DHL -->
+<div>
+<div class="flex justify-between text-caption font-caption mb-1">
+<span class="font-medium text-ink">DHL</span>
+<span class="font-tabular-data font-medium text-ink">$3.1M</span>
+</div>
+<div class="w-full bg-raised rounded h-2.5 overflow-hidden">
+<div class="bg-chart-3 h-full rounded" style="width: 31%;"></div>
+</div>
+</div>
+<!-- USPS -->
+<div>
+<div class="flex justify-between text-caption font-caption mb-1">
+<span class="font-medium text-ink">USPS</span>
+<span class="font-tabular-data font-medium text-ink">$2.1M</span>
+</div>
+<div class="w-full bg-raised rounded h-2.5 overflow-hidden">
+<div class="bg-chart-4 h-full rounded" style="width: 21%;"></div>
+</div>
+</div>
+</div>
+<!-- Chart Footer Note -->
+<div class="flex justify-between text-[10px] text-secondary-text font-tabular-data pt-2 border-t border-hairline mt-1">
+<span>Coverage: 98.4%</span>
+<span>Normalized volume</span>
+</div>
+</div>
+</div>
+<!-- Pivot Table Component -->
+<div class="bg-surface border border-hairline rounded overflow-hidden">
+<div class="p-3 bg-raised border-b border-hairline flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 16px;">pivot_table_chart</span>
+<span class="text-caption font-caption font-semibold text-ink">Revenue · region × product</span>
+</div>
+<div class="flex items-center gap-3 text-caption font-caption text-secondary-text">
+<span class="font-tabular-data text-[11px]">Agg: SUM(amount)</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-ink" style="font-size: 16px;">filter_list</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full border-collapse text-left font-tabular-data text-[12px]">
+<thead>
+<tr class="bg-window-chrome text-secondary-text border-b border-hairline">
+<th class="py-1.5 px-3 font-medium border-r border-hairline w-28">Region</th>
+<th class="py-1.5 px-3 font-medium text-right border-r border-hairline">Hardware</th>
+<th class="py-1.5 px-3 font-medium text-right border-r border-hairline">Enterprise</th>
+<th class="py-1.5 px-3 font-medium text-right border-r border-hairline">Cloud</th>
+<th class="py-1.5 px-3 font-medium text-right border-r border-hairline">Peripherals</th>
+<th class="py-1.5 px-3 font-medium text-right border-r border-hairline">Support</th>
+<th class="py-1.5 px-3 font-semibold text-right bg-raised text-ink">Total</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-hairline text-ink">
+<tr class="hover:bg-selection-fill/20 transition-colors">
+<td class="py-1.5 px-3 font-medium bg-window-chrome/40 border-r border-hairline">West</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$4,230,190</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$3,104,220</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$2,840,110</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$912,400</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$621,000</td>
+<td class="py-1.5 px-3 text-right font-semibold bg-raised/50">$11,707,920</td>
+</tr>
+<tr class="hover:bg-selection-fill/20 transition-colors">
+<td class="py-1.5 px-3 font-medium bg-window-chrome/40 border-r border-hairline">East</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$1,890,440</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$1,450,900</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$1,210,050</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$418,200</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$310,000</td>
+<td class="py-1.5 px-3 text-right font-semibold bg-raised/50">$5,279,590</td>
+</tr>
+<tr class="hover:bg-selection-fill/20 transition-colors">
+<td class="py-1.5 px-3 font-medium bg-window-chrome/40 border-r border-hairline">Central</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$610,200</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$412,000</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$280,400</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$92,000</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$61,000</td>
+<td class="py-1.5 px-3 text-right font-semibold bg-raised/50">$1,455,600</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="bg-raised font-semibold border-t-2 border-hairline text-ink">
+<td class="py-1.5 px-3 border-r border-hairline">Total</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$6,730,830</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$4,967,120</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$4,330,560</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$1,422,600</td>
+<td class="py-1.5 px-3 text-right border-r border-hairline">$992,000</td>
+<td class="py-1.5 px-3 text-right bg-primary-fixed/20 text-chart-1 font-bold">$18,443,110</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+<!-- Empty Tile Placeholder -->
+<div class="border-2 border-dashed border-strong-line rounded p-4 flex items-center justify-between text-secondary-text bg-raised/30">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 18px;">add_box</span>
+<span class="text-caption font-caption font-medium text-ink">Add a tile</span>
+<span class="text-[11px] text-secondary-text">or drop metrics here</span>
+</div>
+<div class="flex items-center gap-1.5">
+<button class="px-2 py-1 bg-surface border border-hairline rounded text-caption font-caption text-body-text hover:text-ink hover:bg-raised transition-colors duration-150">Sum</button>
+<button class="px-2 py-1 bg-surface border border-hairline rounded text-caption font-caption text-body-text hover:text-ink hover:bg-raised transition-colors duration-150">Average</button>
+<button class="px-2 py-1 bg-surface border border-hairline rounded text-caption font-caption text-body-text hover:text-ink hover:bg-raised transition-colors duration-150">Count</button>
+<button class="px-2 py-1 bg-surface border border-hairline rounded text-caption font-caption text-body-text hover:text-ink hover:bg-raised transition-colors duration-150 flex items-center gap-1">
+<span class="material-symbols-outlined" style="font-size: 13px;">bar_chart</span>
+              Chart
+            </button>
+</div>
+</div>
+</div>
+</main>
+<!-- 2. Docked Inspector Panel (Right 300px) -->
+<aside class="w-[300px] bg-surface border-l border-hairline flex flex-col flex-shrink-0 z-30 justify-between select-none">
+<div class="flex flex-col">
+<!-- Panel Tabs -->
+<div class="h-9 border-b border-hairline flex items-center px-2 bg-window-chrome">
+<button class="flex-1 h-full flex items-center justify-center gap-1.5 text-toolbar-label font-toolbar-label text-primary font-semibold border-b-2 border-primary bg-surface -mb-[1px]">
+<span class="material-symbols-outlined" style="font-size: 15px;">dashboard_customize</span>
+            Tile
+          </button>
+<button class="flex-1 h-full flex items-center justify-center gap-1.5 text-toolbar-label font-toolbar-label text-secondary-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined" style="font-size: 15px;">database</span>
+            Data
+          </button>
+</div>
+<!-- Panel Header / Selection State -->
+<div class="p-3 border-b border-hairline flex items-center justify-between bg-surface">
+<div>
+<div class="text-caption font-caption font-semibold text-ink flex items-center gap-1">
+<span>Revenue Card</span>
+<span class="px-1.5 py-0.2 bg-selection-fill text-chart-1 rounded text-[10px] font-tabular-data font-semibold">KPI</span>
+</div>
+<div class="text-[11px] text-secondary-text">Selection Details</div>
+</div>
+<button class="text-secondary-text hover:text-ink">
+<span class="material-symbols-outlined" style="font-size: 16px;">more_horiz</span>
+</button>
+</div>
+<!-- Inspector Form Controls -->
+<div class="p-3 space-y-4 overflow-y-auto">
+<!-- SECTION 1: DATA BINDING -->
+<div class="space-y-2.5">
+<div class="text-[10px] font-semibold tracking-wider text-secondary-text uppercase font-section-title">Data Binding</div>
+<!-- Value Column Dropdown -->
+<div class="space-y-1">
+<label class="text-[11px] font-medium text-body-text">Value column</label>
+<div class="relative">
+<select class="w-full text-caption font-tabular-data bg-surface border border-hairline rounded py-1 pl-2 pr-7 text-ink focus:border-primary focus:ring-1 focus:ring-primary">
+<option selected="">revenue (Col C)</option>
+<option>orders_count</option>
+<option>margin_net</option>
+<option>gross_profit</option>
+</select>
+</div>
+</div>
+<!-- Aggregate Segmented Control -->
+<div class="space-y-1">
+<label class="text-[11px] font-medium text-body-text">Aggregate function</label>
+<div class="grid grid-cols-3 bg-raised p-0.5 rounded border border-hairline text-center text-toolbar-label font-toolbar-label">
+<button class="py-1 bg-surface font-semibold text-primary rounded shadow-xs border border-hairline">Sum</button>
+<button class="py-1 text-secondary-text hover:text-ink">Average</button>
+<button class="py-1 text-secondary-text hover:text-ink">Count</button>
+</div>
+</div>
+<!-- Compare-to Dropdown -->
+<div class="space-y-1">
+<label class="text-[11px] font-medium text-body-text">Compare to</label>
+<div class="relative">
+<select class="w-full text-caption font-tabular-data bg-surface border border-hairline rounded py-1 pl-2 pr-7 text-ink focus:border-primary focus:ring-1 focus:ring-primary">
+<option selected="">previous quarter</option>
+<option>same quarter last year</option>
+<option>budget target</option>
+<option>custom expression</option>
+</select>
+</div>
+</div>
+</div>
+<div class="border-t border-hairline pt-3"></div>
+<!-- SECTION 2: DISPLAY FORMAT -->
+<div class="space-y-2.5">
+<div class="text-[10px] font-semibold tracking-wider text-secondary-text uppercase font-section-title">Display Format</div>
+<div class="grid grid-cols-2 gap-2">
+<div class="space-y-1">
+<label class="text-[11px] font-medium text-body-text">Notation</label>
+<select class="w-full text-caption font-tabular-data bg-surface border border-hairline rounded py-1 px-2 text-ink">
+<option selected="">Currency ($)</option>
+<option>Standard (#)</option>
+<option>Percent (%)</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="text-[11px] font-medium text-body-text">Decimals</label>
+<input class="w-full text-caption font-tabular-data bg-surface border border-hairline rounded py-1 px-2 text-ink" max="6" min="0" type="number" value="2"/>
+</div>
+</div>
+<!-- Sparkline Toggle -->
+<div class="flex items-center justify-between py-1">
+<span class="text-[11px] font-medium text-body-text">Show sparkline</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-8 h-4 bg-hairline peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[2px] after:bg-white after:border-hairline after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+<div class="border-t border-hairline pt-3"></div>
+<!-- Execution Footnote -->
+<div class="p-2.5 bg-raised rounded border border-hairline flex flex-col gap-1">
+<div class="flex items-center gap-1.5 text-secondary-text">
+<span class="material-symbols-outlined" style="font-size: 14px;">terminal</span>
+<span class="text-[10px] font-semibold uppercase tracking-wider">Provenance</span>
+</div>
+<p class="text-[11px] font-tabular-data text-body-text leading-tight">
+              Source: orders.omx [Col C]<br/>
+              Computed in <span class="text-primary font-medium">0.4ms</span>
+</p>
+</div>
+<button class="w-full py-1.5 bg-primary text-on-primary rounded text-caption font-caption font-medium hover:bg-primary-container transition-all active:scale-[0.99] flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined" style="font-size: 15px;">tune</span>
+            Apply Transform
+          </button>
+</div>
+</div>
+<!-- Inspector Footer -->
+<div class="h-8 border-t border-hairline px-3 flex items-center justify-between bg-window-chrome text-caption font-caption text-secondary-text">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 15px;">settings</span>
+<span class="text-[11px]">Settings</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 15px;">terminal</span>
+<span class="text-[11px]">Diagnostics</span>
+</div>
+</div>
+</aside>
+</div>
+<!-- ==================== BOTTOM STATUS BAR & SHEET TABS ==================== -->
+<footer class="h-[26px] bg-window-chrome border-t border-hairline flex items-center justify-between flex-shrink-0 z-40 text-caption font-caption select-none">
+<!-- Sheet Tabs on the Left -->
+<div class="flex items-center h-full">
+<!-- Inactive Sheet Tab -->
+<button class="h-full px-3.5 flex items-center gap-1.5 bg-window-chrome hover:bg-raised text-secondary-text border-r border-hairline transition-colors">
+<span class="material-symbols-outlined" style="font-size: 14px;">grid_on</span>
+<span class="text-[11px]">Orders</span>
+</button>
+<!-- Active Sheet Tab (Report) -->
+<button class="h-full px-3.5 flex items-center gap-1.5 bg-surface text-ink font-semibold border-r border-hairline border-t-2 border-t-primary -mt-[1px]">
+<span class="material-symbols-outlined text-primary" style="font-size: 14px;">analytics</span>
+<span class="text-[11px]">Report</span>
+</button>
+<!-- Add Sheet Button -->
+<button class="h-full px-2.5 flex items-center justify-center text-secondary-text hover:text-ink hover:bg-raised transition-colors">
+<span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+</button>
+</div>
+<!-- Status Monospace Summary on the Right -->
+<div class="flex items-center gap-3 pr-3 text-[11px] font-tabular-data text-secondary-text">
+<span>Filtered: <strong class="text-ink font-semibold">255,102</strong> of 1,000,000 rows</span>
+<span class="text-hairline">|</span>
+<span>GPU: <strong class="text-ink font-semibold">Apple M3 Max</strong></span>
+<span class="text-hairline">|</span>
+<span class="flex items-center gap-1 text-primary font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-status-good"></span>
+        4.1 ms
+      </span>
+</div>
+</footer>
+</body></html>

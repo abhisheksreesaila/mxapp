@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>omxplorer - orders.csv</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS Play CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration verbatim as specified -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#dfe3e3",
+            "surface-container": "#ebeeef",
+            "on-tertiary-fixed": "#311300",
+            "chart-4": "#d6455d",
+            "chart-1": "#0e7c86",
+            "status-warning": "#b7791f",
+            "raised": "#f0f2f5",
+            "on-primary-fixed": "#001f23",
+            "secondary-text": "#6b7380",
+            "chart-8": "#c45cb5",
+            "on-primary": "#ffffff",
+            "surface-dim": "#d7dbdb",
+            "strong-line": "#c9ced6",
+            "secondary-container": "#785ee5",
+            "outline": "#6e797a",
+            "surface-bright": "#f7fafa",
+            "selection-fill": "#e3f2f3",
+            "error-container": "#ffdad6",
+            "surface-container-lowest": "#ffffff",
+            "on-primary-fixed-variant": "#004f56",
+            "inverse-on-surface": "#eef1f2",
+            "ink": "#1b1f24",
+            "background": "#f7fafa",
+            "chart-6": "#b8892d",
+            "body-text": "#3d434c",
+            "on-error-container": "#93000a",
+            "chart-2": "#e8833a",
+            "chart-5": "#2e9e5b",
+            "on-tertiary-container": "#fff3ee",
+            "surface-container-low": "#f1f4f4",
+            "secondary-fixed": "#e6deff",
+            "primary-fixed": "#98f0fb",
+            "tertiary-fixed": "#ffdbc7",
+            "inverse-surface": "#2d3132",
+            "status-bad": "#c8364c",
+            "primary-fixed-dim": "#7cd4df",
+            "tertiary": "#85481b",
+            "on-secondary-fixed-variant": "#4928b4",
+            "on-error": "#ffffff",
+            "on-primary-container": "#ddfbff",
+            "hairline": "#e1e4e8",
+            "surface-container-highest": "#dfe3e3",
+            "primary-container": "#0e7c86",
+            "on-surface-variant": "#3e494a",
+            "error": "#ba1a1a",
+            "on-secondary": "#ffffff",
+            "on-secondary-container": "#fffbff",
+            "on-background": "#181c1d",
+            "on-secondary-fixed": "#1c0061",
+            "secondary": "#5f43ca",
+            "on-surface": "#181c1d",
+            "page-bg": "#eef0f3",
+            "tertiary-fixed-dim": "#ffb688",
+            "status-good": "#1f8a4c",
+            "chart-3": "#5b5fc7",
+            "chart-7": "#7a8594",
+            "on-tertiary-fixed-variant": "#6f380b",
+            "surface": "#ffffff",
+            "formula-value": "#6a4fd6",
+            "surface-container-high": "#e5e9e9",
+            "inverse-primary": "#7cd4df",
+            "secondary-fixed-dim": "#cabeff",
+            "primary": "#00626a",
+            "surface-tint": "#006972",
+            "outline-variant": "#bdc9ca",
+            "on-tertiary": "#ffffff",
+            "window-chrome": "#f5f6f8",
+            "tertiary-container": "#a26031"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-xl": "1.5rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-md": "0.75rem",
+            "space-lg": "1rem",
+            "margin": "1rem",
+            "space-xs": "0.25rem"
+          },
+          "fontFamily": {
+            "body": ["Inter", "sans-serif"],
+            "toolbar-label": ["Inter", "sans-serif"],
+            "tabular-data": ["JetBrains Mono", "monospace"],
+            "caption": ["Inter", "sans-serif"],
+            "section-title": ["Inter", "sans-serif"],
+            "page-title": ["Inter", "sans-serif"]
+          },
+          "fontSize": {
+            "body": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "toolbar-label": ["11px", { "lineHeight": "14px", "fontWeight": "500" }],
+            "tabular-data": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "section-title": ["15px", { "lineHeight": "22px", "fontWeight": "600" }],
+            "page-title": ["20px", { "lineHeight": "28px", "fontWeight": "700" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Strict spreadsheet layout overrides */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      box-sizing: border-box;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .custom-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .inspector-shadow {
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-page-bg text-ink font-body text-body flex justify-center items-start min-h-full sm:py-6">
+<!-- Mobile View Container: iPhone standard 390px width -->
+<main class="w-full max-w-[390px] h-[844px] bg-surface relative flex flex-col overflow-hidden border border-strong-line sm:rounded-xl shadow-2xl">
+<!-- TopAppBar (Anchored Component from JSON) -->
+<header class="bg-window-chrome dark:bg-inverse-surface border-b border-hairline dark:border-strong-line w-full px-space-md h-12 flex justify-between items-center z-20 shrink-0">
+<div class="flex items-center space-x-2">
+<button aria-label="Back" class="w-8 h-8 flex items-center justify-center hover:bg-raised active:bg-raised transition-colors duration-150 text-ink">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+</button>
+<div class="flex flex-col justify-center">
+<span class="text-section-title font-section-title font-bold text-on-surface dark:text-inverse-on-surface leading-tight">orders.csv</span>
+<span class="text-[10px] font-caption text-secondary-text leading-none mt-0.5">1,000,000 rows • 28.4 MB</span>
+</div>
+</div>
+<div class="flex items-center">
+<button aria-label="More Options" class="w-8 h-8 flex items-center justify-center hover:bg-raised active:bg-raised transition-colors duration-150 text-ink">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Formula Bar (Quick Inspection / fx) -->
+<section class="h-8 bg-surface-container-low border-b border-hairline flex items-center px-2 space-x-1 shrink-0 z-10 text-[11px]">
+<div class="h-5 px-1.5 bg-surface border border-hairline flex items-center justify-center font-tabular-data text-[10px] text-body-text font-semibold">
+        D1:D1000000
+      </div>
+<span class="font-bold text-chart-1 px-1 italic font-tabular-data text-[12px]">fx</span>
+<div class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-tabular-data text-[11px] text-ink">
+        =SUM(orders.csv[revenue])
+      </div>
+<div class="flex items-center space-x-1 text-secondary-text">
+<span class="material-symbols-outlined text-[14px]">check</span>
+<span class="material-symbols-outlined text-[14px]">close</span>
+</div>
+</section>
+<!-- Horizontal Tool Strip / Quick Actions Ribbon (64px wide buttons, min 48px touch targets) -->
+<nav aria-label="Tool strip" class="h-14 bg-window-chrome border-b border-hairline flex items-center overflow-x-auto custom-scrollbar px-1 shrink-0 z-10">
+<!-- Chart -->
+<button class="w-16 h-12 flex-shrink-0 flex flex-col items-center justify-center hover:bg-raised active:bg-raised transition-colors duration-150 text-body-text">
+<span class="material-symbols-outlined text-[18px]">bar_chart</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5 text-[10px]">Chart</span>
+</button>
+<div class="h-6 w-[1px] bg-hairline shrink-0"></div>
+<!-- Pivot -->
+<button class="w-16 h-12 flex-shrink-0 flex flex-col items-center justify-center hover:bg-raised active:bg-raised transition-colors duration-150 text-body-text">
+<span class="material-symbols-outlined text-[18px]">pivot_table_chart</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5 text-[10px]">Pivot</span>
+</button>
+<div class="h-6 w-[1px] bg-hairline shrink-0"></div>
+<!-- Formula -->
+<button class="w-16 h-12 flex-shrink-0 flex flex-col items-center justify-center hover:bg-raised active:bg-raised transition-colors duration-150 text-body-text">
+<span class="material-symbols-outlined text-[18px]">functions</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5 text-[10px]">Formula</span>
+</button>
+<div class="h-6 w-[1px] bg-hairline shrink-0"></div>
+<!-- Sort (Active/Highlighted State for selected column) -->
+<button class="w-16 h-12 flex-shrink-0 flex flex-col items-center justify-center bg-selection-fill text-chart-1 hover:bg-raised active:bg-raised transition-colors duration-150">
+<span class="material-symbols-outlined text-[18px]">swap_vert</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5 text-[10px] font-semibold">Sort</span>
+</button>
+<div class="h-6 w-[1px] bg-hairline shrink-0"></div>
+<!-- Filter -->
+<button class="w-16 h-12 flex-shrink-0 flex flex-col items-center justify-center hover:bg-raised active:bg-raised transition-colors duration-150 text-body-text">
+<span class="material-symbols-outlined text-[18px]">filter_alt</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5 text-[10px]">Filter</span>
+</button>
+<div class="h-6 w-[1px] bg-hairline shrink-0"></div>
+<!-- Format -->
+<button class="w-16 h-12 flex-shrink-0 flex flex-col items-center justify-center hover:bg-raised active:bg-raised transition-colors duration-150 text-body-text">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5 text-[10px]">Format</span>
+</button>
+</nav>
+<!-- Spreadsheet Data Grid Container (Scrollable) -->
+<div class="flex-1 w-full overflow-y-auto overflow-x-auto relative bg-surface custom-scrollbar pb-[280px]">
+<table class="w-full border-collapse border-spacing-0 table-fixed text-left select-none">
+<!-- Grid Header Row (Strict Ledger styling, badges, histograms) -->
+<thead class="sticky top-0 bg-window-chrome z-10 border-b border-strong-line">
+<tr class="h-7 text-[11px] font-section-title text-secondary-text">
+<!-- Row Gutter Corner -->
+<th class="w-10 min-w-[40px] max-w-[40px] bg-surface-container-low border-r border-hairline text-center font-tabular-data text-[10px] font-normal text-secondary-text p-0">
+              #
+            </th>
+<!-- Col 1: order_id (Frozen/Standard) -->
+<th class="w-24 min-w-[96px] border-r border-hairline px-2 font-medium text-ink bg-window-chrome">
+<div class="flex items-center justify-between">
+<span class="truncate font-semibold">order_id</span>
+<span class="bg-surface-variant text-on-surface-variant text-[9px] px-1 py-0 rounded font-tabular-data">#</span>
+</div>
+</th>
+<!-- Col 2: date -->
+<th class="w-24 min-w-[96px] border-r border-hairline px-2 font-medium text-ink bg-window-chrome">
+<div class="flex items-center justify-between">
+<span class="truncate">date</span>
+<span class="material-symbols-outlined text-[11px] text-secondary-text">calendar_today</span>
+</div>
+</th>
+<!-- Col 3: region -->
+<th class="w-20 min-w-[80px] border-r border-hairline px-2 font-medium text-ink bg-window-chrome">
+<div class="flex items-center justify-between">
+<span class="truncate">region</span>
+<span class="bg-surface-variant text-on-surface-variant text-[9px] px-1 py-0 rounded font-bold">Aa</span>
+</div>
+</th>
+<!-- Col 4: revenue (ACTIVELY SELECTED COLUMN) -->
+<th class="w-28 min-w-[112px] bg-selection-fill border-r border-hairline px-2 font-semibold text-chart-1 border-t-2 border-t-chart-1">
+<div class="flex items-center justify-between">
+<span class="truncate text-chart-1">revenue</span>
+<div class="flex items-center space-x-0.5">
+<span class="bg-chart-1 text-on-primary text-[9px] px-1 py-0 rounded font-tabular-data font-bold">$</span>
+<span class="material-symbols-outlined text-[12px] text-chart-1">arrow_drop_down</span>
+</div>
+</div>
+</th>
+</tr>
+</thead>
+<!-- Data Grid Rows: strict 28px height, hairline borders, monospace data -->
+<tbody class="divide-y divide-hairline font-tabular-data text-[12px]">
+<!-- Row 1 -->
+<tr class="h-7 hover:bg-raised transition-colors">
+<td class="bg-surface-container-low border-r border-hairline text-center text-[10px] text-secondary-text">1</td>
+<td class="border-r border-hairline px-2 text-ink whitespace-nowrap">ORD-94021</td>
+<td class="border-r border-hairline px-2 text-secondary-text whitespace-nowrap">2024-03-15</td>
+<td class="border-r border-hairline px-2 text-body-text whitespace-nowrap">NA-West</td>
+<td class="border-r border-hairline px-2 text-right text-ink bg-selection-fill font-medium whitespace-nowrap">$124.50</td>
+</tr>
+<!-- Row 2 -->
+<tr class="h-7 hover:bg-raised transition-colors">
+<td class="bg-surface-container-low border-r border-hairline text-center text-[10px] text-secondary-text">2</td>
+<td class="border-r border-hairline px-2 text-ink whitespace-nowrap">ORD-94022</td>
+<td class="border-r border-hairline px-2 text-secondary-text whitespace-nowrap">2024-03-15</td>
+<td class="border-r border-hairline px-2 text-body-text whitespace-nowrap">EMEA</td>
+<td class="border-r border-hairline px-2 text-right text-ink bg-selection-fill font-medium whitespace-nowrap">$89.00</td>
+</tr>
+<!-- Row 3 -->
+<tr class="h-7 hover:bg-raised transition-colors">
+<td class="bg-surface-container-low border-r border-hairline text-center text-[10px] text-secondary-text">3</td>
+<td class="border-r border-hairline px-2 text-ink whitespace-nowrap">ORD-94023</td>
+<td class="border-r border-hairline px-2 text-secondary-text whitespace-nowrap">2024-03-16</td>
+<td class="border-r border-hairline px-2 text-body-text whitespace-nowrap">APAC</td>
+<td class="border-r border-hairline px-2 text-right text-ink bg-selection-fill font-medium whitespace-nowrap">$1,420.00</td>
+</tr>
+<!-- Row 4 -->
+<tr class="h-7 hover:bg-raised transition-colors">
+<td class="bg-surface-container-low border-r border-hairline text-center text-[10px] text-secondary-text">4</td>
+<td class="border-r border-hairline px-2 text-ink whitespace-nowrap">ORD-94024</td>
+<td class="border-r border-hairline px-2 text-secondary-text whitespace-nowrap">2024-03-16</td>
+<td class="border-r border-hairline px-2 text-body-text whitespace-nowrap">NA-East</td>
+<td class="border-r border-hairline px-2 text-right text-ink bg-selection-fill font-medium whitespace-nowrap">$45.20</td>
+</tr>
+<!-- Row 5 -->
+<tr class="h-7 hover:bg-raised transition-colors">
+<td class="bg-surface-container-low border-r border-hairline text-center text-[10px] text-secondary-text">5</td>
+<td class="border-r border-hairline px-2 text-ink whitespace-nowrap">ORD-94025</td>
+<td class="border-r border-hairline px-2 text-secondary-text whitespace-nowrap">2024-03-16</td>
+<td class="border-r border-hairline px-2 text-body-text whitespace-nowrap">LATAM</td>
+<td class="border-r border-hairline px-2 text-right text-ink bg-selection-fill font-medium whitespace-nowrap">$310.80</td>
+</tr>
+<!-- Row 6 -->
+<tr class="h-7 hover:bg-raised transition-colors">
+<td class="bg-surface-container-low border-r border-hairline text-center text-[10px] text-secondary-text">6</td>
+<td class="border-r border-hairline px-2 text-ink whitespace-nowrap">ORD-94026</td>
+<td class="border-r border-hairline px-2 text-secondary-text whitespace-nowrap">2024-03-17</td>
+<td class="border-r border-hairline px-2 text-body-text whitespace-nowrap">NA-West</td>
+<td class="border-r border-hairline px-2 text-right text-ink bg-selection-fill font-medium whitespace-nowrap">$76.40</td>
+</tr>
+<!-- Row 7 -->
+<tr class="h-7 hover:bg-raised transition-colors">
+<td class="bg-surface-container-low border-r border-hairline text-center text-[10px] text-secondary-text">7</td>
+<td class="border-r border-hairline px-2 text-ink whitespace-nowrap">ORD-94027</td>
+<td class="border-r border-hairline px-2 text-secondary-text whitespace-nowrap">2024-03-17</td>
+<td class="border-r border-hairline px-2 text-body-text whitespace-nowrap">EMEA</td>
+<td class="border-r border-hairline px-2 text-right text-ink bg-selection-fill font-medium whitespace-nowrap">$512.00</td>
+</tr>
+<!-- Row 8 -->
+<tr class="h-7 hover:bg-raised transition-colors">
+<td class="bg-surface-container-low border-r border-hairline text-center text-[10px] text-secondary-text">8</td>
+<td class="border-r border-hairline px-2 text-ink whitespace-nowrap">ORD-94028</td>
+<td class="border-r border-hairline px-2 text-secondary-text whitespace-nowrap">2024-03-17</td>
+<td class="border-r border-hairline px-2 text-body-text whitespace-nowrap">APAC</td>
+<td class="border-r border-hairline px-2 text-right text-ink bg-selection-fill font-medium whitespace-nowrap">$98.15</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Status Bar Summary Strip (Directly above Bottom Sheet / Tabs) -->
+<div class="h-6 bg-surface-container-low border-t border-hairline flex items-center justify-between px-3 text-[10px] font-tabular-data text-secondary-text z-20 shrink-0">
+<div class="flex items-center space-x-2">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-status-good"></span>
+<span>READY</span>
+<span>•</span>
+<span>1M ROWS</span>
+</div>
+<div>
+<span>CALC: 1.2ms (GPU)</span>
+</div>
+</div>
+<!-- Bottom Sheet Inspector (Fixed/Presented half-height over grid, soft shadow, drag pill) -->
+<section class="absolute bottom-12 left-0 right-0 bg-surface border-t border-strong-line inspector-shadow z-30 rounded-t-lg transition-transform duration-200">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-2 pb-1 cursor-grab">
+<div class="w-10 h-1 bg-strong-line rounded-full"></div>
+</div>
+<!-- Sheet Header -->
+<div class="px-4 py-1.5 flex items-center justify-between border-b border-hairline">
+<div class="flex items-center space-x-2">
+<span class="bg-selection-fill text-chart-1 font-tabular-data font-bold text-[11px] px-1.5 py-0.5 rounded border border-hairline">$</span>
+<h2 class="font-section-title text-section-title text-ink font-bold text-[14px]">revenue</h2>
+<span class="text-[11px] font-caption text-secondary-text">Column D</span>
+</div>
+<button aria-label="Dismiss inspector" class="w-6 h-6 flex items-center justify-center text-secondary-text hover:text-ink hover:bg-raised rounded">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+<div class="p-3 space-y-3 max-h-[220px] overflow-y-auto">
+<!-- KPI Metrics Grid (Sum, Average, Count) -->
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-window-chrome p-2 border border-hairline">
+<span class="font-toolbar-label text-[10px] text-secondary-text uppercase tracking-wider block">Sum</span>
+<div class="font-tabular-data text-ink font-bold text-[13px] truncate mt-0.5" title="$72,061,236.00">
+              $72.06M
+            </div>
+</div>
+<div class="bg-window-chrome p-2 border border-hairline">
+<span class="font-toolbar-label text-[10px] text-secondary-text uppercase tracking-wider block">Average</span>
+<div class="font-tabular-data text-ink font-bold text-[13px] truncate mt-0.5">
+              $72.06
+            </div>
+</div>
+<div class="bg-window-chrome p-2 border border-hairline">
+<span class="font-toolbar-label text-[10px] text-secondary-text uppercase tracking-wider block">Count</span>
+<div class="font-tabular-data text-ink font-bold text-[13px] truncate mt-0.5">
+              1,000,000
+            </div>
+</div>
+</div>
+<!-- Mini Distribution Histogram / Frequency Chart -->
+<div class="bg-window-chrome p-2.5 border border-hairline space-y-1.5">
+<div class="flex items-center justify-between text-[10px] font-caption text-secondary-text">
+<span>FREQUENCY DISTRIBUTION</span>
+<span class="font-tabular-data">Log Scale</span>
+</div>
+<!-- Histogram Bars in teal #0e7c86 -->
+<div class="h-10 flex items-end justify-between gap-1 pt-1 pb-0.5 border-b border-strong-line">
+<div class="w-full bg-chart-1 h-[22%]" title="$0 - $50"></div>
+<div class="w-full bg-chart-1 h-[88%]" title="$50 - $100"></div>
+<div class="w-full bg-chart-1 h-[100%]" title="$100 - $250"></div>
+<div class="w-full bg-chart-1 h-[64%]" title="$250 - $500"></div>
+<div class="w-full bg-chart-1 h-[40%]" title="$500 - $1,000"></div>
+<div class="w-full bg-chart-1 h-[18%]" title="$1,000 - $2,500"></div>
+<div class="w-full bg-chart-1 h-[8%]" title="$2,500+"></div>
+</div>
+<div class="flex justify-between text-[9px] font-tabular-data text-secondary-text">
+<span>$0</span>
+<span>$250</span>
+<span>$2.5k+</span>
+</div>
+</div>
+<!-- Format Row (Currency, 2 Decimals) -->
+<div class="flex items-center justify-between gap-2 text-[11px]">
+<div class="flex-1 flex items-center justify-between bg-window-chrome border border-hairline px-2 py-1.5">
+<span class="text-secondary-text">Format:</span>
+<span class="font-medium text-ink">Currency ($)</span>
+</div>
+<div class="flex-1 flex items-center justify-between bg-window-chrome border border-hairline px-2 py-1.5">
+<span class="text-secondary-text">Decimals:</span>
+<span class="font-tabular-data font-medium text-ink">2</span>
+</div>
+</div>
+<!-- Quick Action Buttons -->
+<div class="grid grid-cols-3 gap-1.5 pt-0.5">
+<button class="h-8 border border-strong-line bg-surface hover:bg-raised text-ink text-[11px] font-medium flex items-center justify-center space-x-1">
+<span class="material-symbols-outlined text-[13px] text-chart-1">filter_alt</span>
+<span>Filter</span>
+</button>
+<button class="h-8 border border-strong-line bg-surface hover:bg-raised text-ink text-[11px] font-medium flex items-center justify-center space-x-1">
+<span class="material-symbols-outlined text-[13px] text-chart-1">south</span>
+<span>Sort Desc</span>
+</button>
+<button class="h-8 bg-chart-1 text-on-primary text-[11px] font-medium flex items-center justify-center space-x-1">
+<span class="material-symbols-outlined text-[13px]">add</span>
+<span>Summary</span>
+</button>
+</div>
+</div>
+</section>
+<!-- BottomNavBar (Anchored Component from JSON) -->
+<!-- JSON: label_texts: ["Sheet", "Report", "New Tab"], icons: ["table_chart", "analytics", "add"] -->
+<!-- Active State: "Sheet" is active (with 2px accent top edge) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-space-xs border-t border-hairline dark:border-strong-line bg-window-chrome dark:bg-inverse-surface h-12">
+<!-- Item 1: Sheet (Active) -->
+<button class="flex flex-col items-center justify-center bg-surface dark:bg-surface-dim text-primary dark:text-inverse-primary border-t-2 border-primary dark:border-inverse-primary px-space-md py-space-xs min-h-[48px] flex-1">
+<span class="material-symbols-outlined text-[18px]">table_chart</span>
+<span class="text-toolbar-label font-toolbar-label text-[10px]">Sheet</span>
+</button>
+<!-- Item 2: Report (Inactive) -->
+<button class="flex flex-col items-center justify-center text-secondary-text dark:text-outline-variant px-space-md py-space-xs min-h-[48px] flex-1 hover:bg-raised active:bg-raised transition-colors duration-150">
+<span class="material-symbols-outlined text-[18px]">analytics</span>
+<span class="text-toolbar-label font-toolbar-label text-[10px]">Report</span>
+</button>
+<!-- Item 3: New Tab (Inactive / Action) -->
+<button class="flex flex-col items-center justify-center text-secondary-text dark:text-outline-variant px-space-md py-space-xs min-h-[48px] flex-1 hover:bg-raised active:bg-raised transition-colors duration-150">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="text-toolbar-label font-toolbar-label text-[10px]">New Tab</span>
+</button>
+</nav>
+</main>
+<script>
+    // Lightweight micro-interactions for mobile inspector and column select
+    document.addEventListener('DOMContentLoaded', () => {
+      const dismissBtn = document.querySelector('button[aria-label="Dismiss inspector"]');
+      const inspector = document.querySelector('section.inspector-shadow');
+      
+      if (dismissBtn && inspector) {
+        dismissBtn.addEventListener('click', () => {
+          inspector.classList.toggle('translate-y-[85%]');
+          const icon = dismissBtn.querySelector('.material-symbols-outlined');
+          if (icon) {
+            icon.textContent = inspector.classList.contains('translate-y-[85%]') ? 'keyboard_arrow_up' : 'close';
+          }
+        });
+      }
+    });
+  </script>
+</body></html>

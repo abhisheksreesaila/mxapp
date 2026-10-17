@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>omxplorer — orders.omx</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "title-bar-active": "#2f6fed",
+            "chart-2": "#f08c2e",
+            "surface-container": "#eeeeee",
+            "title-bar": "#14213d",
+            "hairline": "#e0e5ee",
+            "secondary": "#525e7d",
+            "inverse-primary": "#b1c5ff",
+            "status-good": "#138a52",
+            "on-tertiary-container": "#ffffff",
+            "surface-variant": "#e2e2e2",
+            "on-primary": "#ffffff",
+            "title-bar-hover": "#22325a",
+            "on-error-container": "#93000a",
+            "surface-dim": "#dadada",
+            "tertiary-fixed": "#ffdbcb",
+            "secondary-fixed-dim": "#b9c6ea",
+            "outline": "#737786",
+            "surface-raised": "#f1f4f9",
+            "outline-variant": "#c2c6d7",
+            "on-secondary-fixed-variant": "#3a4664",
+            "chart-8": "#c2569f",
+            "chart-7": "#6b7785",
+            "on-secondary-fixed": "#0d1b36",
+            "chart-3": "#13a39a",
+            "status-warning": "#b7791f",
+            "surface-container-highest": "#e2e2e2",
+            "error-container": "#ffdad6",
+            "on-error": "#ffffff",
+            "chart-4": "#d9485f",
+            "on-primary-fixed-variant": "#0040a0",
+            "inverse-on-surface": "#f0f1f1",
+            "canvas-background": "#f3f5f9",
+            "status-bad": "#d23f57",
+            "primary-fixed-dim": "#b1c5ff",
+            "surface-container-high": "#e8e8e8",
+            "strong-line": "#c5cede",
+            "on-primary-fixed": "#001847",
+            "primary-fixed": "#dae2ff",
+            "on-secondary": "#ffffff",
+            "on-background": "#1a1c1c",
+            "inverse-surface": "#2f3131",
+            "chart-6": "#8aa23b",
+            "on-primary-container": "#ffffff",
+            "on-tertiary-fixed": "#341100",
+            "chart-1": "#2f6fed",
+            "error": "#ba1a1a",
+            "tertiary-container": "#c45400",
+            "primary": "#0055ce",
+            "surface-bright": "#f9f9f9",
+            "selection-fill": "#e5eefe",
+            "secondary-container": "#cdd9fe",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary-fixed-variant": "#793100",
+            "formula-value": "#7b3fe4",
+            "text-body": "#374151",
+            "title-bar-text": "#e8edf7",
+            "surface": "#f9f9f9",
+            "on-surface": "#1a1c1c",
+            "background": "#f9f9f9",
+            "surface-container-low": "#f3f3f4",
+            "on-secondary-container": "#525f7e",
+            "text-ink": "#111827",
+            "text-secondary": "#6b7280",
+            "on-surface-variant": "#424654",
+            "surface-tint": "#0056d0",
+            "secondary-fixed": "#d9e2ff",
+            "primary-container": "#2f6fed",
+            "tertiary": "#9d4200",
+            "tertiary-fixed-dim": "#ffb691",
+            "on-tertiary": "#ffffff",
+            "chart-5": "#7b61ff"
+          },
+          borderRadius: {
+            DEFAULT: "0.125rem",
+            lg: "0.25rem",
+            xl: "0.5rem",
+            full: "0.75rem"
+          },
+          spacing: {
+            "space-lg": "16px",
+            "space-xl": "24px",
+            "margin": "16px",
+            "space-sm": "8px",
+            "space-md": "12px",
+            "space-xs": "4px",
+            "gutter": "4px"
+          },
+          fontFamily: {
+            "toolbar-label": ["Inter"],
+            "page-title": ["Inter"],
+            "section-title": ["Inter"],
+            "caption": ["Inter"],
+            "tabular-data": ["JetBrains Mono"],
+            "body": ["Inter"]
+          },
+          fontSize: {
+            "toolbar-label": ["11px", { lineHeight: "14px", fontWeight: "400" }],
+            "page-title": ["20px", { lineHeight: "26px", fontWeight: "700" }],
+            "section-title": ["15px", { lineHeight: "20px", fontWeight: "600" }],
+            "caption": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+            "tabular-data": ["13px", { lineHeight: "18px", fontWeight: "400" }],
+            "body": ["13px", { lineHeight: "18px", fontWeight: "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    /* Hide scrollbars while preserving scroll functionality */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full bg-canvas-background text-text-body font-body antialiased flex flex-col overflow-hidden select-none">
+<!-- 1. Deep Navy Title Bar & Window Header (height 36px) -->
+<header class="bg-title-bar text-title-bar-text h-[36px] px-3 flex items-center justify-between border-b border-[#22325a] shrink-0 z-30">
+<!-- Window controls & brand -->
+<div class="flex items-center space-x-3">
+<div class="flex items-center space-x-1.5 mr-1">
+<span class="w-2.5 h-2.5 rounded-full bg-[#f87171] inline-block opacity-80 hover:opacity-100 transition-opacity"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-[#fbbf24] inline-block opacity-80 hover:opacity-100 transition-opacity"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-[#34d399] inline-block opacity-80 hover:opacity-100 transition-opacity"></span>
+</div>
+<div class="flex items-center space-x-1">
+<span class="material-symbols-outlined text-primary-container !text-[16px]">data_object</span>
+<span class="font-section-title text-[13px] font-bold text-title-bar-text tracking-tight lowercase">omxplorer</span>
+</div>
+</div>
+<!-- Centered Active Document -->
+<div class="flex items-center justify-center">
+<div class="bg-[#1b2b4d] border border-[#2a3c66] px-2.5 py-0.5 rounded-[4px] flex items-center space-x-1.5 shadow-none">
+<span class="material-symbols-outlined text-primary-fixed-dim !text-[14px]">description</span>
+<span class="font-tabular-data text-[12px] text-title-bar-text font-normal">orders.omx</span>
+<span class="text-[10px] text-secondary-fixed-dim font-toolbar-label px-1 bg-[#14213d] rounded">Sheet: Report</span>
+</div>
+</div>
+<!-- Right Quick Actions -->
+<div class="flex items-center space-x-3 text-toolbar-label">
+<div class="flex items-center space-x-1.5 bg-[#1a2d54] px-2 py-0.5 rounded-[4px] border border-[#273f73]">
+<span class="w-1.5 h-1.5 rounded-full bg-status-good animate-pulse"></span>
+<span class="font-tabular-data text-[11px] text-[#b1c5ff] font-medium tracking-tight">GPU Ready · CUDA</span>
+</div>
+<div class="h-3.5 w-px bg-[#22325a]"></div>
+<span class="font-tabular-data text-[11px] text-title-bar-text hover:text-white cursor-pointer px-1">100%</span>
+<div class="flex items-center space-x-1">
+<button class="p-1 hover:bg-title-bar-hover rounded text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined !text-[16px]">terminal</span>
+</button>
+<button class="p-1 hover:bg-title-bar-hover rounded text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined !text-[16px]">share</span>
+</button>
+<button class="p-1 hover:bg-title-bar-hover rounded text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined !text-[16px]">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- 2. Deep Navy Toolbar (height 56px) -->
+<div class="bg-title-bar h-[56px] px-3 flex items-center border-b border-[#22325a] shrink-0 text-title-bar-text overflow-x-auto no-scrollbar">
+<!-- Group 1: File/History -->
+<div class="flex items-center">
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Open</span>
+</button>
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">save</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Save</span>
+</button>
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">undo</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Undo</span>
+</button>
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">redo</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Redo</span>
+</button>
+</div>
+<!-- Vertical hairline separator -->
+<div class="h-7 w-px bg-[#22325a] mx-1"></div>
+<!-- Group 2: Data Components -->
+<div class="flex items-center">
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">table_chart</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Table</span>
+</button>
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Chart</span>
+</button>
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">pivot_table_chart</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Pivot</span>
+</button>
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">functions</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Formula</span>
+</button>
+</div>
+<!-- Vertical hairline separator -->
+<div class="h-7 w-px bg-[#22325a] mx-1"></div>
+<!-- Group 3: Tile Types (KPI active) -->
+<div class="flex items-center">
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center bg-title-bar-active text-on-primary rounded-[4px] transition-colors duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">speed</span>
+<span class="font-toolbar-label text-toolbar-label mt-1 font-medium">KPI</span>
+</button>
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Chart tile</span>
+</button>
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">title</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Text</span>
+</button>
+</div>
+<!-- Vertical hairline separator -->
+<div class="h-7 w-px bg-[#22325a] mx-1"></div>
+<!-- Group 4: Format -->
+<div class="flex items-center">
+<button class="w-[64px] h-[48px] flex flex-col items-center justify-center hover:bg-title-bar-hover rounded-[4px] text-title-bar-text transition-colors duration-150">
+<span class="material-symbols-outlined">format_shapes</span>
+<span class="font-toolbar-label text-toolbar-label mt-1">Format</span>
+</button>
+</div>
+</div>
+<!-- 3. Main Work Area (Split layout: Canvas + Inspector) -->
+<div class="flex-1 flex overflow-hidden relative">
+<!-- Centred scrollable Report canvas -->
+<main class="flex-1 overflow-y-auto p-6 flex justify-center bg-canvas-background">
+<div class="w-full max-w-5xl bg-surface-container-lowest border border-hairline rounded-[6px] shadow-none p-8 flex flex-col space-y-6">
+<!-- Report Header -->
+<div class="border-b border-hairline pb-4 flex flex-col justify-start">
+<div class="flex items-center justify-between">
+<h1 class="font-page-title text-page-title text-text-ink tracking-tight font-bold">Q3 orders</h1>
+<div class="flex items-center space-x-2">
+<span class="text-caption font-caption text-secondary flex items-center">
+<span class="w-2 h-2 rounded-full bg-status-good inline-block mr-1.5"></span> Live model sync
+              </span>
+<button class="px-2.5 py-1 text-caption font-caption bg-surface-raised hover:bg-surface-container text-text-ink border border-hairline rounded-[4px] flex items-center space-x-1">
+<span class="material-symbols-outlined !text-[14px]">refresh</span>
+<span>Re-query</span>
+</button>
+</div>
+</div>
+<p class="font-caption text-caption text-text-secondary mt-1">
+            Updated just now · <span class="font-tabular-data text-[12px] text-text-ink font-medium">1,000,000</span> rows · <span class="font-tabular-data text-[12px] text-primary font-medium">4.1 ms</span> on the GPU
+          </p>
+</div>
+<!-- Filter Chips Row -->
+<div class="flex items-center flex-wrap gap-2 pt-1 pb-1">
+<!-- Active filter: region -->
+<div class="flex items-center bg-[#e5eefe] text-primary border border-[#b1c5ff] px-2.5 py-1 rounded-[4px] font-caption text-caption">
+<span class="font-medium mr-1.5">region = West</span>
+<button class="hover:text-primary-container flex items-center">
+<span class="material-symbols-outlined !text-[13px]">close</span>
+</button>
+</div>
+<!-- Active filter: date -->
+<div class="flex items-center bg-[#e5eefe] text-primary border border-[#b1c5ff] px-2.5 py-1 rounded-[4px] font-caption text-caption">
+<span class="font-medium mr-1.5">date: Jul–Sep 2026</span>
+<button class="hover:text-primary-container flex items-center">
+<span class="material-symbols-outlined !text-[13px]">close</span>
+</button>
+</div>
+<!-- Neutral filter: carrier -->
+<div class="flex items-center bg-surface-raised text-text-body border border-hairline px-2.5 py-1 rounded-[4px] font-caption text-caption">
+<span class="text-secondary mr-1.5">carrier:</span>
+<span class="font-medium text-text-ink">all</span>
+<span class="material-symbols-outlined !text-[14px] text-secondary ml-1">arrow_drop_down</span>
+</div>
+<!-- Add Filter Button -->
+<button class="flex items-center border border-dashed border-[#2f6fed] text-[#2f6fed] hover:bg-[#e5eefe] px-2.5 py-1 rounded-[4px] font-caption text-caption transition-colors">
+<span class="material-symbols-outlined !text-[14px] mr-1">add</span>
+<span>Filter</span>
+</button>
+</div>
+<!-- Row of Four KPI Cards -->
+<div class="grid grid-cols-4 gap-4">
+<!-- Card 1: SELECTED (Revenue) -->
+<div class="bg-surface-container-lowest border-2 border-primary-container rounded-[6px] p-3.5 relative bg-[#fcfdff]">
+<div class="flex justify-between items-start">
+<span class="text-caption font-caption text-secondary font-medium">Revenue</span>
+<span class="text-[11px] font-tabular-data text-status-good bg-[#eaf5ef] px-1.5 py-0.5 rounded-[4px] font-medium">+4.2%</span>
+</div>
+<div class="mt-2 font-tabular-data text-[22px] font-bold text-text-ink tracking-tight">
+              $18.4M
+            </div>
+<!-- Smooth SVG sparkline -->
+<div class="mt-2 h-7 w-full">
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 100 24">
+<path d="M 0,18 Q 20,20 35,13 T 70,10 T 100,3" fill="none" stroke="#2f6fed" stroke-linecap="round" stroke-width="2"></path>
+<circle cx="100" cy="3" fill="#2f6fed" r="3"></circle>
+</svg>
+</div>
+<div class="mt-1 flex items-center justify-between text-[10px] text-secondary">
+<span>vs prev quarter</span>
+<span class="font-tabular-data">$17.6M</span>
+</div>
+</div>
+<!-- Card 2: Orders -->
+<div class="bg-surface-container-lowest border border-hairline rounded-[6px] p-3.5">
+<div class="flex justify-between items-start">
+<span class="text-caption font-caption text-secondary font-medium">Orders</span>
+<span class="text-[11px] font-tabular-data text-status-good bg-[#eaf5ef] px-1.5 py-0.5 rounded-[4px] font-medium">+1.1%</span>
+</div>
+<div class="mt-2 font-tabular-data text-[22px] font-bold text-text-ink tracking-tight">
+              255,102
+            </div>
+<div class="mt-2 h-7 w-full">
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 100 24">
+<path d="M 0,16 Q 25,18 45,11 T 80,12 T 100,5" fill="none" stroke="#525e7d" stroke-linecap="round" stroke-width="1.5"></path>
+</svg>
+</div>
+<div class="mt-1 flex items-center justify-between text-[10px] text-secondary">
+<span>vs prev quarter</span>
+<span class="font-tabular-data">252,326</span>
+</div>
+</div>
+<!-- Card 3: Average order -->
+<div class="bg-surface-container-lowest border border-hairline rounded-[6px] p-3.5">
+<div class="flex justify-between items-start">
+<span class="text-caption font-caption text-secondary font-medium">Average order</span>
+<span class="text-[11px] font-tabular-data text-status-bad bg-[#fdeef1] px-1.5 py-0.5 rounded-[4px] font-medium">-0.8%</span>
+</div>
+<div class="mt-2 font-tabular-data text-[22px] font-bold text-text-ink tracking-tight">
+              $72.06
+            </div>
+<div class="mt-2 h-7 w-full">
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 100 24">
+<path d="M 0,6 Q 20,4 40,12 T 75,15 T 100,20" fill="none" stroke="#d23f57" stroke-linecap="round" stroke-width="1.5"></path>
+</svg>
+</div>
+<div class="mt-1 flex items-center justify-between text-[10px] text-secondary">
+<span>vs prev quarter</span>
+<span class="font-tabular-data">$72.64</span>
+</div>
+</div>
+<!-- Card 4: Margin -->
+<div class="bg-surface-container-lowest border border-hairline rounded-[6px] p-3.5">
+<div class="flex justify-between items-start">
+<span class="text-caption font-caption text-secondary font-medium">Margin</span>
+<span class="text-[11px] font-tabular-data text-status-good bg-[#eaf5ef] px-1.5 py-0.5 rounded-[4px] font-medium">+0.6 pts</span>
+</div>
+<div class="mt-2 font-tabular-data text-[22px] font-bold text-text-ink tracking-tight">
+              31.4%
+            </div>
+<div class="mt-2 h-7 w-full">
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 100 24">
+<path d="M 0,14 Q 30,16 50,10 T 80,8 T 100,4" fill="none" stroke="#138a52" stroke-linecap="round" stroke-width="1.5"></path>
+</svg>
+</div>
+<div class="mt-1 flex items-center justify-between text-[10px] text-secondary">
+<span>vs target</span>
+<span class="font-tabular-data">30.8%</span>
+</div>
+</div>
+</div>
+<!-- Two Charts Side by Side -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Left Chart: Revenue by month -->
+<div class="border border-hairline rounded-[6px] p-4 bg-surface-container-lowest flex flex-col justify-between">
+<div class="flex justify-between items-center mb-3">
+<h2 class="font-section-title text-[13px] font-semibold text-text-ink">Revenue by month</h2>
+<div class="flex items-center space-x-1">
+<button class="p-1 hover:bg-surface-raised rounded text-secondary">
+<span class="material-symbols-outlined !text-[16px]">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Vector Line Chart with Area and Popover -->
+<div class="relative h-44 w-full">
+<!-- Thin gridlines -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+<div class="border-b border-[#f1f4f9] w-full h-0"></div>
+<div class="border-b border-[#f1f4f9] w-full h-0"></div>
+<div class="border-b border-[#f1f4f9] w-full h-0"></div>
+<div class="border-b border-hairline w-full h-0"></div>
+</div>
+<!-- SVG Line and Gradient Tint -->
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 360 140">
+<defs>
+<lineargradient id="areaGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#2f6fed" stop-opacity="0.18"></stop>
+<stop offset="100%" stop-color="#2f6fed" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<!-- Area -->
+<path d="M 10,120 L 10,95 L 50,82 L 95,90 L 140,70 L 185,62 L 230,50 L 275,32 L 320,18 L 350,24 L 350,135 L 10,135 Z" fill="url(#areaGrad)"></path>
+<!-- Line -->
+<path d="M 10,95 L 50,82 L 95,90 L 140,70 L 185,62 L 230,50 L 275,32 L 320,18 L 350,24" fill="none" stroke="#2f6fed" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<!-- Highlight Point on August (x: 275, y: 32) -->
+<circle cx="275" cy="32" fill="#2f6fed" r="4.5" stroke="#ffffff" stroke-width="2"></circle>
+<line stroke="#2f6fed" stroke-dasharray="2 2" stroke-opacity="0.6" stroke-width="1" x1="275" x2="275" y1="32" y2="135"></line>
+</svg>
+<!-- Interactive Hover Dark Popover on Aug -->
+<div class="absolute left-[70%] top-[2px] -translate-x-1/2 bg-[#14213d] text-white px-2 py-1 rounded-[4px] shadow-sm pointer-events-none flex flex-col items-center">
+<span class="font-tabular-data text-[11px] font-semibold text-white tracking-tight">Aug · $6.3M</span>
+<span class="text-[9px] text-[#b1c5ff] leading-none">+12.4% MoM</span>
+<div class="w-1.5 h-1.5 bg-[#14213d] rotate-45 -mb-1 mt-0.5"></div>
+</div>
+</div>
+<!-- X Axis Labels -->
+<div class="flex justify-between text-[11px] font-caption text-secondary mt-2 px-1 border-t border-hairline pt-1.5">
+<span>Jan</span>
+<span>Feb</span>
+<span>Mar</span>
+<span>Apr</span>
+<span>May</span>
+<span>Jun</span>
+<span>Jul</span>
+<span class="font-bold text-text-ink">Aug</span>
+<span>Sep</span>
+</div>
+</div>
+<!-- Right Chart: Revenue by carrier (horizontal bars) -->
+<div class="border border-hairline rounded-[6px] p-4 bg-surface-container-lowest flex flex-col justify-between">
+<div class="flex justify-between items-center mb-3">
+<h2 class="font-section-title text-[13px] font-semibold text-text-ink">Revenue by carrier</h2>
+<span class="text-[11px] font-tabular-data text-secondary">Total: $18.4M</span>
+</div>
+<div class="space-y-3 my-auto">
+<!-- UPS -->
+<div class="space-y-1">
+<div class="flex justify-between text-caption font-caption">
+<span class="font-medium text-text-ink">UPS</span>
+<span class="font-tabular-data text-[12px] text-text-ink font-medium">$7.8M</span>
+</div>
+<div class="w-full bg-[#f1f4f9] h-3.5 rounded-[3px] overflow-hidden">
+<div class="bg-chart-1 h-full rounded-[3px]" style="width: 42.4%;"></div>
+</div>
+</div>
+<!-- FedEx -->
+<div class="space-y-1">
+<div class="flex justify-between text-caption font-caption">
+<span class="font-medium text-text-ink">FedEx</span>
+<span class="font-tabular-data text-[12px] text-text-ink font-medium">$5.4M</span>
+</div>
+<div class="w-full bg-[#f1f4f9] h-3.5 rounded-[3px] overflow-hidden">
+<div class="bg-chart-2 h-full rounded-[3px]" style="width: 29.3%;"></div>
+</div>
+</div>
+<!-- DHL -->
+<div class="space-y-1">
+<div class="flex justify-between text-caption font-caption">
+<span class="font-medium text-text-ink">DHL</span>
+<span class="font-tabular-data text-[12px] text-text-ink font-medium">$3.1M</span>
+</div>
+<div class="w-full bg-[#f1f4f9] h-3.5 rounded-[3px] overflow-hidden">
+<div class="bg-chart-3 h-full rounded-[3px]" style="width: 16.8%;"></div>
+</div>
+</div>
+<!-- USPS -->
+<div class="space-y-1">
+<div class="flex justify-between text-caption font-caption">
+<span class="font-medium text-text-ink">USPS</span>
+<span class="font-tabular-data text-[12px] text-text-ink font-medium">$2.1M</span>
+</div>
+<div class="w-full bg-[#f1f4f9] h-3.5 rounded-[3px] overflow-hidden">
+<div class="bg-chart-4 h-full rounded-[3px]" style="width: 11.4%;"></div>
+</div>
+</div>
+</div>
+<div class="pt-2 border-t border-hairline flex items-center justify-between text-[11px] text-secondary">
+<span>Standard ground &amp; freight</span>
+<span class="font-tabular-data text-[11px]">4 carriers</span>
+</div>
+</div>
+</div>
+<!-- Pivot Table -->
+<div class="border border-hairline rounded-[6px] overflow-hidden bg-surface-container-lowest">
+<div class="px-3.5 py-2.5 bg-surface-raised border-b border-hairline flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-secondary !text-[16px]">pivot_table_chart</span>
+<span class="font-section-title text-[13px] font-semibold text-text-ink">Revenue · region × product</span>
+</div>
+<div class="flex items-center space-x-1.5 text-caption">
+<span class="text-secondary text-[11px]">Rows: Region</span>
+<span class="text-hairline">|</span>
+<span class="text-secondary text-[11px]">Cols: Category</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse font-body text-[12px]">
+<thead>
+<tr class="bg-surface-raised text-text-ink font-medium border-b border-hairline h-7">
+<th class="px-3 py-1 font-semibold text-secondary w-36">Region</th>
+<th class="px-3 py-1 text-right font-semibold">Hardware</th>
+<th class="px-3 py-1 text-right font-semibold">Software</th>
+<th class="px-3 py-1 text-right font-semibold">Cloud</th>
+<th class="px-3 py-1 text-right font-semibold">Peripherals</th>
+<th class="px-3 py-1 text-right font-semibold">Support</th>
+<th class="px-3 py-1 text-right font-bold text-text-ink bg-[#eaf0fb]">Total</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-hairline">
+<tr class="h-7 hover:bg-selection-fill transition-colors">
+<td class="px-3 py-1 font-medium text-text-ink">North America</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$2,410,200</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$1,980,450</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$1,420,100</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$842,900</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$410,350</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold text-text-ink bg-[#f5f8fd]">$7,064,000</td>
+</tr>
+<tr class="h-7 hover:bg-selection-fill transition-colors">
+<td class="px-3 py-1 font-medium text-text-ink">Europe (EMEA)</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$1,890,500</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$1,450,200</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$1,110,800</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$620,400</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$320,100</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold text-text-ink bg-[#f5f8fd]">$5,392,000</td>
+</tr>
+<tr class="h-7 hover:bg-selection-fill transition-colors">
+<td class="px-3 py-1 font-medium text-text-ink">Asia Pacific</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$1,350,800</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$920,400</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$780,250</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$490,100</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$210,050</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold text-text-ink bg-[#f5f8fd]">$3,751,600</td>
+</tr>
+<tr class="h-7 hover:bg-selection-fill transition-colors">
+<td class="px-3 py-1 font-medium text-text-ink">Latin America</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$820,100</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$540,800</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$410,200</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$280,300</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px]">$140,900</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold text-text-ink bg-[#f5f8fd]">$2,192,300</td>
+</tr>
+<!-- Total Row -->
+<tr class="h-7 bg-[#f1f4f9] border-t-2 border-hairline font-semibold text-text-ink">
+<td class="px-3 py-1 font-bold">Total</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold">$6,471,600</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold">$4,891,850</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold">$3,721,350</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold">$2,233,700</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold">$1,081,400</td>
+<td class="px-3 py-1 text-right font-tabular-data text-[12px] font-bold text-primary bg-[#e5eefe]">$18,399,900</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- "Add a tile" Row -->
+<div class="border border-dashed border-strong-line rounded-[6px] p-4 text-center bg-surface-container-low hover:bg-[#ebedf2] transition-colors">
+<div class="flex flex-col items-center justify-center space-y-2">
+<div class="flex items-center space-x-1 text-secondary text-caption font-medium">
+<span class="material-symbols-outlined !text-[16px]">add_circle</span>
+<span>Insert computed tile into this report</span>
+</div>
+<div class="flex items-center space-x-2 pt-1">
+<button class="px-3 py-1 bg-surface-container-lowest border border-hairline rounded-[6px] text-caption font-medium text-text-ink hover:border-primary-container shadow-none flex items-center space-x-1">
+<span class="font-tabular-data text-primary text-[11px] font-bold">∑</span>
+<span>Sum</span>
+</button>
+<button class="px-3 py-1 bg-surface-container-lowest border border-hairline rounded-[6px] text-caption font-medium text-text-ink hover:border-primary-container shadow-none flex items-center space-x-1">
+<span class="font-tabular-data text-chart-2 text-[11px] font-bold">μ</span>
+<span>Average</span>
+</button>
+<button class="px-3 py-1 bg-surface-container-lowest border border-hairline rounded-[6px] text-caption font-medium text-text-ink hover:border-primary-container shadow-none flex items-center space-x-1">
+<span class="font-tabular-data text-chart-3 text-[11px] font-bold">#</span>
+<span>Count</span>
+</button>
+<button class="px-3 py-1 bg-surface-container-lowest border border-hairline rounded-[6px] text-caption font-medium text-text-ink hover:border-primary-container shadow-none flex items-center space-x-1">
+<span class="material-symbols-outlined !text-[14px] text-chart-5">monitoring</span>
+<span>Chart</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- 5. Right Inspector Panel (300px width, docked right) -->
+<aside class="w-[300px] h-full bg-surface-container-lowest border-l border-hairline flex flex-col shrink-0 z-20">
+<!-- Header with segmented tabs: Tile · Data -->
+<div class="px-4 pt-3 border-b border-hairline">
+<div class="flex items-center justify-between pb-2">
+<span class="font-section-title text-[13px] font-semibold text-text-ink">Inspector</span>
+<span class="text-[11px] text-secondary font-tabular-data">ID: tile_kpi_rev</span>
+</div>
+<div class="flex space-x-4 border-b border-transparent -mb-[1px]">
+<button class="pb-2 border-b-2 border-primary-container text-primary font-section-title text-caption font-semibold flex items-center space-x-1">
+<span class="material-symbols-outlined !text-[15px]">tune</span>
+<span>Tile</span>
+</button>
+<button class="pb-2 text-secondary hover:text-text-ink font-caption text-caption flex items-center space-x-1">
+<span class="material-symbols-outlined !text-[15px]">database</span>
+<span>Data</span>
+</button>
+<button class="pb-2 text-secondary hover:text-text-ink font-caption text-caption flex items-center space-x-1">
+<span class="material-symbols-outlined !text-[15px]">style</span>
+<span>Style</span>
+</button>
+</div>
+</div>
+<!-- Inspector Scrollable Body -->
+<div class="flex-1 overflow-y-auto p-4 space-y-5 text-body">
+<!-- Section 1: Tile Properties -->
+<div class="space-y-3">
+<h3 class="text-[11px] font-semibold text-secondary tracking-wider">TILE PROPERTIES</h3>
+<!-- Field: Value column -->
+<div class="space-y-1">
+<label class="block text-caption font-caption text-text-ink">Value column</label>
+<div class="relative">
+<div class="w-full h-8 px-2.5 bg-surface-raised border border-hairline rounded-[4px] flex items-center justify-between cursor-pointer hover:border-strong-line">
+<div class="flex items-center space-x-2">
+<span class="w-4 h-4 bg-[#dae2ff] text-primary rounded-[2px] font-tabular-data text-[10px] flex items-center justify-center font-bold">#</span>
+<span class="font-tabular-data text-[12px] text-text-ink">revenue</span>
+</div>
+<span class="material-symbols-outlined !text-[16px] text-secondary">unfold_more</span>
+</div>
+</div>
+</div>
+<!-- Field: Aggregate -->
+<div class="space-y-1">
+<label class="block text-caption font-caption text-text-ink">Aggregate</label>
+<div class="grid grid-cols-3 gap-1 p-0.5 bg-surface-raised border border-hairline rounded-[4px]">
+<button class="py-1 text-[11px] font-medium bg-title-bar-active text-white rounded-[2px] shadow-none">Sum</button>
+<button class="py-1 text-[11px] font-medium text-text-body hover:bg-surface-container rounded-[2px]">Average</button>
+<button class="py-1 text-[11px] font-medium text-text-body hover:bg-surface-container rounded-[2px]">Count</button>
+</div>
+</div>
+<!-- Field: Compare to -->
+<div class="space-y-1">
+<label class="block text-caption font-caption text-text-ink">Compare to</label>
+<div class="w-full h-8 px-2.5 bg-surface-raised border border-hairline rounded-[4px] flex items-center justify-between cursor-pointer hover:border-strong-line">
+<span class="text-caption font-caption text-text-ink">previous quarter</span>
+<span class="material-symbols-outlined !text-[16px] text-secondary">arrow_drop_down</span>
+</div>
+</div>
+</div>
+<div class="h-px bg-hairline w-full"></div>
+<!-- Section 2: Display & Formatting -->
+<div class="space-y-3">
+<h3 class="text-[11px] font-semibold text-secondary tracking-wider">DISPLAY &amp; FORMATTING</h3>
+<!-- Format dropdown -->
+<div class="space-y-1">
+<label class="block text-caption font-caption text-text-ink">Format</label>
+<div class="w-full h-8 px-2.5 bg-surface-raised border border-hairline rounded-[4px] flex items-center justify-between cursor-pointer hover:border-strong-line">
+<span class="text-caption font-caption text-text-ink">Currency ($ USD)</span>
+<span class="material-symbols-outlined !text-[16px] text-secondary">arrow_drop_down</span>
+</div>
+</div>
+<!-- Decimals stepper -->
+<div class="space-y-1">
+<label class="block text-caption font-caption text-text-ink">Decimals</label>
+<div class="flex items-center h-8 bg-surface-raised border border-hairline rounded-[4px] overflow-hidden">
+<input class="w-full px-2.5 bg-transparent border-0 font-tabular-data text-[12px] text-text-ink focus:ring-0 focus:outline-none" readonly="" type="text" value="1"/>
+<div class="flex flex-col border-l border-hairline h-full w-6">
+<button class="flex-1 flex items-center justify-center hover:bg-surface-container text-secondary text-[10px] leading-none border-b border-hairline">▲</button>
+<button class="flex-1 flex items-center justify-center hover:bg-surface-container text-secondary text-[10px] leading-none">▼</button>
+</div>
+</div>
+</div>
+<!-- Show sparkline toggle/switch ON -->
+<div class="flex items-center justify-between pt-1">
+<span class="text-caption font-caption text-text-ink">Show sparkline</span>
+<div class="w-8 h-4 bg-primary-container rounded-full p-0.5 cursor-pointer flex items-center justify-end">
+<div class="w-3 h-3 bg-white rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="h-px bg-hairline w-full"></div>
+<!-- Section 3: Performance -->
+<div class="space-y-2">
+<h3 class="text-[11px] font-semibold text-secondary tracking-wider">PERFORMANCE</h3>
+<div class="p-2.5 bg-surface-raised border border-hairline rounded-[4px] space-y-1.5">
+<div class="flex items-center justify-between">
+<span class="text-[11px] text-secondary">Engine</span>
+<div class="flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-status-good"></span>
+<span class="font-tabular-data text-[11px] font-medium text-text-ink">CUDA 12.4</span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-[11px] text-secondary">Device</span>
+<span class="font-tabular-data text-[11px] text-text-ink font-medium">NVIDIA RTX 4090</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-[11px] text-secondary">Latency</span>
+<span class="font-tabular-data text-[11px] text-status-good font-bold">4.1 ms</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Inspector Footer CTA -->
+<div class="p-3 border-t border-hairline bg-surface-raised">
+<button class="w-full py-1.5 bg-primary hover:bg-[#0047ac] text-on-primary font-caption font-semibold rounded-[4px] text-center transition-colors">
+          Apply Pipeline
+        </button>
+</div>
+</aside>
+</div>
+<!-- 6. Bottom Bar (height 28px) -->
+<footer class="h-[28px] bg-surface-container-lowest border-t border-hairline flex items-center justify-between px-3 text-caption shrink-0 select-none z-30">
+<!-- Left: Sheet tabs -->
+<div class="flex items-center h-full space-x-0.5">
+<!-- Inactive Sheet: Orders -->
+<button class="h-full px-3 flex items-center text-secondary hover:text-text-ink hover:bg-surface-raised font-caption border-r border-hairline transition-colors">
+<span>Orders</span>
+</button>
+<!-- Active Sheet: Report -->
+<div class="h-full px-3 flex items-center text-text-ink font-medium bg-surface-container-lowest border-t-2 border-t-primary-container border-r border-hairline">
+<span class="material-symbols-outlined !text-[13px] mr-1 text-primary">assessment</span>
+<span>Report</span>
+</div>
+<!-- Add Sheet Button -->
+<button class="w-6 h-6 flex items-center justify-center hover:bg-surface-raised rounded text-secondary hover:text-text-ink ml-1">
+<span class="material-symbols-outlined !text-[15px]">add</span>
+</button>
+</div>
+<!-- Right: Status bar with monospace JetBrains Mono figures -->
+<div class="flex items-center space-x-3 text-secondary font-tabular-data text-[11px]">
+<span>Filtered: <strong class="text-text-ink font-medium">255,102</strong> of 1,000,000 rows</span>
+<span class="text-hairline">|</span>
+<span>Selection Sum: <strong class="text-primary font-semibold">$18,412,980</strong></span>
+<span class="text-hairline">|</span>
+<span class="flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-status-good inline-block"></span>
+<span class="text-text-ink">NVIDIA RTX 4090 (4.1 ms)</span>
+</span>
+</div>
+</footer>
+</body></html>

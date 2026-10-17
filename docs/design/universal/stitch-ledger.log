@@ -1,0 +1,13 @@
+project 13667871302139021251
+{
+  "success": true,
+  "data": {
+    "path": "ledger.md",
+    "project": "13667871302139021251",
+    "id": "1843028332981017988",
+    "status": "uploaded",
+    "appliedScreenIds": [],
+    "applyCommand": "stitch edit screen <screen-id> --project 13667871302139021251 --design-system 1843028332981017988"
+  }
+}
+done

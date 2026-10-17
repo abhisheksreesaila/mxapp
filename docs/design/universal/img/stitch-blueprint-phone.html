@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=390, height=844, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>omxplorer - orders.csv</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "chart-8": "#c2569f",
+            "surface-container-high": "#e8e8e8",
+            "secondary-fixed-dim": "#b9c6ea",
+            "on-primary-fixed-variant": "#0040a0",
+            "on-tertiary-fixed": "#341100",
+            "canvas-background": "#f3f5f9",
+            "tertiary-container": "#c45400",
+            "tertiary-fixed": "#ffdbcb",
+            "tertiary": "#9d4200",
+            "on-secondary-fixed": "#0d1b36",
+            "surface-tint": "#0056d0",
+            "on-secondary": "#ffffff",
+            "surface-variant": "#e2e2e2",
+            "on-tertiary-container": "#ffffff",
+            "on-secondary-container": "#525f7e",
+            "selection-fill": "#e5eefe",
+            "on-error-container": "#93000a",
+            "hairline": "#e0e5ee",
+            "title-bar": "#14213d",
+            "status-warning": "#b7791f",
+            "background": "#f9f9f9",
+            "surface-container": "#eeeeee",
+            "text-secondary": "#6b7280",
+            "tertiary-fixed-dim": "#ffb691",
+            "on-primary-fixed": "#001847",
+            "chart-4": "#d9485f",
+            "chart-1": "#2f6fed",
+            "title-bar-active": "#2f6fed",
+            "surface": "#f9f9f9",
+            "on-surface": "#1a1c1c",
+            "on-error": "#ffffff",
+            "chart-6": "#8aa23b",
+            "status-bad": "#d23f57",
+            "surface-container-low": "#f3f3f4",
+            "formula-value": "#7b3fe4",
+            "chart-2": "#f08c2e",
+            "primary": "#0055ce",
+            "secondary": "#525e7d",
+            "status-good": "#138a52",
+            "on-secondary-fixed-variant": "#3a4664",
+            "chart-3": "#13a39a",
+            "on-primary": "#ffffff",
+            "inverse-surface": "#2f3131",
+            "text-body": "#374151",
+            "on-surface-variant": "#424654",
+            "title-bar-hover": "#22325a",
+            "title-bar-text": "#e8edf7",
+            "strong-line": "#c5cede",
+            "outline": "#737786",
+            "chart-7": "#6b7785",
+            "secondary-container": "#cdd9fe",
+            "primary-fixed-dim": "#b1c5ff",
+            "error": "#ba1a1a",
+            "text-ink": "#111827",
+            "on-background": "#1a1c1c",
+            "error-container": "#ffdad6",
+            "on-tertiary": "#ffffff",
+            "on-primary-container": "#ffffff",
+            "surface-dim": "#dadada",
+            "primary-container": "#2f6fed",
+            "inverse-on-surface": "#f0f1f1",
+            "primary-fixed": "#dae2ff",
+            "surface-bright": "#f9f9f9",
+            "outline-variant": "#c2c6d7",
+            "secondary-fixed": "#d9e2ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-raised": "#f1f4f9",
+            "surface-container-highest": "#e2e2e2",
+            "inverse-primary": "#b1c5ff",
+            "on-tertiary-fixed-variant": "#793100",
+            "chart-5": "#7b61ff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "16px",
+            "gutter": "4px",
+            "space-xl": "24px",
+            "space-lg": "16px",
+            "space-xs": "4px",
+            "space-sm": "8px",
+            "space-md": "12px"
+          },
+          "fontFamily": {
+            "page-title": ["Inter"],
+            "section-title": ["Inter"],
+            "caption": ["Inter"],
+            "body": ["Inter"],
+            "tabular-data": ["JetBrains Mono"],
+            "toolbar-label": ["Inter"]
+          },
+          "fontSize": {
+            "page-title": ["20px", { "lineHeight": "26px", "fontWeight": "700" }],
+            "section-title": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "body": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "tabular-data": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "toolbar-label": ["11px", { "lineHeight": "14px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-canvas-background text-text-ink antialiased select-none overflow-hidden h-full font-body text-body">
+<div class="w-[390px] h-[844px] mx-auto flex flex-col bg-canvas-background relative overflow-hidden border border-hairline shadow-2xl">
+<!-- Top Hardware Status Simulation -->
+<div class="h-10 bg-title-bar flex items-center justify-between px-space-lg text-title-bar-text text-[12px] font-tabular-data font-medium tracking-tight shrink-0 z-50">
+<span>9:41</span>
+<div class="flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[14px]">wifi</span>
+<span class="material-symbols-outlined text-[16px]">battery_full</span>
+</div>
+</div>
+<!-- TopAppBar Shared Component Blueprint Execution -->
+<header class="bg-title-bar text-title-bar-text border-b border-hairline flat no shadows fixed top-10 left-0 w-full z-50 flex items-center justify-between px-space-md h-12">
+<div class="flex items-center space-x-2">
+<button aria-label="Back" class="w-8 h-8 flex items-center justify-center text-title-bar-text hover:bg-title-bar-hover active:opacity-80 transition-opacity duration-150 rounded">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+</button>
+<div class="flex items-center space-x-1.5">
+<span class="font-section-title text-section-title text-title-bar-text tracking-tight">orders.csv</span>
+<span class="text-[10px] bg-title-bar-hover text-chart-1 font-tabular-data px-1.5 py-0.5 rounded font-medium border border-chart-1/30">1M ROWS</span>
+</div>
+</div>
+<div class="flex items-center space-x-1">
+<button aria-label="More Options" class="w-8 h-8 flex items-center justify-center text-title-bar-text hover:bg-title-bar-hover active:opacity-80 transition-opacity duration-150 rounded">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Horizontal Quick-Tool Command Strip -->
+<div class="mt-[88px] h-12 bg-title-bar flex items-center overflow-x-auto no-scrollbar px-space-xs border-b border-title-bar-hover shrink-0 z-30">
+<button class="flex flex-col items-center justify-center min-w-[54px] h-10 text-title-bar-text hover:bg-title-bar-hover active:opacity-80 transition-opacity rounded">
+<span class="material-symbols-outlined text-[17px] text-chart-1">bar_chart</span>
+<span class="font-toolbar-label text-toolbar-label text-title-bar-text mt-0.5">Chart</span>
+</button>
+<div class="w-[1px] h-5 bg-title-bar-hover mx-0.5"></div>
+<button class="flex flex-col items-center justify-center min-w-[54px] h-10 text-title-bar-text hover:bg-title-bar-hover active:opacity-80 transition-opacity rounded">
+<span class="material-symbols-outlined text-[17px]">pivot_table_chart</span>
+<span class="font-toolbar-label text-toolbar-label text-title-bar-text mt-0.5">Pivot</span>
+</button>
+<div class="w-[1px] h-5 bg-title-bar-hover mx-0.5"></div>
+<button class="flex flex-col items-center justify-center min-w-[54px] h-10 text-title-bar-text hover:bg-title-bar-hover active:opacity-80 transition-opacity rounded">
+<span class="material-symbols-outlined text-[17px]">functions</span>
+<span class="font-toolbar-label text-toolbar-label text-title-bar-text mt-0.5">Formula</span>
+</button>
+<div class="w-[1px] h-5 bg-title-bar-hover mx-0.5"></div>
+<button class="flex flex-col items-center justify-center min-w-[54px] h-10 text-title-bar-text hover:bg-title-bar-hover active:opacity-80 transition-opacity rounded">
+<span class="material-symbols-outlined text-[17px]">swap_vert</span>
+<span class="font-toolbar-label text-toolbar-label text-title-bar-text mt-0.5">Sort</span>
+</button>
+<div class="w-[1px] h-5 bg-title-bar-hover mx-0.5"></div>
+<button class="flex flex-col items-center justify-center min-w-[54px] h-10 text-title-bar-text hover:bg-title-bar-hover active:opacity-80 transition-opacity rounded">
+<span class="material-symbols-outlined text-[17px]">filter_alt</span>
+<span class="font-toolbar-label text-toolbar-label text-title-bar-text mt-0.5">Filter</span>
+</button>
+<div class="w-[1px] h-5 bg-title-bar-hover mx-0.5"></div>
+<button class="flex flex-col items-center justify-center min-w-[54px] h-10 text-title-bar-text hover:bg-title-bar-hover active:opacity-80 transition-opacity rounded">
+<span class="material-symbols-outlined text-[17px]">format_shapes</span>
+<span class="font-toolbar-label text-toolbar-label text-title-bar-text mt-0.5">Format</span>
+</button>
+</div>
+<!-- Formula Bar / Selection State Indicator Strip -->
+<div class="h-8 bg-surface-raised border-b border-hairline flex items-center px-space-sm justify-between shrink-0 text-caption font-caption z-20">
+<div class="flex items-center space-x-2">
+<div class="flex items-center bg-surface-container-lowest px-1.5 py-0.5 border border-hairline rounded font-tabular-data text-chart-1 font-semibold text-[11px]">
+          D:D
+        </div>
+<div class="flex items-center space-x-1">
+<span class="text-formula-value font-tabular-data font-bold text-[12px] italic">fx</span>
+<span class="font-tabular-data text-[12px] text-text-body font-medium">=REVENUE[1..1000000]</span>
+</div>
+</div>
+<div class="flex items-center space-x-2 text-text-secondary font-tabular-data text-[11px]">
+<span class="bg-surface-container px-1 rounded text-text-ink font-semibold">1,000,000 cells</span>
+</div>
+</div>
+<!-- Main Data Grid Canvas -->
+<div class="flex-1 flex flex-col bg-surface-container-lowest overflow-hidden relative">
+<!-- Grid Header Row -->
+<div class="flex bg-surface-raised border-b border-strong-line h-11 shrink-0 z-10 text-[11px] font-caption font-medium text-text-body select-none">
+<!-- 48px Gutter Corner -->
+<div class="w-12 h-full flex items-center justify-center border-r border-hairline text-text-secondary font-tabular-data text-[10px]">
+          #
+        </div>
+<!-- Frozen Column A: order_id -->
+<div class="w-24 px-2 py-1 flex flex-col justify-between border-r border-hairline bg-surface-raised shrink-0">
+<div class="flex items-center justify-between">
+<span class="font-semibold truncate text-text-ink">order_id</span>
+<span class="text-[9px] font-tabular-data px-1 bg-surface-container text-text-secondary rounded">#</span>
+</div>
+<!-- Micro 4-bar Histogram -->
+<div class="flex items-end space-x-0.5 h-2 w-full">
+<div class="w-1.5 bg-secondary-container h-[40%] rounded-xs"></div>
+<div class="w-1.5 bg-secondary-container h-[70%] rounded-xs"></div>
+<div class="w-1.5 bg-secondary-container h-[90%] rounded-xs"></div>
+<div class="w-1.5 bg-secondary-container h-[100%] rounded-xs"></div>
+</div>
+</div>
+<!-- Scrollable Columns Group -->
+<div class="flex overflow-x-hidden flex-1">
+<!-- Column B: date -->
+<div class="w-24 px-2 py-1 flex flex-col justify-between border-r border-hairline shrink-0 bg-surface-raised">
+<div class="flex items-center justify-between">
+<span class="font-semibold truncate text-text-ink">date</span>
+<span class="material-symbols-outlined text-[10px] text-text-secondary">calendar_today</span>
+</div>
+<!-- Micro 4-bar Histogram -->
+<div class="flex items-end space-x-0.5 h-2 w-full">
+<div class="w-1.5 bg-secondary-container h-[60%] rounded-xs"></div>
+<div class="w-1.5 bg-secondary-container h-[80%] rounded-xs"></div>
+<div class="w-1.5 bg-secondary-container h-[85%] rounded-xs"></div>
+<div class="w-1.5 bg-secondary-container h-[55%] rounded-xs"></div>
+</div>
+</div>
+<!-- Column C: region -->
+<div class="w-20 px-2 py-1 flex flex-col justify-between border-r border-hairline shrink-0 bg-surface-raised">
+<div class="flex items-center justify-between">
+<span class="font-semibold truncate text-text-ink">region</span>
+<span class="text-[9px] font-tabular-data px-1 bg-surface-container text-text-secondary rounded">Aa</span>
+</div>
+<!-- Micro 4-bar Histogram -->
+<div class="flex items-end space-x-0.5 h-2 w-full">
+<div class="w-1.5 bg-secondary-container h-[90%] rounded-xs"></div>
+<div class="w-1.5 bg-secondary-container h-[50%] rounded-xs"></div>
+<div class="w-1.5 bg-secondary-container h-[70%] rounded-xs"></div>
+<div class="w-1.5 bg-secondary-container h-[40%] rounded-xs"></div>
+</div>
+</div>
+<!-- Column D: revenue (Active Column with Accent Fill) -->
+<div class="w-28 px-2 py-1 flex flex-col justify-between border-r-2 border-l border-primary bg-selection-fill shrink-0">
+<div class="flex items-center justify-between">
+<span class="font-bold truncate text-primary">revenue</span>
+<span class="text-[10px] font-tabular-data font-bold px-1 bg-primary text-on-primary rounded">$</span>
+</div>
+<!-- Micro 4-bar Active Histogram -->
+<div class="flex items-end space-x-0.5 h-2 w-full">
+<div class="w-1.5 bg-chart-1 h-[25%] rounded-xs"></div>
+<div class="w-1.5 bg-chart-1 h-[55%] rounded-xs"></div>
+<div class="w-1.5 bg-chart-1 h-[100%] rounded-xs"></div>
+<div class="w-1.5 bg-chart-1 h-[30%] rounded-xs"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Grid Rows Container -->
+<div class="flex-1 overflow-y-auto no-scrollbar font-tabular-data text-[12px] divide-y divide-hairline">
+<!-- Row 1 -->
+<div class="flex h-9 items-center hover:bg-surface-raised">
+<div class="w-12 h-full flex items-center justify-center border-r border-hairline text-text-secondary bg-surface-raised text-[11px]">1</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">#1004812</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">2024-10-01</div>
+<div class="w-20 px-2 truncate border-r border-hairline text-text-body">US-West</div>
+<div class="w-28 px-2 truncate border-r border-primary/40 bg-selection-fill font-medium text-text-ink text-right">$42.50</div>
+</div>
+<!-- Row 2 -->
+<div class="flex h-9 items-center hover:bg-surface-raised">
+<div class="w-12 h-full flex items-center justify-center border-r border-hairline text-text-secondary bg-surface-raised text-[11px]">2</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">#1004813</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">2024-10-01</div>
+<div class="w-20 px-2 truncate border-r border-hairline text-text-body">EMEA</div>
+<div class="w-28 px-2 truncate border-r border-primary/40 bg-selection-fill font-medium text-text-ink text-right">$128.00</div>
+</div>
+<!-- Row 3 -->
+<div class="flex h-9 items-center hover:bg-surface-raised">
+<div class="w-12 h-full flex items-center justify-center border-r border-hairline text-text-secondary bg-surface-raised text-[11px]">3</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">#1004814</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">2024-10-02</div>
+<div class="w-20 px-2 truncate border-r border-hairline text-text-body">APAC</div>
+<div class="w-28 px-2 truncate border-r border-primary/40 bg-selection-fill font-medium text-text-ink text-right">$14.99</div>
+</div>
+<!-- Row 4 -->
+<div class="flex h-9 items-center hover:bg-surface-raised">
+<div class="w-12 h-full flex items-center justify-center border-r border-hairline text-text-secondary bg-surface-raised text-[11px]">4</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">#1004815</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">2024-10-02</div>
+<div class="w-20 px-2 truncate border-r border-hairline text-text-body">US-East</div>
+<div class="w-28 px-2 truncate border-r border-primary/40 bg-selection-fill font-medium text-text-ink text-right">$312.40</div>
+</div>
+<!-- Row 5 -->
+<div class="flex h-9 items-center hover:bg-surface-raised">
+<div class="w-12 h-full flex items-center justify-center border-r border-hairline text-text-secondary bg-surface-raised text-[11px]">5</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">#1004816</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">2024-10-02</div>
+<div class="w-20 px-2 truncate border-r border-hairline text-text-body">LATAM</div>
+<div class="w-28 px-2 truncate border-r border-primary/40 bg-selection-fill font-medium text-text-ink text-right">$85.20</div>
+</div>
+<!-- Row 6 -->
+<div class="flex h-9 items-center hover:bg-surface-raised">
+<div class="w-12 h-full flex items-center justify-center border-r border-hairline text-text-secondary bg-surface-raised text-[11px]">6</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">#1004817</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">2024-10-03</div>
+<div class="w-20 px-2 truncate border-r border-hairline text-text-body">US-West</div>
+<div class="w-28 px-2 truncate border-r border-primary/40 bg-selection-fill font-medium text-text-ink text-right">$64.10</div>
+</div>
+<!-- Row 7 -->
+<div class="flex h-9 items-center hover:bg-surface-raised">
+<div class="w-12 h-full flex items-center justify-center border-r border-hairline text-text-secondary bg-surface-raised text-[11px]">7</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">#1004818</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">2024-10-03</div>
+<div class="w-20 px-2 truncate border-r border-hairline text-text-body">EMEA</div>
+<div class="w-28 px-2 truncate border-r border-primary/40 bg-selection-fill font-medium text-text-ink text-right">$190.50</div>
+</div>
+<!-- Row 8 -->
+<div class="flex h-9 items-center hover:bg-surface-raised">
+<div class="w-12 h-full flex items-center justify-center border-r border-hairline text-text-secondary bg-surface-raised text-[11px]">8</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">#1004819</div>
+<div class="w-24 px-2 truncate border-r border-hairline text-text-body">2024-10-04</div>
+<div class="w-20 px-2 truncate border-r border-hairline text-text-body">APAC</div>
+<div class="w-28 px-2 truncate border-r border-primary/40 bg-selection-fill font-medium text-text-ink text-right">$27.00</div>
+</div>
+</div>
+</div>
+<!-- Column Inspector Half-Sheet (Docked Modal Layer Above Tab Bar) -->
+<div class="bg-surface-container-lowest border-t border-hairline shadow-[0_-4px_16px_rgba(0,0,0,0.12)] z-30 flex flex-col px-space-md pt-2 pb-2 shrink-0 h-[308px]">
+<!-- Grab Handle -->
+<div class="w-8 h-1 bg-surface-variant rounded-full mx-auto mb-2 shrink-0"></div>
+<!-- Sheet Title & Header Action -->
+<div class="flex items-center justify-between pb-2 border-b border-hairline shrink-0">
+<div class="flex items-center space-x-2">
+<span class="w-5 h-5 rounded bg-primary text-on-primary font-tabular-data text-[11px] font-bold flex items-center justify-center">$</span>
+<h2 class="font-section-title text-section-title text-text-ink tracking-tight">Column: revenue</h2>
+</div>
+<button aria-label="Minimize inspector" class="w-6 h-6 flex items-center justify-center text-text-secondary hover:text-text-ink">
+<span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+</div>
+<!-- Monospace KPI Rapid Aggregate Row -->
+<div class="grid grid-cols-3 gap-2 py-2.5 border-b border-hairline shrink-0">
+<div class="bg-surface-raised p-2 rounded border border-hairline flex flex-col justify-center">
+<span class="font-toolbar-label text-toolbar-label text-text-secondary font-medium uppercase tracking-wider">SUM</span>
+<span class="font-tabular-data text-[12px] font-bold text-text-ink mt-0.5 truncate tracking-tight">$72,061,236</span>
+</div>
+<div class="bg-surface-raised p-2 rounded border border-hairline flex flex-col justify-center">
+<span class="font-toolbar-label text-toolbar-label text-text-secondary font-medium uppercase tracking-wider">AVERAGE</span>
+<span class="font-tabular-data text-[12px] font-bold text-text-ink mt-0.5 truncate tracking-tight">$72.06</span>
+</div>
+<div class="bg-surface-raised p-2 rounded border border-hairline flex flex-col justify-center">
+<span class="font-toolbar-label text-toolbar-label text-text-secondary font-medium uppercase tracking-wider">COUNT</span>
+<span class="font-tabular-data text-[12px] font-bold text-primary mt-0.5 truncate tracking-tight">1,000,000</span>
+</div>
+</div>
+<!-- Frequency Distribution Histogram Section -->
+<div class="py-2 shrink-0">
+<div class="flex items-center justify-between text-[11px] font-caption text-text-secondary mb-1">
+<span class="font-semibold text-text-ink">Distribution Spread</span>
+<span class="font-tabular-data text-[10px]">StdDev: ±$24.18</span>
+</div>
+<!-- Histogram Bars -->
+<div class="h-16 flex items-end justify-between space-x-1.5 pt-1 px-1 bg-surface-raised border border-hairline rounded">
+<div class="flex-1 flex flex-col items-center h-full justify-end">
+<div class="w-full bg-chart-1 rounded-t-xs" style="height: 28%;"></div>
+</div>
+<div class="flex-1 flex flex-col items-center h-full justify-end">
+<div class="w-full bg-chart-1 rounded-t-xs" style="height: 62%;"></div>
+</div>
+<div class="flex-1 flex flex-col items-center h-full justify-end">
+<div class="w-full bg-chart-1 rounded-t-xs" style="height: 100%;"></div>
+</div>
+<div class="flex-1 flex flex-col items-center h-full justify-end">
+<div class="w-full bg-chart-1 rounded-t-xs" style="height: 84%;"></div>
+</div>
+<div class="flex-1 flex flex-col items-center h-full justify-end">
+<div class="w-full bg-chart-1 rounded-t-xs" style="height: 46%;"></div>
+</div>
+<div class="flex-1 flex flex-col items-center h-full justify-end">
+<div class="w-full bg-chart-1 rounded-t-xs" style="height: 18%;"></div>
+</div>
+<div class="flex-1 flex flex-col items-center h-full justify-end">
+<div class="w-full bg-chart-1 rounded-t-xs" style="height: 8%;"></div>
+</div>
+</div>
+<!-- Histogram Axis Labels -->
+<div class="flex justify-between font-tabular-data text-[9px] text-text-secondary px-0.5 mt-1">
+<span>$0</span>
+<span>$75</span>
+<span>$150</span>
+<span>$300</span>
+<span>$500+</span>
+</div>
+</div>
+<!-- Format Control Strip -->
+<div class="pt-1 flex items-center justify-between shrink-0">
+<div class="flex items-center space-x-1">
+<button class="px-2 py-1 bg-secondary-container text-on-secondary-fixed text-[11px] font-caption font-semibold rounded border border-hairline">
+            Currency ($)
+          </button>
+<button class="px-2 py-1 bg-surface-raised text-text-body text-[11px] font-caption font-medium rounded border border-hairline">
+            .00
+          </button>
+<button class="px-2 py-1 bg-surface-raised text-text-body text-[11px] font-caption font-medium rounded border border-hairline">
+            %
+          </button>
+</div>
+<div class="flex items-center space-x-1.5 text-[11px] font-tabular-data text-status-good font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-status-good"></span>
+<span>Indexed</span>
+</div>
+</div>
+</div>
+<!-- BottomNavBar Shared Component Blueprint Execution -->
+<nav class="bg-surface-container-lowest font-toolbar-label text-toolbar-label border-t border-hairline flat no shadows fixed bottom-0 left-0 w-full z-40 flex justify-around items-center px-space-md h-12 bg-surface-container-lowest">
+<!-- Sheet 1 (Active Destination according to Blueprint and Hierarchy) -->
+<button class="flex flex-col items-center justify-center text-primary border-t-2 border-primary pt-1 w-20 hover:bg-surface-raised active:scale-95 transition-transform duration-100">
+<span class="material-symbols-outlined text-[18px]">table_chart</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5 font-medium">Sheet 1</span>
+</button>
+<!-- Report (Inactive) -->
+<button class="flex flex-col items-center justify-center text-text-secondary pt-1 w-20 hover:bg-surface-raised active:scale-95 transition-transform duration-100">
+<span class="material-symbols-outlined text-[18px]">analytics</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5">Report</span>
+</button>
+<!-- New Sheet (Add Destination) -->
+<button class="flex flex-col items-center justify-center text-text-secondary pt-1 w-20 hover:bg-surface-raised active:scale-95 transition-transform duration-100">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="font-toolbar-label text-toolbar-label mt-0.5">New Sheet</span>
+</button>
+</nav>
+</div>
+</body></html>

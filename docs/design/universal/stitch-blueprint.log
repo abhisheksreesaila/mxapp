@@ -1,0 +1,13 @@
+project 17324947970306603505
+{
+  "success": true,
+  "data": {
+    "path": "blueprint.md",
+    "project": "17324947970306603505",
+    "id": "8412498344268253336",
+    "status": "uploaded",
+    "appliedScreenIds": [],
+    "applyCommand": "stitch edit screen <screen-id> --project 17324947970306603505 --design-system 8412498344268253336"
+  }
+}
+done

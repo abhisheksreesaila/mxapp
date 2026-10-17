@@ -1,0 +1,7 @@
+omxplorer, a desktop spreadsheet app for data scientists (1440x900), on its Report tab: a report built from scratch over a 1,000,000-row orders table. Same window as the sheet: title bar ("omxplorer" lowercase, "orders.omx" centred), the toolbar of icon-above-label buttons in groups [Open, Save, Undo, Redo] [Table, Chart, Pivot, Formula] [KPI, Chart tile, Text] [Format], and a 300px inspector on the right with tabs "Tile · Data" (Tile active: value column dropdown "revenue", aggregate segmented control Sum/Average/Count, compare-to dropdown "previous quarter").
+The report page (scrolls, white page centred in the work area): title "Q3 orders" with a caption "Updated just now · 1,000,000 rows · 4.1 ms on the GPU". A row of filter chips: "region = West ✕", "date: Jul–Sep 2026 ✕", "carrier: all", "+ Filter".
+A row of four KPI cards: Revenue $18.4M (+4.2%, sparkline), Orders 255,102 (+1.1%), Average order $72.06 (-0.8%), Margin 31.4% (+0.6 pts). The first card is selected (accent ring).
+Then two charts side by side: "Revenue by month" (a line chart, Jan–Sep, with a hover point reading "Aug · $6.3M") and "Revenue by carrier" (horizontal bars UPS, FedEx, DHL, USPS with values).
+Then a pivot table "Revenue · region × product" with 5 product columns, row and column totals, money formatted.
+At the end an empty dashed "Add a tile" row with buttons Sum, Average, Count, Chart.
+Bottom bar: sheet tabs "Orders", "Report" (active), + ; status "Filtered: 255,102 of 1,000,000 rows".

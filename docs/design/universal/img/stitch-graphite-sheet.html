@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>omxplorer — orders.csv</title>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with custom configuration -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "chart-2": "#f5a524",
+            "on-surface-variant": "#d7c3ae",
+            "on-primary-container": "#643f00",
+            "on-primary": "#462b00",
+            "surface-bright": "#38393c",
+            "outline-variant": "#524434",
+            "surface-container-highest": "#343538",
+            "on-primary-fixed": "#2a1800",
+            "chart-5": "#ff6b6b",
+            "surface-tint": "#ffb957",
+            "on-secondary": "#3f0c85",
+            "inverse-primary": "#835400",
+            "primary-container": "#f5a524",
+            "chart-4": "#3ddc97",
+            "surface-raised": "#26272b",
+            "secondary-container": "#592f9e",
+            "inverse-on-surface": "#2f3033",
+            "on-error-container": "#ffdad6",
+            "text-secondary": "#858892",
+            "status-good": "#3ddc97",
+            "on-background": "#e3e2e6",
+            "status-warning": "#f5a524",
+            "primary-fixed-dim": "#ffb957",
+            "on-surface": "#e3e2e6",
+            "surface-container": "#1f1f23",
+            "on-primary-fixed-variant": "#643f00",
+            "surface-variant": "#343538",
+            "error": "#ffb4ab",
+            "error-container": "#93000a",
+            "surface-dim": "#121316",
+            "surface-container-lowest": "#0d0e11",
+            "formula-values": "#b48cff",
+            "tertiary": "#9ad9ff",
+            "on-tertiary-fixed": "#001e2c",
+            "on-tertiary": "#003549",
+            "secondary": "#d4bbff",
+            "on-tertiary-container": "#004d69",
+            "on-secondary-container": "#c8aaff",
+            "page-bg": "#161618",
+            "hairline": "#2e3034",
+            "chart-1": "#4cc2ff",
+            "tertiary-container": "#36c2ff",
+            "status-bad": "#ff6b6b",
+            "window-chrome": "#121214",
+            "surface": "#1d1e21",
+            "on-tertiary-fixed-variant": "#004c69",
+            "surface-container-high": "#292a2d",
+            "inverse-surface": "#e3e2e6",
+            "tertiary-fixed-dim": "#7bd0ff",
+            "on-secondary-fixed-variant": "#562d9c",
+            "chart-7": "#8f98a8",
+            "chart-6": "#e0c341",
+            "chart-8": "#ff9de2",
+            "secondary-fixed": "#ebdcff",
+            "on-error": "#690005",
+            "on-secondary-fixed": "#260059",
+            "secondary-fixed-dim": "#d4bbff",
+            "surface-container-low": "#1a1b1e",
+            "chart-3": "#b48cff",
+            "background": "#121316",
+            "primary": "#ffc77f",
+            "outline": "#9f8e7a",
+            "text-body": "#c2c4ca",
+            "tertiary-fixed": "#c4e7ff",
+            "strong-line": "#44464c",
+            "selection-fill": "#3a2f17",
+            "primary-fixed": "#ffddb5",
+            "text-ink": "#ececee"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-md": "1rem",
+            "gutter": "1rem",
+            "space-xl": "2rem",
+            "margin": "1rem",
+            "space-lg": "1.5rem",
+            "space-xs": "0.25rem",
+            "space-sm": "0.5rem"
+          },
+          "fontFamily": {
+            "label-md": ["Inter"],
+            "headline-lg": ["Inter"],
+            "body-md": ["Inter"],
+            "code-figures": ["JetBrains Mono"],
+            "toolbar-label": ["Inter"],
+            "headline-md": ["Inter"]
+          },
+          "fontSize": {
+            "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-lg": ["20px", { "lineHeight": "24px", "fontWeight": "700" }],
+            "body-md": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "code-figures": ["12px", { "lineHeight": "16px", "letterSpacing": "-0.01em", "fontWeight": "400" }],
+            "toolbar-label": ["11px", { "lineHeight": "14px", "fontWeight": "500" }],
+            "headline-md": ["15px", { "lineHeight": "20px", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Custom scrollbars to keep dense technical feel */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #161618;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2e3034;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #44464c;
+    }
+    .material-symbols-outlined {
+      font-size: 18px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body class="bg-page-bg text-text-body font-body-md text-body-md antialiased overflow-hidden select-none h-screen w-screen flex flex-col justify-between">
+<!-- 1. TITLE BAR (Height ~36px, bg #121214, border-b hairline) -->
+<header class="h-9 bg-window-chrome border-b border-hairline flex items-center justify-between px-space-md shrink-0 z-30">
+<!-- Left: window controls & app name -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-[#ff5f56] opacity-75 inline-block"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-[#ffbd2e] opacity-75 inline-block"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-[#27c93f] opacity-75 inline-block"></span>
+</div>
+<div class="h-3 w-[1px] bg-hairline mx-1"></div>
+<span class="font-headline-md text-headline-md text-primary tracking-tight font-bold">omxplorer</span>
+<span class="text-text-secondary text-[10px] tracking-wider font-mono font-medium px-1.5 py-0.5 rounded bg-surface border border-hairline">v2.4.1</span>
+</div>
+<!-- Center: document status & name -->
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[16px]">cloud_done</span>
+<span class="font-body-md text-body-md text-text-ink font-medium">orders.csv</span>
+<span class="text-text-secondary font-code-figures text-code-figures">— 1,000,000 rows</span>
+<span class="w-1.5 h-1.5 rounded-full bg-status-good ml-1" title="Dataset in-memory synced"></span>
+</div>
+<!-- Right: Actions -->
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-1.5 px-2.5 py-1 text-toolbar-label font-toolbar-label text-text-secondary hover:text-on-surface bg-surface hover:bg-surface-raised border border-hairline transition-colors">
+<span class="material-symbols-outlined text-[15px]">share</span>
+<span>Share</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1 text-toolbar-label font-toolbar-label bg-primary-container text-surface-dim font-semibold hover:opacity-95 transition-opacity">
+<span class="material-symbols-outlined text-[15px]">save</span>
+<span>Save</span>
+</button>
+</div>
+</header>
+<!-- 2. TOOLBAR (Height ~56px, bg #121214, border-b hairline) -->
+<nav class="h-14 bg-window-chrome border-b border-hairline flex items-center justify-between px-2 shrink-0 z-20">
+<div class="flex items-center h-full">
+<!-- Group 1: File Actions -->
+<div class="flex items-center h-full py-1">
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>
+<span class="font-toolbar-label text-toolbar-label">Open</span>
+</button>
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">save</span>
+<span class="font-toolbar-label text-toolbar-label">Save</span>
+</button>
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">undo</span>
+<span class="font-toolbar-label text-toolbar-label">Undo</span>
+</button>
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">redo</span>
+<span class="font-toolbar-label text-toolbar-label">Redo</span>
+</button>
+</div>
+<!-- Thin hairline separator -->
+<div class="h-7 w-[1px] bg-hairline mx-1"></div>
+<!-- Group 2: Data Tools -->
+<div class="flex items-center h-full py-1">
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">table_chart</span>
+<span class="font-toolbar-label text-toolbar-label">Table</span>
+</button>
+<!-- Hovered state button: Chart -->
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-chart-2 bg-surface-raised border border-chart-2/30 rounded transition-colors relative">
+<span class="material-symbols-outlined text-[18px]">bar_chart</span>
+<span class="font-toolbar-label text-toolbar-label font-semibold">Chart</span>
+<span class="absolute bottom-0.5 w-4 h-0.5 bg-chart-2 rounded-full"></span>
+</button>
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">pivot_table_chart</span>
+<span class="font-toolbar-label text-toolbar-label">Pivot</span>
+</button>
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">functions</span>
+<span class="font-toolbar-label text-toolbar-label">Formula</span>
+</button>
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">add_row_below</span>
+<span class="font-toolbar-label text-toolbar-label">Add row</span>
+</button>
+</div>
+<!-- Thin hairline separator -->
+<div class="h-7 w-[1px] bg-hairline mx-1"></div>
+<!-- Group 3: Operations -->
+<div class="flex items-center h-full py-1">
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">sort</span>
+<span class="font-toolbar-label text-toolbar-label">Sort</span>
+</button>
+<button class="w-16 h-full flex flex-col items-center justify-center gap-1 text-text-secondary hover:text-on-surface hover:bg-surface-raised transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_alt</span>
+<span class="font-toolbar-label text-toolbar-label">Filter</span>
+</button>
+</div>
+</div>
+<!-- Right-aligned format trigger -->
+<div class="flex items-center pr-2">
+<button class="w-16 h-12 flex flex-col items-center justify-center gap-1 text-primary bg-surface-raised border border-hairline rounded transition-colors">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+<span class="font-toolbar-label text-toolbar-label font-medium">Format</span>
+</button>
+</div>
+</nav>
+<!-- 3. FORMULA BAR (Height ~32px, bg #161618, border-b hairline) -->
+<div class="h-8 bg-page-bg border-b border-hairline flex items-center px-3 gap-2.5 shrink-0 z-10">
+<!-- Cell reference box -->
+<div class="font-code-figures text-code-figures text-primary bg-surface border border-hairline px-2.5 py-0.5 rounded min-w-[50px] text-center font-medium">
+      J12
+    </div>
+<!-- fx label -->
+<span class="font-code-figures italic font-bold text-formula-values text-[13px] px-1 select-none">fx</span>
+<!-- Formula input -->
+<div class="flex-1 flex items-center bg-surface-dim border border-hairline rounded px-2.5 h-6">
+<span class="font-code-figures text-code-figures text-text-ink tracking-tight font-medium">= revenue - cost</span>
+<span class="inline-block w-1.5 h-3.5 bg-chart-2 ml-1 animate-pulse"></span>
+</div>
+<!-- Confirm / Cancel buttons -->
+<div class="flex items-center gap-1">
+<button class="w-6 h-6 flex items-center justify-center text-text-secondary hover:text-status-bad transition-colors rounded hover:bg-surface">
+<span class="material-symbols-outlined text-[15px]">close</span>
+</button>
+<button class="w-6 h-6 flex items-center justify-center text-status-good hover:text-chart-4 transition-colors rounded hover:bg-surface">
+<span class="material-symbols-outlined text-[15px]">check</span>
+</button>
+</div>
+</div>
+<!-- 4 & 5. MAIN WORKSPACE (Data Grid + Inspector Panel) -->
+<div class="flex-1 flex overflow-hidden">
+<!-- DATA GRID CONTAINER -->
+<div class="flex-1 flex flex-col overflow-hidden bg-page-bg relative">
+<!-- Grid Scroll Viewport -->
+<div class="flex-1 overflow-auto flex flex-col">
+<table class="border-collapse w-full min-w-[1050px] text-left">
+<!-- STICKY HEADER ROW (Height ~42px, bg #26272b) -->
+<thead class="sticky top-0 z-10 bg-surface-raised border-b border-hairline">
+<tr class="h-[42px] divide-x divide-hairline text-text-secondary font-label-md text-label-md">
+<!-- Row number gutter -->
+<th class="w-12 text-center bg-surface-dim text-text-secondary font-code-figures text-code-figures font-normal select-none">
+                #
+              </th>
+<!-- order_id -->
+<th class="px-2.5 py-1 w-28 hover:bg-surface transition-colors cursor-pointer">
+<div class="flex items-center justify-between">
+<span class="font-medium text-text-ink text-[12px]">order_id</span>
+<span class="font-code-figures text-[10px] text-text-secondary bg-surface px-1 rounded border border-hairline">#</span>
+</div>
+<div class="flex items-end gap-0.5 h-2.5 mt-1 opacity-70">
+<span class="w-1 bg-chart-1 h-[30%]"></span>
+<span class="w-1 bg-chart-1 h-[60%]"></span>
+<span class="w-1 bg-chart-1 h-[90%]"></span>
+<span class="w-1 bg-chart-1 h-[70%]"></span>
+<span class="w-1 bg-chart-1 h-[40%]"></span>
+<span class="w-1 bg-chart-1 h-[80%]"></span>
+</div>
+</th>
+<!-- date -->
+<th class="px-2.5 py-1 w-28 hover:bg-surface transition-colors cursor-pointer">
+<div class="flex items-center justify-between">
+<span class="font-medium text-text-ink text-[12px]">date</span>
+<span class="material-symbols-outlined text-[11px] text-text-secondary">calendar_today</span>
+</div>
+<div class="flex items-end gap-0.5 h-2.5 mt-1 opacity-70">
+<span class="w-1 bg-chart-7 h-[40%]"></span>
+<span class="w-1 bg-chart-7 h-[50%]"></span>
+<span class="w-1 bg-chart-7 h-[65%]"></span>
+<span class="w-1 bg-chart-7 h-[85%]"></span>
+<span class="w-1 bg-chart-7 h-[95%]"></span>
+<span class="w-1 bg-chart-7 h-[70%]"></span>
+</div>
+</th>
+<!-- region -->
+<th class="px-2.5 py-1 w-24 hover:bg-surface transition-colors cursor-pointer">
+<div class="flex items-center justify-between">
+<span class="font-medium text-text-ink text-[12px]">region</span>
+<span class="text-[10px] font-mono text-text-secondary">Aa</span>
+</div>
+<div class="flex items-end gap-0.5 h-2.5 mt-1 opacity-70">
+<span class="w-1 bg-chart-7 h-[90%]"></span>
+<span class="w-1 bg-chart-7 h-[70%]"></span>
+<span class="w-1 bg-chart-7 h-[50%]"></span>
+<span class="w-1 bg-chart-7 h-[40%]"></span>
+<span class="w-1 bg-chart-7 h-[30%]"></span>
+</div>
+</th>
+<!-- customer -->
+<th class="px-2.5 py-1 w-36 hover:bg-surface transition-colors cursor-pointer">
+<div class="flex items-center justify-between">
+<span class="font-medium text-text-ink text-[12px]">customer</span>
+<span class="text-[10px] font-mono text-text-secondary">Aa</span>
+</div>
+<div class="flex items-end gap-0.5 h-2.5 mt-1 opacity-70">
+<span class="w-1 bg-chart-7 h-[40%]"></span>
+<span class="w-1 bg-chart-7 h-[60%]"></span>
+<span class="w-1 bg-chart-7 h-[50%]"></span>
+<span class="w-1 bg-chart-7 h-[80%]"></span>
+<span class="w-1 bg-chart-7 h-[65%]"></span>
+</div>
+</th>
+<!-- product -->
+<th class="px-2.5 py-1 w-44 hover:bg-surface transition-colors cursor-pointer">
+<div class="flex items-center justify-between">
+<span class="font-medium text-text-ink text-[12px]">product</span>
+<span class="text-[10px] font-mono text-text-secondary">Aa</span>
+</div>
+<div class="flex items-end gap-0.5 h-2.5 mt-1 opacity-70">
+<span class="w-1 bg-chart-7 h-[75%]"></span>
+<span class="w-1 bg-chart-7 h-[45%]"></span>
+<span class="w-1 bg-chart-7 h-[85%]"></span>
+<span class="w-1 bg-chart-7 h-[35%]"></span>
+<span class="w-1 bg-chart-7 h-[60%]"></span>
+</div>
+</th>
+<!-- carrier -->
+<th class="px-2.5 py-1 w-28 hover:bg-surface transition-colors cursor-pointer">
+<div class="flex items-center justify-between">
+<span class="font-medium text-text-ink text-[12px]">carrier</span>
+<span class="text-[10px] font-mono text-text-secondary">Aa</span>
+</div>
+<div class="flex items-end gap-0.5 h-2.5 mt-1 opacity-70">
+<span class="w-1 bg-chart-7 h-[90%]"></span>
+<span class="w-1 bg-chart-7 h-[60%]"></span>
+<span class="w-1 bg-chart-7 h-[30%]"></span>
+</div>
+</th>
+<!-- qty -->
+<th class="px-2.5 py-1 w-20 text-right hover:bg-surface transition-colors cursor-pointer">
+<div class="flex items-center justify-end gap-1">
+<span class="font-medium text-text-ink text-[12px]">qty</span>
+<span class="font-code-figures text-[10px] text-text-secondary bg-surface px-1 rounded border border-hairline">#</span>
+</div>
+<div class="flex items-end justify-end gap-0.5 h-2.5 mt-1 opacity-70">
+<span class="w-1 bg-chart-1 h-[80%]"></span>
+<span class="w-1 bg-chart-1 h-[40%]"></span>
+<span class="w-1 bg-chart-1 h-[20%]"></span>
+<span class="w-1 bg-chart-1 h-[15%]"></span>
+</div>
+</th>
+<!-- revenue (SELECTED COLUMN: Tinted #3a2f17 / amber tinted) -->
+<th class="px-2.5 py-1 w-32 text-right bg-selection-fill/90 border-t-2 border-t-chart-2 cursor-pointer">
+<div class="flex items-center justify-end gap-1.5">
+<span class="font-semibold text-primary text-[12px]">revenue</span>
+<span class="font-code-figures text-[10px] text-chart-2 bg-window-chrome px-1 rounded border border-chart-2/40">$</span>
+</div>
+<div class="flex items-end justify-end gap-0.5 h-2.5 mt-1">
+<span class="w-1 bg-chart-2 h-[30%]"></span>
+<span class="w-1 bg-chart-2 h-[75%]"></span>
+<span class="w-1 bg-chart-2 h-[100%]"></span>
+<span class="w-1 bg-chart-2 h-[55%]"></span>
+<span class="w-1 bg-chart-2 h-[40%]"></span>
+<span class="w-1 bg-chart-2 h-[20%]"></span>
+</div>
+</th>
+<!-- cost -->
+<th class="px-2.5 py-1 w-28 text-right hover:bg-surface transition-colors cursor-pointer">
+<div class="flex items-center justify-end gap-1">
+<span class="font-medium text-text-ink text-[12px]">cost</span>
+<span class="font-code-figures text-[10px] text-text-secondary bg-surface px-1 rounded border border-hairline">$</span>
+</div>
+<div class="flex items-end justify-end gap-0.5 h-2.5 mt-1 opacity-70">
+<span class="w-1 bg-chart-7 h-[40%]"></span>
+<span class="w-1 bg-chart-7 h-[70%]"></span>
+<span class="w-1 bg-chart-7 h-[90%]"></span>
+<span class="w-1 bg-chart-7 h-[50%]"></span>
+</div>
+</th>
+<!-- margin (FORMULA COLUMN) -->
+<th class="px-2.5 py-1 w-32 text-right hover:bg-surface transition-colors cursor-pointer">
+<div class="flex items-center justify-end gap-1.5">
+<span class="font-medium text-formula-values text-[12px]">margin</span>
+<span class="font-code-figures text-[10px] text-formula-values bg-surface px-1 rounded border border-formula-values/40">fx</span>
+</div>
+<div class="flex items-end justify-end gap-0.5 h-2.5 mt-1 opacity-70">
+<span class="w-1 bg-formula-values h-[35%]"></span>
+<span class="w-1 bg-formula-values h-[50%]"></span>
+<span class="w-1 bg-formula-values h-[90%]"></span>
+<span class="w-1 bg-formula-values h-[65%]"></span>
+<span class="w-1 bg-formula-values h-[40%]"></span>
+</div>
+</th>
+</tr>
+</thead>
+<!-- BODY ROWS (Height 28px each, border-b hairline) -->
+<tbody class="divide-y divide-hairline font-code-figures text-code-figures">
+<!-- Row 1 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">1</td>
+<td class="px-2.5 text-text-body">1048201</td>
+<td class="px-2.5 text-text-secondary">2026-07-14</td>
+<td class="px-2.5 font-body-md text-text-body">West</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Apex Corp</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Desk Chair</td>
+<td class="px-2.5 font-body-md text-text-secondary">UPS</td>
+<td class="px-2.5 text-right text-text-body">4</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$1,284.50</td>
+<td class="px-2.5 text-right text-text-body">$820.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$464.50</td>
+</tr>
+<!-- Row 2 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">2</td>
+<td class="px-2.5 text-text-body">1048202</td>
+<td class="px-2.5 text-text-secondary">2026-07-14</td>
+<td class="px-2.5 font-body-md text-text-body">East</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Vector AI</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Monitor Arm</td>
+<td class="px-2.5 font-body-md text-text-secondary">FedEx</td>
+<td class="px-2.5 text-right text-text-body">12</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$840.00</td>
+<td class="px-2.5 text-right text-text-body">$490.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$350.00</td>
+</tr>
+<!-- Row 3 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">3</td>
+<td class="px-2.5 text-text-body">1048203</td>
+<td class="px-2.5 text-text-secondary">2026-07-15</td>
+<td class="px-2.5 font-body-md text-text-body">North</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">HyperScale</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Standing Desk</td>
+<td class="px-2.5 font-body-md text-text-secondary">DHL</td>
+<td class="px-2.5 text-right text-text-body">1</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$2,450.00</td>
+<td class="px-2.5 text-right text-text-body">$1,550.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$900.00</td>
+</tr>
+<!-- Row 4 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">4</td>
+<td class="px-2.5 text-text-body">1048204</td>
+<td class="px-2.5 text-text-secondary">2026-07-15</td>
+<td class="px-2.5 font-body-md text-text-body">South</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Orbit Labs</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Ergonomic Keybd</td>
+<td class="px-2.5 font-body-md text-text-secondary">FedEx Ground</td>
+<td class="px-2.5 text-right text-text-body">8</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$320.00</td>
+<td class="px-2.5 text-right text-text-body">$180.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$140.00</td>
+</tr>
+<!-- Row 5 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">5</td>
+<td class="px-2.5 text-text-body">1048205</td>
+<td class="px-2.5 text-text-secondary">2026-07-15</td>
+<td class="px-2.5 font-body-md text-text-body">Central</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Lumina</td>
+<td class="px-2.5 font-body-md text-text-body truncate">4K Display</td>
+<td class="px-2.5 font-body-md text-text-secondary">UPS Express</td>
+<td class="px-2.5 text-right text-text-body">2</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$1,890.00</td>
+<td class="px-2.5 text-right text-text-body">$1,120.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$770.00</td>
+</tr>
+<!-- Row 6 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">6</td>
+<td class="px-2.5 text-text-body">1048206</td>
+<td class="px-2.5 text-text-secondary">2026-07-16</td>
+<td class="px-2.5 font-body-md text-text-body">West</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">NeuralPath</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Smart Light Bar</td>
+<td class="px-2.5 font-body-md text-text-secondary">UPS</td>
+<td class="px-2.5 text-right text-text-body">6</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$450.00</td>
+<td class="px-2.5 text-right text-text-body">$260.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$190.00</td>
+</tr>
+<!-- Row 7 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">7</td>
+<td class="px-2.5 text-text-body">1048207</td>
+<td class="px-2.5 text-text-secondary">2026-07-16</td>
+<td class="px-2.5 font-body-md text-text-body">East</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Synthetix</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Cable Spine</td>
+<td class="px-2.5 font-body-md text-text-secondary">FedEx</td>
+<td class="px-2.5 text-right text-text-body">15</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$225.00</td>
+<td class="px-2.5 text-right text-text-body">$95.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$130.00</td>
+</tr>
+<!-- Row 8 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">8</td>
+<td class="px-2.5 text-text-body">1048208</td>
+<td class="px-2.5 text-text-secondary">2026-07-16</td>
+<td class="px-2.5 font-body-md text-text-body">North</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Basecamp Tech</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Foot Rest Pad</td>
+<td class="px-2.5 font-body-md text-text-secondary">DHL</td>
+<td class="px-2.5 text-right text-text-body">3</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$135.00</td>
+<td class="px-2.5 text-right text-text-body">$72.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$63.00</td>
+</tr>
+<!-- Row 9 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">9</td>
+<td class="px-2.5 text-text-body">1048209</td>
+<td class="px-2.5 text-text-secondary">2026-07-17</td>
+<td class="px-2.5 font-body-md text-text-body">South</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Acro Bio</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Noise Canceling Headset</td>
+<td class="px-2.5 font-body-md text-text-secondary">UPS</td>
+<td class="px-2.5 text-right text-text-body">7</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$1,750.00</td>
+<td class="px-2.5 text-right text-text-body">$1,150.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$600.00</td>
+</tr>
+<!-- Row 10 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">10</td>
+<td class="px-2.5 text-text-body">1048210</td>
+<td class="px-2.5 text-text-secondary">2026-07-17</td>
+<td class="px-2.5 font-body-md text-text-body">West</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Krypton Corp</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Docking Station 12-in-1</td>
+<td class="px-2.5 font-body-md text-text-secondary">FedEx</td>
+<td class="px-2.5 text-right text-text-body">5</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$1,195.00</td>
+<td class="px-2.5 text-right text-text-body">$740.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$455.00</td>
+</tr>
+<!-- Row 11 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">11</td>
+<td class="px-2.5 text-text-body">1048211</td>
+<td class="px-2.5 text-text-secondary">2026-07-17</td>
+<td class="px-2.5 font-body-md text-text-body">Central</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Quantum Dynamics</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Desk Mat Wool</td>
+<td class="px-2.5 font-body-md text-text-secondary">DHL</td>
+<td class="px-2.5 text-right text-text-body">10</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$420.00</td>
+<td class="px-2.5 text-right text-text-body">$190.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$230.00</td>
+</tr>
+<!-- Row 12 (ACTIVE / ACCENT RING ON J12: revenue & margin intersection) -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">12</td>
+<td class="px-2.5 text-text-body">1048212</td>
+<td class="px-2.5 text-text-secondary">2026-07-18</td>
+<td class="px-2.5 font-body-md text-text-body">East</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Starlight Media</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Webcam 4K Pro</td>
+<td class="px-2.5 font-body-md text-text-secondary">UPS Ground</td>
+<td class="px-2.5 text-right text-text-body">9</td>
+<!-- revenue column cell -->
+<td class="px-2.5 text-right bg-selection-fill/80 text-text-ink font-medium">$1,620.00</td>
+<td class="px-2.5 text-right text-text-body">$980.00</td>
+<!-- J12 Cell with prominent 2px accent ring (#f5a524) & corner drag handle -->
+<td class="px-2.5 text-right text-formula-values font-semibold relative bg-surface-raised ring-2 ring-chart-2 ring-inset">
+<span>$640.00</span>
+<!-- Corner drag handle -->
+<span class="absolute -bottom-1 -right-1 w-2 h-2 bg-chart-2 border border-surface-dim z-20 cursor-crosshair"></span>
+</td>
+</tr>
+<!-- Row 13 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">13</td>
+<td class="px-2.5 text-text-body">1048213</td>
+<td class="px-2.5 text-text-secondary">2026-07-18</td>
+<td class="px-2.5 font-body-md text-text-body">West</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Apex Corp</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Standing Desk Pro</td>
+<td class="px-2.5 font-body-md text-text-secondary">DHL</td>
+<td class="px-2.5 text-right text-text-body">2</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$1,980.00</td>
+<td class="px-2.5 text-right text-text-body">$1,210.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$770.00</td>
+</tr>
+<!-- Row 14 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">14</td>
+<td class="px-2.5 text-text-body">1048214</td>
+<td class="px-2.5 text-text-secondary">2026-07-18</td>
+<td class="px-2.5 font-body-md text-text-body">North</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">DataFlow Inc</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Vertical Mouse</td>
+<td class="px-2.5 font-body-md text-text-secondary">FedEx</td>
+<td class="px-2.5 text-right text-text-body">14</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$840.00</td>
+<td class="px-2.5 text-right text-text-body">$420.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$420.00</td>
+</tr>
+<!-- Row 15 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">15</td>
+<td class="px-2.5 text-text-body">1048215</td>
+<td class="px-2.5 text-text-secondary">2026-07-19</td>
+<td class="px-2.5 font-body-md text-text-body">South</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Prism Software</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Monitor Lightbar 2</td>
+<td class="px-2.5 font-body-md text-text-secondary">UPS</td>
+<td class="px-2.5 text-right text-text-body">3</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$297.00</td>
+<td class="px-2.5 text-right text-text-body">$180.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$117.00</td>
+</tr>
+<!-- Row 16 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">16</td>
+<td class="px-2.5 text-text-body">1048216</td>
+<td class="px-2.5 text-text-secondary">2026-07-19</td>
+<td class="px-2.5 font-body-md text-text-body">East</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">CloudSync AI</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Ergo Keyboard Split</td>
+<td class="px-2.5 font-body-md text-text-secondary">FedEx</td>
+<td class="px-2.5 text-right text-text-body">5</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$1,350.00</td>
+<td class="px-2.5 text-right text-text-body">$810.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$540.00</td>
+</tr>
+<!-- Row 17 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">17</td>
+<td class="px-2.5 text-text-body">1048217</td>
+<td class="px-2.5 text-text-secondary">2026-07-19</td>
+<td class="px-2.5 font-body-md text-text-body">Central</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Vector AI</td>
+<td class="px-2.5 font-body-md text-text-body truncate">4K Studio Monitor</td>
+<td class="px-2.5 font-body-md text-text-secondary">DHL</td>
+<td class="px-2.5 text-right text-text-body">1</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$1,450.00</td>
+<td class="px-2.5 text-right text-text-body">$950.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$500.00</td>
+</tr>
+<!-- Row 18 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">18</td>
+<td class="px-2.5 text-text-body">1048218</td>
+<td class="px-2.5 text-text-secondary">2026-07-20</td>
+<td class="px-2.5 font-body-md text-text-body">West</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Apex Corp</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Cable Trunking Kit</td>
+<td class="px-2.5 font-body-md text-text-secondary">UPS</td>
+<td class="px-2.5 text-right text-text-body">20</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$580.00</td>
+<td class="px-2.5 text-right text-text-body">$220.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$360.00</td>
+</tr>
+<!-- Row 19 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">19</td>
+<td class="px-2.5 text-text-body">1048219</td>
+<td class="px-2.5 text-text-secondary">2026-07-20</td>
+<td class="px-2.5 font-body-md text-text-body">North</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">HyperScale</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Dual Arm Stand</td>
+<td class="px-2.5 font-body-md text-text-secondary">FedEx</td>
+<td class="px-2.5 text-right text-text-body">6</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$720.00</td>
+<td class="px-2.5 text-right text-text-body">$390.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$330.00</td>
+</tr>
+<!-- Row 20 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">20</td>
+<td class="px-2.5 text-text-body">1048220</td>
+<td class="px-2.5 text-text-secondary">2026-07-20</td>
+<td class="px-2.5 font-body-md text-text-body">South</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Lumina</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Acoustic Desk Panel</td>
+<td class="px-2.5 font-body-md text-text-secondary">DHL</td>
+<td class="px-2.5 text-right text-text-body">8</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$640.00</td>
+<td class="px-2.5 text-right text-text-body">$290.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$350.00</td>
+</tr>
+<!-- Row 21 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">21</td>
+<td class="px-2.5 text-text-body">1048221</td>
+<td class="px-2.5 text-text-secondary">2026-07-21</td>
+<td class="px-2.5 font-body-md text-text-body">East</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Orbit Labs</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Ergonomic Mousepad</td>
+<td class="px-2.5 font-body-md text-text-secondary">UPS</td>
+<td class="px-2.5 text-right text-text-body">12</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$360.00</td>
+<td class="px-2.5 text-right text-text-body">$140.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$220.00</td>
+</tr>
+<!-- Row 22 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">22</td>
+<td class="px-2.5 text-text-body">1048222</td>
+<td class="px-2.5 text-text-secondary">2026-07-21</td>
+<td class="px-2.5 font-body-md text-text-body">West</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Synthetix</td>
+<td class="px-2.5 font-body-md text-text-body truncate">USB-C Hub Pro</td>
+<td class="px-2.5 font-body-md text-text-secondary">FedEx</td>
+<td class="px-2.5 text-right text-text-body">10</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$890.00</td>
+<td class="px-2.5 text-right text-text-body">$510.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$380.00</td>
+</tr>
+<!-- Row 23 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">23</td>
+<td class="px-2.5 text-text-body">1048223</td>
+<td class="px-2.5 text-text-secondary">2026-07-21</td>
+<td class="px-2.5 font-body-md text-text-body">Central</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Basecamp Tech</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Monitor Riser Walnut</td>
+<td class="px-2.5 font-body-md text-text-secondary">DHL</td>
+<td class="px-2.5 text-right text-text-body">4</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$480.00</td>
+<td class="px-2.5 text-right text-text-body">$230.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$250.00</td>
+</tr>
+<!-- Row 24 -->
+<tr class="h-7 hover:bg-surface-raised/50 divide-x divide-hairline">
+<td class="text-center bg-surface-dim/80 text-text-secondary text-[11px]">24</td>
+<td class="px-2.5 text-text-body">1048224</td>
+<td class="px-2.5 text-text-secondary">2026-07-22</td>
+<td class="px-2.5 font-body-md text-text-body">North</td>
+<td class="px-2.5 font-body-md text-text-ink truncate">Quantum Dynamics</td>
+<td class="px-2.5 font-body-md text-text-body truncate">Wireless Charge Pad</td>
+<td class="px-2.5 font-body-md text-text-secondary">UPS</td>
+<td class="px-2.5 text-right text-text-body">11</td>
+<td class="px-2.5 text-right bg-selection-fill/70 text-text-ink font-medium">$550.00</td>
+<td class="px-2.5 text-right text-text-body">$260.00</td>
+<td class="px-2.5 text-right text-formula-values font-medium">$290.00</td>
+</tr>
+</tbody>
+<!-- PINNED TOTALS ROW -->
+<tfoot class="sticky bottom-0 z-10 bg-surface border-t-2 border-hairline font-code-figures text-code-figures font-semibold">
+<tr class="h-8 divide-x divide-hairline">
+<td class="px-3 text-left text-text-secondary uppercase text-[11px] tracking-wide" colspan="7">
+                Total (1,000,000 rows)
+              </td>
+<td class="px-2.5 text-right text-text-ink">3,421,800</td>
+<td class="px-2.5 text-right text-primary bg-selection-fill font-bold">$72,061,236.00</td>
+<td class="px-2.5 text-right text-text-ink">$44,120,890.00</td>
+<td class="px-2.5 text-right text-formula-values font-bold">$27,940,346.00</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+<!-- 5. RIGHT INSPECTOR PANEL (300px wide, bg #1d1e21, border-l hairline) -->
+<aside class="w-[300px] shrink-0 bg-surface border-l border-hairline flex flex-col justify-between overflow-y-auto">
+<div>
+<!-- Tabs across top: Format · Column · Table -->
+<div class="h-9 border-b border-hairline flex items-center px-2 bg-window-chrome select-none">
+<button class="flex-1 py-2 text-center text-toolbar-label font-toolbar-label text-chart-2 border-b-2 border-chart-2 font-semibold">
+            Format
+          </button>
+<button class="flex-1 py-2 text-center text-toolbar-label font-toolbar-label text-text-secondary hover:text-on-surface transition-colors">
+            Column
+          </button>
+<button class="flex-1 py-2 text-center text-toolbar-label font-toolbar-label text-text-secondary hover:text-on-surface transition-colors">
+            Table
+          </button>
+</div>
+<!-- Inspector Content -->
+<div class="p-space-md space-y-5">
+<!-- SECTION: NUMBER -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-[11px] font-semibold text-text-secondary uppercase tracking-wider font-toolbar-label">NUMBER</span>
+<span class="text-[10px] text-chart-2 font-code-figures">revenue (col H)</span>
+</div>
+<!-- Segmented control: [Auto | Number | Currency | Percent] -->
+<div class="grid grid-cols-4 bg-surface-dim p-0.5 rounded border border-hairline mb-3">
+<button class="py-1 text-[11px] font-toolbar-label text-text-secondary hover:text-on-surface rounded text-center">Auto</button>
+<button class="py-1 text-[11px] font-toolbar-label text-text-secondary hover:text-on-surface rounded text-center">Num</button>
+<button class="py-1 text-[11px] font-toolbar-label bg-surface-raised text-chart-2 font-semibold rounded text-center border border-hairline">Cur</button>
+<button class="py-1 text-[11px] font-toolbar-label text-text-secondary hover:text-on-surface rounded text-center">%</button>
+</div>
+<div class="space-y-2.5">
+<!-- Decimals Stepper -->
+<div class="flex items-center justify-between">
+<span class="text-[12px] text-text-body">Decimals</span>
+<div class="flex items-center bg-surface-dim border border-hairline rounded">
+<button class="px-2 py-0.5 text-text-secondary hover:text-on-surface hover:bg-surface-raised font-mono">-</button>
+<span class="px-2 text-[12px] font-code-figures text-text-ink min-w-[24px] text-center">2</span>
+<button class="px-2 py-0.5 text-text-secondary hover:text-on-surface hover:bg-surface-raised font-mono">+</button>
+</div>
+</div>
+<!-- Thousands separator switch toggled ON -->
+<div class="flex items-center justify-between">
+<span class="text-[12px] text-text-body">Thousands separator</span>
+<button class="w-8 h-4.5 bg-chart-2 rounded-full relative p-0.5 flex items-center justify-end">
+<span class="w-3.5 h-3.5 bg-surface-dim rounded-full shadow-sm block"></span>
+</button>
+</div>
+<!-- Currency symbol dropdown -->
+<div class="flex items-center justify-between">
+<span class="text-[12px] text-text-body">Currency symbol</span>
+<div class="flex items-center justify-between bg-surface-dim border border-hairline rounded px-2 py-1 w-24">
+<span class="font-code-figures text-text-ink text-[12px]">$ (USD)</span>
+<span class="material-symbols-outlined text-[13px] text-text-secondary">arrow_drop_down</span>
+</div>
+</div>
+<!-- Negatives Choice: radio/pill -->
+<div class="pt-1">
+<span class="text-[11px] text-text-secondary block mb-1.5">Negative values</span>
+<div class="grid grid-cols-2 gap-1.5">
+<div class="flex items-center justify-center py-1 px-1.5 rounded bg-surface-raised border border-chart-2/40 text-text-ink font-code-figures text-[11px]">
+                    -1,234.00
+                  </div>
+<div class="flex items-center justify-center py-1 px-1.5 rounded bg-surface-dim border border-hairline text-text-secondary font-code-figures text-[11px]">
+                    (1,234.00)
+                  </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Thin hairline separator -->
+<div class="h-[1px] bg-hairline w-full"></div>
+<!-- SECTION: COLUMN STATS -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-[11px] font-semibold text-text-secondary uppercase tracking-wider font-toolbar-label">COLUMN STATS</span>
+<span class="text-[10px] text-text-secondary font-code-figures">Float64</span>
+</div>
+<!-- Monospace stat list -->
+<div class="bg-surface-dim rounded border border-hairline p-2.5 space-y-1.5 font-code-figures text-code-figures mb-3">
+<div class="flex justify-between items-center text-[12px]">
+<span class="text-text-secondary">count:</span>
+<span class="text-text-ink font-medium">1,000,000</span>
+</div>
+<div class="flex justify-between items-center text-[12px]">
+<span class="text-text-secondary">empty:</span>
+<span class="text-text-ink font-medium">0</span>
+</div>
+<div class="flex justify-between items-center text-[12px]">
+<span class="text-text-secondary">distinct:</span>
+<span class="text-text-ink font-medium">812,441</span>
+</div>
+<div class="h-[1px] bg-hairline my-1"></div>
+<div class="flex justify-between items-center text-[12px]">
+<span class="text-text-secondary">min:</span>
+<span class="text-text-ink font-medium">$4.20</span>
+</div>
+<div class="flex justify-between items-center text-[12px]">
+<span class="text-text-secondary">max:</span>
+<span class="text-text-ink font-medium">$9,980.00</span>
+</div>
+<div class="flex justify-between items-center text-[12px]">
+<span class="text-text-secondary">mean:</span>
+<span class="text-primary font-bold">$72.06</span>
+</div>
+</div>
+<!-- Small distribution histogram graphic -->
+<div>
+<div class="flex justify-between text-[10px] text-text-secondary font-code-figures mb-1">
+<span>Distribution</span>
+<span>Normal · Pos. Skew</span>
+</div>
+<div class="h-16 bg-surface-dim border border-hairline rounded p-2 flex items-end justify-between gap-1">
+<div class="w-full bg-chart-2/40 h-[12%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/60 h-[28%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/80 h-[56%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2 h-[100%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/90 h-[82%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/75 h-[64%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/60 h-[48%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/45 h-[34%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/30 h-[22%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/20 h-[14%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/15 h-[8%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+<div class="w-full bg-chart-2/10 h-[5%] rounded-t-sm hover:bg-chart-2 transition-colors"></div>
+</div>
+<div class="flex justify-between text-[9px] text-text-secondary font-code-figures mt-1 px-0.5">
+<span>$4.20</span>
+<span>$2,500</span>
+<span>$9,980.00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick action at footer of inspector -->
+<div class="p-3 border-t border-hairline bg-surface-dim">
+<button class="w-full py-1.5 px-3 bg-surface hover:bg-surface-raised border border-hairline rounded font-toolbar-label text-toolbar-label text-text-ink flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[15px] text-chart-2">query_stats</span>
+<span>Generate Column Analysis</span>
+</button>
+</div>
+</aside>
+</div>
+<!-- 6. BOTTOM BAR (Height 26px, bg #121214, border-t hairline) -->
+<footer class="h-[26px] bg-window-chrome border-t border-hairline flex items-center justify-between px-3 text-xs shrink-0 select-none z-30">
+<!-- Bottom-left: Sheet tabs like Excel -->
+<div class="flex items-center h-full">
+<!-- Active Sheet: Orders -->
+<div class="h-full px-3 bg-surface border-t-2 border-chart-2 border-r border-hairline flex items-center gap-1.5 text-text-ink font-medium text-[11px]">
+<span class="material-symbols-outlined text-[13px] text-chart-2">grid_on</span>
+<span>Orders</span>
+</div>
+<!-- Inactive Sheet: Report -->
+<div class="h-full px-3 hover:bg-surface-raised/60 border-r border-hairline flex items-center gap-1.5 text-text-secondary hover:text-on-surface cursor-pointer text-[11px] transition-colors">
+<span>Report</span>
+</div>
+<!-- Add (+) button -->
+<button class="h-full px-2 text-text-secondary hover:text-chart-2 hover:bg-surface transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<!-- Bottom-right: Monospace status figures -->
+<div class="flex items-center gap-3 font-code-figures text-[11px] text-text-secondary">
+<div class="flex items-center gap-1">
+<span>Sum</span>
+<span class="text-text-ink font-medium">$72,061,236.00</span>
+</div>
+<span class="text-hairline">·</span>
+<div class="flex items-center gap-1">
+<span>Average</span>
+<span class="text-text-ink font-medium">$72.06</span>
+</div>
+<span class="text-hairline">·</span>
+<div class="flex items-center gap-1">
+<span>Count</span>
+<span class="text-text-ink font-medium">1,000,000</span>
+</div>
+<span class="text-hairline">·</span>
+<div class="flex items-center gap-1.5 text-status-good">
+<span class="w-1.5 h-1.5 rounded-full bg-status-good"></span>
+<span>GPU RTX 4090</span>
+</div>
+<span class="text-hairline">·</span>
+<div class="text-formula-values font-mono">
+        0.3 ms
+      </div>
+</div>
+</footer>
+</body></html>

@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>omxplorer — orders.csv</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "inverse-on-surface": "#eef1f2",
+            "surface-bright": "#f7fafa",
+            "on-tertiary-container": "#fff3ee",
+            "on-error-container": "#93000a",
+            "chart-5": "#2e9e5b",
+            "surface-container-high": "#e5e9e9",
+            "tertiary-fixed-dim": "#ffb688",
+            "surface": "#ffffff",
+            "outline-variant": "#bdc9ca",
+            "chart-6": "#b8892d",
+            "status-warning": "#b7791f",
+            "selection-fill": "#e3f2f3",
+            "chart-3": "#5b5fc7",
+            "chart-1": "#0e7c86",
+            "window-chrome": "#f5f6f8",
+            "surface-container-highest": "#dfe3e3",
+            "tertiary-fixed": "#ffdbc7",
+            "primary": "#00626a",
+            "surface-variant": "#dfe3e3",
+            "on-tertiary": "#ffffff",
+            "background": "#f7fafa",
+            "chart-4": "#d6455d",
+            "strong-line": "#c9ced6",
+            "secondary-container": "#785ee5",
+            "on-error": "#ffffff",
+            "status-good": "#1f8a4c",
+            "secondary": "#5f43ca",
+            "on-primary-container": "#ddfbff",
+            "on-background": "#181c1d",
+            "inverse-surface": "#2d3132",
+            "on-tertiary-fixed-variant": "#6f380b",
+            "chart-7": "#7a8594",
+            "primary-fixed": "#98f0fb",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary-fixed": "#1c0061",
+            "on-primary": "#ffffff",
+            "raised": "#f0f2f5",
+            "secondary-text": "#6b7380",
+            "outline": "#6e797a",
+            "on-secondary": "#ffffff",
+            "on-secondary-fixed-variant": "#4928b4",
+            "chart-8": "#c45cb5",
+            "formula-value": "#6a4fd6",
+            "on-primary-fixed": "#001f23",
+            "surface-tint": "#006972",
+            "inverse-primary": "#7cd4df",
+            "body-text": "#3d434c",
+            "chart-2": "#e8833a",
+            "ink": "#1b1f24",
+            "secondary-fixed-dim": "#cabeff",
+            "primary-container": "#0e7c86",
+            "on-surface": "#181c1d",
+            "secondary-fixed": "#e6deff",
+            "on-primary-fixed-variant": "#004f56",
+            "surface-dim": "#d7dbdb",
+            "page-bg": "#eef0f3",
+            "tertiary": "#85481b",
+            "status-bad": "#c8364c",
+            "on-secondary-container": "#fffbff",
+            "error": "#ba1a1a",
+            "on-surface-variant": "#3e494a",
+            "surface-container": "#ebeeef",
+            "on-tertiary-fixed": "#311300",
+            "tertiary-container": "#a26031",
+            "primary-fixed-dim": "#7cd4df",
+            "hairline": "#e1e4e8",
+            "error-container": "#ffdad6",
+            "surface-container-low": "#f1f4f4"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-xs": "0.25rem",
+            "space-sm": "0.5rem",
+            "space-md": "0.75rem",
+            "gutter": "1rem",
+            "space-xl": "1.5rem",
+            "margin": "1rem",
+            "space-lg": "1rem"
+          },
+          "fontFamily": {
+            "page-title": ["Inter", "sans-serif"],
+            "caption": ["Inter", "sans-serif"],
+            "body": ["Inter", "sans-serif"],
+            "tabular-data": ["JetBrains Mono", "monospace"],
+            "section-title": ["Inter", "sans-serif"],
+            "toolbar-label": ["Inter", "sans-serif"]
+          },
+          "fontSize": {
+            "page-title": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "body": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "tabular-data": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "section-title": ["15px", { "lineHeight": "22px", "fontWeight": "600" }],
+            "toolbar-label": ["11px", { "lineHeight": "14px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+    }
+    /* Hide scrollbars cleanly while allowing scroll */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Dense custom table borders */
+    .grid-cell {
+      border-right: 1px solid #e1e4e8;
+      border-bottom: 1px solid #e1e4e8;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col bg-page-bg text-ink font-body text-body select-none">
+<!-- 1. TITLE BAR (40px high) -->
+<!-- Conforms to TopNavBar shared component specification & layout instructions -->
+<header class="h-10 bg-window-chrome flex items-center justify-between px-space-md border-b border-hairline select-none flex-shrink-0 z-20">
+<!-- Left: Window controls & Branding -->
+<div class="flex items-center space-x-space-md">
+<!-- Mac window traffic lights -->
+<div class="flex items-center space-x-1.5 mr-1">
+<span class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] inline-block"></span>
+<span class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] inline-block"></span>
+<span class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] inline-block"></span>
+</div>
+<!-- Brand Logo / Product Name from JSON -->
+<span class="font-page-title text-page-title font-bold text-primary tracking-tight leading-none">omxplorer</span>
+<!-- TopNavBar Navigation Menus from JSON -->
+<nav class="hidden md:flex items-center space-x-space-sm ml-2">
+<button class="px-1.5 py-0.5 text-toolbar-label font-toolbar-label rounded text-secondary-text hover:text-ink hover:bg-raised transition-colors duration-150">File</button>
+<button class="px-1.5 py-0.5 text-toolbar-label font-toolbar-label rounded text-secondary-text hover:text-ink hover:bg-raised transition-colors duration-150">Edit</button>
+<button class="px-1.5 py-0.5 text-toolbar-label font-toolbar-label rounded text-secondary-text hover:text-ink hover:bg-raised transition-colors duration-150">View</button>
+<button class="px-1.5 py-0.5 text-toolbar-label font-toolbar-label rounded text-secondary-text hover:text-ink hover:bg-raised transition-colors duration-150">Insert</button>
+<button class="px-1.5 py-0.5 text-toolbar-label font-toolbar-label rounded text-secondary-text hover:text-ink hover:bg-raised transition-colors duration-150">Format</button>
+<button class="px-1.5 py-0.5 text-toolbar-label font-toolbar-label rounded text-primary font-semibold hover:bg-raised transition-colors duration-150">Data</button>
+<button class="px-1.5 py-0.5 text-toolbar-label font-toolbar-label rounded text-secondary-text hover:text-ink hover:bg-raised transition-colors duration-150">Model</button>
+<button class="px-1.5 py-0.5 text-toolbar-label font-toolbar-label rounded text-secondary-text hover:text-ink hover:bg-raised transition-colors duration-150">Help</button>
+</nav>
+</div>
+<!-- Center: Document Title & Row badge -->
+<div class="flex items-center space-x-space-sm">
+<span class="font-body text-body font-medium text-ink">orders.csv</span>
+<span class="text-secondary-text text-caption font-caption">—</span>
+<span class="font-tabular-data text-caption text-secondary-text">1,000,000 rows</span>
+<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium bg-selection-fill text-primary border border-primary/20">Saved</span>
+</div>
+<!-- Right: Shared actions & Titlebar actions -->
+<div class="flex items-center space-x-space-sm">
+<div class="flex items-center space-x-1 mr-2 text-secondary-text">
+<button class="p-1 rounded hover:bg-raised hover:text-ink transition-colors duration-150" title="Memory cache status">
+<span class="material-symbols-outlined">memory</span>
+</button>
+<button class="p-1 rounded hover:bg-raised hover:text-ink transition-colors duration-150" title="Sync Status">
+<span class="material-symbols-outlined">cloud_done</span>
+</button>
+</div>
+<button class="h-6 px-2.5 rounded bg-surface border border-strong-line text-ink text-toolbar-label font-toolbar-label hover:bg-raised transition-colors duration-150 inline-flex items-center space-x-1">
+<span class="material-symbols-outlined" style="font-size: 14px;">ios_share</span>
+<span>Share</span>
+</button>
+<button class="h-6 px-3 rounded bg-primary-container text-on-primary text-toolbar-label font-toolbar-label font-semibold hover:bg-primary transition-colors duration-150 shadow-none">
+        Save
+      </button>
+</div>
+</header>
+<!-- 2. TOOLBAR (54px high) -->
+<div class="h-[54px] bg-window-chrome border-b border-hairline flex items-center px-space-md space-x-1 flex-shrink-0 select-none overflow-x-auto no-scrollbar">
+<!-- Group 1: File Actions [Open, Save, Undo, Redo] -->
+<div class="flex items-center">
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Open</span>
+</button>
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">save</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Save</span>
+</button>
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">undo</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Undo</span>
+</button>
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">redo</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Redo</span>
+</button>
+</div>
+<!-- Vertical hairline divider -->
+<div class="h-7 w-[1px] bg-hairline mx-1"></div>
+<!-- Group 2: Table Operations [Table, Chart, Pivot, Formula, Add row] -->
+<div class="flex items-center">
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">table_chart</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Table</span>
+</button>
+<!-- [Chart] is explicitly hovered state with raised background and subtle border -->
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded bg-raised border border-strong-line/60 text-primary transition-colors duration-150 font-medium">
+<span class="material-symbols-outlined text-primary">bar_chart</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Chart</span>
+</button>
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">pivot_table_chart</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Pivot</span>
+</button>
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">functions</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Formula</span>
+</button>
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">add_row_below</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Add row</span>
+</button>
+</div>
+<!-- Vertical hairline divider -->
+<div class="h-7 w-[1px] bg-hairline mx-1"></div>
+<!-- Group 3: Sorting & Filtering -->
+<div class="flex items-center">
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">swap_vert</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Sort</span>
+</button>
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded hover:bg-raised text-body-text hover:text-ink transition-colors duration-150">
+<span class="material-symbols-outlined">filter_list</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Filter</span>
+</button>
+</div>
+<div class="flex-1"></div>
+<!-- Far Right: Format Tool -->
+<button class="w-16 h-11 flex flex-col items-center justify-center rounded bg-raised text-primary font-semibold hover:bg-selection-fill transition-colors duration-150 border border-hairline">
+<span class="material-symbols-outlined">format_shapes</span>
+<span class="text-toolbar-label font-toolbar-label mt-0.5">Format</span>
+</button>
+</div>
+<!-- 3. FORMULA BAR (32px high) -->
+<div class="h-8 bg-surface border-b border-hairline flex items-center px-space-md space-x-2 flex-shrink-0 z-10">
+<!-- Active Cell Reference Box -->
+<div class="w-16 h-6 px-1.5 flex items-center justify-center border border-strong-line rounded bg-window-chrome text-ink font-tabular-data text-caption font-semibold">
+      J12
+    </div>
+<!-- Vertical Hairline Divider -->
+<div class="h-4 w-[1px] bg-hairline"></div>
+<!-- Formula 'fx' identifier -->
+<span class="font-tabular-data text-body italic font-semibold text-secondary-text px-1">fx</span>
+<!-- Cancel and Accept buttons -->
+<div class="flex items-center space-x-1 text-secondary-text">
+<button class="w-5 h-5 flex items-center justify-center rounded hover:bg-raised hover:text-status-bad transition-colors">
+<span class="material-symbols-outlined" style="font-size: 15px;">close</span>
+</button>
+<button class="w-5 h-5 flex items-center justify-center rounded hover:bg-raised hover:text-status-good transition-colors">
+<span class="material-symbols-outlined" style="font-size: 15px;">check</span>
+</button>
+</div>
+<!-- Monospace Formula Input -->
+<div class="flex-1 h-6 flex items-center px-2 font-tabular-data text-body rounded border border-hairline bg-surface">
+<span class="text-ink font-medium">=</span>
+<span class="ml-1 text-chart-1 font-medium">revenue</span>
+<span class="mx-1 text-ink">-</span>
+<span class="text-chart-2 font-medium">cost</span>
+</div>
+<!-- Active Formula Evaluated Badge -->
+<div class="text-caption font-tabular-data text-formula-value bg-secondary-fixed/40 px-2 py-0.5 rounded border border-secondary-fixed">
+      eval: $1,420.00
+    </div>
+</div>
+<!-- 4. MAIN WORKSPACE (Data Grid + Inspector Panel) -->
+<div class="flex-1 flex overflow-hidden relative">
+<!-- DATA GRID CONTAINER -->
+<div class="flex-1 flex flex-col bg-surface overflow-auto no-scrollbar relative select-text">
+<!-- GRID TABLE -->
+<table class="border-collapse table-fixed w-full text-left font-tabular-data text-tabular-data">
+<!-- COLUMN HEADERS (36px high) -->
+<thead class="sticky top-0 bg-window-chrome z-10 shadow-[0_1px_0_0_#c9ced6]">
+<tr class="h-9 text-ink font-toolbar-label text-toolbar-label border-b border-strong-line">
+<!-- Row Number Gutter Header (48px) -->
+<th class="w-12 min-w-[48px] bg-raised border-r border-hairline text-center text-secondary-text font-tabular-data text-caption font-normal p-0 select-none">
+              #
+            </th>
+<!-- Col 1: order_id -->
+<th class="w-24 px-2 border-r border-hairline bg-window-chrome select-none">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="text-[10px] px-1 py-0.2 rounded bg-raised text-secondary-text border border-hairline font-tabular-data">#</span>
+<span class="font-semibold text-ink">order_id</span>
+</div>
+<!-- Mini distribution histogram sparkline -->
+<div class="flex items-end h-3 space-x-0.5 opacity-60">
+<span class="w-1 h-1.5 bg-chart-1 rounded-none inline-block"></span>
+<span class="w-1 h-2.5 bg-chart-1 rounded-none inline-block"></span>
+<span class="w-1 h-3 bg-chart-1 rounded-none inline-block"></span>
+<span class="w-1 h-2 bg-chart-1 rounded-none inline-block"></span>
+</div>
+</div>
+</th>
+<!-- Col 2: date -->
+<th class="w-28 px-2 border-r border-hairline bg-window-chrome select-none">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="material-symbols-outlined text-[13px] text-secondary-text">calendar_today</span>
+<span class="font-semibold text-ink">date</span>
+</div>
+<div class="flex items-end h-3 space-x-0.5 opacity-60">
+<span class="w-1 h-2 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2 bg-chart-1 inline-block"></span>
+<span class="w-1 h-3 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2.5 bg-chart-1 inline-block"></span>
+</div>
+</div>
+</th>
+<!-- Col 3: region -->
+<th class="w-24 px-2 border-r border-hairline bg-window-chrome select-none">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="text-[10px] px-1 py-0.2 rounded bg-raised text-secondary-text border border-hairline">Aa</span>
+<span class="font-semibold text-ink">region</span>
+</div>
+<div class="flex items-end h-3 space-x-0.5 opacity-60">
+<span class="w-1 h-1 bg-chart-1 inline-block"></span>
+<span class="w-1 h-3 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2 bg-chart-1 inline-block"></span>
+<span class="w-1 h-1.5 bg-chart-1 inline-block"></span>
+</div>
+</div>
+</th>
+<!-- Col 4: customer -->
+<th class="w-32 px-2 border-r border-hairline bg-window-chrome select-none">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="text-[10px] px-1 py-0.2 rounded bg-raised text-secondary-text border border-hairline">Aa</span>
+<span class="font-semibold text-ink">customer</span>
+</div>
+<div class="flex items-end h-3 space-x-0.5 opacity-60">
+<span class="w-1 h-3 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2.5 bg-chart-1 inline-block"></span>
+<span class="w-1 h-1.5 bg-chart-1 inline-block"></span>
+</div>
+</div>
+</th>
+<!-- Col 5: product -->
+<th class="w-36 px-2 border-r border-hairline bg-window-chrome select-none">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="text-[10px] px-1 py-0.2 rounded bg-raised text-secondary-text border border-hairline">Aa</span>
+<span class="font-semibold text-ink">product</span>
+</div>
+<div class="flex items-end h-3 space-x-0.5 opacity-60">
+<span class="w-1 h-1.5 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2.5 bg-chart-1 inline-block"></span>
+<span class="w-1 h-3 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2 bg-chart-1 inline-block"></span>
+</div>
+</div>
+</th>
+<!-- Col 6: carrier -->
+<th class="w-24 px-2 border-r border-hairline bg-window-chrome select-none">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-1">
+<span class="text-[10px] px-1 py-0.2 rounded bg-raised text-secondary-text border border-hairline">Aa</span>
+<span class="font-semibold text-ink">carrier</span>
+</div>
+<div class="flex items-end h-3 space-x-0.5 opacity-60">
+<span class="w-1 h-2 bg-chart-1 inline-block"></span>
+<span class="w-1 h-3 bg-chart-1 inline-block"></span>
+<span class="w-1 h-1 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2 bg-chart-1 inline-block"></span>
+</div>
+</div>
+</th>
+<!-- Col 7: qty (right aligned) -->
+<th class="w-20 px-2 border-r border-hairline bg-window-chrome text-right select-none">
+<div class="flex items-center justify-end space-x-1.5">
+<div class="flex items-end h-3 space-x-0.5 opacity-60 mr-1">
+<span class="w-1 h-1 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2 bg-chart-1 inline-block"></span>
+<span class="w-1 h-3 bg-chart-1 inline-block"></span>
+<span class="w-1 h-1.5 bg-chart-1 inline-block"></span>
+</div>
+<span class="text-[10px] px-1 py-0.2 rounded bg-raised text-secondary-text border border-hairline font-tabular-data">#</span>
+<span class="font-semibold text-ink">qty</span>
+</div>
+</th>
+<!-- Col 8: revenue (SELECTED COLUMN) -->
+<th class="w-28 px-2 border-r border-primary/30 bg-selection-fill text-right select-none">
+<div class="flex items-center justify-end space-x-1.5">
+<div class="flex items-end h-3 space-x-0.5 opacity-80 mr-1">
+<span class="w-1 h-1.5 bg-primary inline-block"></span>
+<span class="w-1 h-2.5 bg-primary inline-block"></span>
+<span class="w-1 h-3 bg-primary inline-block"></span>
+<span class="w-1 h-2 bg-primary inline-block"></span>
+</div>
+<span class="text-[10px] px-1 py-0.2 rounded bg-primary-container text-on-primary font-tabular-data">$</span>
+<span class="font-semibold text-primary">revenue</span>
+</div>
+</th>
+<!-- Col 9: cost (right aligned) -->
+<th class="w-28 px-2 border-r border-hairline bg-window-chrome text-right select-none">
+<div class="flex items-center justify-end space-x-1.5">
+<div class="flex items-end h-3 space-x-0.5 opacity-60 mr-1">
+<span class="w-1 h-2 bg-chart-1 inline-block"></span>
+<span class="w-1 h-3 bg-chart-1 inline-block"></span>
+<span class="w-1 h-2.5 bg-chart-1 inline-block"></span>
+<span class="w-1 h-1 bg-chart-1 inline-block"></span>
+</div>
+<span class="text-[10px] px-1 py-0.2 rounded bg-raised text-secondary-text border border-hairline font-tabular-data">$</span>
+<span class="font-semibold text-ink">cost</span>
+</div>
+</th>
+<!-- Col 10: margin (formula column) -->
+<th class="w-28 px-2 border-r border-hairline bg-window-chrome text-right select-none">
+<div class="flex items-center justify-end space-x-1.5">
+<div class="flex items-end h-3 space-x-0.5 opacity-60 mr-1">
+<span class="w-1 h-1.5 bg-formula-value inline-block"></span>
+<span class="w-1 h-2 bg-formula-value inline-block"></span>
+<span class="w-1 h-3 bg-formula-value inline-block"></span>
+<span class="w-1 h-2 bg-formula-value inline-block"></span>
+</div>
+<span class="text-[10px] px-1 py-0.2 rounded bg-secondary-fixed text-formula-value font-semibold">fx</span>
+<span class="font-semibold text-formula-value">margin</span>
+</div>
+</th>
+</tr>
+</thead>
+<!-- 24 BODY ROWS (28px height each) -->
+<tbody class="divide-y divide-hairline">
+<!-- Row 1 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">1</td>
+<td class="px-2 grid-cell">100241</td>
+<td class="px-2 grid-cell">2026-07-14</td>
+<td class="px-2 grid-cell">West</td>
+<td class="px-2 grid-cell">Acme Corp</td>
+<td class="px-2 grid-cell truncate">Standing Desk</td>
+<td class="px-2 grid-cell">FedEx</td>
+<td class="px-2 grid-cell text-right">3</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$2,150.00</td>
+<td class="px-2 grid-cell text-right">$1,420.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$730.00</td>
+</tr>
+<!-- Row 2 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">2</td>
+<td class="px-2 grid-cell">100242</td>
+<td class="px-2 grid-cell">2026-07-14</td>
+<td class="px-2 grid-cell">East</td>
+<td class="px-2 grid-cell">NovaTech</td>
+<td class="px-2 grid-cell truncate">Monitor Arm</td>
+<td class="px-2 grid-cell">UPS</td>
+<td class="px-2 grid-cell text-right">8</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$349.00</td>
+<td class="px-2 grid-cell text-right">$190.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$159.00</td>
+</tr>
+<!-- Row 3 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">3</td>
+<td class="px-2 grid-cell">100243</td>
+<td class="px-2 grid-cell">2026-07-14</td>
+<td class="px-2 grid-cell">North</td>
+<td class="px-2 grid-cell">Globex</td>
+<td class="px-2 grid-cell truncate">Desk Chair</td>
+<td class="px-2 grid-cell">DHL</td>
+<td class="px-2 grid-cell text-right">5</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$1,284.50</td>
+<td class="px-2 grid-cell text-right">$820.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$464.50</td>
+</tr>
+<!-- Row 4 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">4</td>
+<td class="px-2 grid-cell">100244</td>
+<td class="px-2 grid-cell">2026-07-14</td>
+<td class="px-2 grid-cell">Central</td>
+<td class="px-2 grid-cell">Initech</td>
+<td class="px-2 grid-cell truncate">Mech Keyboard</td>
+<td class="px-2 grid-cell">FedEx</td>
+<td class="px-2 grid-cell text-right">12</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$1,800.00</td>
+<td class="px-2 grid-cell text-right">$1,050.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$750.00</td>
+</tr>
+<!-- Row 5 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">5</td>
+<td class="px-2 grid-cell">100245</td>
+<td class="px-2 grid-cell">2026-07-14</td>
+<td class="px-2 grid-cell">South</td>
+<td class="px-2 grid-cell">Apex Bio</td>
+<td class="px-2 grid-cell truncate">USB-C Dock</td>
+<td class="px-2 grid-cell">UPS</td>
+<td class="px-2 grid-cell text-right">4</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$796.00</td>
+<td class="px-2 grid-cell text-right">$480.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$316.00</td>
+</tr>
+<!-- Row 6 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">6</td>
+<td class="px-2 grid-cell">100246</td>
+<td class="px-2 grid-cell">2026-07-14</td>
+<td class="px-2 grid-cell">West</td>
+<td class="px-2 grid-cell">Acme Corp</td>
+<td class="px-2 grid-cell truncate">Monitor Arm</td>
+<td class="px-2 grid-cell">DHL</td>
+<td class="px-2 grid-cell text-right">10</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$436.25</td>
+<td class="px-2 grid-cell text-right">$237.50</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$198.75</td>
+</tr>
+<!-- Row 7 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">7</td>
+<td class="px-2 grid-cell">100247</td>
+<td class="px-2 grid-cell">2026-07-15</td>
+<td class="px-2 grid-cell">East</td>
+<td class="px-2 grid-cell">Globex</td>
+<td class="px-2 grid-cell truncate">Standing Desk</td>
+<td class="px-2 grid-cell">UPS</td>
+<td class="px-2 grid-cell text-right">2</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$1,433.30</td>
+<td class="px-2 grid-cell text-right">$946.60</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$486.70</td>
+</tr>
+<!-- Row 8 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">8</td>
+<td class="px-2 grid-cell">100248</td>
+<td class="px-2 grid-cell">2026-07-15</td>
+<td class="px-2 grid-cell">Central</td>
+<td class="px-2 grid-cell">NovaTech</td>
+<td class="px-2 grid-cell truncate">Desk Chair</td>
+<td class="px-2 grid-cell">FedEx</td>
+<td class="px-2 grid-cell text-right">6</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$1,541.40</td>
+<td class="px-2 grid-cell text-right">$984.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$557.40</td>
+</tr>
+<!-- Row 9 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">9</td>
+<td class="px-2 grid-cell">100249</td>
+<td class="px-2 grid-cell">2026-07-15</td>
+<td class="px-2 grid-cell">North</td>
+<td class="px-2 grid-cell">Initech</td>
+<td class="px-2 grid-cell truncate">USB-C Dock</td>
+<td class="px-2 grid-cell">DHL</td>
+<td class="px-2 grid-cell text-right">15</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$2,985.00</td>
+<td class="px-2 grid-cell text-right">$1,800.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$1,185.00</td>
+</tr>
+<!-- Row 10 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">10</td>
+<td class="px-2 grid-cell">100250</td>
+<td class="px-2 grid-cell">2026-07-15</td>
+<td class="px-2 grid-cell">South</td>
+<td class="px-2 grid-cell">Apex Bio</td>
+<td class="px-2 grid-cell truncate">Mech Keyboard</td>
+<td class="px-2 grid-cell">UPS</td>
+<td class="px-2 grid-cell text-right">1</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$150.00</td>
+<td class="px-2 grid-cell text-right">$85.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$65.00</td>
+</tr>
+<!-- Row 11 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">11</td>
+<td class="px-2 grid-cell">100251</td>
+<td class="px-2 grid-cell">2026-07-15</td>
+<td class="px-2 grid-cell">West</td>
+<td class="px-2 grid-cell">NovaTech</td>
+<td class="px-2 grid-cell truncate">Standing Desk</td>
+<td class="px-2 grid-cell">FedEx</td>
+<td class="px-2 grid-cell text-right">4</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$2,866.60</td>
+<td class="px-2 grid-cell text-right">$1,893.20</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$973.40</td>
+</tr>
+<!-- Row 12 (Contains selected cell J12 with 2px accent selection ring in teal #0e7c86) -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-primary font-bold select-none text-caption font-tabular-data">12</td>
+<td class="px-2 grid-cell">100252</td>
+<td class="px-2 grid-cell">2026-07-15</td>
+<td class="px-2 grid-cell">Central</td>
+<td class="px-2 grid-cell">Acme Corp</td>
+<td class="px-2 grid-cell truncate">Desk Chair</td>
+<td class="px-2 grid-cell">UPS</td>
+<td class="px-2 grid-cell text-right">7</td>
+<!-- CELL J12 - SELECTED CELL ACTIVE RING -->
+<td class="px-2 border-r border-primary/20 bg-selection-fill text-right font-semibold relative ring-2 ring-primary ring-inset z-10 text-primary">
+              $1,798.30
+            </td>
+<td class="px-2 grid-cell text-right">$1,148.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$650.30</td>
+</tr>
+<!-- Row 13 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">13</td>
+<td class="px-2 grid-cell">100253</td>
+<td class="px-2 grid-cell">2026-07-16</td>
+<td class="px-2 grid-cell">East</td>
+<td class="px-2 grid-cell">Initech</td>
+<td class="px-2 grid-cell truncate">Monitor Arm</td>
+<td class="px-2 grid-cell">DHL</td>
+<td class="px-2 grid-cell text-right">3</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$130.88</td>
+<td class="px-2 grid-cell text-right">$71.25</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$59.63</td>
+</tr>
+<!-- Row 14 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">14</td>
+<td class="px-2 grid-cell">100254</td>
+<td class="px-2 grid-cell">2026-07-16</td>
+<td class="px-2 grid-cell">North</td>
+<td class="px-2 grid-cell">Globex</td>
+<td class="px-2 grid-cell truncate">Mech Keyboard</td>
+<td class="px-2 grid-cell">FedEx</td>
+<td class="px-2 grid-cell text-right">9</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$1,350.00</td>
+<td class="px-2 grid-cell text-right">$765.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$585.00</td>
+</tr>
+<!-- Row 15 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">15</td>
+<td class="px-2 grid-cell">100255</td>
+<td class="px-2 grid-cell">2026-07-16</td>
+<td class="px-2 grid-cell">South</td>
+<td class="px-2 grid-cell">Apex Bio</td>
+<td class="px-2 grid-cell truncate">Standing Desk</td>
+<td class="px-2 grid-cell">DHL</td>
+<td class="px-2 grid-cell text-right">2</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$1,433.30</td>
+<td class="px-2 grid-cell text-right">$946.60</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$486.70</td>
+</tr>
+<!-- Row 16 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">16</td>
+<td class="px-2 grid-cell">100256</td>
+<td class="px-2 grid-cell">2026-07-16</td>
+<td class="px-2 grid-cell">West</td>
+<td class="px-2 grid-cell">Acme Corp</td>
+<td class="px-2 grid-cell truncate">USB-C Dock</td>
+<td class="px-2 grid-cell">UPS</td>
+<td class="px-2 grid-cell text-right">5</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$995.00</td>
+<td class="px-2 grid-cell text-right">$600.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$395.00</td>
+</tr>
+<!-- Row 17 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">17</td>
+<td class="px-2 grid-cell">100257</td>
+<td class="px-2 grid-cell">2026-07-16</td>
+<td class="px-2 grid-cell">Central</td>
+<td class="px-2 grid-cell">NovaTech</td>
+<td class="px-2 grid-cell truncate">Desk Chair</td>
+<td class="px-2 grid-cell">FedEx</td>
+<td class="px-2 grid-cell text-right">3</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$770.70</td>
+<td class="px-2 grid-cell text-right">$492.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$278.70</td>
+</tr>
+<!-- Row 18 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">18</td>
+<td class="px-2 grid-cell">100258</td>
+<td class="px-2 grid-cell">2026-07-16</td>
+<td class="px-2 grid-cell">East</td>
+<td class="px-2 grid-cell">Initech</td>
+<td class="px-2 grid-cell truncate">Monitor Arm</td>
+<td class="px-2 grid-cell">UPS</td>
+<td class="px-2 grid-cell text-right">6</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$261.75</td>
+<td class="px-2 grid-cell text-right">$142.50</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$119.25</td>
+</tr>
+<!-- Row 19 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">19</td>
+<td class="px-2 grid-cell">100259</td>
+<td class="px-2 grid-cell">2026-07-17</td>
+<td class="px-2 grid-cell">North</td>
+<td class="px-2 grid-cell">Globex</td>
+<td class="px-2 grid-cell truncate">Standing Desk</td>
+<td class="px-2 grid-cell">DHL</td>
+<td class="px-2 grid-cell text-right">8</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$5,733.20</td>
+<td class="px-2 grid-cell text-right">$3,786.40</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$1,946.80</td>
+</tr>
+<!-- Row 20 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">20</td>
+<td class="px-2 grid-cell">100260</td>
+<td class="px-2 grid-cell">2026-07-17</td>
+<td class="px-2 grid-cell">South</td>
+<td class="px-2 grid-cell">Apex Bio</td>
+<td class="px-2 grid-cell truncate">Mech Keyboard</td>
+<td class="px-2 grid-cell">UPS</td>
+<td class="px-2 grid-cell text-right">14</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$2,100.00</td>
+<td class="px-2 grid-cell text-right">$1,190.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$910.00</td>
+</tr>
+<!-- Row 21 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">21</td>
+<td class="px-2 grid-cell">100261</td>
+<td class="px-2 grid-cell">2026-07-17</td>
+<td class="px-2 grid-cell">West</td>
+<td class="px-2 grid-cell">Acme Corp</td>
+<td class="px-2 grid-cell truncate">Desk Chair</td>
+<td class="px-2 grid-cell">FedEx</td>
+<td class="px-2 grid-cell text-right">2</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$513.80</td>
+<td class="px-2 grid-cell text-right">$328.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$185.80</td>
+</tr>
+<!-- Row 22 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">22</td>
+<td class="px-2 grid-cell">100262</td>
+<td class="px-2 grid-cell">2026-07-17</td>
+<td class="px-2 grid-cell">Central</td>
+<td class="px-2 grid-cell">NovaTech</td>
+<td class="px-2 grid-cell truncate">USB-C Dock</td>
+<td class="px-2 grid-cell">UPS</td>
+<td class="px-2 grid-cell text-right">11</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$2,189.00</td>
+<td class="px-2 grid-cell text-right">$1,320.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$869.00</td>
+</tr>
+<!-- Row 23 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">23</td>
+<td class="px-2 grid-cell">100263</td>
+<td class="px-2 grid-cell">2026-07-17</td>
+<td class="px-2 grid-cell">East</td>
+<td class="px-2 grid-cell">Globex</td>
+<td class="px-2 grid-cell truncate">Monitor Arm</td>
+<td class="px-2 grid-cell">DHL</td>
+<td class="px-2 grid-cell text-right">4</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$174.50</td>
+<td class="px-2 grid-cell text-right">$95.00</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$79.50</td>
+</tr>
+<!-- Row 24 -->
+<tr class="h-7 hover:bg-raised/60">
+<td class="w-12 bg-raised border-r border-hairline text-right pr-2 text-secondary-text select-none text-caption font-tabular-data">24</td>
+<td class="px-2 grid-cell">100264</td>
+<td class="px-2 grid-cell">2026-07-17</td>
+<td class="px-2 grid-cell">North</td>
+<td class="px-2 grid-cell">Initech</td>
+<td class="px-2 grid-cell truncate">Standing Desk</td>
+<td class="px-2 grid-cell">FedEx</td>
+<td class="px-2 grid-cell text-right">5</td>
+<td class="px-2 border-r border-primary/20 bg-selection-fill/50 text-right font-medium">$3,583.25</td>
+<td class="px-2 grid-cell text-right">$2,366.50</td>
+<td class="px-2 grid-cell text-right text-formula-value font-medium">$1,216.75</td>
+</tr>
+</tbody>
+<!-- TOTALS ROW (PINNED AT BOTTOM) -->
+<tfoot class="sticky bottom-0 bg-window-chrome z-10 border-t-2 border-strong-line font-tabular-data">
+<tr class="h-8 text-ink font-semibold">
+<td class="w-12 bg-raised border-r border-hairline text-center text-secondary-text font-normal text-caption">Σ</td>
+<td class="px-2 grid-cell font-toolbar-label uppercase text-[11px] tracking-wider text-secondary-text" colspan="5">
+              Total / Average (1M rows)
+            </td>
+<td class="px-2 grid-cell text-secondary-text font-normal">—</td>
+<td class="px-2 grid-cell text-right font-bold text-ink">14,208,450</td>
+<td class="px-2 border-r border-primary/30 bg-selection-fill text-right font-bold text-primary">$72,061,236.00</td>
+<td class="px-2 grid-cell text-right font-bold text-ink">$48,290,110.00</td>
+<td class="px-2 grid-cell text-right font-bold text-formula-value">$23,771,126.00</td>
+</tr>
+</tfoot>
+</table>
+</div>
+<!-- 5. RIGHT INSPECTOR PANEL (300px wide, fixed right) -->
+<!-- Follows SideNavBar / Inspector component token definitions -->
+<aside class="w-[300px] flex-shrink-0 bg-surface border-l border-hairline flex flex-col h-full z-20 select-none overflow-y-auto no-scrollbar">
+<!-- Panel Header & Tabs: Format · Column · Table with 'Format' active -->
+<div class="border-b border-hairline bg-surface">
+<div class="px-space-md pt-3 pb-2 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-section-title text-section-title font-semibold text-ink leading-tight">Inspector &amp; Schema</span>
+<span class="text-[11px] text-secondary-text font-caption mt-0.5">Active: Sheet1 (1,048,576 rows)</span>
+</div>
+<button class="px-2 py-0.5 text-[11px] font-semibold text-primary bg-selection-fill rounded hover:bg-selection-fill/80 border border-primary/20">
+            Profile Data
+          </button>
+</div>
+<nav class="flex px-space-md space-x-4 text-caption font-toolbar-label border-t border-hairline pt-1">
+<button class="py-1.5 text-primary font-semibold border-b-2 border-primary -mb-[1px]">Format</button>
+<button class="py-1.5 text-secondary-text hover:text-ink font-medium">Column</button>
+<button class="py-1.5 text-secondary-text hover:text-ink font-medium">Table</button>
+<button class="py-1.5 text-secondary-text hover:text-ink font-medium">Distribution</button>
+</nav>
+</div>
+<!-- Inspector Panel Body Content -->
+<div class="p-space-md space-y-space-lg flex-1">
+<!-- SECTION: NUMBER FORMATTING -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-[11px] font-semibold uppercase tracking-wider text-secondary-text">Number</h3>
+<span class="text-[10px] text-secondary-text">Format Rule</span>
+</div>
+<!-- Segmented Control [Auto | Number | Currency | Percent] -->
+<div class="grid grid-cols-4 p-0.5 bg-raised rounded border border-hairline text-[11px] font-toolbar-label text-center mb-3">
+<button class="py-1 rounded text-secondary-text hover:text-ink">Auto</button>
+<button class="py-1 rounded text-secondary-text hover:text-ink">Number</button>
+<button class="py-1 rounded bg-surface text-primary font-semibold shadow-none border border-hairline">Currency</button>
+<button class="py-1 rounded text-secondary-text hover:text-ink">Percent</button>
+</div>
+<div class="space-y-2.5 text-body">
+<!-- Decimals Stepper -->
+<div class="flex items-center justify-between">
+<span class="text-secondary-text text-caption font-caption">Decimals</span>
+<div class="flex items-center space-x-1">
+<div class="w-12 h-6 flex items-center justify-center border border-hairline rounded bg-surface font-tabular-data text-caption text-ink">
+                  2
+                </div>
+<button class="w-6 h-6 border border-hairline rounded bg-window-chrome hover:bg-raised flex items-center justify-center text-ink text-xs font-semibold">-</button>
+<button class="w-6 h-6 border border-hairline rounded bg-window-chrome hover:bg-raised flex items-center justify-center text-ink text-xs font-semibold">+</button>
+</div>
+</div>
+<!-- Thousands Separator Toggle -->
+<div class="flex items-center justify-between">
+<span class="text-secondary-text text-caption font-caption">Thousands separator</span>
+<button class="w-8 h-4 bg-primary rounded-full relative flex items-center px-0.5 focus:outline-none" title="Enabled">
+<div class="w-3 h-3 bg-white rounded-full ml-auto shadow-sm"></div>
+</button>
+</div>
+<!-- Negatives Choice Selector -->
+<div class="flex items-center justify-between">
+<span class="text-secondary-text text-caption font-caption">Negatives</span>
+<div class="flex items-center space-x-1.5 font-tabular-data text-caption">
+<span class="px-1.5 py-0.5 rounded border border-primary bg-selection-fill text-primary font-medium cursor-pointer">
+                  -1,234.00
+                </span>
+<span class="px-1.5 py-0.5 rounded border border-hairline text-secondary-text hover:bg-raised cursor-pointer">
+                  (1,234.00)
+                </span>
+</div>
+</div>
+<!-- Currency Symbol Dropdown -->
+<div class="flex items-center justify-between pt-1">
+<span class="text-secondary-text text-caption font-caption">Currency symbol</span>
+<div class="h-6 w-20 px-2 rounded border border-hairline bg-surface flex items-center justify-between text-caption font-tabular-data text-ink cursor-pointer hover:bg-raised">
+<span>$ (USD)</span>
+<span class="material-symbols-outlined text-secondary-text" style="font-size: 14px;">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+<!-- DIVIDER -->
+<div class="h-[1px] bg-hairline"></div>
+<!-- SECTION: COLUMN STATS (revenue) -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-[11px] font-semibold uppercase tracking-wider text-secondary-text">Column Stats (revenue)</h3>
+<span class="inline-block w-2 h-2 rounded-full bg-status-good" title="Engine synchronized"></span>
+</div>
+<!-- Monospace Metric Rows in JetBrains Mono -->
+<div class="bg-window-chrome rounded p-2.5 border border-hairline space-y-1.5 font-tabular-data text-caption">
+<div class="flex justify-between items-center">
+<span class="text-secondary-text">Count</span>
+<span class="text-ink font-medium">1,000,000</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-secondary-text">Empty</span>
+<span class="text-ink font-medium">0</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-secondary-text">Distinct</span>
+<span class="text-ink font-medium">812,441</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-secondary-text">Min</span>
+<span class="text-ink font-medium">$4.20</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-secondary-text">Max</span>
+<span class="text-ink font-medium">$9,980.00</span>
+</div>
+<div class="flex justify-between items-center pt-1 border-t border-hairline">
+<span class="text-secondary-text font-semibold">Mean</span>
+<span class="text-primary font-semibold">$72.06</span>
+</div>
+</div>
+<!-- Visual Distribution Histogram Bar Chart (12 clean bars in #0e7c86) -->
+<div class="mt-3">
+<div class="flex justify-between items-center text-[10px] text-secondary-text font-tabular-data mb-1">
+<span>$4.20</span>
+<span>Distribution Frequency (12 bins)</span>
+<span>$9,980</span>
+</div>
+<div class="h-14 bg-window-chrome rounded p-1.5 border border-hairline flex items-end justify-between space-x-1">
+<!-- Bar 1 -->
+<div class="w-full bg-[#0e7c86]/90 rounded-none h-[45%]" title="Bin 1: 184,200"></div>
+<!-- Bar 2 -->
+<div class="w-full bg-[#0e7c86] rounded-none h-[75%]" title="Bin 2: 310,400"></div>
+<!-- Bar 3 -->
+<div class="w-full bg-[#0e7c86] rounded-none h-[100%]" title="Bin 3: 420,100"></div>
+<!-- Bar 4 -->
+<div class="w-full bg-[#0e7c86] rounded-none h-[65%]" title="Bin 4: 260,000"></div>
+<!-- Bar 5 -->
+<div class="w-full bg-[#0e7c86]/80 rounded-none h-[40%]" title="Bin 5: 165,000"></div>
+<!-- Bar 6 -->
+<div class="w-full bg-[#0e7c86]/70 rounded-none h-[28%]" title="Bin 6: 110,000"></div>
+<!-- Bar 7 -->
+<div class="w-full bg-[#0e7c86]/60 rounded-none h-[20%]" title="Bin 7: 82,000"></div>
+<!-- Bar 8 -->
+<div class="w-full bg-[#0e7c86]/50 rounded-none h-[14%]" title="Bin 8: 55,000"></div>
+<!-- Bar 9 -->
+<div class="w-full bg-[#0e7c86]/40 rounded-none h-[10%]" title="Bin 9: 39,000"></div>
+<!-- Bar 10 -->
+<div class="w-full bg-[#0e7c86]/30 rounded-none h-[6%]" title="Bin 10: 24,000"></div>
+<!-- Bar 11 -->
+<div class="w-full bg-[#0e7c86]/20 rounded-none h-[4%]" title="Bin 11: 15,000"></div>
+<!-- Bar 12 -->
+<div class="w-full bg-[#0e7c86]/20 rounded-none h-[2%]" title="Bin 12: 8,300"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Inspector Footer Bar (Settings & Log Console tabs) -->
+<div class="h-8 border-t border-hairline bg-window-chrome flex items-center justify-between px-space-md text-[11px] text-secondary-text">
+<button class="flex items-center space-x-1 hover:text-ink">
+<span class="material-symbols-outlined" style="font-size: 15px;">tune</span>
+<span>Settings</span>
+</button>
+<button class="flex items-center space-x-1 hover:text-ink">
+<span class="material-symbols-outlined" style="font-size: 15px;">terminal</span>
+<span>Log Console</span>
+</button>
+</div>
+</aside>
+</div>
+<!-- 6. BOTTOM STATUS BAR (26px high) -->
+<footer class="h-[26px] bg-window-chrome border-t border-hairline flex items-center justify-between px-space-md flex-shrink-0 select-none z-30">
+<!-- Left: Spreadsheet Tabs [Orders (active with 2px teal top), Report, + button] -->
+<div class="flex items-center h-full -mb-[1px]">
+<!-- Orders Tab (ACTIVE) -->
+<div class="h-full px-3 flex items-center space-x-1.5 bg-surface border-r border-hairline border-t-2 border-t-primary text-primary font-medium text-caption cursor-pointer">
+<span>Orders</span>
+<span class="material-symbols-outlined text-secondary-text hover:text-ink" style="font-size: 13px;">close</span>
+</div>
+<!-- Report Tab -->
+<div class="h-full px-3 flex items-center space-x-1 bg-transparent hover:bg-raised border-r border-hairline text-secondary-text hover:text-ink text-caption cursor-pointer">
+<span>Report</span>
+</div>
+<!-- Add Tab Button -->
+<button class="h-full px-2 flex items-center justify-center text-secondary-text hover:text-ink hover:bg-raised transition-colors">
+<span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+</button>
+</div>
+<!-- Right: Monospace Status Metrics -->
+<div class="flex items-center space-x-2 font-tabular-data text-[11px] text-secondary-text">
+<div class="flex items-center space-x-1">
+<span>Sum</span>
+<span class="text-ink font-medium">$72,061,236.00</span>
+</div>
+<span>·</span>
+<div class="flex items-center space-x-1">
+<span>Average</span>
+<span class="text-ink font-medium">$72.06</span>
+</div>
+<span>·</span>
+<div class="flex items-center space-x-1">
+<span>Count</span>
+<span class="text-ink font-medium">1,000,000</span>
+</div>
+<span>·</span>
+<div class="flex items-center space-x-1 text-primary font-medium">
+<span class="material-symbols-outlined" style="font-size: 13px;">memory</span>
+<span>GPU RTX 4090</span>
+</div>
+<span>·</span>
+<div class="flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-status-good inline-block"></span>
+<span class="text-ink font-medium">0.3 ms</span>
+</div>
+</div>
+</footer>
+</body></html>

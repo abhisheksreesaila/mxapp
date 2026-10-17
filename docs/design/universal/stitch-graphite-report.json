@@ -1,0 +1,679 @@
+{
+  "success": true,
+  "data": {
+    "resource": "screen",
+    "id": "6ea9d7d3f6794ce1ae531c0ea4826979",
+    "project": "6981834873790512247",
+    "title": "omxplorer — Q3 Orders Report",
+    "device": "DESKTOP",
+    "screenType": "DESIGN",
+    "canvasUrl": "https://stitch.google.com/projects/6981834873790512247?node-id=6ea9d7d3f6794ce1ae531c0ea4826979",
+    "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1U0s7OP3-utmv8wX2DquRi10jR5yzRAJajeOGgJOjm68vutD_3R2QFP9oqwsgS12uO-XmJXT2oic-RO5ZIyxw94JTOVNrr6zP1Gb4QYF7ynYehi7Tjb9WTzvcthB8-VOvivcQ4pPVCqHcia_anlESb1WM0JhEwOpv45XUlKSYWq4gf3GlSh695iCEVbSr-rtrDQ2Xlyw2XBH70Qw23QnRylfIwmqBmbfdqq0yqQrGeTmJc6wZWJvoTlwaM",
+    "htmlCode": {
+      "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sX2Y4MTBhZTQxNjc4NTQ5MjQ5YjY5MTZkNDdmMWM0YzUyEgsSBxDOpomh_Q8YAZIBIwoKcHJvamVjdF9pZBIVQhM2OTgxODM0ODczNzkwNTEyMjQ3&filename=&opi=96797242",
+      "mimeType": "text/html",
+      "name": "projects/6981834873790512247/files/f834f50db5a048af949ade793120dc9a"
+    },
+    "rawScreen": {
+      "outputComponents": [
+        {
+          "design": {
+            "screens": [
+              {
+                "designSystem": {
+                  "designSystem": {
+                    "displayName": "Graphite",
+                    "styleGuidelines": "## Brand & Style\n\nThis design system is engineered for developers, data analysts, and power users who live inside dark editors and high-density technical workspaces. It evokes a focused, utilitarian, and uncompromisingly precise emotional response—reminiscent of a professional development environment or a high-end mathematical notebook.\n\nThe chosen aesthetic is a refined, flat **Dark/Minimalist** style. It completely eschews trendy glassmorphism, organic gradients, and platform-native chrome in favor of absolute visual consistency across all operating systems. Surfaces rely on structured neutral graphite tones paired with crisp white figures and a single, high-visibility amber accent that commands attention without causing eye strain.\n\n## Layout & Spacing\n\nThe layout model relies on a fixed-density grid structure optimized for desktop workstations, analytical tools, and high-resolution tablets. Content compartments are organized into rigid structural panes rather than fluid, reflowing cards.\n\n- **Gutters & Margins:** Standardized 16px (`1rem`) architectural spacing ensures consistent alignment between inspector panels, toolbars, and sheet views.\n- **Rhythm:** Component paddings and interior element gaps adhere strictly to a 4px/8px baseline grid (`space-xs` through `space-lg`), minimizing wasted canvas space and emphasizing operational efficiency.\n\n## Elevation & Depth\n\nDepth is handled with absolute restraint. The environment is predominantly flat, utilizing sharp structural hairlines (`#2e3034` and `#44464c`) instead of shadows to bound panels, cards, and data grids. \n\n- **Surface Tiers:** Hierarchy is communicated purely through tonal stacking—stepping from page backgrounds (`#161618`) to sheet surfaces (`#1d1e21`) and raised hover states (`#26272b`).\n- **Floating Elements:** Dropdowns, floating menus, and modal dialogs are the sole exceptions, utilizing a single, soft, non-distractive shadow (`0 4px 16px rgba(0, 0, 0, 0.12)`) to lift them cleanly above the workspace.\n\n## Components\n\nComponents are engineered to look and behave identically across Linux, macOS, Windows, web, and iPad.\n\n- **Toolbars:** Composed of icon-above-label buttons (64px width) organized into logical groups separated by thin vertical hairlines. Hover states apply the raised surface color, while active states engage the amber accent tint.\n- **Formula Bar:** Features a dedicated cell reference box, an explicit `\"fx\"` label, a monospace input field, and immediate cancel/accept action controls.\n- **Data Grids:** Built with a 48px row-number gutter, column headers housing type badges (`#`, `$`, `Aa`, calendar), and microscopic distribution histograms. Body rows are locked to a dense 28px height with explicit hairlines, a 2px amber accent ring for selected cells, and secondary tinting for active columns.\n- **Inspector:** A fixed 300px right-hand panel featuring top-level navigation tabs, uppercase section titles, flat dropdowns, segmented controls, steppers, and switches.\n- **Sheet Tabs:** Positioned at the bottom-left in a classic spreadsheet format. Active tabs rest on the surface color with a distinct 2px amber top border, accompanied by an inline add (`+`) control.\n- **Status Bar:** A 26px utility bar featuring monospace metrics including row counts, selection aggregates (sum, average, count), GPU identification, and last computation timestamps.\n- **KPI Cards:** Composed of a categorical label, large monospace figures, an embedded sparkline, and directional delta chips utilizing semantic good/bad coloring.\n- **Charts:** Completely flat visualizations featuring thin gridlines, zero 3D distortion, and rigid adherence to the designated colour-blind-safe series order.",
+                    "theme": {
+                      "bodyFont": "INTER",
+                      "bodyFontFamily": "Inter",
+                      "colorMode": "DARK",
+                      "colorVariant": "FIDELITY",
+                      "customColor": "#f5a524",
+                      "designMd": "---\nname: Graphite\ncolors:\n  surface: '#1d1e21'\n  surface-dim: '#121316'\n  surface-bright: '#38393c'\n  surface-container-lowest: '#0d0e11'\n  surface-container-low: '#1a1b1e'\n  surface-container: '#1f1f23'\n  surface-container-high: '#292a2d'\n  surface-container-highest: '#343538'\n  on-surface: '#e3e2e6'\n  on-surface-variant: '#d7c3ae'\n  inverse-surface: '#e3e2e6'\n  inverse-on-surface: '#2f3033'\n  outline: '#9f8e7a'\n  outline-variant: '#524434'\n  surface-tint: '#ffb957'\n  primary: '#ffc77f'\n  on-primary: '#462b00'\n  primary-container: '#f5a524'\n  on-primary-container: '#643f00'\n  inverse-primary: '#835400'\n  secondary: '#d4bbff'\n  on-secondary: '#3f0c85'\n  secondary-container: '#592f9e'\n  on-secondary-container: '#c8aaff'\n  tertiary: '#9ad9ff'\n  on-tertiary: '#003549'\n  tertiary-container: '#36c2ff'\n  on-tertiary-container: '#004d69'\n  error: '#ffb4ab'\n  on-error: '#690005'\n  error-container: '#93000a'\n  on-error-container: '#ffdad6'\n  primary-fixed: '#ffddb5'\n  primary-fixed-dim: '#ffb957'\n  on-primary-fixed: '#2a1800'\n  on-primary-fixed-variant: '#643f00'\n  secondary-fixed: '#ebdcff'\n  secondary-fixed-dim: '#d4bbff'\n  on-secondary-fixed: '#260059'\n  on-secondary-fixed-variant: '#562d9c'\n  tertiary-fixed: '#c4e7ff'\n  tertiary-fixed-dim: '#7bd0ff'\n  on-tertiary-fixed: '#001e2c'\n  on-tertiary-fixed-variant: '#004c69'\n  background: '#121316'\n  on-background: '#e3e2e6'\n  surface-variant: '#343538'\n  window-chrome: '#121214'\n  page-bg: '#161618'\n  surface-raised: '#26272b'\n  selection-fill: '#3a2f17'\n  hairline: '#2e3034'\n  strong-line: '#44464c'\n  text-ink: '#ececee'\n  text-body: '#c2c4ca'\n  text-secondary: '#858892'\n  formula-values: '#b48cff'\n  status-good: '#3ddc97'\n  status-bad: '#ff6b6b'\n  status-warning: '#f5a524'\n  chart-1: '#4cc2ff'\n  chart-2: '#f5a524'\n  chart-3: '#b48cff'\n  chart-4: '#3ddc97'\n  chart-5: '#ff6b6b'\n  chart-6: '#e0c341'\n  chart-7: '#8f98a8'\n  chart-8: '#ff9de2'\ntypography:\n  headline-lg:\n    fontFamily: Inter\n    fontSize: 20px\n    fontWeight: '700'\n    lineHeight: 24px\n  headline-md:\n    fontFamily: Inter\n    fontSize: 15px\n    fontWeight: '600'\n    lineHeight: 20px\n  body-md:\n    fontFamily: Inter\n    fontSize: 13px\n    fontWeight: '400'\n    lineHeight: 18px\n  label-md:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n  toolbar-label:\n    fontFamily: Inter\n    fontSize: 11px\n    fontWeight: '500'\n    lineHeight: 14px\n  code-figures:\n    fontFamily: JetBrains Mono\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n    letterSpacing: -0.01em\nrounded:\n  sm: 0.125rem\n  DEFAULT: 0.25rem\n  md: 0.375rem\n  lg: 0.5rem\n  xl: 0.75rem\n  full: 9999px\nspacing:\n  gutter: 1rem\n  margin: 1rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 1rem\n  space-lg: 1.5rem\n  space-xl: 2rem\n---\n\n## Brand & Style\n\nThis design system is engineered for developers, data analysts, and power users who live inside dark editors and high-density technical workspaces. It evokes a focused, utilitarian, and uncompromisingly precise emotional response—reminiscent of a professional development environment or a high-end mathematical notebook.\n\nThe chosen aesthetic is a refined, flat **Dark/Minimalist** style. It completely eschews trendy glassmorphism, organic gradients, and platform-native chrome in favor of absolute visual consistency across all operating systems. Surfaces rely on structured neutral graphite tones paired with crisp white figures and a single, high-visibility amber accent that commands attention without causing eye strain.\n\n## Colors\n\nThe palette is strictly calibrated for dark-mode data density. It utilizes a neutral graphite foundation devoid of blue undertones, establishing a calm backdrop for complex analytical work.\n\n- **Primary & Accent (`#f5a524`):** Warm amber used exclusively for selection rings, primary action states, active tabs, focus states, and critical warnings.\n- **Secondary (`#b48cff`):** Muted purple reserved specifically for formula values and secondary data indicators.\n- **Neutrals:** A carefully stepped grayscale ranging from deep window chrome (`#121214`) to raised interactive surfaces (`#26272b`), separated by precise hairlines (`#2e3034`).\n- **Semantic & Charts:** Dedicated status tones for success (`#3ddc97`) and error (`#ff6b6b`), alongside an eight-color, color-blind-safe categorical palette for data visualization.\n\n## Typography\n\nTypography enforces a strict hierarchy tailored for dense dashboards and spreadsheet interfaces. \n\n- **UI Interface (`Inter`):** Handles all application chrome, labels, section titles, and page headers. Sizes are kept compact (11px to 20px) to maximize information density.\n- **Numbers & Code (`JetBrains Mono`):** Monospace figures are strictly tabular and right-aligned across all data grids, KPIs, status bars, and formula inputs to ensure vertical alignment of numerical data.\n\n## Layout & Spacing\n\nThe layout model relies on a fixed-density grid structure optimized for desktop workstations, analytical tools, and high-resolution tablets. Content compartments are organized into rigid structural panes rather than fluid, reflowing cards.\n\n- **Gutters & Margins:** Standardized 16px (`1rem`) architectural spacing ensures consistent alignment between inspector panels, toolbars, and sheet views.\n- **Rhythm:** Component paddings and interior element gaps adhere strictly to a 4px/8px baseline grid (`space-xs` through `space-lg`), minimizing wasted canvas space and emphasizing operational efficiency.\n\n## Elevation & Depth\n\nDepth is handled with absolute restraint. The environment is predominantly flat, utilizing sharp structural hairlines (`#2e3034` and `#44464c`) instead of shadows to bound panels, cards, and data grids. \n\n- **Surface Tiers:** Hierarchy is communicated purely through tonal stacking—stepping from page backgrounds (`#161618`) to sheet surfaces (`#1d1e21`) and raised hover states (`#26272b`).\n- **Floating Elements:** Dropdowns, floating menus, and modal dialogs are the sole exceptions, utilizing a single, soft, non-distractive shadow (`0 4px 16px rgba(0, 0, 0, 0.12)`) to lift them cleanly above the workspace.\n\n## Shapes\n\nThe shape language reflects technical precision. Corner radii are kept minimal to avoid a \"soft\" or consumer-grade appearance.\n\n- **Panels & Containers:** Panels, cards, and buttons feature a tight `6px` radius.\n- **Inputs & Micro-elements:** Inputs, chips, and badges use a crisp `4px` radius.\n- **Data Cells:** Table and grid cells strictly utilize `0px` (sharp) corners to maintain clean, uninterrupted grid lines across massive datasets.\n- **Icons:** All iconography relies exclusively on Lucide line icons rendered with a `1.5px` stroke weight at a uniform `18px` scale. Emojis are strictly prohibited.\n\n## Components\n\nComponents are engineered to look and behave identically across Linux, macOS, Windows, web, and iPad.\n\n- **Toolbars:** Composed of icon-above-label buttons (64px width) organized into logical groups separated by thin vertical hairlines. Hover states apply the raised surface color, while active states engage the amber accent tint.\n- **Formula Bar:** Features a dedicated cell reference box, an explicit `\"fx\"` label, a monospace input field, and immediate cancel/accept action controls.\n- **Data Grids:** Built with a 48px row-number gutter, column headers housing type badges (`#`, `$`, `Aa`, calendar), and microscopic distribution histograms. Body rows are locked to a dense 28px height with explicit hairlines, a 2px amber accent ring for selected cells, and secondary tinting for active columns.\n- **Inspector:** A fixed 300px right-hand panel featuring top-level navigation tabs, uppercase section titles, flat dropdowns, segmented controls, steppers, and switches.\n- **Sheet Tabs:** Positioned at the bottom-left in a classic spreadsheet format. Active tabs rest on the surface color with a distinct 2px amber top border, accompanied by an inline add (`+`) control.\n- **Status Bar:** A 26px utility bar featuring monospace metrics including row counts, selection aggregates (sum, average, count), GPU identification, and last computation timestamps.\n- **KPI Cards:** Composed of a categorical label, large monospace figures, an embedded sparkline, and directional delta chips utilizing semantic good/bad coloring.\n- **Charts:** Completely flat visualizations featuring thin gridlines, zero 3D distortion, and rigid adherence to the designated colour-blind-safe series order.",
+                      "font": "INTER",
+                      "headlineFont": "INTER",
+                      "headlineFontFamily": "Inter",
+                      "labelFont": "INTER",
+                      "labelFontFamily": "Inter",
+                      "namedColors": {
+                        "background": "#121316",
+                        "chart-1": "#4cc2ff",
+                        "chart-2": "#f5a524",
+                        "chart-3": "#b48cff",
+                        "chart-4": "#3ddc97",
+                        "chart-5": "#ff6b6b",
+                        "chart-6": "#e0c341",
+                        "chart-7": "#8f98a8",
+                        "chart-8": "#ff9de2",
+                        "error": "#ffb4ab",
+                        "error_container": "#93000a",
+                        "formula-values": "#b48cff",
+                        "hairline": "#2e3034",
+                        "inverse_on_surface": "#2f3033",
+                        "inverse_primary": "#835400",
+                        "inverse_surface": "#e3e2e6",
+                        "on_background": "#e3e2e6",
+                        "on_error": "#690005",
+                        "on_error_container": "#ffdad6",
+                        "on_primary": "#462b00",
+                        "on_primary_container": "#643f00",
+                        "on_primary_fixed": "#2a1800",
+                        "on_primary_fixed_variant": "#643f00",
+                        "on_secondary": "#3f0c85",
+                        "on_secondary_container": "#c8aaff",
+                        "on_secondary_fixed": "#260059",
+                        "on_secondary_fixed_variant": "#562d9c",
+                        "on_surface": "#e3e2e6",
+                        "on_surface_variant": "#d7c3ae",
+                        "on_tertiary": "#003549",
+                        "on_tertiary_container": "#004d69",
+                        "on_tertiary_fixed": "#001e2c",
+                        "on_tertiary_fixed_variant": "#004c69",
+                        "outline": "#9f8e7a",
+                        "outline_variant": "#524434",
+                        "page-bg": "#161618",
+                        "primary": "#ffc77f",
+                        "primary_container": "#f5a524",
+                        "primary_fixed": "#ffddb5",
+                        "primary_fixed_dim": "#ffb957",
+                        "secondary": "#d4bbff",
+                        "secondary_container": "#592f9e",
+                        "secondary_fixed": "#ebdcff",
+                        "secondary_fixed_dim": "#d4bbff",
+                        "selection-fill": "#3a2f17",
+                        "status-bad": "#ff6b6b",
+                        "status-good": "#3ddc97",
+                        "status-warning": "#f5a524",
+                        "strong-line": "#44464c",
+                        "surface": "#1d1e21",
+                        "surface-raised": "#26272b",
+                        "surface_bright": "#38393c",
+                        "surface_container": "#1f1f23",
+                        "surface_container_high": "#292a2d",
+                        "surface_container_highest": "#343538",
+                        "surface_container_low": "#1a1b1e",
+                        "surface_container_lowest": "#0d0e11",
+                        "surface_dim": "#121316",
+                        "surface_tint": "#ffb957",
+                        "surface_variant": "#343538",
+                        "tertiary": "#9ad9ff",
+                        "tertiary_container": "#36c2ff",
+                        "tertiary_fixed": "#c4e7ff",
+                        "tertiary_fixed_dim": "#7bd0ff",
+                        "text-body": "#c2c4ca",
+                        "text-ink": "#ececee",
+                        "text-secondary": "#858892",
+                        "window-chrome": "#121214"
+                      },
+                      "overrideNeutralColor": "#1d1e21",
+                      "overridePrimaryColor": "#f5a524",
+                      "overrideSecondaryColor": "#b48cff",
+                      "roundness": "ROUND_FOUR",
+                      "spacing": {
+                        "gutter": "1rem",
+                        "margin": "1rem",
+                        "space-lg": "1.5rem",
+                        "space-md": "1rem",
+                        "space-sm": "0.5rem",
+                        "space-xl": "2rem",
+                        "space-xs": "0.25rem"
+                      },
+                      "spacingScale": 2,
+                      "typography": {
+                        "body-md": {
+                          "fontFamily": "Inter",
+                          "fontSize": "13px",
+                          "fontWeight": "400",
+                          "lineHeight": "18px"
+                        },
+                        "code-figures": {
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": "12px",
+                          "fontWeight": "400",
+                          "letterSpacing": "-0.01em",
+                          "lineHeight": "16px"
+                        },
+                        "headline-lg": {
+                          "fontFamily": "Inter",
+                          "fontSize": "20px",
+                          "fontWeight": "700",
+                          "lineHeight": "24px"
+                        },
+                        "headline-md": {
+                          "fontFamily": "Inter",
+                          "fontSize": "15px",
+                          "fontWeight": "600",
+                          "lineHeight": "20px"
+                        },
+                        "label-md": {
+                          "fontFamily": "Inter",
+                          "fontSize": "12px",
+                          "fontWeight": "400",
+                          "lineHeight": "16px"
+                        },
+                        "toolbar-label": {
+                          "fontFamily": "Inter",
+                          "fontSize": "11px",
+                          "fontWeight": "500",
+                          "lineHeight": "14px"
+                        }
+                      }
+                    }
+                  },
+                  "name": "assets/594cbef631e24345933a2c8a1ebb9efb",
+                  "version": "1"
+                },
+                "deviceType": "DESKTOP",
+                "generatedBy": "figaro_agent",
+                "height": "2048",
+                "htmlCode": {
+                  "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sX2Y4MTBhZTQxNjc4NTQ5MjQ5YjY5MTZkNDdmMWM0YzUyEgsSBxDOpomh_Q8YAZIBIwoKcHJvamVjdF9pZBIVQhM2OTgxODM0ODczNzkwNTEyMjQ3&filename=&opi=96797242",
+                  "mimeType": "text/html",
+                  "name": "projects/6981834873790512247/files/f834f50db5a048af949ade793120dc9a"
+                },
+                "id": "6ea9d7d3f6794ce1ae531c0ea4826979",
+                "name": "projects/6981834873790512247/screens/6ea9d7d3f6794ce1ae531c0ea4826979",
+                "prompt": "Build the desktop interface (1440x900 viewport) for omxplorer on its Report tab according to the Graphite design system specifications and exact prompt requirements:\n\n1. Window Chrome & Navigation:\n- Top Title bar: Dark window chrome (#121214) with traffic-light window controls on far left, \"omxplorer\" in lowercase JetBrains Mono font, and centered \"orders.omx\" document pill/badge. Right side has kernel status / GPU indicator (e.g. \"RTX 4090 · Ready\").\n- Toolbar: Flat icon-above-label buttons (64px wide, height ~52px) separated into clean groups by vertical hairlines:\n  * Group 1: [Open, Save, Undo, Redo]\n  * Group 2: [Table, Chart, Pivot, Formula]\n  * Group 3: [KPI, Chart tile, Text]\n  * Group 4: [Format]\n  Hover effects and active tool states with subtle Graphite raised tint and amber accent touch.\n\n2. Inspector Panel (Docked Right, 300px width):\n- Border-l hairline (#2e3034), background #1d1e21.\n- Top tab bar: \"Tile\" (active, accent underline/highlight) and \"Data\".\n- Inspector controls:\n  * Section header: \"TILE CONFIGURATION\" (small uppercase 11px)\n  * Value column dropdown: \"revenue\" (with numeric badge '#')\n  * Aggregate segmented control: [Sum | Average | Count] (with 'Sum' active/highlighted)\n  * Compare-to dropdown: \"previous quarter\"\n  * Display options: Format currency ($), Decimals stepper (1), Show sparkline toggle (checked).\n  * Selected Tile indicator: \"KPI Tile 1 (Revenue)\"\n\n3. Central Work Area:\n- Background: #161618 (page behind the sheet).\n- Scrollable report document page: Centered white/light or high-contrast crisp card canvas or Graphite document sheet (elevated panel #1d1e21 with hairline #2e3034 border, 6px radius) matching data-science notebook standards. Let's make it the clean report document with title \"Q3 orders\".\n- Header:\n  * Page title: \"Q3 orders\" (20px bold Inter, #ececee)\n  * Metadata caption: \"Updated just now · 1,000,000 rows · 4.1 ms on the GPU\" (with monospace 4.1 ms in JetBrains Mono, GPU badge).\n- Filter row (chips):\n  * \"region = West ✕\" (active chip, dark raised pill with subtle amber border/tint)\n  * \"date: Jul–Sep 2026 ✕\" (active chip)\n  * \"carrier: all\" (chip)\n  * \"+ Filter\" (dashed/bordered button)\n- KPI Cards row (4 cards in a grid):\n  * Card 1: Revenue \"$18.4M\" in JetBrains Mono bold, delta chip \"+4.2%\" (good green #3ddc97), mini vector SVG sparkline. SELECTED with 2px amber accent ring (#f5a524) and subtle glow/selection fill.\n  * Card 2: Orders \"255,102\", delta chip \"+1.1%\" (good green #3ddc97), mini sparkline.\n  * Card 3: Average order \"$72.06\", delta chip \"-0.8%\" (bad red #ff6b6b), mini sparkline.\n  * Card 4: Margin \"31.4%\", delta chip \"+0.6 pts\" (good green #3ddc97), mini sparkline.\n- Side-by-side Charts section:\n  * Chart 1: \"Revenue by month\" — clean SVG line chart spanning Jan through Sep, with gridlines, gradient fill underneath, and an interactive hover tooltip point at August reading \"Aug · $6.3M\" with a vertical guide line.\n  * Chart 2: \"Revenue by carrier\" — horizontal bar chart comparing UPS ($7.2M), FedEx ($5.8M), DHL ($3.4M), USPS ($2.0M) with carrier logos/labels, exact JetBrains Mono money values right-aligned.\n- Pivot Table:\n  * Title: \"Revenue · region × product\"\n  * Formatted matrix table: 5 product columns (Enterprise, Pro, Starter, Hardware, Services) plus \"Total\" column.\n  * Rows for West, East, Central, South, and \"Total\" row with hairline borders and raised row styling.\n  * Numbers right-aligned in tabular JetBrains Mono with currency formatting ($1,240,500 etc.).\n- \"Add a tile\" empty dashed state:\n  * Dashed border container with buttons: [ + Sum ], [ + Average ], [ + Count ], [ + Chart ].\n\n4. Bottom Bars:\n- Sheet tabs (bottom-left, Excel/Jupyter notebook style): \"Orders\", \"Report\" (active tab with #1d1e21 surface and 2px #f5a524 accent top edge), and \"+\" new tab button.\n- Status bar (26px height, monospace metrics): \"Filtered: 255,102 of 1,000,000 rows · Sum: $18,421,900 · Avg: $72.06 · NVIDIA RTX 4090 · 4.1 ms\"\n\nEnsure full Graphite design system adherence: neutral graphite tones (#121214, #161618, #1d1e21, #26272b), hairline borders (#2e3034), crisp typography (Inter for UI, tabular JetBrains Mono for figures), and warm amber (#f5a524) accents.",
+                "screenMetadata": {
+                  "agentType": "PRO_AGENT",
+                  "status": "COMPLETE"
+                },
+                "screenType": "DESIGN",
+                "screenshot": {
+                  "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1U0s7OP3-utmv8wX2DquRi10jR5yzRAJajeOGgJOjm68vutD_3R2QFP9oqwsgS12uO-XmJXT2oic-RO5ZIyxw94JTOVNrr6zP1Gb4QYF7ynYehi7Tjb9WTzvcthB8-VOvivcQ4pPVCqHcia_anlESb1WM0JhEwOpv45XUlKSYWq4gf3GlSh695iCEVbSr-rtrDQ2Xlyw2XBH70Qw23QnRylfIwmqBmbfdqq0yqQrGeTmJc6wZWJvoTlwaM",
+                  "name": "projects/6981834873790512247/files/036a5fb0fc6a4bd6a33b53812b43d119"
+                },
+                "theme": {
+                  "bodyFont": "INTER",
+                  "bodyFontFamily": "Inter",
+                  "colorMode": "DARK",
+                  "colorVariant": "FIDELITY",
+                  "customColor": "#f5a524",
+                  "font": "INTER",
+                  "headlineFont": "INTER",
+                  "headlineFontFamily": "Inter",
+                  "labelFont": "INTER",
+                  "labelFontFamily": "Inter",
+                  "namedColors": {
+                    "background": "#121316",
+                    "chart-1": "#4cc2ff",
+                    "chart-2": "#f5a524",
+                    "chart-3": "#b48cff",
+                    "chart-4": "#3ddc97",
+                    "chart-5": "#ff6b6b",
+                    "chart-6": "#e0c341",
+                    "chart-7": "#8f98a8",
+                    "chart-8": "#ff9de2",
+                    "error": "#ffb4ab",
+                    "error_container": "#93000a",
+                    "formula-values": "#b48cff",
+                    "hairline": "#2e3034",
+                    "inverse_on_surface": "#2f3033",
+                    "inverse_primary": "#835400",
+                    "inverse_surface": "#e3e2e6",
+                    "on_background": "#e3e2e6",
+                    "on_error": "#690005",
+                    "on_error_container": "#ffdad6",
+                    "on_primary": "#462b00",
+                    "on_primary_container": "#643f00",
+                    "on_primary_fixed": "#2a1800",
+                    "on_primary_fixed_variant": "#643f00",
+                    "on_secondary": "#3f0c85",
+                    "on_secondary_container": "#c8aaff",
+                    "on_secondary_fixed": "#260059",
+                    "on_secondary_fixed_variant": "#562d9c",
+                    "on_surface": "#e3e2e6",
+                    "on_surface_variant": "#d7c3ae",
+                    "on_tertiary": "#003549",
+                    "on_tertiary_container": "#004d69",
+                    "on_tertiary_fixed": "#001e2c",
+                    "on_tertiary_fixed_variant": "#004c69",
+                    "outline": "#9f8e7a",
+                    "outline_variant": "#524434",
+                    "page-bg": "#161618",
+                    "primary": "#ffc77f",
+                    "primary_container": "#f5a524",
+                    "primary_fixed": "#ffddb5",
+                    "primary_fixed_dim": "#ffb957",
+                    "secondary": "#d4bbff",
+                    "secondary_container": "#592f9e",
+                    "secondary_fixed": "#ebdcff",
+                    "secondary_fixed_dim": "#d4bbff",
+                    "selection-fill": "#3a2f17",
+                    "status-bad": "#ff6b6b",
+                    "status-good": "#3ddc97",
+                    "status-warning": "#f5a524",
+                    "strong-line": "#44464c",
+                    "surface": "#1d1e21",
+                    "surface-raised": "#26272b",
+                    "surface_bright": "#38393c",
+                    "surface_container": "#1f1f23",
+                    "surface_container_high": "#292a2d",
+                    "surface_container_highest": "#343538",
+                    "surface_container_low": "#1a1b1e",
+                    "surface_container_lowest": "#0d0e11",
+                    "surface_dim": "#121316",
+                    "surface_tint": "#ffb957",
+                    "surface_variant": "#343538",
+                    "tertiary": "#9ad9ff",
+                    "tertiary_container": "#36c2ff",
+                    "tertiary_fixed": "#c4e7ff",
+                    "tertiary_fixed_dim": "#7bd0ff",
+                    "text-body": "#c2c4ca",
+                    "text-ink": "#ececee",
+                    "text-secondary": "#858892",
+                    "window-chrome": "#121214"
+                  },
+                  "overrideNeutralColor": "#1d1e21",
+                  "overridePrimaryColor": "#f5a524",
+                  "overrideSecondaryColor": "#b48cff",
+                  "roundness": "ROUND_FOUR",
+                  "spacing": {
+                    "gutter": "1rem",
+                    "margin": "1rem",
+                    "space-lg": "1.5rem",
+                    "space-md": "1rem",
+                    "space-sm": "0.5rem",
+                    "space-xl": "2rem",
+                    "space-xs": "0.25rem"
+                  },
+                  "spacingScale": 2,
+                  "typography": {
+                    "body-md": {
+                      "fontFamily": "Inter",
+                      "fontSize": "13px",
+                      "fontWeight": "400",
+                      "lineHeight": "18px"
+                    },
+                    "code-figures": {
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": "12px",
+                      "fontWeight": "400",
+                      "letterSpacing": "-0.01em",
+                      "lineHeight": "16px"
+                    },
+                    "headline-lg": {
+                      "fontFamily": "Inter",
+                      "fontSize": "20px",
+                      "fontWeight": "700",
+                      "lineHeight": "24px"
+                    },
+                    "headline-md": {
+                      "fontFamily": "Inter",
+                      "fontSize": "15px",
+                      "fontWeight": "600",
+                      "lineHeight": "20px"
+                    },
+                    "label-md": {
+                      "fontFamily": "Inter",
+                      "fontSize": "12px",
+                      "fontWeight": "400",
+                      "lineHeight": "16px"
+                    },
+                    "toolbar-label": {
+                      "fontFamily": "Inter",
+                      "fontSize": "11px",
+                      "fontWeight": "500",
+                      "lineHeight": "14px"
+                    }
+                  }
+                },
+                "title": "omxplorer — Q3 Orders Report",
+                "width": "2560"
+              }
+            ],
+            "theme": {}
+          }
+        },
+        {
+          "text": "Here is the complete desktop design for **omxplorer** (1440×900) on its **Report tab** based on the Graphite design system:\n\n### What was created:\n1. **Window Chrome & Toolbar**:\n   - macOS traffic light controls with lowercase `omxplorer` branding in JetBrains Mono.\n   - Centered `orders.omx` dataset badge and live GPU status badge (`RTX 4090 · Ready`).\n   - Grouped icon-above-label toolbar separated by hairline dividers: `[Open, Save, Undo, Redo]`, `[Table, Chart, Pivot, Formula]`, `[KPI, Chart tile, Text]`, and `[Format]`.\n\n2. **Report Workspace & Controls**:\n   - Header: `\"Q3 orders\"` with caption `\"Updated just now · 1,000,000 rows · 4.1 ms on GPU\"`.\n   - Filter bar: Removable chips for `region = West ✕`, `date: Jul–Sep 2026 ✕`, `carrier: all`, and `+ Filter`.\n   - Four KPI cards: \n     - **Revenue $18.4M** (`+4.2%`, selected with amber accent ring and sparkline)\n     - **Orders 255,102** (`+1.1%`, sparkline)\n     - **Average order $72.06** (`-0.8%`, sparkline)\n     - **Margin 31.4%** (`+0.6 pts`, sparkline)\n   - Side-by-side charts:\n     - **Revenue by month**: Line chart with gridlines and interactive hover tooltip pointing at `\"Aug · $6.3M\"`.\n     - **Revenue by carrier**: Horizontal bars comparing UPS Logistics, FedEx Express, DHL Express, and USPS Priority.\n   - **Pivot table**: `\"Revenue · region × product\"` cross-tabulating 5 product columns (`Enterprise`, `Pro Suite`, `Starter`, `Hardware`, `Services`) across regions with row and column totals in tabular JetBrains Mono.\n   - **Add a tile row**: Dashed container offering quick action buttons (`+ Sum`, `+ Average`, `+ Count`, `+ Chart`).\n\n3. **300px Inspector & Status Bar**:\n   - Docked 300px right-hand inspector panel with active **Tile** tab, value column dropdown (`# revenue`), aggregate segmented control (`Sum / Average / Count`), and comparison selector (`previous quarter`).\n   - Bottom sheet tab bar with `Orders`, active `Report` tab (with accent top edge), and `+`.\n   - 26px monospace status bar displaying live filtered record count (`Filtered: 255,102 of 1,000,000 rows`), selection aggregates, GPU device, and latency."
+        },
+        {
+          "suggestion": "Switch the active selection to the pivot table in the Inspector panel"
+        },
+        {
+          "suggestion": "Add a heatmap gradient to the pivot table cells"
+        },
+        {
+          "suggestion": "Show the orders data sheet tab view"
+        },
+        {
+          "sessionEvent": {
+            "actor": "Agent",
+            "eventId": "9c7efa9b",
+            "eventPayload": {
+              "dom_operations": [
+                {
+                  "action": "insert_before",
+                  "attr_name": null,
+                  "attr_value": null,
+                  "class_name": null,
+                  "content": "<div class=\"bg-surface-container border border-hairline rounded overflow-hidden\">\n  <div class=\"px-4 py-3 border-b border-hairline flex items-center justify-between bg-surface-raised\">\n    <div>\n      <div class=\"flex items-center space-x-2\">\n        <span class=\"material-symbols-outlined text-primary\" style=\"font-size: 16px;\">pivot_table_chart</span>\n        <h3 class=\"text-headline-md font-headline-md text-text-ink\">Revenue · region × product</h3>\n      </div>\n      <p class=\"text-toolbar-label font-toolbar-label text-text-secondary mt-0.5\">Cross-tabulation aggregation across 1M records (GPU hash aggregate)</p>\n    </div>\n    <div class=\"flex items-center space-x-1.5\">\n      <span class=\"text-[11px] font-code-figures text-text-secondary bg-surface-dim px-2 py-0.5 rounded border border-hairline\">4 × 5 grid</span>\n      <button class=\"p-1 text-text-secondary hover:text-text-ink hover:bg-surface-container-high rounded transition-colors\" title=\"Export CSV\">\n        <span class=\"material-symbols-outlined\" style=\"font-size: 16px;\">file_download</span>\n      </button>\n      <button class=\"p-1 text-text-secondary hover:text-text-ink hover:bg-surface-container-high rounded transition-colors\" title=\"More options\">\n        <span class=\"material-symbols-outlined\" style=\"font-size: 16px;\">more_vert</span>\n      </button>\n    </div>\n  </div>\n  <div class=\"overflow-x-auto\">\n    <table class=\"w-full border-collapse text-left font-body-md text-body-md\">\n      <thead>\n        <tr class=\"bg-surface-raised border-b border-hairline text-toolbar-label font-toolbar-label text-text-secondary\">\n          <th class=\"py-2.5 px-3.5 border-r border-hairline w-32 font-medium\">Region</th>\n          <th class=\"py-2.5 px-3.5 border-r border-hairline text-right font-medium\">Enterprise</th>\n          <th class=\"py-2.5 px-3.5 border-r border-hairline text-right font-medium\">Pro Suite</th>\n          <th class=\"py-2.5 px-3.5 border-r border-hairline text-right font-medium\">Starter</th>\n          <th class=\"py-2.5 px-3.5 border-r border-hairline text-right font-medium\">Hardware</th>\n          <th class=\"py-2.5 px-3.5 border-r border-hairline text-right font-medium\">Services</th>\n          <th class=\"py-2.5 px-3.5 text-right font-semibold text-text-ink bg-surface-dim/40\">Total</th>\n        </tr>\n      </thead>\n      <tbody class=\"font-code-figures text-code-figures divide-y divide-hairline\">\n        <tr class=\"hover:bg-surface-raised transition-colors bg-surface-container-low\">\n          <td class=\"py-2 px-3.5 border-r border-hairline font-toolbar-label text-text-ink font-medium flex items-center justify-between\">\n            <span>West</span>\n            <span class=\"w-1.5 h-1.5 rounded-full bg-primary inline-block\"></span>\n          </td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-ink\">$4.82M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-ink\">$1.85M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-ink\">$0.92M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-ink\">$1.15M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-ink\">$0.48M</td>\n          <td class=\"py-2 px-3.5 text-right font-bold text-primary bg-surface-dim/40\">$9.22M</td>\n        </tr>\n        <tr class=\"hover:bg-surface-raised transition-colors\">\n          <td class=\"py-2 px-3.5 border-r border-hairline font-toolbar-label text-text-body\">East</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$3.15M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$1.24M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.61M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.78M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.34M</td>\n          <td class=\"py-2 px-3.5 text-right font-semibold text-text-ink bg-surface-dim/40\">$6.12M</td>\n        </tr>\n        <tr class=\"hover:bg-surface-raised transition-colors\">\n          <td class=\"py-2 px-3.5 border-r border-hairline font-toolbar-label text-text-body\">Central</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$1.94M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.86M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.42M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.51M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.21M</td>\n          <td class=\"py-2 px-3.5 text-right font-semibold text-text-ink bg-surface-dim/40\">$3.94M</td>\n        </tr>\n        <tr class=\"hover:bg-surface-raised transition-colors\">\n          <td class=\"py-2 px-3.5 border-r border-hairline font-toolbar-label text-text-body\">South</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$1.10M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.48M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.24M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.28M</td>\n          <td class=\"py-2 px-3.5 border-r border-hairline text-right text-text-body\">$0.11M</td>\n          <td class=\"py-2 px-3.5 text-right font-semibold text-text-ink bg-surface-dim/40\">$2.21M</td>\n        </tr>\n        <tr class=\"bg-surface-raised font-bold border-t-2 border-hairline\">\n          <td class=\"py-2.5 px-3.5 border-r border-hairline font-toolbar-label text-text-ink\">Total</td>\n          <td class=\"py-2.5 px-3.5 border-r border-hairline text-right text-text-ink\">$11.01M</td>\n          <td class=\"py-2.5 px-3.5 border-r border-hairline text-right text-text-ink\">$4.43M</td>\n          <td class=\"py-2.5 px-3.5 border-r border-hairline text-right text-text-ink\">$2.19M</td>\n          <td class=\"py-2.5 px-3.5 border-r border-hairline text-right text-text-ink\">$2.72M</td>\n          <td class=\"py-2.5 px-3.5 border-r border-hairline text-right text-text-ink\">$1.14M</td>\n          <td class=\"py-2.5 px-3.5 text-right text-primary font-bold bg-[#29261f]\">$21.49M</td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</div>",
+                  "selector": "div.border-dashed.border-strong-line",
+                  "selector_strategy": "Target the dashed tile placeholder container using its unique class combination 'div.border-dashed.border-strong-line'. Use insert_before to insert the styled pivot table right before this element.",
+                  "target_element_goal": "Insert the requested high-density crisp Pivot Table right before the 'Append metric or visualization tile to sheet' dashed placeholder container.",
+                  "verified_html_context": "<div class=\"border border-dashed border-strong-line rounded p-5 flex flex-col items-center justify-center space-y-3 bg-surface-dim/40 hover:border-text-secondary transition-colors\">"
+                }
+              ],
+              "payload_type": "DomOperationEvent",
+              "screen_id": "omxplorer_report_tab"
+            },
+            "eventTime": "2026-10-17T18:07:33.470427952Z",
+            "eventType": "project.file_update"
+          }
+        }
+      ],
+      "projectId": "6981834873790512247",
+      "sessionId": "2507880554602527792",
+      "designSystem": {
+        "designSystem": {
+          "displayName": "Graphite",
+          "styleGuidelines": "## Brand & Style\n\nThis design system is engineered for developers, data analysts, and power users who live inside dark editors and high-density technical workspaces. It evokes a focused, utilitarian, and uncompromisingly precise emotional response—reminiscent of a professional development environment or a high-end mathematical notebook.\n\nThe chosen aesthetic is a refined, flat **Dark/Minimalist** style. It completely eschews trendy glassmorphism, organic gradients, and platform-native chrome in favor of absolute visual consistency across all operating systems. Surfaces rely on structured neutral graphite tones paired with crisp white figures and a single, high-visibility amber accent that commands attention without causing eye strain.\n\n## Layout & Spacing\n\nThe layout model relies on a fixed-density grid structure optimized for desktop workstations, analytical tools, and high-resolution tablets. Content compartments are organized into rigid structural panes rather than fluid, reflowing cards.\n\n- **Gutters & Margins:** Standardized 16px (`1rem`) architectural spacing ensures consistent alignment between inspector panels, toolbars, and sheet views.\n- **Rhythm:** Component paddings and interior element gaps adhere strictly to a 4px/8px baseline grid (`space-xs` through `space-lg`), minimizing wasted canvas space and emphasizing operational efficiency.\n\n## Elevation & Depth\n\nDepth is handled with absolute restraint. The environment is predominantly flat, utilizing sharp structural hairlines (`#2e3034` and `#44464c`) instead of shadows to bound panels, cards, and data grids. \n\n- **Surface Tiers:** Hierarchy is communicated purely through tonal stacking—stepping from page backgrounds (`#161618`) to sheet surfaces (`#1d1e21`) and raised hover states (`#26272b`).\n- **Floating Elements:** Dropdowns, floating menus, and modal dialogs are the sole exceptions, utilizing a single, soft, non-distractive shadow (`0 4px 16px rgba(0, 0, 0, 0.12)`) to lift them cleanly above the workspace.\n\n## Components\n\nComponents are engineered to look and behave identically across Linux, macOS, Windows, web, and iPad.\n\n- **Toolbars:** Composed of icon-above-label buttons (64px width) organized into logical groups separated by thin vertical hairlines. Hover states apply the raised surface color, while active states engage the amber accent tint.\n- **Formula Bar:** Features a dedicated cell reference box, an explicit `\"fx\"` label, a monospace input field, and immediate cancel/accept action controls.\n- **Data Grids:** Built with a 48px row-number gutter, column headers housing type badges (`#`, `$`, `Aa`, calendar), and microscopic distribution histograms. Body rows are locked to a dense 28px height with explicit hairlines, a 2px amber accent ring for selected cells, and secondary tinting for active columns.\n- **Inspector:** A fixed 300px right-hand panel featuring top-level navigation tabs, uppercase section titles, flat dropdowns, segmented controls, steppers, and switches.\n- **Sheet Tabs:** Positioned at the bottom-left in a classic spreadsheet format. Active tabs rest on the surface color with a distinct 2px amber top border, accompanied by an inline add (`+`) control.\n- **Status Bar:** A 26px utility bar featuring monospace metrics including row counts, selection aggregates (sum, average, count), GPU identification, and last computation timestamps.\n- **KPI Cards:** Composed of a categorical label, large monospace figures, an embedded sparkline, and directional delta chips utilizing semantic good/bad coloring.\n- **Charts:** Completely flat visualizations featuring thin gridlines, zero 3D distortion, and rigid adherence to the designated colour-blind-safe series order.",
+          "theme": {
+            "bodyFont": "INTER",
+            "bodyFontFamily": "Inter",
+            "colorMode": "DARK",
+            "colorVariant": "FIDELITY",
+            "customColor": "#f5a524",
+            "designMd": "---\nname: Graphite\ncolors:\n  surface: '#1d1e21'\n  surface-dim: '#121316'\n  surface-bright: '#38393c'\n  surface-container-lowest: '#0d0e11'\n  surface-container-low: '#1a1b1e'\n  surface-container: '#1f1f23'\n  surface-container-high: '#292a2d'\n  surface-container-highest: '#343538'\n  on-surface: '#e3e2e6'\n  on-surface-variant: '#d7c3ae'\n  inverse-surface: '#e3e2e6'\n  inverse-on-surface: '#2f3033'\n  outline: '#9f8e7a'\n  outline-variant: '#524434'\n  surface-tint: '#ffb957'\n  primary: '#ffc77f'\n  on-primary: '#462b00'\n  primary-container: '#f5a524'\n  on-primary-container: '#643f00'\n  inverse-primary: '#835400'\n  secondary: '#d4bbff'\n  on-secondary: '#3f0c85'\n  secondary-container: '#592f9e'\n  on-secondary-container: '#c8aaff'\n  tertiary: '#9ad9ff'\n  on-tertiary: '#003549'\n  tertiary-container: '#36c2ff'\n  on-tertiary-container: '#004d69'\n  error: '#ffb4ab'\n  on-error: '#690005'\n  error-container: '#93000a'\n  on-error-container: '#ffdad6'\n  primary-fixed: '#ffddb5'\n  primary-fixed-dim: '#ffb957'\n  on-primary-fixed: '#2a1800'\n  on-primary-fixed-variant: '#643f00'\n  secondary-fixed: '#ebdcff'\n  secondary-fixed-dim: '#d4bbff'\n  on-secondary-fixed: '#260059'\n  on-secondary-fixed-variant: '#562d9c'\n  tertiary-fixed: '#c4e7ff'\n  tertiary-fixed-dim: '#7bd0ff'\n  on-tertiary-fixed: '#001e2c'\n  on-tertiary-fixed-variant: '#004c69'\n  background: '#121316'\n  on-background: '#e3e2e6'\n  surface-variant: '#343538'\n  window-chrome: '#121214'\n  page-bg: '#161618'\n  surface-raised: '#26272b'\n  selection-fill: '#3a2f17'\n  hairline: '#2e3034'\n  strong-line: '#44464c'\n  text-ink: '#ececee'\n  text-body: '#c2c4ca'\n  text-secondary: '#858892'\n  formula-values: '#b48cff'\n  status-good: '#3ddc97'\n  status-bad: '#ff6b6b'\n  status-warning: '#f5a524'\n  chart-1: '#4cc2ff'\n  chart-2: '#f5a524'\n  chart-3: '#b48cff'\n  chart-4: '#3ddc97'\n  chart-5: '#ff6b6b'\n  chart-6: '#e0c341'\n  chart-7: '#8f98a8'\n  chart-8: '#ff9de2'\ntypography:\n  headline-lg:\n    fontFamily: Inter\n    fontSize: 20px\n    fontWeight: '700'\n    lineHeight: 24px\n  headline-md:\n    fontFamily: Inter\n    fontSize: 15px\n    fontWeight: '600'\n    lineHeight: 20px\n  body-md:\n    fontFamily: Inter\n    fontSize: 13px\n    fontWeight: '400'\n    lineHeight: 18px\n  label-md:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n  toolbar-label:\n    fontFamily: Inter\n    fontSize: 11px\n    fontWeight: '500'\n    lineHeight: 14px\n  code-figures:\n    fontFamily: JetBrains Mono\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n    letterSpacing: -0.01em\nrounded:\n  sm: 0.125rem\n  DEFAULT: 0.25rem\n  md: 0.375rem\n  lg: 0.5rem\n  xl: 0.75rem\n  full: 9999px\nspacing:\n  gutter: 1rem\n  margin: 1rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 1rem\n  space-lg: 1.5rem\n  space-xl: 2rem\n---\n\n## Brand & Style\n\nThis design system is engineered for developers, data analysts, and power users who live inside dark editors and high-density technical workspaces. It evokes a focused, utilitarian, and uncompromisingly precise emotional response—reminiscent of a professional development environment or a high-end mathematical notebook.\n\nThe chosen aesthetic is a refined, flat **Dark/Minimalist** style. It completely eschews trendy glassmorphism, organic gradients, and platform-native chrome in favor of absolute visual consistency across all operating systems. Surfaces rely on structured neutral graphite tones paired with crisp white figures and a single, high-visibility amber accent that commands attention without causing eye strain.\n\n## Colors\n\nThe palette is strictly calibrated for dark-mode data density. It utilizes a neutral graphite foundation devoid of blue undertones, establishing a calm backdrop for complex analytical work.\n\n- **Primary & Accent (`#f5a524`):** Warm amber used exclusively for selection rings, primary action states, active tabs, focus states, and critical warnings.\n- **Secondary (`#b48cff`):** Muted purple reserved specifically for formula values and secondary data indicators.\n- **Neutrals:** A carefully stepped grayscale ranging from deep window chrome (`#121214`) to raised interactive surfaces (`#26272b`), separated by precise hairlines (`#2e3034`).\n- **Semantic & Charts:** Dedicated status tones for success (`#3ddc97`) and error (`#ff6b6b`), alongside an eight-color, color-blind-safe categorical palette for data visualization.\n\n## Typography\n\nTypography enforces a strict hierarchy tailored for dense dashboards and spreadsheet interfaces. \n\n- **UI Interface (`Inter`):** Handles all application chrome, labels, section titles, and page headers. Sizes are kept compact (11px to 20px) to maximize information density.\n- **Numbers & Code (`JetBrains Mono`):** Monospace figures are strictly tabular and right-aligned across all data grids, KPIs, status bars, and formula inputs to ensure vertical alignment of numerical data.\n\n## Layout & Spacing\n\nThe layout model relies on a fixed-density grid structure optimized for desktop workstations, analytical tools, and high-resolution tablets. Content compartments are organized into rigid structural panes rather than fluid, reflowing cards.\n\n- **Gutters & Margins:** Standardized 16px (`1rem`) architectural spacing ensures consistent alignment between inspector panels, toolbars, and sheet views.\n- **Rhythm:** Component paddings and interior element gaps adhere strictly to a 4px/8px baseline grid (`space-xs` through `space-lg`), minimizing wasted canvas space and emphasizing operational efficiency.\n\n## Elevation & Depth\n\nDepth is handled with absolute restraint. The environment is predominantly flat, utilizing sharp structural hairlines (`#2e3034` and `#44464c`) instead of shadows to bound panels, cards, and data grids. \n\n- **Surface Tiers:** Hierarchy is communicated purely through tonal stacking—stepping from page backgrounds (`#161618`) to sheet surfaces (`#1d1e21`) and raised hover states (`#26272b`).\n- **Floating Elements:** Dropdowns, floating menus, and modal dialogs are the sole exceptions, utilizing a single, soft, non-distractive shadow (`0 4px 16px rgba(0, 0, 0, 0.12)`) to lift them cleanly above the workspace.\n\n## Shapes\n\nThe shape language reflects technical precision. Corner radii are kept minimal to avoid a \"soft\" or consumer-grade appearance.\n\n- **Panels & Containers:** Panels, cards, and buttons feature a tight `6px` radius.\n- **Inputs & Micro-elements:** Inputs, chips, and badges use a crisp `4px` radius.\n- **Data Cells:** Table and grid cells strictly utilize `0px` (sharp) corners to maintain clean, uninterrupted grid lines across massive datasets.\n- **Icons:** All iconography relies exclusively on Lucide line icons rendered with a `1.5px` stroke weight at a uniform `18px` scale. Emojis are strictly prohibited.\n\n## Components\n\nComponents are engineered to look and behave identically across Linux, macOS, Windows, web, and iPad.\n\n- **Toolbars:** Composed of icon-above-label buttons (64px width) organized into logical groups separated by thin vertical hairlines. Hover states apply the raised surface color, while active states engage the amber accent tint.\n- **Formula Bar:** Features a dedicated cell reference box, an explicit `\"fx\"` label, a monospace input field, and immediate cancel/accept action controls.\n- **Data Grids:** Built with a 48px row-number gutter, column headers housing type badges (`#`, `$`, `Aa`, calendar), and microscopic distribution histograms. Body rows are locked to a dense 28px height with explicit hairlines, a 2px amber accent ring for selected cells, and secondary tinting for active columns.\n- **Inspector:** A fixed 300px right-hand panel featuring top-level navigation tabs, uppercase section titles, flat dropdowns, segmented controls, steppers, and switches.\n- **Sheet Tabs:** Positioned at the bottom-left in a classic spreadsheet format. Active tabs rest on the surface color with a distinct 2px amber top border, accompanied by an inline add (`+`) control.\n- **Status Bar:** A 26px utility bar featuring monospace metrics including row counts, selection aggregates (sum, average, count), GPU identification, and last computation timestamps.\n- **KPI Cards:** Composed of a categorical label, large monospace figures, an embedded sparkline, and directional delta chips utilizing semantic good/bad coloring.\n- **Charts:** Completely flat visualizations featuring thin gridlines, zero 3D distortion, and rigid adherence to the designated colour-blind-safe series order.",
+            "font": "INTER",
+            "headlineFont": "INTER",
+            "headlineFontFamily": "Inter",
+            "labelFont": "INTER",
+            "labelFontFamily": "Inter",
+            "namedColors": {
+              "background": "#121316",
+              "chart-1": "#4cc2ff",
+              "chart-2": "#f5a524",
+              "chart-3": "#b48cff",
+              "chart-4": "#3ddc97",
+              "chart-5": "#ff6b6b",
+              "chart-6": "#e0c341",
+              "chart-7": "#8f98a8",
+              "chart-8": "#ff9de2",
+              "error": "#ffb4ab",
+              "error_container": "#93000a",
+              "formula-values": "#b48cff",
+              "hairline": "#2e3034",
+              "inverse_on_surface": "#2f3033",
+              "inverse_primary": "#835400",
+              "inverse_surface": "#e3e2e6",
+              "on_background": "#e3e2e6",
+              "on_error": "#690005",
+              "on_error_container": "#ffdad6",
+              "on_primary": "#462b00",
+              "on_primary_container": "#643f00",
+              "on_primary_fixed": "#2a1800",
+              "on_primary_fixed_variant": "#643f00",
+              "on_secondary": "#3f0c85",
+              "on_secondary_container": "#c8aaff",
+              "on_secondary_fixed": "#260059",
+              "on_secondary_fixed_variant": "#562d9c",
+              "on_surface": "#e3e2e6",
+              "on_surface_variant": "#d7c3ae",
+              "on_tertiary": "#003549",
+              "on_tertiary_container": "#004d69",
+              "on_tertiary_fixed": "#001e2c",
+              "on_tertiary_fixed_variant": "#004c69",
+              "outline": "#9f8e7a",
+              "outline_variant": "#524434",
+              "page-bg": "#161618",
+              "primary": "#ffc77f",
+              "primary_container": "#f5a524",
+              "primary_fixed": "#ffddb5",
+              "primary_fixed_dim": "#ffb957",
+              "secondary": "#d4bbff",
+              "secondary_container": "#592f9e",
+              "secondary_fixed": "#ebdcff",
+              "secondary_fixed_dim": "#d4bbff",
+              "selection-fill": "#3a2f17",
+              "status-bad": "#ff6b6b",
+              "status-good": "#3ddc97",
+              "status-warning": "#f5a524",
+              "strong-line": "#44464c",
+              "surface": "#1d1e21",
+              "surface-raised": "#26272b",
+              "surface_bright": "#38393c",
+              "surface_container": "#1f1f23",
+              "surface_container_high": "#292a2d",
+              "surface_container_highest": "#343538",
+              "surface_container_low": "#1a1b1e",
+              "surface_container_lowest": "#0d0e11",
+              "surface_dim": "#121316",
+              "surface_tint": "#ffb957",
+              "surface_variant": "#343538",
+              "tertiary": "#9ad9ff",
+              "tertiary_container": "#36c2ff",
+              "tertiary_fixed": "#c4e7ff",
+              "tertiary_fixed_dim": "#7bd0ff",
+              "text-body": "#c2c4ca",
+              "text-ink": "#ececee",
+              "text-secondary": "#858892",
+              "window-chrome": "#121214"
+            },
+            "overrideNeutralColor": "#1d1e21",
+            "overridePrimaryColor": "#f5a524",
+            "overrideSecondaryColor": "#b48cff",
+            "roundness": "ROUND_FOUR",
+            "spacing": {
+              "gutter": "1rem",
+              "margin": "1rem",
+              "space-lg": "1.5rem",
+              "space-md": "1rem",
+              "space-sm": "0.5rem",
+              "space-xl": "2rem",
+              "space-xs": "0.25rem"
+            },
+            "spacingScale": 2,
+            "typography": {
+              "body-md": {
+                "fontFamily": "Inter",
+                "fontSize": "13px",
+                "fontWeight": "400",
+                "lineHeight": "18px"
+              },
+              "code-figures": {
+                "fontFamily": "JetBrains Mono",
+                "fontSize": "12px",
+                "fontWeight": "400",
+                "letterSpacing": "-0.01em",
+                "lineHeight": "16px"
+              },
+              "headline-lg": {
+                "fontFamily": "Inter",
+                "fontSize": "20px",
+                "fontWeight": "700",
+                "lineHeight": "24px"
+              },
+              "headline-md": {
+                "fontFamily": "Inter",
+                "fontSize": "15px",
+                "fontWeight": "600",
+                "lineHeight": "20px"
+              },
+              "label-md": {
+                "fontFamily": "Inter",
+                "fontSize": "12px",
+                "fontWeight": "400",
+                "lineHeight": "16px"
+              },
+              "toolbar-label": {
+                "fontFamily": "Inter",
+                "fontSize": "11px",
+                "fontWeight": "500",
+                "lineHeight": "14px"
+              }
+            }
+          }
+        },
+        "name": "assets/594cbef631e24345933a2c8a1ebb9efb",
+        "version": "1"
+      },
+      "deviceType": "DESKTOP",
+      "generatedBy": "figaro_agent",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sX2Y4MTBhZTQxNjc4NTQ5MjQ5YjY5MTZkNDdmMWM0YzUyEgsSBxDOpomh_Q8YAZIBIwoKcHJvamVjdF9pZBIVQhM2OTgxODM0ODczNzkwNTEyMjQ3&filename=&opi=96797242",
+        "mimeType": "text/html",
+        "name": "projects/6981834873790512247/files/f834f50db5a048af949ade793120dc9a"
+      },
+      "id": "6ea9d7d3f6794ce1ae531c0ea4826979",
+      "name": "projects/6981834873790512247/screens/6ea9d7d3f6794ce1ae531c0ea4826979",
+      "prompt": "Build the desktop interface (1440x900 viewport) for omxplorer on its Report tab according to the Graphite design system specifications and exact prompt requirements:\n\n1. Window Chrome & Navigation:\n- Top Title bar: Dark window chrome (#121214) with traffic-light window controls on far left, \"omxplorer\" in lowercase JetBrains Mono font, and centered \"orders.omx\" document pill/badge. Right side has kernel status / GPU indicator (e.g. \"RTX 4090 · Ready\").\n- Toolbar: Flat icon-above-label buttons (64px wide, height ~52px) separated into clean groups by vertical hairlines:\n  * Group 1: [Open, Save, Undo, Redo]\n  * Group 2: [Table, Chart, Pivot, Formula]\n  * Group 3: [KPI, Chart tile, Text]\n  * Group 4: [Format]\n  Hover effects and active tool states with subtle Graphite raised tint and amber accent touch.\n\n2. Inspector Panel (Docked Right, 300px width):\n- Border-l hairline (#2e3034), background #1d1e21.\n- Top tab bar: \"Tile\" (active, accent underline/highlight) and \"Data\".\n- Inspector controls:\n  * Section header: \"TILE CONFIGURATION\" (small uppercase 11px)\n  * Value column dropdown: \"revenue\" (with numeric badge '#')\n  * Aggregate segmented control: [Sum | Average | Count] (with 'Sum' active/highlighted)\n  * Compare-to dropdown: \"previous quarter\"\n  * Display options: Format currency ($), Decimals stepper (1), Show sparkline toggle (checked).\n  * Selected Tile indicator: \"KPI Tile 1 (Revenue)\"\n\n3. Central Work Area:\n- Background: #161618 (page behind the sheet).\n- Scrollable report document page: Centered white/light or high-contrast crisp card canvas or Graphite document sheet (elevated panel #1d1e21 with hairline #2e3034 border, 6px radius) matching data-science notebook standards. Let's make it the clean report document with title \"Q3 orders\".\n- Header:\n  * Page title: \"Q3 orders\" (20px bold Inter, #ececee)\n  * Metadata caption: \"Updated just now · 1,000,000 rows · 4.1 ms on the GPU\" (with monospace 4.1 ms in JetBrains Mono, GPU badge).\n- Filter row (chips):\n  * \"region = West ✕\" (active chip, dark raised pill with subtle amber border/tint)\n  * \"date: Jul–Sep 2026 ✕\" (active chip)\n  * \"carrier: all\" (chip)\n  * \"+ Filter\" (dashed/bordered button)\n- KPI Cards row (4 cards in a grid):\n  * Card 1: Revenue \"$18.4M\" in JetBrains Mono bold, delta chip \"+4.2%\" (good green #3ddc97), mini vector SVG sparkline. SELECTED with 2px amber accent ring (#f5a524) and subtle glow/selection fill.\n  * Card 2: Orders \"255,102\", delta chip \"+1.1%\" (good green #3ddc97), mini sparkline.\n  * Card 3: Average order \"$72.06\", delta chip \"-0.8%\" (bad red #ff6b6b), mini sparkline.\n  * Card 4: Margin \"31.4%\", delta chip \"+0.6 pts\" (good green #3ddc97), mini sparkline.\n- Side-by-side Charts section:\n  * Chart 1: \"Revenue by month\" — clean SVG line chart spanning Jan through Sep, with gridlines, gradient fill underneath, and an interactive hover tooltip point at August reading \"Aug · $6.3M\" with a vertical guide line.\n  * Chart 2: \"Revenue by carrier\" — horizontal bar chart comparing UPS ($7.2M), FedEx ($5.8M), DHL ($3.4M), USPS ($2.0M) with carrier logos/labels, exact JetBrains Mono money values right-aligned.\n- Pivot Table:\n  * Title: \"Revenue · region × product\"\n  * Formatted matrix table: 5 product columns (Enterprise, Pro, Starter, Hardware, Services) plus \"Total\" column.\n  * Rows for West, East, Central, South, and \"Total\" row with hairline borders and raised row styling.\n  * Numbers right-aligned in tabular JetBrains Mono with currency formatting ($1,240,500 etc.).\n- \"Add a tile\" empty dashed state:\n  * Dashed border container with buttons: [ + Sum ], [ + Average ], [ + Count ], [ + Chart ].\n\n4. Bottom Bars:\n- Sheet tabs (bottom-left, Excel/Jupyter notebook style): \"Orders\", \"Report\" (active tab with #1d1e21 surface and 2px #f5a524 accent top edge), and \"+\" new tab button.\n- Status bar (26px height, monospace metrics): \"Filtered: 255,102 of 1,000,000 rows · Sum: $18,421,900 · Avg: $72.06 · NVIDIA RTX 4090 · 4.1 ms\"\n\nEnsure full Graphite design system adherence: neutral graphite tones (#121214, #161618, #1d1e21, #26272b), hairline borders (#2e3034), crisp typography (Inter for UI, tabular JetBrains Mono for figures), and warm amber (#f5a524) accents.",
+      "screenMetadata": {
+        "agentType": "PRO_AGENT",
+        "status": "COMPLETE"
+      },
+      "screenType": "DESIGN",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1U0s7OP3-utmv8wX2DquRi10jR5yzRAJajeOGgJOjm68vutD_3R2QFP9oqwsgS12uO-XmJXT2oic-RO5ZIyxw94JTOVNrr6zP1Gb4QYF7ynYehi7Tjb9WTzvcthB8-VOvivcQ4pPVCqHcia_anlESb1WM0JhEwOpv45XUlKSYWq4gf3GlSh695iCEVbSr-rtrDQ2Xlyw2XBH70Qw23QnRylfIwmqBmbfdqq0yqQrGeTmJc6wZWJvoTlwaM",
+        "name": "projects/6981834873790512247/files/036a5fb0fc6a4bd6a33b53812b43d119"
+      },
+      "theme": {
+        "bodyFont": "INTER",
+        "bodyFontFamily": "Inter",
+        "colorMode": "DARK",
+        "colorVariant": "FIDELITY",
+        "customColor": "#f5a524",
+        "font": "INTER",
+        "headlineFont": "INTER",
+        "headlineFontFamily": "Inter",
+        "labelFont": "INTER",
+        "labelFontFamily": "Inter",
+        "namedColors": {
+          "background": "#121316",
+          "chart-1": "#4cc2ff",
+          "chart-2": "#f5a524",
+          "chart-3": "#b48cff",
+          "chart-4": "#3ddc97",
+          "chart-5": "#ff6b6b",
+          "chart-6": "#e0c341",
+          "chart-7": "#8f98a8",
+          "chart-8": "#ff9de2",
+          "error": "#ffb4ab",
+          "error_container": "#93000a",
+          "formula-values": "#b48cff",
+          "hairline": "#2e3034",
+          "inverse_on_surface": "#2f3033",
+          "inverse_primary": "#835400",
+          "inverse_surface": "#e3e2e6",
+          "on_background": "#e3e2e6",
+          "on_error": "#690005",
+          "on_error_container": "#ffdad6",
+          "on_primary": "#462b00",
+          "on_primary_container": "#643f00",
+          "on_primary_fixed": "#2a1800",
+          "on_primary_fixed_variant": "#643f00",
+          "on_secondary": "#3f0c85",
+          "on_secondary_container": "#c8aaff",
+          "on_secondary_fixed": "#260059",
+          "on_secondary_fixed_variant": "#562d9c",
+          "on_surface": "#e3e2e6",
+          "on_surface_variant": "#d7c3ae",
+          "on_tertiary": "#003549",
+          "on_tertiary_container": "#004d69",
+          "on_tertiary_fixed": "#001e2c",
+          "on_tertiary_fixed_variant": "#004c69",
+          "outline": "#9f8e7a",
+          "outline_variant": "#524434",
+          "page-bg": "#161618",
+          "primary": "#ffc77f",
+          "primary_container": "#f5a524",
+          "primary_fixed": "#ffddb5",
+          "primary_fixed_dim": "#ffb957",
+          "secondary": "#d4bbff",
+          "secondary_container": "#592f9e",
+          "secondary_fixed": "#ebdcff",
+          "secondary_fixed_dim": "#d4bbff",
+          "selection-fill": "#3a2f17",
+          "status-bad": "#ff6b6b",
+          "status-good": "#3ddc97",
+          "status-warning": "#f5a524",
+          "strong-line": "#44464c",
+          "surface": "#1d1e21",
+          "surface-raised": "#26272b",
+          "surface_bright": "#38393c",
+          "surface_container": "#1f1f23",
+          "surface_container_high": "#292a2d",
+          "surface_container_highest": "#343538",
+          "surface_container_low": "#1a1b1e",
+          "surface_container_lowest": "#0d0e11",
+          "surface_dim": "#121316",
+          "surface_tint": "#ffb957",
+          "surface_variant": "#343538",
+          "tertiary": "#9ad9ff",
+          "tertiary_container": "#36c2ff",
+          "tertiary_fixed": "#c4e7ff",
+          "tertiary_fixed_dim": "#7bd0ff",
+          "text-body": "#c2c4ca",
+          "text-ink": "#ececee",
+          "text-secondary": "#858892",
+          "window-chrome": "#121214"
+        },
+        "overrideNeutralColor": "#1d1e21",
+        "overridePrimaryColor": "#f5a524",
+        "overrideSecondaryColor": "#b48cff",
+        "roundness": "ROUND_FOUR",
+        "spacing": {
+          "gutter": "1rem",
+          "margin": "1rem",
+          "space-lg": "1.5rem",
+          "space-md": "1rem",
+          "space-sm": "0.5rem",
+          "space-xl": "2rem",
+          "space-xs": "0.25rem"
+        },
+        "spacingScale": 2,
+        "typography": {
+          "body-md": {
+            "fontFamily": "Inter",
+            "fontSize": "13px",
+            "fontWeight": "400",
+            "lineHeight": "18px"
+          },
+          "code-figures": {
+            "fontFamily": "JetBrains Mono",
+            "fontSize": "12px",
+            "fontWeight": "400",
+            "letterSpacing": "-0.01em",
+            "lineHeight": "16px"
+          },
+          "headline-lg": {
+            "fontFamily": "Inter",
+            "fontSize": "20px",
+            "fontWeight": "700",
+            "lineHeight": "24px"
+          },
+          "headline-md": {
+            "fontFamily": "Inter",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "lineHeight": "20px"
+          },
+          "label-md": {
+            "fontFamily": "Inter",
+            "fontSize": "12px",
+            "fontWeight": "400",
+            "lineHeight": "16px"
+          },
+          "toolbar-label": {
+            "fontFamily": "Inter",
+            "fontSize": "11px",
+            "fontWeight": "500",
+            "lineHeight": "14px"
+          }
+        }
+      },
+      "title": "omxplorer — Q3 Orders Report",
+      "width": "2560",
+      "agentText": "Here is the complete desktop design for **omxplorer** (1440×900) on its **Report tab** based on the Graphite design system:\n\n### What was created:\n1. **Window Chrome & Toolbar**:\n   - macOS traffic light controls with lowercase `omxplorer` branding in JetBrains Mono.\n   - Centered `orders.omx` dataset badge and live GPU status badge (`RTX 4090 · Ready`).\n   - Grouped icon-above-label toolbar separated by hairline dividers: `[Open, Save, Undo, Redo]`, `[Table, Chart, Pivot, Formula]`, `[KPI, Chart tile, Text]`, and `[Format]`.\n\n2. **Report Workspace & Controls**:\n   - Header: `\"Q3 orders\"` with caption `\"Updated just now · 1,000,000 rows · 4.1 ms on GPU\"`.\n   - Filter bar: Removable chips for `region = West ✕`, `date: Jul–Sep 2026 ✕`, `carrier: all`, and `+ Filter`.\n   - Four KPI cards: \n     - **Revenue $18.4M** (`+4.2%`, selected with amber accent ring and sparkline)\n     - **Orders 255,102** (`+1.1%`, sparkline)\n     - **Average order $72.06** (`-0.8%`, sparkline)\n     - **Margin 31.4%** (`+0.6 pts`, sparkline)\n   - Side-by-side charts:\n     - **Revenue by month**: Line chart with gridlines and interactive hover tooltip pointing at `\"Aug · $6.3M\"`.\n     - **Revenue by carrier**: Horizontal bars comparing UPS Logistics, FedEx Express, DHL Express, and USPS Priority.\n   - **Pivot table**: `\"Revenue · region × product\"` cross-tabulating 5 product columns (`Enterprise`, `Pro Suite`, `Starter`, `Hardware`, `Services`) across regions with row and column totals in tabular JetBrains Mono.\n   - **Add a tile row**: Dashed container offering quick action buttons (`+ Sum`, `+ Average`, `+ Count`, `+ Chart`).\n\n3. **300px Inspector & Status Bar**:\n   - Docked 300px right-hand inspector panel with active **Tile** tab, value column dropdown (`# revenue`), aggregate segmented control (`Sum / Average / Count`), and comparison selector (`previous quarter`).\n   - Bottom sheet tab bar with `Orders`, active `Report` tab (with accent top edge), and `+`.\n   - 26px monospace status bar displaying live filtered record count (`Filtered: 255,102 of 1,000,000 rows`), selection aggregates, GPU device, and latency.",
+      "suggestions": [
+        "Switch the active selection to the pivot table in the Inspector panel",
+        "Add a heatmap gradient to the pivot table cells",
+        "Show the orders data sheet tab view"
+      ],
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1U0s7OP3-utmv8wX2DquRi10jR5yzRAJajeOGgJOjm68vutD_3R2QFP9oqwsgS12uO-XmJXT2oic-RO5ZIyxw94JTOVNrr6zP1Gb4QYF7ynYehi7Tjb9WTzvcthB8-VOvivcQ4pPVCqHcia_anlESb1WM0JhEwOpv45XUlKSYWq4gf3GlSh695iCEVbSr-rtrDQ2Xlyw2XBH70Qw23QnRylfIwmqBmbfdqq0yqQrGeTmJc6wZWJvoTlwaM"
+    }
+  }
+}

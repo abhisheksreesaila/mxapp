@@ -1,0 +1,671 @@
+{
+  "success": true,
+  "data": {
+    "resource": "screen",
+    "id": "d3329f38d0da4848889b8ede070230cc",
+    "project": "13667871302139021251",
+    "title": "omxplorer Mobile — orders.csv",
+    "device": "MOBILE",
+    "screenType": "DESIGN",
+    "canvasUrl": "https://stitch.google.com/projects/13667871302139021251?node-id=d3329f38d0da4848889b8ede070230cc",
+    "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1VN7ljMIpC8ddJAtSZjvrSXxA46P2BivUKbd5ntMw8NbXP7A0O3O8WtKEU2Eyxi-J9G86hBmSPL4ZageTuVmvVqjOBd9g8O4FZF2XFtCfM4_BQ-Hbe_1Kl1gK-1Pp0Mf7xXtnNRkPOwicvwb8sSfIIs3BEp97AlVQmRlFS659Hb6cfluiYb3RvdZW3AAG4VdsvrqiTgrPDNKjlywBjdf-Xk7cwKsvxuY1qVocdbDRtSj86BW7SCzEstVqMu",
+    "htmlCode": {
+      "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzcyZWNkN2UwM2EzOTQ2N2I5YTEwNmIyNmQ5MDEyNGYwEgsSBxDOpomh_Q8YAZIBJAoKcHJvamVjdF9pZBIWQhQxMzY2Nzg3MTMwMjEzOTAyMTI1MQ&filename=&opi=96797242",
+      "mimeType": "text/html",
+      "name": "projects/13667871302139021251/files/4ba8dc730f1c4d9dae2f6f6583f2507d"
+    },
+    "rawScreen": {
+      "outputComponents": [
+        {
+          "design": {
+            "screens": [
+              {
+                "designSystem": {
+                  "designSystem": {
+                    "displayName": "Spreadsheet Classic",
+                    "styleGuidelines": "## Brand & Style\n\nThis design system is built for dense data exploration, financial modeling, and analytical workflows. It embodies a clean, spreadsheet-classic aesthetic that prioritizes absolute clarity, high contrast, and zero platform chrome discrepancies. The design style relies on a functional, flat presentation with strict structural grids, ensuring a calm, professional, and reliable environment for long data-heavy sessions.\n\nD\n## Layout & Spacing\n\nThe layout model follows a structured, fixed-grid spreadsheet architecture where content aligns to precise rows and columns. Spacing is tight and predictable to maximize information density. Gutters and component paddings rely on an incremental spacing scale designed to keep toolbar elements, data cells, and inspector panels systematically aligned.\n\n## Elevation & Depth\n\nVisual hierarchy is achieved primarily through a flat architectural layout utilizing precise hairlines and background tonal shifts rather than dramatic shadows or blurs. Surfaces are demarcated by clean 1px borders (`#e1e4e8` and `#c9ced6`). Floating menus, contextual dialogs, and popovers are the sole elements permitted to break flatness, using a single soft, diffused shadow (`0 4px 16px rgba(0, 0, 0, 0.12)`).\n\n## Components\n\n### Toolbar\nConstructed with icon-above-label buttons, exactly 64px wide. Grouped logically and separated by thin vertical hairlines (`#e1e4e8`). Hover states fill with the raised surface color (`#f0f2f5`), and active tools take on the primary accent tint.\n\n### Data Grid\nThe core data component featuring a 48px row-number gutter, column header rows complete with type badges (`#`, `$`, `Aa`, calendar), and tiny distribution histograms. Body rows maintain a strict 28px height with hairline borders. Selected cells display a 2px accent ring, selected columns are lightly tinted (`#e3f2f3`), and formula columns render their evaluated values in the designated formula color.\n\n### Formula Bar\nComposed of a cell reference indicator box, a distinct \"fx\" label, a monospace input field, and immediate cancel/accept action buttons.\n\n### Inspector Panel\nA fixed 300px right-side panel featuring top-level navigation tabs, small uppercase section titles, flat dropdown menus, segmented controls, steppers, and switches.\n\n### Sheet Tabs\nPositioned at the bottom-left in classic spreadsheet fashion. Flat rectangular tabs where the active tab rests on the surface background with a 2px accent top edge, accompanied by an inline creation button.\n\n### Status Bar\nA fixed 26px footer using monospace figures to display total rows, active selection summaries (sum, average, count), GPU status, and last computation time.\n\n### KPI Cards\nStructured with a clear text label, a prominent monospace numeric figure, an inline sparkline visualization, and a semantic delta chip reflecting good or bad conditional styling.",
+                    "theme": {
+                      "bodyFont": "INTER",
+                      "bodyFontFamily": "Inter",
+                      "colorMode": "LIGHT",
+                      "colorVariant": "FIDELITY",
+                      "customColor": "#0e7c86",
+                      "designMd": "---\nname: Spreadsheet Classic\ncolors:\n  surface: '#ffffff'\n  surface-dim: '#d7dbdb'\n  surface-bright: '#f7fafa'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#f1f4f4'\n  surface-container: '#ebeeef'\n  surface-container-high: '#e5e9e9'\n  surface-container-highest: '#dfe3e3'\n  on-surface: '#181c1d'\n  on-surface-variant: '#3e494a'\n  inverse-surface: '#2d3132'\n  inverse-on-surface: '#eef1f2'\n  outline: '#6e797a'\n  outline-variant: '#bdc9ca'\n  surface-tint: '#006972'\n  primary: '#00626a'\n  on-primary: '#ffffff'\n  primary-container: '#0e7c86'\n  on-primary-container: '#ddfbff'\n  inverse-primary: '#7cd4df'\n  secondary: '#5f43ca'\n  on-secondary: '#ffffff'\n  secondary-container: '#785ee5'\n  on-secondary-container: '#fffbff'\n  tertiary: '#85481b'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#a26031'\n  on-tertiary-container: '#fff3ee'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#98f0fb'\n  primary-fixed-dim: '#7cd4df'\n  on-primary-fixed: '#001f23'\n  on-primary-fixed-variant: '#004f56'\n  secondary-fixed: '#e6deff'\n  secondary-fixed-dim: '#cabeff'\n  on-secondary-fixed: '#1c0061'\n  on-secondary-fixed-variant: '#4928b4'\n  tertiary-fixed: '#ffdbc7'\n  tertiary-fixed-dim: '#ffb688'\n  on-tertiary-fixed: '#311300'\n  on-tertiary-fixed-variant: '#6f380b'\n  background: '#f7fafa'\n  on-background: '#181c1d'\n  surface-variant: '#dfe3e3'\n  window-chrome: '#f5f6f8'\n  page-bg: '#eef0f3'\n  raised: '#f0f2f5'\n  selection-fill: '#e3f2f3'\n  hairline: '#e1e4e8'\n  strong-line: '#c9ced6'\n  ink: '#1b1f24'\n  body-text: '#3d434c'\n  secondary-text: '#6b7380'\n  formula-value: '#6a4fd6'\n  status-good: '#1f8a4c'\n  status-bad: '#c8364c'\n  status-warning: '#b7791f'\n  chart-1: '#0e7c86'\n  chart-2: '#e8833a'\n  chart-3: '#5b5fc7'\n  chart-4: '#d6455d'\n  chart-5: '#2e9e5b'\n  chart-6: '#b8892d'\n  chart-7: '#7a8594'\n  chart-8: '#c45cb5'\ntypography:\n  page-title:\n    fontFamily: Inter\n    fontSize: 20px\n    fontWeight: '700'\n    lineHeight: 28px\n  section-title:\n    fontFamily: Inter\n    fontSize: 15px\n    fontWeight: '600'\n    lineHeight: 22px\n  body:\n    fontFamily: Inter\n    fontSize: 13px\n    fontWeight: '400'\n    lineHeight: 18px\n  caption:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n  toolbar-label:\n    fontFamily: Inter\n    fontSize: 11px\n    fontWeight: '500'\n    lineHeight: 14px\n  tabular-data:\n    fontFamily: JetBrains Mono\n    fontSize: 13px\n    fontWeight: '400'\n    lineHeight: 18px\nrounded:\n  sm: 0.125rem\n  DEFAULT: 0.25rem\n  md: 0.375rem\n  lg: 0.5rem\n  xl: 0.75rem\n  full: 9999px\nspacing:\n  gutter: 1rem\n  margin: 1rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 0.75rem\n  space-lg: 1rem\n  space-xl: 1.5rem\n---\n\n## Brand & Style\n\nThis design system is built for dense data exploration, financial modeling, and analytical workflows. It embodies a clean, spreadsheet-classic aesthetic that prioritizes absolute clarity, high contrast, and zero platform chrome discrepancies. The design style relies on a functional, flat presentation with strict structural grids, ensuring a calm, professional, and reliable environment for long data-heavy sessions.\n\n## Colors\n\nThe color palette is purposefully engineered for data-dense interfaces, utilizing a quiet grey chrome against a bright white sheet. A deep teal accent defines interactive states, selection rings, and primary actions, while distinct semantic colors handle formulas, validation states, and accessible chart series.\n\n## Typography\n\nThe typographic hierarchy pairs clean UI sans-serif structures with a strict monospaced tabular font for all numbers, formulas, and quantitative metrics. Text alignments are intentional: numeric values are strictly right-aligned in columns to maintain scannability across rows.\n\nD\n## Layout & Spacing\n\nThe layout model follows a structured, fixed-grid spreadsheet architecture where content aligns to precise rows and columns. Spacing is tight and predictable to maximize information density. Gutters and component paddings rely on an incremental spacing scale designed to keep toolbar elements, data cells, and inspector panels systematically aligned.\n\n## Elevation & Depth\n\nVisual hierarchy is achieved primarily through a flat architectural layout utilizing precise hairlines and background tonal shifts rather than dramatic shadows or blurs. Surfaces are demarcated by clean 1px borders (`#e1e4e8` and `#c9ced6`). Floating menus, contextual dialogs, and popovers are the sole elements permitted to break flatness, using a single soft, diffused shadow (`0 4px 16px rgba(0, 0, 0, 0.12)`).\n\n## Shapes\n\nThe shape language is strictly controlled to maintain a crisp, utilitarian aesthetic. Table cells have absolute sharp edges (`0px`), while structural panels, cards, and primary buttons use a restrained `6px` radius. Smaller interactive elements like inputs, chips, and segmented controls feature a tighter `4px` radius.\n\n## Components\n\n### Toolbar\nConstructed with icon-above-label buttons, exactly 64px wide. Grouped logically and separated by thin vertical hairlines (`#e1e4e8`). Hover states fill with the raised surface color (`#f0f2f5`), and active tools take on the primary accent tint.\n\n### Data Grid\nThe core data component featuring a 48px row-number gutter, column header rows complete with type badges (`#`, `$`, `Aa`, calendar), and tiny distribution histograms. Body rows maintain a strict 28px height with hairline borders. Selected cells display a 2px accent ring, selected columns are lightly tinted (`#e3f2f3`), and formula columns render their evaluated values in the designated formula color.\n\n### Formula Bar\nComposed of a cell reference indicator box, a distinct \"fx\" label, a monospace input field, and immediate cancel/accept action buttons.\n\n### Inspector Panel\nA fixed 300px right-side panel featuring top-level navigation tabs, small uppercase section titles, flat dropdown menus, segmented controls, steppers, and switches.\n\n### Sheet Tabs\nPositioned at the bottom-left in classic spreadsheet fashion. Flat rectangular tabs where the active tab rests on the surface background with a 2px accent top edge, accompanied by an inline creation button.\n\n### Status Bar\nA fixed 26px footer using monospace figures to display total rows, active selection summaries (sum, average, count), GPU status, and last computation time.\n\n### KPI Cards\nStructured with a clear text label, a prominent monospace numeric figure, an inline sparkline visualization, and a semantic delta chip reflecting good or bad conditional styling.",
+                      "font": "INTER",
+                      "headlineFont": "INTER",
+                      "headlineFontFamily": "Inter",
+                      "labelFont": "JETBRAINS_MONO",
+                      "labelFontFamily": "JetBrains Mono",
+                      "namedColors": {
+                        "background": "#f7fafa",
+                        "body-text": "#3d434c",
+                        "chart-1": "#0e7c86",
+                        "chart-2": "#e8833a",
+                        "chart-3": "#5b5fc7",
+                        "chart-4": "#d6455d",
+                        "chart-5": "#2e9e5b",
+                        "chart-6": "#b8892d",
+                        "chart-7": "#7a8594",
+                        "chart-8": "#c45cb5",
+                        "error": "#ba1a1a",
+                        "error_container": "#ffdad6",
+                        "formula-value": "#6a4fd6",
+                        "hairline": "#e1e4e8",
+                        "ink": "#1b1f24",
+                        "inverse_on_surface": "#eef1f2",
+                        "inverse_primary": "#7cd4df",
+                        "inverse_surface": "#2d3132",
+                        "on_background": "#181c1d",
+                        "on_error": "#ffffff",
+                        "on_error_container": "#93000a",
+                        "on_primary": "#ffffff",
+                        "on_primary_container": "#ddfbff",
+                        "on_primary_fixed": "#001f23",
+                        "on_primary_fixed_variant": "#004f56",
+                        "on_secondary": "#ffffff",
+                        "on_secondary_container": "#fffbff",
+                        "on_secondary_fixed": "#1c0061",
+                        "on_secondary_fixed_variant": "#4928b4",
+                        "on_surface": "#181c1d",
+                        "on_surface_variant": "#3e494a",
+                        "on_tertiary": "#ffffff",
+                        "on_tertiary_container": "#fff3ee",
+                        "on_tertiary_fixed": "#311300",
+                        "on_tertiary_fixed_variant": "#6f380b",
+                        "outline": "#6e797a",
+                        "outline_variant": "#bdc9ca",
+                        "page-bg": "#eef0f3",
+                        "primary": "#00626a",
+                        "primary_container": "#0e7c86",
+                        "primary_fixed": "#98f0fb",
+                        "primary_fixed_dim": "#7cd4df",
+                        "raised": "#f0f2f5",
+                        "secondary": "#5f43ca",
+                        "secondary-text": "#6b7380",
+                        "secondary_container": "#785ee5",
+                        "secondary_fixed": "#e6deff",
+                        "secondary_fixed_dim": "#cabeff",
+                        "selection-fill": "#e3f2f3",
+                        "status-bad": "#c8364c",
+                        "status-good": "#1f8a4c",
+                        "status-warning": "#b7791f",
+                        "strong-line": "#c9ced6",
+                        "surface": "#ffffff",
+                        "surface_bright": "#f7fafa",
+                        "surface_container": "#ebeeef",
+                        "surface_container_high": "#e5e9e9",
+                        "surface_container_highest": "#dfe3e3",
+                        "surface_container_low": "#f1f4f4",
+                        "surface_container_lowest": "#ffffff",
+                        "surface_dim": "#d7dbdb",
+                        "surface_tint": "#006972",
+                        "surface_variant": "#dfe3e3",
+                        "tertiary": "#85481b",
+                        "tertiary_container": "#a26031",
+                        "tertiary_fixed": "#ffdbc7",
+                        "tertiary_fixed_dim": "#ffb688",
+                        "window-chrome": "#f5f6f8"
+                      },
+                      "overridePrimaryColor": "#0e7c86",
+                      "overrideSecondaryColor": "#6a4fd6",
+                      "roundness": "ROUND_FOUR",
+                      "spacing": {
+                        "gutter": "1rem",
+                        "margin": "1rem",
+                        "space-lg": "1rem",
+                        "space-md": "0.75rem",
+                        "space-sm": "0.5rem",
+                        "space-xl": "1.5rem",
+                        "space-xs": "0.25rem"
+                      },
+                      "spacingScale": 2,
+                      "typography": {
+                        "body": {
+                          "fontFamily": "Inter",
+                          "fontSize": "13px",
+                          "fontWeight": "400",
+                          "lineHeight": "18px"
+                        },
+                        "caption": {
+                          "fontFamily": "Inter",
+                          "fontSize": "12px",
+                          "fontWeight": "400",
+                          "lineHeight": "16px"
+                        },
+                        "page-title": {
+                          "fontFamily": "Inter",
+                          "fontSize": "20px",
+                          "fontWeight": "700",
+                          "lineHeight": "28px"
+                        },
+                        "section-title": {
+                          "fontFamily": "Inter",
+                          "fontSize": "15px",
+                          "fontWeight": "600",
+                          "lineHeight": "22px"
+                        },
+                        "tabular-data": {
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": "13px",
+                          "fontWeight": "400",
+                          "lineHeight": "18px"
+                        },
+                        "toolbar-label": {
+                          "fontFamily": "Inter",
+                          "fontSize": "11px",
+                          "fontWeight": "500",
+                          "lineHeight": "14px"
+                        }
+                      }
+                    }
+                  },
+                  "name": "assets/bb19ccbf1758455db742c08f4a1c1716",
+                  "version": "1"
+                },
+                "deviceType": "MOBILE",
+                "generatedBy": "figaro_agent",
+                "height": "1768",
+                "htmlCode": {
+                  "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzcyZWNkN2UwM2EzOTQ2N2I5YTEwNmIyNmQ5MDEyNGYwEgsSBxDOpomh_Q8YAZIBJAoKcHJvamVjdF9pZBIWQhQxMzY2Nzg3MTMwMjEzOTAyMTI1MQ&filename=&opi=96797242",
+                  "mimeType": "text/html",
+                  "name": "projects/13667871302139021251/files/4ba8dc730f1c4d9dae2f6f6583f2507d"
+                },
+                "id": "d3329f38d0da4848889b8ede070230cc",
+                "name": "projects/13667871302139021251/screens/d3329f38d0da4848889b8ede070230cc",
+                "prompt": "iPhone mobile view (390px width) of omxplorer spreadsheet app following the Ledger design specification.\nExact requirements:\n1. Top Bar: document name \"orders.csv\" with back chevron button and \"…\" overflow menu button, clean white/grey chrome (#f5f6f8), 48px touch targets. Under the title, show subtle metadata badge \"1,000,000 rows • 28.4 MB\".\n2. Horizontal Tool Strip / Quick Actions Ribbon (scrollable or neatly fitted): Touch-friendly buttons (min 48px target height/width) for: Chart, Pivot, Formula, Sort, Filter, Format. Active or crisp outline styling with Lucide icons (bar chart, table pivot, fx, arrow down-up, filter, sliders).\n3. Data Grid:\n   - Narrow row-number gutter (40-48px width) with 1, 2, 3, 4, 5...\n   - Frozen first column: \"order_id\" (badge \"#\", mini histogram spark, monospace IDs like ORD-94021, ORD-94022).\n   - Columns: \"date\" (type badge calendar, e.g. 2024-03-15), \"region\" (type badge Aa, e.g. NA-West, EMEA, APAC), and \"revenue\" (type badge \"$\").\n   - Revenue column is actively selected: header cell tinted with selection fill (#e3f2f3) and 2px accent top/border (#0e7c86), cells right-aligned JetBrains Mono numbers ($124.50, $89.00, $1,420.00, $45.20, $310.80).\n   - Crisp 1px hairlines (#e1e4e8), calm contrast, zero cell radius.\n4. Bottom Sheet Inspector (presented at half height over the lower grid portion with soft shadow and drag pill handle):\n   - Header with handle: Title \"revenue\" with \"$\" badge, and close \"✕\" or dismiss button.\n   - KPI metrics row:\n     * Sum: $72,061,236.00 (large bold monospace JetBrains Mono)\n     * Average: $72.06\n     * Count: 1,000,000\n   - Mini Distribution Histogram / Frequency Chart: Flat bars in teal (#0e7c86) showing revenue distribution across price buckets, with baseline and label.\n   - Format row: Format type \"Currency ($)\", Decimals \"2 decimals\", with stepper or dropdown chips.\n   - Quick action buttons: \"Filter Column\", \"Sort Descending\", \"Add Summary\".\n5. Floating / Bottom Tab Bar:\n   - Thumb-friendly 48px targets.\n   - Sheet tabs: \"Sheet\" (active with 2px teal indicator), \"Report\", and \"+\" button.\n6. Design tokens:\n   - Flat aesthetic (no blur/glass/heavy gradients), hairline borders #e1e4e8, text #1b1f24, secondary #6b7380, accent #0e7c86, selection fill #e3f2f3.\n   - Inter for UI text and JetBrains Mono for all numeric values and IDs.",
+                "screenMetadata": {
+                  "agentType": "PRO_AGENT",
+                  "status": "COMPLETE"
+                },
+                "screenType": "DESIGN",
+                "screenshot": {
+                  "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1VN7ljMIpC8ddJAtSZjvrSXxA46P2BivUKbd5ntMw8NbXP7A0O3O8WtKEU2Eyxi-J9G86hBmSPL4ZageTuVmvVqjOBd9g8O4FZF2XFtCfM4_BQ-Hbe_1Kl1gK-1Pp0Mf7xXtnNRkPOwicvwb8sSfIIs3BEp97AlVQmRlFS659Hb6cfluiYb3RvdZW3AAG4VdsvrqiTgrPDNKjlywBjdf-Xk7cwKsvxuY1qVocdbDRtSj86BW7SCzEstVqMu",
+                  "name": "projects/13667871302139021251/files/044b1380e4fb45f3852714979a90cfa1"
+                },
+                "theme": {
+                  "bodyFont": "INTER",
+                  "bodyFontFamily": "Inter",
+                  "colorMode": "LIGHT",
+                  "colorVariant": "FIDELITY",
+                  "customColor": "#0e7c86",
+                  "font": "INTER",
+                  "headlineFont": "INTER",
+                  "headlineFontFamily": "Inter",
+                  "labelFont": "JETBRAINS_MONO",
+                  "labelFontFamily": "JetBrains Mono",
+                  "namedColors": {
+                    "background": "#f7fafa",
+                    "body-text": "#3d434c",
+                    "chart-1": "#0e7c86",
+                    "chart-2": "#e8833a",
+                    "chart-3": "#5b5fc7",
+                    "chart-4": "#d6455d",
+                    "chart-5": "#2e9e5b",
+                    "chart-6": "#b8892d",
+                    "chart-7": "#7a8594",
+                    "chart-8": "#c45cb5",
+                    "error": "#ba1a1a",
+                    "error_container": "#ffdad6",
+                    "formula-value": "#6a4fd6",
+                    "hairline": "#e1e4e8",
+                    "ink": "#1b1f24",
+                    "inverse_on_surface": "#eef1f2",
+                    "inverse_primary": "#7cd4df",
+                    "inverse_surface": "#2d3132",
+                    "on_background": "#181c1d",
+                    "on_error": "#ffffff",
+                    "on_error_container": "#93000a",
+                    "on_primary": "#ffffff",
+                    "on_primary_container": "#ddfbff",
+                    "on_primary_fixed": "#001f23",
+                    "on_primary_fixed_variant": "#004f56",
+                    "on_secondary": "#ffffff",
+                    "on_secondary_container": "#fffbff",
+                    "on_secondary_fixed": "#1c0061",
+                    "on_secondary_fixed_variant": "#4928b4",
+                    "on_surface": "#181c1d",
+                    "on_surface_variant": "#3e494a",
+                    "on_tertiary": "#ffffff",
+                    "on_tertiary_container": "#fff3ee",
+                    "on_tertiary_fixed": "#311300",
+                    "on_tertiary_fixed_variant": "#6f380b",
+                    "outline": "#6e797a",
+                    "outline_variant": "#bdc9ca",
+                    "page-bg": "#eef0f3",
+                    "primary": "#00626a",
+                    "primary_container": "#0e7c86",
+                    "primary_fixed": "#98f0fb",
+                    "primary_fixed_dim": "#7cd4df",
+                    "raised": "#f0f2f5",
+                    "secondary": "#5f43ca",
+                    "secondary-text": "#6b7380",
+                    "secondary_container": "#785ee5",
+                    "secondary_fixed": "#e6deff",
+                    "secondary_fixed_dim": "#cabeff",
+                    "selection-fill": "#e3f2f3",
+                    "status-bad": "#c8364c",
+                    "status-good": "#1f8a4c",
+                    "status-warning": "#b7791f",
+                    "strong-line": "#c9ced6",
+                    "surface": "#ffffff",
+                    "surface_bright": "#f7fafa",
+                    "surface_container": "#ebeeef",
+                    "surface_container_high": "#e5e9e9",
+                    "surface_container_highest": "#dfe3e3",
+                    "surface_container_low": "#f1f4f4",
+                    "surface_container_lowest": "#ffffff",
+                    "surface_dim": "#d7dbdb",
+                    "surface_tint": "#006972",
+                    "surface_variant": "#dfe3e3",
+                    "tertiary": "#85481b",
+                    "tertiary_container": "#a26031",
+                    "tertiary_fixed": "#ffdbc7",
+                    "tertiary_fixed_dim": "#ffb688",
+                    "window-chrome": "#f5f6f8"
+                  },
+                  "overridePrimaryColor": "#0e7c86",
+                  "overrideSecondaryColor": "#6a4fd6",
+                  "roundness": "ROUND_FOUR",
+                  "spacing": {
+                    "gutter": "1rem",
+                    "margin": "1rem",
+                    "space-lg": "1rem",
+                    "space-md": "0.75rem",
+                    "space-sm": "0.5rem",
+                    "space-xl": "1.5rem",
+                    "space-xs": "0.25rem"
+                  },
+                  "spacingScale": 2,
+                  "typography": {
+                    "body": {
+                      "fontFamily": "Inter",
+                      "fontSize": "13px",
+                      "fontWeight": "400",
+                      "lineHeight": "18px"
+                    },
+                    "caption": {
+                      "fontFamily": "Inter",
+                      "fontSize": "12px",
+                      "fontWeight": "400",
+                      "lineHeight": "16px"
+                    },
+                    "page-title": {
+                      "fontFamily": "Inter",
+                      "fontSize": "20px",
+                      "fontWeight": "700",
+                      "lineHeight": "28px"
+                    },
+                    "section-title": {
+                      "fontFamily": "Inter",
+                      "fontSize": "15px",
+                      "fontWeight": "600",
+                      "lineHeight": "22px"
+                    },
+                    "tabular-data": {
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": "13px",
+                      "fontWeight": "400",
+                      "lineHeight": "18px"
+                    },
+                    "toolbar-label": {
+                      "fontFamily": "Inter",
+                      "fontSize": "11px",
+                      "fontWeight": "500",
+                      "lineHeight": "14px"
+                    }
+                  }
+                },
+                "title": "omxplorer Mobile — orders.csv",
+                "width": "780"
+              }
+            ],
+            "theme": {}
+          }
+        },
+        {
+          "text": "Here is **omxplorer on iPhone** (390×844) designed in accordance with the Spreadsheet Classic (Ledger) design specification:\n\n### Key Highlights:\n1. **Header & Navigation Bar**:\n   - Document title **orders.csv** with row count & size indicator (`1,000,000 rows • 28.4 MB`), back chevron, and `…` overflow actions.\n   - Clean 48px touch targets adhering to mobile ergonomics.\n\n2. **Horizontal Quick Tools Strip**:\n   - Touch-friendly ribbon with icon-above-label actions: **Chart**, **Pivot**, **Formula**, **Sort** (active state highlighted in `#0e7c86` accent tint), **Filter**, and **Format**.\n\n3. **High-Density Spreadsheet Data Grid**:\n   - Row-number gutter (48px) with hairline grid borders (`#e1e4e8`) and zero cell radius.\n   - **Frozen `order_id` column** with numeric badge (`#`) and mini header histogram sparks.\n   - Columns for `date` (calendar badge), `region` (`Aa` badge), and `revenue` (`$` badge).\n   - Actively selected `revenue` column with quiet selection tint (`#e3f2f3`), accent border, and right-aligned tabular figures in **JetBrains Mono**.\n\n4. **Half-Height Column Inspector Sheet**:\n   - Grab handle and dismiss control for the selected **revenue (Column D)**.\n   - KPI metrics row featuring **Sum ($72,061,236.00)**, **Average ($72.06)**, and **Count (1,000,000)**.\n   - Frequency distribution histogram with bucket bounds.\n   - Quick formatting row displaying **Format: Currency ($)** and **Decimals: 2**.\n\n5. **Bottom Tab Bar**:\n   - Excel-style sheet tabs: **Sheet** (active with teal top indicator), **Report**, and a **+** button with 48px touch heights."
+        },
+        {
+          "suggestion": "Add a filter/sort drawer for the revenue column"
+        },
+        {
+          "suggestion": "Show the formula bar expanded for mobile editing"
+        },
+        {
+          "suggestion": "Switch to dark mode while maintaining Ledger principles"
+        },
+        {
+          "sessionEvent": {
+            "actor": "Agent",
+            "eventId": "1403e076",
+            "eventPayload": {
+              "dom_operations": [
+                {
+                  "action": "replace_element",
+                  "attr_name": null,
+                  "attr_value": null,
+                  "class_name": null,
+                  "content": "<div class=\"font-tabular-data text-ink font-bold text-[11px] truncate mt-0.5\" title=\"$72,061,236.00\">$72,061,236.00</div>",
+                  "selector": "section.inspector-shadow .grid-cols-3 > div:nth-child(1) > div.font-tabular-data",
+                  "selector_strategy": "The Sum card is the first child of the .grid-cols-3 KPI metrics container within section.inspector-shadow. Its value display element has title='$72,061,236.00'.",
+                  "target_element_goal": "Update the Sum KPI metric card text from '$72.06M' to the full formatted figure '$72,061,236.00' and ensure text size fits cleanly.",
+                  "verified_html_context": "<div class=\"font-tabular-data text-ink font-bold text-[13px] truncate mt-0.5\" title=\"$72,061,236.00\">"
+                }
+              ],
+              "payload_type": "DomOperationEvent",
+              "screen_id": "omxplorer_mobile_orders"
+            },
+            "eventTime": "2026-10-17T18:06:48.209499587Z",
+            "eventType": "project.file_update"
+          }
+        }
+      ],
+      "projectId": "13667871302139021251",
+      "sessionId": "2202617004997736963",
+      "designSystem": {
+        "designSystem": {
+          "displayName": "Spreadsheet Classic",
+          "styleGuidelines": "## Brand & Style\n\nThis design system is built for dense data exploration, financial modeling, and analytical workflows. It embodies a clean, spreadsheet-classic aesthetic that prioritizes absolute clarity, high contrast, and zero platform chrome discrepancies. The design style relies on a functional, flat presentation with strict structural grids, ensuring a calm, professional, and reliable environment for long data-heavy sessions.\n\nD\n## Layout & Spacing\n\nThe layout model follows a structured, fixed-grid spreadsheet architecture where content aligns to precise rows and columns. Spacing is tight and predictable to maximize information density. Gutters and component paddings rely on an incremental spacing scale designed to keep toolbar elements, data cells, and inspector panels systematically aligned.\n\n## Elevation & Depth\n\nVisual hierarchy is achieved primarily through a flat architectural layout utilizing precise hairlines and background tonal shifts rather than dramatic shadows or blurs. Surfaces are demarcated by clean 1px borders (`#e1e4e8` and `#c9ced6`). Floating menus, contextual dialogs, and popovers are the sole elements permitted to break flatness, using a single soft, diffused shadow (`0 4px 16px rgba(0, 0, 0, 0.12)`).\n\n## Components\n\n### Toolbar\nConstructed with icon-above-label buttons, exactly 64px wide. Grouped logically and separated by thin vertical hairlines (`#e1e4e8`). Hover states fill with the raised surface color (`#f0f2f5`), and active tools take on the primary accent tint.\n\n### Data Grid\nThe core data component featuring a 48px row-number gutter, column header rows complete with type badges (`#`, `$`, `Aa`, calendar), and tiny distribution histograms. Body rows maintain a strict 28px height with hairline borders. Selected cells display a 2px accent ring, selected columns are lightly tinted (`#e3f2f3`), and formula columns render their evaluated values in the designated formula color.\n\n### Formula Bar\nComposed of a cell reference indicator box, a distinct \"fx\" label, a monospace input field, and immediate cancel/accept action buttons.\n\n### Inspector Panel\nA fixed 300px right-side panel featuring top-level navigation tabs, small uppercase section titles, flat dropdown menus, segmented controls, steppers, and switches.\n\n### Sheet Tabs\nPositioned at the bottom-left in classic spreadsheet fashion. Flat rectangular tabs where the active tab rests on the surface background with a 2px accent top edge, accompanied by an inline creation button.\n\n### Status Bar\nA fixed 26px footer using monospace figures to display total rows, active selection summaries (sum, average, count), GPU status, and last computation time.\n\n### KPI Cards\nStructured with a clear text label, a prominent monospace numeric figure, an inline sparkline visualization, and a semantic delta chip reflecting good or bad conditional styling.",
+          "theme": {
+            "bodyFont": "INTER",
+            "bodyFontFamily": "Inter",
+            "colorMode": "LIGHT",
+            "colorVariant": "FIDELITY",
+            "customColor": "#0e7c86",
+            "designMd": "---\nname: Spreadsheet Classic\ncolors:\n  surface: '#ffffff'\n  surface-dim: '#d7dbdb'\n  surface-bright: '#f7fafa'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#f1f4f4'\n  surface-container: '#ebeeef'\n  surface-container-high: '#e5e9e9'\n  surface-container-highest: '#dfe3e3'\n  on-surface: '#181c1d'\n  on-surface-variant: '#3e494a'\n  inverse-surface: '#2d3132'\n  inverse-on-surface: '#eef1f2'\n  outline: '#6e797a'\n  outline-variant: '#bdc9ca'\n  surface-tint: '#006972'\n  primary: '#00626a'\n  on-primary: '#ffffff'\n  primary-container: '#0e7c86'\n  on-primary-container: '#ddfbff'\n  inverse-primary: '#7cd4df'\n  secondary: '#5f43ca'\n  on-secondary: '#ffffff'\n  secondary-container: '#785ee5'\n  on-secondary-container: '#fffbff'\n  tertiary: '#85481b'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#a26031'\n  on-tertiary-container: '#fff3ee'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#98f0fb'\n  primary-fixed-dim: '#7cd4df'\n  on-primary-fixed: '#001f23'\n  on-primary-fixed-variant: '#004f56'\n  secondary-fixed: '#e6deff'\n  secondary-fixed-dim: '#cabeff'\n  on-secondary-fixed: '#1c0061'\n  on-secondary-fixed-variant: '#4928b4'\n  tertiary-fixed: '#ffdbc7'\n  tertiary-fixed-dim: '#ffb688'\n  on-tertiary-fixed: '#311300'\n  on-tertiary-fixed-variant: '#6f380b'\n  background: '#f7fafa'\n  on-background: '#181c1d'\n  surface-variant: '#dfe3e3'\n  window-chrome: '#f5f6f8'\n  page-bg: '#eef0f3'\n  raised: '#f0f2f5'\n  selection-fill: '#e3f2f3'\n  hairline: '#e1e4e8'\n  strong-line: '#c9ced6'\n  ink: '#1b1f24'\n  body-text: '#3d434c'\n  secondary-text: '#6b7380'\n  formula-value: '#6a4fd6'\n  status-good: '#1f8a4c'\n  status-bad: '#c8364c'\n  status-warning: '#b7791f'\n  chart-1: '#0e7c86'\n  chart-2: '#e8833a'\n  chart-3: '#5b5fc7'\n  chart-4: '#d6455d'\n  chart-5: '#2e9e5b'\n  chart-6: '#b8892d'\n  chart-7: '#7a8594'\n  chart-8: '#c45cb5'\ntypography:\n  page-title:\n    fontFamily: Inter\n    fontSize: 20px\n    fontWeight: '700'\n    lineHeight: 28px\n  section-title:\n    fontFamily: Inter\n    fontSize: 15px\n    fontWeight: '600'\n    lineHeight: 22px\n  body:\n    fontFamily: Inter\n    fontSize: 13px\n    fontWeight: '400'\n    lineHeight: 18px\n  caption:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n  toolbar-label:\n    fontFamily: Inter\n    fontSize: 11px\n    fontWeight: '500'\n    lineHeight: 14px\n  tabular-data:\n    fontFamily: JetBrains Mono\n    fontSize: 13px\n    fontWeight: '400'\n    lineHeight: 18px\nrounded:\n  sm: 0.125rem\n  DEFAULT: 0.25rem\n  md: 0.375rem\n  lg: 0.5rem\n  xl: 0.75rem\n  full: 9999px\nspacing:\n  gutter: 1rem\n  margin: 1rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 0.75rem\n  space-lg: 1rem\n  space-xl: 1.5rem\n---\n\n## Brand & Style\n\nThis design system is built for dense data exploration, financial modeling, and analytical workflows. It embodies a clean, spreadsheet-classic aesthetic that prioritizes absolute clarity, high contrast, and zero platform chrome discrepancies. The design style relies on a functional, flat presentation with strict structural grids, ensuring a calm, professional, and reliable environment for long data-heavy sessions.\n\n## Colors\n\nThe color palette is purposefully engineered for data-dense interfaces, utilizing a quiet grey chrome against a bright white sheet. A deep teal accent defines interactive states, selection rings, and primary actions, while distinct semantic colors handle formulas, validation states, and accessible chart series.\n\n## Typography\n\nThe typographic hierarchy pairs clean UI sans-serif structures with a strict monospaced tabular font for all numbers, formulas, and quantitative metrics. Text alignments are intentional: numeric values are strictly right-aligned in columns to maintain scannability across rows.\n\nD\n## Layout & Spacing\n\nThe layout model follows a structured, fixed-grid spreadsheet architecture where content aligns to precise rows and columns. Spacing is tight and predictable to maximize information density. Gutters and component paddings rely on an incremental spacing scale designed to keep toolbar elements, data cells, and inspector panels systematically aligned.\n\n## Elevation & Depth\n\nVisual hierarchy is achieved primarily through a flat architectural layout utilizing precise hairlines and background tonal shifts rather than dramatic shadows or blurs. Surfaces are demarcated by clean 1px borders (`#e1e4e8` and `#c9ced6`). Floating menus, contextual dialogs, and popovers are the sole elements permitted to break flatness, using a single soft, diffused shadow (`0 4px 16px rgba(0, 0, 0, 0.12)`).\n\n## Shapes\n\nThe shape language is strictly controlled to maintain a crisp, utilitarian aesthetic. Table cells have absolute sharp edges (`0px`), while structural panels, cards, and primary buttons use a restrained `6px` radius. Smaller interactive elements like inputs, chips, and segmented controls feature a tighter `4px` radius.\n\n## Components\n\n### Toolbar\nConstructed with icon-above-label buttons, exactly 64px wide. Grouped logically and separated by thin vertical hairlines (`#e1e4e8`). Hover states fill with the raised surface color (`#f0f2f5`), and active tools take on the primary accent tint.\n\n### Data Grid\nThe core data component featuring a 48px row-number gutter, column header rows complete with type badges (`#`, `$`, `Aa`, calendar), and tiny distribution histograms. Body rows maintain a strict 28px height with hairline borders. Selected cells display a 2px accent ring, selected columns are lightly tinted (`#e3f2f3`), and formula columns render their evaluated values in the designated formula color.\n\n### Formula Bar\nComposed of a cell reference indicator box, a distinct \"fx\" label, a monospace input field, and immediate cancel/accept action buttons.\n\n### Inspector Panel\nA fixed 300px right-side panel featuring top-level navigation tabs, small uppercase section titles, flat dropdown menus, segmented controls, steppers, and switches.\n\n### Sheet Tabs\nPositioned at the bottom-left in classic spreadsheet fashion. Flat rectangular tabs where the active tab rests on the surface background with a 2px accent top edge, accompanied by an inline creation button.\n\n### Status Bar\nA fixed 26px footer using monospace figures to display total rows, active selection summaries (sum, average, count), GPU status, and last computation time.\n\n### KPI Cards\nStructured with a clear text label, a prominent monospace numeric figure, an inline sparkline visualization, and a semantic delta chip reflecting good or bad conditional styling.",
+            "font": "INTER",
+            "headlineFont": "INTER",
+            "headlineFontFamily": "Inter",
+            "labelFont": "JETBRAINS_MONO",
+            "labelFontFamily": "JetBrains Mono",
+            "namedColors": {
+              "background": "#f7fafa",
+              "body-text": "#3d434c",
+              "chart-1": "#0e7c86",
+              "chart-2": "#e8833a",
+              "chart-3": "#5b5fc7",
+              "chart-4": "#d6455d",
+              "chart-5": "#2e9e5b",
+              "chart-6": "#b8892d",
+              "chart-7": "#7a8594",
+              "chart-8": "#c45cb5",
+              "error": "#ba1a1a",
+              "error_container": "#ffdad6",
+              "formula-value": "#6a4fd6",
+              "hairline": "#e1e4e8",
+              "ink": "#1b1f24",
+              "inverse_on_surface": "#eef1f2",
+              "inverse_primary": "#7cd4df",
+              "inverse_surface": "#2d3132",
+              "on_background": "#181c1d",
+              "on_error": "#ffffff",
+              "on_error_container": "#93000a",
+              "on_primary": "#ffffff",
+              "on_primary_container": "#ddfbff",
+              "on_primary_fixed": "#001f23",
+              "on_primary_fixed_variant": "#004f56",
+              "on_secondary": "#ffffff",
+              "on_secondary_container": "#fffbff",
+              "on_secondary_fixed": "#1c0061",
+              "on_secondary_fixed_variant": "#4928b4",
+              "on_surface": "#181c1d",
+              "on_surface_variant": "#3e494a",
+              "on_tertiary": "#ffffff",
+              "on_tertiary_container": "#fff3ee",
+              "on_tertiary_fixed": "#311300",
+              "on_tertiary_fixed_variant": "#6f380b",
+              "outline": "#6e797a",
+              "outline_variant": "#bdc9ca",
+              "page-bg": "#eef0f3",
+              "primary": "#00626a",
+              "primary_container": "#0e7c86",
+              "primary_fixed": "#98f0fb",
+              "primary_fixed_dim": "#7cd4df",
+              "raised": "#f0f2f5",
+              "secondary": "#5f43ca",
+              "secondary-text": "#6b7380",
+              "secondary_container": "#785ee5",
+              "secondary_fixed": "#e6deff",
+              "secondary_fixed_dim": "#cabeff",
+              "selection-fill": "#e3f2f3",
+              "status-bad": "#c8364c",
+              "status-good": "#1f8a4c",
+              "status-warning": "#b7791f",
+              "strong-line": "#c9ced6",
+              "surface": "#ffffff",
+              "surface_bright": "#f7fafa",
+              "surface_container": "#ebeeef",
+              "surface_container_high": "#e5e9e9",
+              "surface_container_highest": "#dfe3e3",
+              "surface_container_low": "#f1f4f4",
+              "surface_container_lowest": "#ffffff",
+              "surface_dim": "#d7dbdb",
+              "surface_tint": "#006972",
+              "surface_variant": "#dfe3e3",
+              "tertiary": "#85481b",
+              "tertiary_container": "#a26031",
+              "tertiary_fixed": "#ffdbc7",
+              "tertiary_fixed_dim": "#ffb688",
+              "window-chrome": "#f5f6f8"
+            },
+            "overridePrimaryColor": "#0e7c86",
+            "overrideSecondaryColor": "#6a4fd6",
+            "roundness": "ROUND_FOUR",
+            "spacing": {
+              "gutter": "1rem",
+              "margin": "1rem",
+              "space-lg": "1rem",
+              "space-md": "0.75rem",
+              "space-sm": "0.5rem",
+              "space-xl": "1.5rem",
+              "space-xs": "0.25rem"
+            },
+            "spacingScale": 2,
+            "typography": {
+              "body": {
+                "fontFamily": "Inter",
+                "fontSize": "13px",
+                "fontWeight": "400",
+                "lineHeight": "18px"
+              },
+              "caption": {
+                "fontFamily": "Inter",
+                "fontSize": "12px",
+                "fontWeight": "400",
+                "lineHeight": "16px"
+              },
+              "page-title": {
+                "fontFamily": "Inter",
+                "fontSize": "20px",
+                "fontWeight": "700",
+                "lineHeight": "28px"
+              },
+              "section-title": {
+                "fontFamily": "Inter",
+                "fontSize": "15px",
+                "fontWeight": "600",
+                "lineHeight": "22px"
+              },
+              "tabular-data": {
+                "fontFamily": "JetBrains Mono",
+                "fontSize": "13px",
+                "fontWeight": "400",
+                "lineHeight": "18px"
+              },
+              "toolbar-label": {
+                "fontFamily": "Inter",
+                "fontSize": "11px",
+                "fontWeight": "500",
+                "lineHeight": "14px"
+              }
+            }
+          }
+        },
+        "name": "assets/bb19ccbf1758455db742c08f4a1c1716",
+        "version": "1"
+      },
+      "deviceType": "MOBILE",
+      "generatedBy": "figaro_agent",
+      "height": "1768",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzcyZWNkN2UwM2EzOTQ2N2I5YTEwNmIyNmQ5MDEyNGYwEgsSBxDOpomh_Q8YAZIBJAoKcHJvamVjdF9pZBIWQhQxMzY2Nzg3MTMwMjEzOTAyMTI1MQ&filename=&opi=96797242",
+        "mimeType": "text/html",
+        "name": "projects/13667871302139021251/files/4ba8dc730f1c4d9dae2f6f6583f2507d"
+      },
+      "id": "d3329f38d0da4848889b8ede070230cc",
+      "name": "projects/13667871302139021251/screens/d3329f38d0da4848889b8ede070230cc",
+      "prompt": "iPhone mobile view (390px width) of omxplorer spreadsheet app following the Ledger design specification.\nExact requirements:\n1. Top Bar: document name \"orders.csv\" with back chevron button and \"…\" overflow menu button, clean white/grey chrome (#f5f6f8), 48px touch targets. Under the title, show subtle metadata badge \"1,000,000 rows • 28.4 MB\".\n2. Horizontal Tool Strip / Quick Actions Ribbon (scrollable or neatly fitted): Touch-friendly buttons (min 48px target height/width) for: Chart, Pivot, Formula, Sort, Filter, Format. Active or crisp outline styling with Lucide icons (bar chart, table pivot, fx, arrow down-up, filter, sliders).\n3. Data Grid:\n   - Narrow row-number gutter (40-48px width) with 1, 2, 3, 4, 5...\n   - Frozen first column: \"order_id\" (badge \"#\", mini histogram spark, monospace IDs like ORD-94021, ORD-94022).\n   - Columns: \"date\" (type badge calendar, e.g. 2024-03-15), \"region\" (type badge Aa, e.g. NA-West, EMEA, APAC), and \"revenue\" (type badge \"$\").\n   - Revenue column is actively selected: header cell tinted with selection fill (#e3f2f3) and 2px accent top/border (#0e7c86), cells right-aligned JetBrains Mono numbers ($124.50, $89.00, $1,420.00, $45.20, $310.80).\n   - Crisp 1px hairlines (#e1e4e8), calm contrast, zero cell radius.\n4. Bottom Sheet Inspector (presented at half height over the lower grid portion with soft shadow and drag pill handle):\n   - Header with handle: Title \"revenue\" with \"$\" badge, and close \"✕\" or dismiss button.\n   - KPI metrics row:\n     * Sum: $72,061,236.00 (large bold monospace JetBrains Mono)\n     * Average: $72.06\n     * Count: 1,000,000\n   - Mini Distribution Histogram / Frequency Chart: Flat bars in teal (#0e7c86) showing revenue distribution across price buckets, with baseline and label.\n   - Format row: Format type \"Currency ($)\", Decimals \"2 decimals\", with stepper or dropdown chips.\n   - Quick action buttons: \"Filter Column\", \"Sort Descending\", \"Add Summary\".\n5. Floating / Bottom Tab Bar:\n   - Thumb-friendly 48px targets.\n   - Sheet tabs: \"Sheet\" (active with 2px teal indicator), \"Report\", and \"+\" button.\n6. Design tokens:\n   - Flat aesthetic (no blur/glass/heavy gradients), hairline borders #e1e4e8, text #1b1f24, secondary #6b7380, accent #0e7c86, selection fill #e3f2f3.\n   - Inter for UI text and JetBrains Mono for all numeric values and IDs.",
+      "screenMetadata": {
+        "agentType": "PRO_AGENT",
+        "status": "COMPLETE"
+      },
+      "screenType": "DESIGN",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1VN7ljMIpC8ddJAtSZjvrSXxA46P2BivUKbd5ntMw8NbXP7A0O3O8WtKEU2Eyxi-J9G86hBmSPL4ZageTuVmvVqjOBd9g8O4FZF2XFtCfM4_BQ-Hbe_1Kl1gK-1Pp0Mf7xXtnNRkPOwicvwb8sSfIIs3BEp97AlVQmRlFS659Hb6cfluiYb3RvdZW3AAG4VdsvrqiTgrPDNKjlywBjdf-Xk7cwKsvxuY1qVocdbDRtSj86BW7SCzEstVqMu",
+        "name": "projects/13667871302139021251/files/044b1380e4fb45f3852714979a90cfa1"
+      },
+      "theme": {
+        "bodyFont": "INTER",
+        "bodyFontFamily": "Inter",
+        "colorMode": "LIGHT",
+        "colorVariant": "FIDELITY",
+        "customColor": "#0e7c86",
+        "font": "INTER",
+        "headlineFont": "INTER",
+        "headlineFontFamily": "Inter",
+        "labelFont": "JETBRAINS_MONO",
+        "labelFontFamily": "JetBrains Mono",
+        "namedColors": {
+          "background": "#f7fafa",
+          "body-text": "#3d434c",
+          "chart-1": "#0e7c86",
+          "chart-2": "#e8833a",
+          "chart-3": "#5b5fc7",
+          "chart-4": "#d6455d",
+          "chart-5": "#2e9e5b",
+          "chart-6": "#b8892d",
+          "chart-7": "#7a8594",
+          "chart-8": "#c45cb5",
+          "error": "#ba1a1a",
+          "error_container": "#ffdad6",
+          "formula-value": "#6a4fd6",
+          "hairline": "#e1e4e8",
+          "ink": "#1b1f24",
+          "inverse_on_surface": "#eef1f2",
+          "inverse_primary": "#7cd4df",
+          "inverse_surface": "#2d3132",
+          "on_background": "#181c1d",
+          "on_error": "#ffffff",
+          "on_error_container": "#93000a",
+          "on_primary": "#ffffff",
+          "on_primary_container": "#ddfbff",
+          "on_primary_fixed": "#001f23",
+          "on_primary_fixed_variant": "#004f56",
+          "on_secondary": "#ffffff",
+          "on_secondary_container": "#fffbff",
+          "on_secondary_fixed": "#1c0061",
+          "on_secondary_fixed_variant": "#4928b4",
+          "on_surface": "#181c1d",
+          "on_surface_variant": "#3e494a",
+          "on_tertiary": "#ffffff",
+          "on_tertiary_container": "#fff3ee",
+          "on_tertiary_fixed": "#311300",
+          "on_tertiary_fixed_variant": "#6f380b",
+          "outline": "#6e797a",
+          "outline_variant": "#bdc9ca",
+          "page-bg": "#eef0f3",
+          "primary": "#00626a",
+          "primary_container": "#0e7c86",
+          "primary_fixed": "#98f0fb",
+          "primary_fixed_dim": "#7cd4df",
+          "raised": "#f0f2f5",
+          "secondary": "#5f43ca",
+          "secondary-text": "#6b7380",
+          "secondary_container": "#785ee5",
+          "secondary_fixed": "#e6deff",
+          "secondary_fixed_dim": "#cabeff",
+          "selection-fill": "#e3f2f3",
+          "status-bad": "#c8364c",
+          "status-good": "#1f8a4c",
+          "status-warning": "#b7791f",
+          "strong-line": "#c9ced6",
+          "surface": "#ffffff",
+          "surface_bright": "#f7fafa",
+          "surface_container": "#ebeeef",
+          "surface_container_high": "#e5e9e9",
+          "surface_container_highest": "#dfe3e3",
+          "surface_container_low": "#f1f4f4",
+          "surface_container_lowest": "#ffffff",
+          "surface_dim": "#d7dbdb",
+          "surface_tint": "#006972",
+          "surface_variant": "#dfe3e3",
+          "tertiary": "#85481b",
+          "tertiary_container": "#a26031",
+          "tertiary_fixed": "#ffdbc7",
+          "tertiary_fixed_dim": "#ffb688",
+          "window-chrome": "#f5f6f8"
+        },
+        "overridePrimaryColor": "#0e7c86",
+        "overrideSecondaryColor": "#6a4fd6",
+        "roundness": "ROUND_FOUR",
+        "spacing": {
+          "gutter": "1rem",
+          "margin": "1rem",
+          "space-lg": "1rem",
+          "space-md": "0.75rem",
+          "space-sm": "0.5rem",
+          "space-xl": "1.5rem",
+          "space-xs": "0.25rem"
+        },
+        "spacingScale": 2,
+        "typography": {
+          "body": {
+            "fontFamily": "Inter",
+            "fontSize": "13px",
+            "fontWeight": "400",
+            "lineHeight": "18px"
+          },
+          "caption": {
+            "fontFamily": "Inter",
+            "fontSize": "12px",
+            "fontWeight": "400",
+            "lineHeight": "16px"
+          },
+          "page-title": {
+            "fontFamily": "Inter",
+            "fontSize": "20px",
+            "fontWeight": "700",
+            "lineHeight": "28px"
+          },
+          "section-title": {
+            "fontFamily": "Inter",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "lineHeight": "22px"
+          },
+          "tabular-data": {
+            "fontFamily": "JetBrains Mono",
+            "fontSize": "13px",
+            "fontWeight": "400",
+            "lineHeight": "18px"
+          },
+          "toolbar-label": {
+            "fontFamily": "Inter",
+            "fontSize": "11px",
+            "fontWeight": "500",
+            "lineHeight": "14px"
+          }
+        }
+      },
+      "title": "omxplorer Mobile — orders.csv",
+      "width": "780",
+      "agentText": "Here is **omxplorer on iPhone** (390×844) designed in accordance with the Spreadsheet Classic (Ledger) design specification:\n\n### Key Highlights:\n1. **Header & Navigation Bar**:\n   - Document title **orders.csv** with row count & size indicator (`1,000,000 rows • 28.4 MB`), back chevron, and `…` overflow actions.\n   - Clean 48px touch targets adhering to mobile ergonomics.\n\n2. **Horizontal Quick Tools Strip**:\n   - Touch-friendly ribbon with icon-above-label actions: **Chart**, **Pivot**, **Formula**, **Sort** (active state highlighted in `#0e7c86` accent tint), **Filter**, and **Format**.\n\n3. **High-Density Spreadsheet Data Grid**:\n   - Row-number gutter (48px) with hairline grid borders (`#e1e4e8`) and zero cell radius.\n   - **Frozen `order_id` column** with numeric badge (`#`) and mini header histogram sparks.\n   - Columns for `date` (calendar badge), `region` (`Aa` badge), and `revenue` (`$` badge).\n   - Actively selected `revenue` column with quiet selection tint (`#e3f2f3`), accent border, and right-aligned tabular figures in **JetBrains Mono**.\n\n4. **Half-Height Column Inspector Sheet**:\n   - Grab handle and dismiss control for the selected **revenue (Column D)**.\n   - KPI metrics row featuring **Sum ($72,061,236.00)**, **Average ($72.06)**, and **Count (1,000,000)**.\n   - Frequency distribution histogram with bucket bounds.\n   - Quick formatting row displaying **Format: Currency ($)** and **Decimals: 2**.\n\n5. **Bottom Tab Bar**:\n   - Excel-style sheet tabs: **Sheet** (active with teal top indicator), **Report**, and a **+** button with 48px touch heights.",
+      "suggestions": [
+        "Add a filter/sort drawer for the revenue column",
+        "Show the formula bar expanded for mobile editing",
+        "Switch to dark mode while maintaining Ledger principles"
+      ],
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1VN7ljMIpC8ddJAtSZjvrSXxA46P2BivUKbd5ntMw8NbXP7A0O3O8WtKEU2Eyxi-J9G86hBmSPL4ZageTuVmvVqjOBd9g8O4FZF2XFtCfM4_BQ-Hbe_1Kl1gK-1Pp0Mf7xXtnNRkPOwicvwb8sSfIIs3BEp97AlVQmRlFS659Hb6cfluiYb3RvdZW3AAG4VdsvrqiTgrPDNKjlywBjdf-Xk7cwKsvxuY1qVocdbDRtSj86BW7SCzEstVqMu"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+project 6981834873790512247
+{
+  "success": true,
+  "data": {
+    "path": "graphite.md",
+    "project": "6981834873790512247",
+    "id": "8542736416957548931",
+    "status": "uploaded",
+    "appliedScreenIds": [],
+    "applyCommand": "stitch edit screen <screen-id> --project 6981834873790512247 --design-system 8542736416957548931"
+  }
+}
+done
