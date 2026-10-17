@@ -96,7 +96,7 @@ def m1():
     closed = kit("tap:Show popover;dismiss:", "kit-popover-closed")
     dark = kit("segment:0=Graphite", "kit-graphite")
     check = kit("toggle:Show grid lines", "kit-check")
-    moved = kit("move:1=40,30", "kit-moved")
+    moved = kit("move:note=40,30", "kit-moved")
     for r in (plain, saved, undone, key, ctx, sorted_, dlg, done, pop, closed, dark, check, moved):
         if r[0] is None:
             return False, r[1]

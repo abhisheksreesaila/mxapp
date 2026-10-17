@@ -160,7 +160,7 @@ struct Main(App):
     def draw(mut self, canvas: Int, mut s: Surface):
         """The canvas: a small sheet drawn with the baked fonts and the skin's colours."""
         var k = s.scale
-        var p = self.pal
+        ref p = self.pal
         s.fill(p.card)
         var w = Float64(s.width)
         var h = Float64(s.height)
@@ -179,7 +179,7 @@ struct Main(App):
         rect(s, 112 * k, 56 * k, 106 * k, 22 * k, p.card)
         var names: List[String] = ["region", "revenue", "cost", "margin"]
         for c in range(4):
-            self.font.draw(s, names[c], (8 + 110 * c) * k, 19 * k, 12.5 * k, p.ink2, p.medium)
+            self.font.draw(s, names[c], Float64(8 + 110 * c) * k, 19 * k, 12.5 * k, p.ink2, p.medium)
         self.font.draw(s, "Right-click (or long-press) for the column's menu", w / 2, h - 12 * k, 12 * k, p.ink3, p.regular, CENTRE)
 
     def menu_bar(self) -> View:
