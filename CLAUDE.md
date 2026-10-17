@@ -4,7 +4,7 @@ Mode: experiment
 Ship: direct
 Design language: Omarchy for MX Studio and the Workbook (the person's current Omarchy theme, JetBrains Mono, flat; owner 2026-10-16), Fluent 2 for the analytics showcase
 
-Current experiment: `GOAL.md` (goal 15: omxplorer charts, pivots and the Report; goals 1–14 in `docs/goals/`; omxplorer is the killer app, omxapp the framework, both lowercase). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 17: omxplorer's universal theme and the components it needs; goals 1–15 in `docs/goals/`; omxplorer is the killer app, omxapp the framework, both lowercase). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 

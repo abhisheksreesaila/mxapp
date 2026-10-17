@@ -200,3 +200,6 @@ Newest last. What was tried, what happened, dead ends.
 - Free-space placement scanned 16-pt steps and missed the one spot that fits (x = 536): candidate positions (left edge, right of / below each object) instead.
 - Two buttons named "Chart" (the toolbar's and the Report's add-tile) made a test step tap the wrong one: the tile buttons say "… tile".
 - Mojo can't move single fields out of a struct here: open_document fills out-parameters instead of returning a document struct.
+
+## Goal 17: the universal theme and its components (2026-10-17 afternoon)
+- Setup: goal 15 archived (docs/goals/15-check.py, 15-omxplorer-objects.md, 15-report.md); goal 16's polish list stays a draft plan. Inter 4.1 and JetBrains Mono 2.304 downloaded from their GitHub releases and vendored (OFL). The GOAL.md milestones follow docs/design/universal.md's build order; the command palette, Import streaming, the filter popover and phone sheets are out of bounds.
