@@ -204,3 +204,9 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-180 · the BOOL column badge is the word "bool" (a ✓ glyph drew as an empty box on the web: the app's fonts don't have it) · yes
 - D-181 · the sample orders are generated row by row straight into a package Table (`orders.order_row`, shared with the stand-in's `order_columns`), so no second copy exists · memory at 100M rows · yes
 - D-182 · `Sheet.mode` (CPU / GPU / AUTO, AUTO by default) lets a test force the GPU, so "GPU sums = a CPU pass" compares the GPU with plain loops when there is a GPU · the earlier test compared the CPU with itself · yes
+
+## Goal 20: omxplorer on what MX frame can do now (2026-10-18)
+- D-183 · a Parquet file goes through the same Import step as a CSV file (one import record for both, `mojoui/csvio.mojo`), read by the package's `read_parquet` · one path to test; the Import step already shows what any reader reports · yes
+- D-184 · a file opens streamed when its table (rows × columns × 8 bytes) is more than a quarter of the machine's memory; `OMX_STREAM_ROWS` sets a row count instead (the checks use it) · the 100M-row sample peaked at 26 GB in memory; a quarter leaves room for the GPU copy and the rest of the app · yes
+- D-185 · a streamed sheet is read-only and on the CPU; the grid keeps a few decoded row groups (least recently used goes first); every aggregate is one `Query(scan)` · the package's scan is CPU only and has no overlay for edits · yes
+- D-186 · the package is vendored from MX frame's main 05332ac (F-140 merged at ec268d2), built from `git archive`, not the MX frame checkout (another session's F-141 is in progress there, with a conflicted plan.md) · never build from someone's unfinished work · yes
