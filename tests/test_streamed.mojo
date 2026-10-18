@@ -100,5 +100,11 @@ def main() raises:
     remove(gone)
     _ = g.display(1, 4000)
     assert_true(g.read_problem() != "", "a failed read left no problem")
+    # ...and when the file is back, the next row group read clears it
+    var back = read_parquet(SMALL)
+    write_parquet(gone, back.take_table(), "", UNCOMPRESSED, 312)
+    _ = g.display(1, 100)
+    assert_equal(g.read_problem(), "")
+    assert_equal(g.display(1, 100), whole.display(1, 100))
     print("STREAMED: " + String(cells) + " cells over 17 row groups equal the whole read; totals, chart, pivot, span")
     print("STREAMED TESTS PASSED")

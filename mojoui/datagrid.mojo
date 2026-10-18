@@ -812,7 +812,7 @@ struct DataGrid(Copyable, Movable):
                     continue
                 cw = min(cw, right - x)
                 var text = self.clip(src.grid_text(c, row), cw - 16 * k, 13 * k, p.regular, font)
-                var color = p.ink if src.grid_editable(c) else p.formula
+                var color = p.formula if src.grid_formula(c) else p.ink  # (a read-only column that isn't a formula reads as data)
                 if row == self.cur_row and c == self.cur_col:
                     rect(s, x, y, cw, GRID_ROW_H * k, p.accent)
                     rect(s, x + 2 * k, y + 2 * k, cw - 4 * k, GRID_ROW_H * k - 4 * k, p.card)

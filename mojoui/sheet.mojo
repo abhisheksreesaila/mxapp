@@ -51,6 +51,7 @@ struct Pages(Movable):
     var tables: List[Table]
     var plain: List[Optional[Sums]]  # per column: its totals over every row, once asked
     var problem: String  # the last read that failed (a file changed or cut short since it was opened): shown, not hidden
+    var last_gpu: Bool  # (any sheet) the last aggregate ran on the GPU
 
     def __init__(out self):
         self.starts = List[Int]()
@@ -58,6 +59,7 @@ struct Pages(Movable):
         self.tables = List[Table]()
         self.plain = List[Optional[Sums]]()
         self.problem = ""
+        self.last_gpu = False
 
     def bytes(self, k: Int) -> Int:
         return self.tables[k].rows() * self.tables[k].columns() * 8
@@ -176,6 +178,10 @@ struct Sheet(Movable, GridSource):
 
     def streamed(self) -> Bool:
         return Bool(self.scan)
+
+    def last_device(self) -> String:
+        """Where the last aggregate ran: the GPU's name, or "CPU"."""
+        return self.device_name if self.pages[].last_gpu else "CPU"
 
     def read_problem(self) -> String:
         """Why the last rows read from a streamed file failed ("" when they didn't)."""
@@ -402,6 +408,7 @@ struct Sheet(Movable, GridSource):
         q = q^.agg(sum(v), count(), count(v))
         var r = q^.compute(self.mode)
         var sums = Sums(r.values(0), r.counts.copy(), r.values(2), r.milliseconds, r.device == MX_GPU)
+        self.pages[].last_gpu = sums.on_gpu
         if plain:
             self.pages[].plain[value] = sums.copy()
         return sums^
