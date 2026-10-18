@@ -9,6 +9,7 @@ import base64
 import importlib.util
 import io
 import os
+import re
 import sys
 import time
 from pathlib import Path
