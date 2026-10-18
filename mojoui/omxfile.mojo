@@ -7,13 +7,14 @@
 #
 # Format 1 (the pyarrow shim's files) is refused with a message that says so.
 
-from mxframe import write_parquet, read_parquet, Table, UNCOMPRESSED
-from mojoui.sheet import Sheet, INT, DECIMAL, TEXT
+from mxframe import write_parquet, read_parquet, scan_parquet, Table, UNCOMPRESSED
+from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT
+from mojoui.csvio import streams
 from mojoui.json import Json, json_string
 from mojoui.numformat import ColumnFormat
 from mojoui.cellstyle import ALL_PARTS
 from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT
-from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_CHART
+from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_CHART, TILE_DISTINCT, TILE_LAST
 
 comptime FORMAT = 2
 
@@ -69,7 +70,11 @@ def save_omx(path: String, sheet: Sheet, objects: List[SheetObject] = [], tiles:
     """Writes the table as it stands (every alive row, the edits applied), its styles, the sheet's charts and pivots,
     the Report (its tiles and filter) and the tabs' names to `path` (.omx)."""
     # uncompressed for now: a document saved on Linux must open on the Mac build, which has no zstd or snappy (vendoring static codecs for it is a follow-up)
-    write_parquet(path, sheet.frame.bake(), metadata(sheet, objects, tiles, filter, tab_names), UNCOMPRESSED)
+    var meta = metadata(sheet, objects, tiles, filter, tab_names)
+    if sheet.streamed():  # (D-214: streamed out a row group at a time, the edits applied; atomic, so it may replace the file it reads)
+        sheet.frame.save(path, meta, UNCOMPRESSED)
+    else:
+        write_parquet(path, sheet.frame.bake(), meta, UNCOMPRESSED)
 
 
 def format_from(j: Json, node: Int) -> ColumnFormat:
@@ -95,9 +100,14 @@ def read_meta(path: String, mut table: Table) raises -> Json:
     table = r.take_table()
     if table.columns() == 0:
         raise Error("it has no columns")
-    if r.metadata == "":
+    return parse_meta(r.metadata)
+
+
+def parse_meta(text: String) raises -> Json:
+    """A document's "omx" metadata, refused unless it is format 2."""
+    if text == "":
         raise Error("it isn't an omxplorer document")
-    var j = Json.parse(r.metadata)
+    var j = Json.parse(text)
     var version = j.number(j.get(0, "omx"))
     if version == 1:
         raise Error("it was saved by an older omxplorer (format 1); open the original CSV and save it again")
@@ -113,19 +123,32 @@ def open_omx(path: String, use_gpu: Bool = True) raises -> Sheet:
 
 
 def read_document(path: String, mut j: Json, use_gpu: Bool) raises -> Sheet:
-    """The table with its formulas and formats; `j` is the file's metadata (the objects and the Report are in it)."""
-    var table = Table()
+    """The table with its formulas and formats; `j` is the file's metadata (the objects and the Report are in it).
+    A document too big for memory (as for a Parquet file, D-184) opens streamed (D-214)."""
+    var sheet = placeholder_sheet()
+    var streamed = False
     try:
-        j = read_meta(path, table)
+        var scan = scan_parquet(path)  # (the footer only: how big it is)
+        if scan.columns() > 0 and streams(scan.rows(), scan.columns()):
+            j = parse_meta(scan.metadata())
+            sheet = Sheet(scan)
+            streamed = True
     except e:
-        raise Error("can't open " + path + ": " + String(e))
+        if "omxplorer" in String(e) or "format 1" in String(e):
+            raise Error("can't open " + path + ": " + String(e))
+    if not streamed:
+        var table = Table()
+        try:
+            j = read_meta(path, table)
+        except e:
+            raise Error("can't open " + path + ": " + String(e))
+        sheet = Sheet(table^.share(), use_gpu)
     var specs = j.get(0, "columns")
-    if j.size(specs) != table.columns():
-        raise Error("can't open " + path + ": it describes " + String(j.size(specs)) + " columns but stores " + String(table.columns()))
-    for c in range(table.columns()):
-        if j.text(j.get(j.at(specs, c), "name")) != table.name(c):
+    if j.size(specs) != sheet.stored():
+        raise Error("can't open " + path + ": it describes " + String(j.size(specs)) + " columns but stores " + String(sheet.stored()))
+    for c in range(sheet.stored()):
+        if j.text(j.get(j.at(specs, c), "name")) != sheet.name(c):
             raise Error("can't open " + path + ": column " + String(c + 1) + " is described as another name than it is stored under")
-    var sheet = Sheet(table^.share(), use_gpu)
     for c in range(sheet.stored()):
         sheet.set_format(c, format_from(j, j.get(j.at(specs, c), "format")))
         sheet.set_column_style(c, style_from(j, j.get(j.at(specs, c), "style")))
@@ -194,7 +217,8 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         var kind = j.number(j.get(t, "kind"), -1)
         var col = j.number(j.get(t, "col"), -1)
         var group = j.number(j.get(t, "group"), -1)
-        if not (TILE_SUM <= kind <= TILE_CHART) or not is_number(sheet, col) or (kind == TILE_CHART and not is_text(sheet, group)):
+        var column_ok = (0 <= col < sheet.columns()) if kind == TILE_DISTINCT else is_number(sheet, col)  # (distinct: text too)
+        if not (TILE_SUM <= kind <= TILE_LAST) or not column_ok or (kind == TILE_CHART and not is_text(sheet, group)):
             continue
         tiles.append(new_tile(kind, col, group))
     var f = j.get(report, "filter")

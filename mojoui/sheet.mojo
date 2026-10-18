@@ -4,19 +4,22 @@
 # corner mark) and it formats values for cells, totals, charts and pivots. Every aggregate goes through
 # `Sheet.totals`: one `Query(frame).on_device(dt)…compute(AUTO)` (docs/mxframe-mojo-api.md section 5).
 #
-# A sheet can also be *streamed* (D-185): a Parquet file too big for memory, opened with the package's `scan_parquet`.
-# Then the grid reads its rows a row group at a time (the last few decoded groups are kept), every aggregate is a
-# `Query(scan)` on the CPU, a column's plain totals are kept (the file doesn't change), and nothing can be edited.
+# A sheet can also be *streamed* (D-185, D-213): a Parquet file too big for memory, opened with the package's
+# `scan_parquet` as a `Frame(scan)`. Its rows are read through the frame's cache of decoded column chunks as the grid
+# shows them, every aggregate is a `Query(frame)` that streams the file with the session's edits applied (on the CPU),
+# and it edits, undoes and saves (`Frame.save`, streamed) like a sheet in memory. Sorting holds ~50 bytes a row
+# (the package's permutation), so it's refused when that wouldn't fit a quarter of memory (D-215).
 #
 # The stand-in engine (mojoui.frame, frame_gpu) stays for MX Studio and the Workbook.
 
 from std.memory import ArcPointer
 from std.collections import Dict
-from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of,
+from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of, count_distinct, median,
                      AUTO as MX_AUTO, GPU as MX_GPU, CPU as MX_CPU, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL, DATE as MX_DATE,
                      gpu_available, ParquetScan)
 from mojoui.datagrid import GridSource
 from mojoui.cellstyle import CellStyle, ALL_PARTS
+from mojoui.shared import memory_bytes
 from mojoui.numformat import (ColumnFormat, format_number, format_date, date_text, parse_decimal, decimal_text, AUTO, NUMBER, PERCENT,
                               CURRENCY)
 
@@ -61,69 +64,23 @@ struct Sums(Copyable, Movable):
     var on_gpu: Bool
 
 
-comptime KEPT_GROUPS = 4  # decoded row groups a streamed sheet keeps at most (a 2^20-row group of 5 columns is 40 MB)
-comptime KEPT_BYTES = 512 << 20  # ...and while they fit in this much (always at least the group on screen)
-comptime READ_ONLY = "the file is streamed from disk (too big for memory), so it's read-only"
+comptime SORT_BYTES_PER_ROW = 50  # a streamed sort's order (the package's permutation: keys and row numbers)
 
 
-struct Pages(Movable):
-    """A streamed sheet's decoded row groups (most recently used last) and each column's plain totals, behind an
-    ArcPointer so the sheet's read-only methods (a grid draws through them) can fill them."""
+struct Notes(Movable):
+    """What a sheet's read-only methods learn as they read (a grid draws through them), behind an ArcPointer: the
+    last read that failed, where the last aggregate ran, and each column's plain totals while the edits stand."""
 
-    var starts: List[Int]  # the first row of each row group, then the row count
-    var groups: List[Int]  # the row groups kept, least recently used first
-    var tables: List[Table]
-    var plain: List[Optional[Sums]]  # per column: its totals over every row, once asked
-    var problem: String  # the last read that failed (a file changed or cut short since it was opened): shown, not hidden
-    var last_gpu: Bool  # (any sheet) the last aggregate ran on the GPU
+    var problem: String  # the last read that failed (a streamed file changed or cut short since it was opened): shown, not hidden
+    var last_gpu: Bool  # the last aggregate ran on the GPU
+    var plain: Dict[Int, Sums]  # (streamed) column → its totals over every row, kept while `plain_edits` holds
+    var plain_edits: Int
 
     def __init__(out self):
-        self.starts = List[Int]()
-        self.groups = List[Int]()
-        self.tables = List[Table]()
-        self.plain = List[Optional[Sums]]()
         self.problem = ""
         self.last_gpu = False
-
-    def bytes(self, k: Int) -> Int:
-        return self.tables[k].rows() * self.tables[k].columns() * 8
-
-    def group_of(self, row: Int) -> Int:
-        var lo = 0
-        var hi = len(self.starts) - 2
-        while lo < hi:
-            var mid = (lo + hi + 1) // 2
-            if self.starts[mid] <= row:
-                lo = mid
-            else:
-                hi = mid - 1
-        return lo
-
-    def slot(mut self, g: Int, scan: ParquetScan) raises -> Int:
-        """Where row group g's table is kept, decoding it (and letting the oldest go) when it isn't."""
-        for k in range(len(self.groups)):
-            if self.groups[k] == g:
-                if k != len(self.groups) - 1:  # (now the most recently used)
-                    var t = self.tables.pop(k)
-                    _ = self.groups.pop(k)
-                    self.tables.append(t^)
-                    self.groups.append(g)
-                return len(self.groups) - 1
-        var cols = List[Int]()
-        for c in range(scan.columns()):
-            cols.append(c)
-        var t = scan.read_group(g, cols)
-        self.problem = ""  # (reads work again)
-        var kept = t.rows() * t.columns() * 8
-        for k in range(len(self.tables)):
-            kept += self.bytes(k)
-        while len(self.groups) > 0 and (len(self.groups) >= KEPT_GROUPS or kept > KEPT_BYTES):
-            kept -= self.bytes(0)
-            _ = self.tables.pop(0)
-            _ = self.groups.pop(0)
-        self.tables.append(t^)
-        self.groups.append(g)
-        return len(self.groups) - 1
+        self.plain = Dict[Int, Sums]()
+        self.plain_edits = 0
 
 
 def empty_table() raises -> Table:
@@ -163,8 +120,8 @@ struct Sheet(Movable, GridSource):
     var device: Optional[DeviceTable]  # the table on the GPU (None: no GPU, or the table didn't fit)
     var device_name: String
     var mode: Int  # CPU, GPU or AUTO (the default: the GPU from a million rows); tests force the GPU to compare it with the CPU
-    var scan: Optional[ParquetScan]  # a streamed file (D-185): rows come from here, a row group at a time
-    var pages: ArcPointer[Pages]
+    var scan: Optional[ParquetScan]  # a streamed file (D-185): the frame reads its rows from here
+    var notes: ArcPointer[Notes]
     var styles: List[Int]  # per column: its CellStyle's bits (mojoui.cellstyle); missing = plain
     var cell_styles: Dict[Int, Int]  # row * STYLE_COLS + column → the cell's own style, over its column's (sparse)
     var style_log: List[StyleChange]  # format changes Undo can take back, newest last
@@ -179,7 +136,7 @@ struct Sheet(Movable, GridSource):
         self.device_name = "CPU"
         self.mode = MX_AUTO
         self.scan = None
-        self.pages = ArcPointer(Pages())
+        self.notes = ArcPointer(Notes())
         if use_gpu and gpu_available():
             try:
                 var dt = DeviceTable(table)
@@ -189,8 +146,8 @@ struct Sheet(Movable, GridSource):
                 self.device = None
 
     def __init__(out self, scan: ParquetScan):
-        """A streamed sheet over a Parquet file: its columns and dictionaries now, its rows when they're shown."""
-        self.frame = MxFrame(scan.schema)
+        """A streamed sheet over a Parquet file: its columns now, its words and rows when they're shown; editable."""
+        self.frame = MxFrame(scan)
         self.formats = List[ColumnFormat]()
         self.styles = List[Int]()
         self.cell_styles = Dict[Int, Int]()
@@ -199,26 +156,18 @@ struct Sheet(Movable, GridSource):
         self.device_name = "CPU"
         self.mode = MX_CPU  # (the package streams on the CPU)
         self.scan = scan.copy()
-        var pages = Pages()
-        var at = 0
-        for g in range(scan.row_groups()):
-            pages.starts.append(at)
-            at += scan.group_rows(g)
-        pages.starts.append(at)
-        for _ in range(scan.columns()):
-            pages.plain.append(None)
-        self.pages = ArcPointer(pages^)
+        self.notes = ArcPointer(Notes())
 
     def streamed(self) -> Bool:
         return Bool(self.scan)
 
     def last_device(self) -> String:
         """Where the last aggregate ran: the GPU's name, or "CPU"."""
-        return self.device_name if self.pages[].last_gpu else "CPU"
+        return self.device_name if self.notes[].last_gpu else "CPU"
 
     def read_problem(self) -> String:
         """Why the last rows read from a streamed file failed ("" when they didn't)."""
-        return self.pages[].problem
+        return self.notes[].problem
 
     def release(mut self):
         """Gives the GPU copy back (the document closed or was replaced)."""
@@ -238,13 +187,9 @@ struct Sheet(Movable, GridSource):
         return self.frame.columns()
 
     def rows(self) -> Int:
-        if self.scan:
-            return self.scan.value().rows()
         return self.frame.rows()
 
     def alive(self, row: Int) -> Bool:
-        if self.scan:
-            return 0 <= row < self.rows()
         return self.frame.alive(row)
 
     def name(self, c: Int) -> String:
@@ -264,65 +209,55 @@ struct Sheet(Movable, GridSource):
 
     def word_count(self, c: Int) -> Int:
         """A text column's values now (its dictionary and the words typed into it): its codes run 0 up to this.
-        Streamed: the file's dictionary, built by the package on first use."""
+        Streamed: the file's dictionary is built by the package on first use; a failure is the read problem."""
         if not (c < self.stored() and self.kind(c) == TEXT):
             return 0
-        if self.scan:
-            try:
-                return self.scan.value().word_count(c)
-            except e:
-                self.pages[].problem = String(e)
-                return 0
-        return self.frame.word_count(c)
+        try:
+            return self.frame.word_count(c)
+        except e:
+            self.notes[].problem = String(e)
+            return 0
 
     def text_of(self, c: Int, code: Int64) -> String:
-        if self.scan:
-            try:
-                return self.scan.value().text_of(c, Int(code))
-            except e:
-                self.pages[].problem = String(e)
-                return ""
-        return self.frame.text_of(c, code)
+        try:
+            return self.frame.text_of(c, code)
+        except e:
+            self.notes[].problem = String(e)
+            return ""
 
     def code_of(self, c: Int, word: String) -> Int:
-        if self.scan:
-            try:
-                return self.scan.value().code_of(c, word)
-            except e:
-                self.pages[].problem = String(e)
-                return -1
-        return self.frame.code_of(c, word)
+        try:
+            return self.frame.code_of(c, word)
+        except e:
+            self.notes[].problem = String(e)
+            return -1
 
     # ---------- values ----------
 
     def value(self, c: Int, row: Int) -> Int64:
         try:
-            if self.scan:
-                ref p = self.pages[]
-                var g = p.group_of(row)
-                var k = p.slot(g, self.scan.value())
-                return p.tables[k].get(c, row - p.starts[g])
-            return self.frame.get(c, row)
+            var loads = self.frame.cache_loads() if self.scan else 0
+            var v = self.frame.get(c, row)
+            if self.notes[].problem != "" and self.scan and self.frame.cache_loads() != loads:
+                self.notes[].problem = ""  # (a read from the file worked again; one from the cache proves nothing)
+            return v
         except e:
-            if self.scan:
-                self.pages[].problem = String(e)
+            self.notes[].problem = String(e)
             return 0
 
     def is_null(self, c: Int, row: Int) -> Bool:
         try:
-            if self.scan:
-                ref p = self.pages[]
-                var g = p.group_of(row)
-                var k = p.slot(g, self.scan.value())
-                return p.tables[k].is_null(c, row - p.starts[g])
-            return self.frame.is_null(c, row)
+            var loads = self.frame.cache_loads() if self.scan else 0
+            var empty = self.frame.is_null(c, row)
+            if self.notes[].problem != "" and self.scan and self.frame.cache_loads() != loads:
+                self.notes[].problem = ""  # (a read from the file worked again)
+            return empty
         except e:
-            if self.scan:
-                self.pages[].problem = String(e)
+            self.notes[].problem = String(e)
             return False
 
     def edited(self, c: Int, row: Int) -> Bool:
-        return c < self.stored() and not self.scan and self.frame.edited(c, row)
+        return c < self.stored() and self.frame.edited(c, row)
 
     # ---------- formats (per column; applied only to what's shown) ----------
 
@@ -403,8 +338,6 @@ struct Sheet(Movable, GridSource):
     def set_text(mut self, c: Int, row: Int, text: String) raises:
         """A typed value: empty makes the cell empty (null); numbers read what the formats print back
         ("$1,234.50", "(1,234)", "36.4%"); the other kinds as the package parses them."""
-        if self.scan:
-            raise Error(READ_ONLY)
         var kind = self.kind(c)
         if String(text.strip()) == "" or (c >= self.stored()):
             self.frame.set_text(c, row, text)
@@ -417,14 +350,12 @@ struct Sheet(Movable, GridSource):
 
     def append(mut self) raises -> Int:
         """A new empty row; returns its number."""
-        if self.scan:
-            raise Error(READ_ONLY)
         return self.frame.append(List[String]())
 
     def undo(mut self) -> Bool:
         """Takes back the last change: a format change (styles, number formats) or an edit to the table, whichever
-        came last. A streamed sheet's formats can be undone; its table has no edits."""
-        var edits = 0 if self.scan else len(self.frame.log)
+        came last."""
+        var edits = len(self.frame.log)
         if len(self.style_log) > 0 and self.style_log[len(self.style_log) - 1].edits >= edits:
             var change = self.style_log.pop()
             var k = len(change.steps) - 1
@@ -440,7 +371,7 @@ struct Sheet(Movable, GridSource):
                     _ = self.cell_styles.pop(s.row * STYLE_COLS + s.col, 0)
                 k -= 1
             return True
-        return False if self.scan else self.frame.undo()
+        return self.frame.undo()
 
     # ---------- cell styles (mojoui.cellstyle: a column's, and sparse cell overrides) ----------
 
@@ -508,7 +439,7 @@ struct Sheet(Movable, GridSource):
                     _ = self.cell_styles.pop(key, 0)
                 else:
                     self.cell_styles[key] = bits
-        self.style_log.append(StyleChange(steps^, 0 if self.scan else len(self.frame.log)))
+        self.style_log.append(StyleChange(steps^, len(self.frame.log)))
 
     def clear_style(mut self, c: Int, row: Int):
         """Clear formatting: the cell (or with row -1 the column and every cell in it) back to plain, its number
@@ -526,25 +457,27 @@ struct Sheet(Movable, GridSource):
         var steps = List[StyleStep]()
         steps.append(StyleStep(c, -2, 0, False, self.format_of(c)))
         self.set_format(c, f)
-        self.style_log.append(StyleChange(steps^, 0 if self.scan else len(self.frame.log)))
+        self.style_log.append(StyleChange(steps^, len(self.frame.log)))
 
     def formula(mut self, text: String) raises -> Int:
-        if self.scan:
-            raise Error(READ_ONLY)
         return self.frame.formula(text)
 
+    def sort_bytes(self) -> Int:
+        """What sorting holds while it runs (streamed: the package's keys and row numbers, about 50 bytes a row)."""
+        return self.rows() * SORT_BYTES_PER_ROW if self.scan else 0
+
     def permutation(self, c: Int, descending: Bool = False) raises -> List[Int]:
-        if self.scan:
-            raise Error(READ_ONLY)
+        """The rows in the order of column c. Streamed, refused when its order wouldn't fit a quarter of memory."""
+        if self.scan and self.sort_bytes() > memory_bytes() // 4:
+            raise Error("sorting " + String(self.rows()) + " streamed rows needs about " + String(self.sort_bytes() >> 30)
+                        + " GB, more than a quarter of this computer's memory: filter or chart it instead")
         return self.frame.permutation(c, descending)
 
     # ---------- aggregates ----------
 
     def query(self) raises -> Query:
-        """A query over this session's view of the table, on the GPU copy when there is one; over the file, a row
-        group at a time, when the sheet is streamed."""
-        if self.scan:
-            return Query(self.scan.value())
+        """A query over this session's view of the table (its edits included), on the GPU copy when there is one;
+        over the file, streamed, when the sheet is."""
         var q = Query(self.frame)
         if self.device:
             q = q^.on_device(self.device.value())
@@ -553,10 +486,16 @@ struct Sheet(Movable, GridSource):
     def totals(self, value: Int, key: Optional[Expr] = None, groups: Int = 1, filter: Optional[Expr] = None) raises -> Sums:
         """Sum of column `value` (a formula column too), the rows and the non-empty rows, per group of `key`
         (0 … groups-1; none: one group), over the rows `filter` keeps. The session's edits are included.
-        A streamed sheet keeps each column's plain totals (no key, no filter): the file doesn't change."""
-        var plain = not key and not filter and Bool(self.scan) and value < len(self.pages[].plain)
-        if plain and self.pages[].plain[value]:
-            return self.pages[].plain[value].value().copy()
+        A streamed sheet keeps each column's plain totals (no key, no filter) until the next edit or undo."""
+        var plain = not key and not filter and Bool(self.scan)
+        var now = self.frame.edits * 1_000_003 + len(self.frame.log)  # (moves with every edit and every undo)
+        if plain:
+            if self.notes[].plain_edits != now:
+                self.notes[].plain = Dict[Int, Sums]()
+                self.notes[].plain_edits = now
+            var kept = self.notes[].plain.get(value)
+            if kept:
+                return kept.value().copy()
         var q = self.query()
         if filter:
             q = q^.where(filter.value().copy())
@@ -566,10 +505,40 @@ struct Sheet(Movable, GridSource):
         q = q^.agg(sum(v), count(), count(v))
         var r = q^.compute(self.mode)
         var sums = Sums(r.values(0), r.counts.copy(), r.values(2), r.milliseconds, r.device == MX_GPU)
-        self.pages[].last_gpu = sums.on_gpu
+        self.notes[].last_gpu = sums.on_gpu
         if plain:
-            self.pages[].plain[value] = sums.copy()
+            self.notes[].plain[value] = sums.copy()
         return sums^
+
+    def distinct(self, c: Int, filter: Optional[Expr] = None) raises -> Int:
+        """How many different values column c holds over the rows `filter` keeps (empty cells don't count; text: different
+        words, a merged spelling once). The engine's count_distinct, on the CPU; streamed too."""
+        var q = self.query()
+        if filter:
+            q = q^.where(filter.value().copy())
+        var r = q^.agg(count_distinct(col(self.name(c)))).compute(MX_CPU if self.scan else self.mode)
+        return Int(r.values(0)[0])
+
+    def median(self, c: Int, filter: Optional[Expr] = None) raises -> Tuple[Int64, Bool]:
+        """The middle value of number column c over the rows `filter` keeps (two middle values: their mean, as
+        DuckDB, Excel and pandas), at the column's scale plus one place (the engine's median, exact); False when there
+        are no values."""
+        var q = self.query()
+        if filter:
+            q = q^.where(filter.value().copy())
+        var r = q^.agg(median(col(self.name(c)))).compute(MX_CPU if self.scan else self.mode)
+        return (Int64(r.values(0)[0]), r.present(0, 0))
+
+    def format_median(self, c: Int, m: Int64) -> String:
+        """A median (one place finer than the column) as the column shows its values: its own places, rounded half away
+        from zero; a whole-number column shows .5 when the middle falls between two."""
+        var scale = (self.scale(c) if self.kind(c) == DECIMAL else 0) + 1
+        var f = self.format_of(c)
+        if f.is_auto():
+            f = ColumnFormat(NUMBER, -1, True, False, "$")
+        if f.decimals < 0:
+            f.decimals = scale - 1 if scale > 1 or m % 10 == 0 else 1
+        return format_number(m, scale, f)
 
     def span(self, c: Int) raises -> Tuple[Int64, Int64, Bool]:
         """The smallest and largest value of column c over its non-empty rows (False: there are none)."""
@@ -601,7 +570,7 @@ struct Sheet(Movable, GridSource):
         return self.kind(c) == INT or self.kind(c) == DECIMAL
 
     def grid_editable(self, c: Int) -> Bool:
-        return c < self.stored() and not self.scan
+        return c < self.stored()
 
     def grid_formula(self, c: Int) -> Bool:
         return c >= self.stored()

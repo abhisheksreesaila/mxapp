@@ -1,13 +1,13 @@
-"""Milestone checker for GOAL.md (goal 21: omxplorer's formatting, tabs and toolbar; goal 20's checks run as M4, every
-earlier goal's inside them). Rebuilds from scratch, prints PASS/FAIL per milestone. omxplorer is driven through the
-agent host (scripts/agent_client.py), on GTK (MOJOUI_TEST steps) and in Chromium (scripts/drive.py), on the Parquet
-file goal 20's checks write with pyarrow (build/g20/small.parquet: order, amount, region, day, paid; 5,000 rows).
+"""Milestone checker for GOAL.md (goal 22: omxplorer on MX frame 7cbcc04: streamed files editable, Distinct and Median
+tiles; goal 21's checks run as M4, every earlier goal's inside them). Rebuilds from scratch, prints PASS/FAIL per
+milestone. omxplorer is driven through the agent host (scripts/agent_client.py), on GTK and in Chromium; pyarrow writes
+the Parquet files (scripts/parquet_fixture.py) and is the oracle for their rows, sums, distinct counts and medians.
 
 Run: scripts/check   (a subset without rebuilding: scripts/check M1 M2; earlier goals: through docs/goals/NN-check.py)
 """
 
+import decimal
 import importlib.util
-import os
 import re
 import sys
 import time
@@ -24,308 +24,264 @@ def load(name, path):
     return mod
 
 
-g20 = load("goal20", "docs/goals/20-check.py")
-g19 = g20.g19
+g21 = load("goal21", "docs/goals/21-check.py")
+g20 = g21.g20
 run, BUILD = g20.run, g20.BUILD
 from agent_client import Client  # noqa: E402
-import drive  # noqa: E402
 
-OUT = BUILD / "g21"
-# the selected cell after Create table is amount on row 1 (the first decimal column); these steps style it fully
-STYLE_STEPS = "tap:Bold;tap:Italic;tap:Underline;tap:Strikethrough;menu:Format>Red;tap:Fill colour;tapat:1=718,500;tap:Align centre"
-STYLED = "amount on row 1: bold, italic, underlined, struck through, red, fill blue, centred"
-COLUMN_X, HEADER_Y = 190, 12  # (canvas points: the amount column's header: after the gutter and order)
+OUT = BUILD / "g22"
+LAPTOP = 8 << 30  # OMX_MEMORY_BYTES: act as an 8 GB machine (D-217): the 4 GB table streams, its sort (5 GB) doesn't fit
+D = decimal.Decimal
 
 
 def env(tag, **more):
-    """Test-only places for documents, settings and uploads (never the person's own)."""
     home = OUT / tag
     for d in ("docs", "config", "uploads"):
         (home / d).mkdir(parents=True, exist_ok=True)
-    return dict(g19.env(), OMX_DOCUMENTS=str(home / "docs"), OMX_CONFIG=str(home / "config"), OMXAPP_UPLOADS=str(home / "uploads"),
+    return dict(g20.g19.env(), OMX_DOCUMENTS=str(home / "docs"), OMX_CONFIG=str(home / "config"), OMXAPP_UPLOADS=str(home / "uploads"),
                 **{k: str(v) for k, v in more.items()})
 
 
-def small():
-    return g20.fixture("small", "small.parquet")
+def status(c):
+    return g20.status_of(c)
 
 
-def gtk(steps, name, **more):
-    """A GTK run of omxplorer with test steps; its printed labels (and boxes)."""
-    exe = BUILD / "omxplorer" / "linux" / "omxplorer"
-    r = run([str(exe)], env=dict(env(name, **more), MOJOUI_TEST=steps, MOJOUI_SHOT=str(OUT / f"{name}-gtk.png")), timeout=900)
-    out = r.stdout + r.stderr
-    if r.returncode != 0 or "CRITICAL" in out or "TEST: " in out:
-        raise RuntimeError(f"GTK run {name} failed (exit {r.returncode}): {out[-500:]}")
-    return out
-
-
-def web(steps, name, **more):
-    """The same steps in Chromium (the web host); its printed labels (and boxes)."""
-    e = env(name, **more)
-    saved = {k: os.environ.get(k) for k in e}
-    os.environ.update(e)
-    try:
-        r, out = drive.web_run(BUILD / "omxplorer" / "web", steps, shot=str(OUT / f"{name}-web.png"), viewport=(1440, 900))
-    finally:
-        for k, v in saved.items():
-            if v is None:
-                os.environ.pop(k, None)
-            else:
-                os.environ[k] = v
-    if r.returncode != 0:
-        raise RuntimeError(f"web run {name} failed: {out[-500:]}")
-    return out
-
-
-def box(out, tag):
-    m = re.search(rf"^BOX: {re.escape(tag)} ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+)$", out, re.M)
-    return tuple(float(v) for v in m.groups()) if m else None
-
-
-def status_of(c):
-    texts, _, _ = c.call("read")
-    return [t[len("status-bar: "):] for t in texts.splitlines() if t.startswith("status-bar: ")]
-
-
-def screen(c):
-    text, _, _ = c.call("screen")
-    return text
-
-
-def pressed(text, title):
-    """Whether the screen shows tool `title` pressed (the agent host writes `Button "Bold" = on`)."""
-    return f'Button "{title}" = on' in text
-
-
-def open_small(c, path=None):
-    tool = g20.opener(c)
-    c.call(tool, path=str(path or small()))
-    c.call("create-table")
+def timing(items):
+    """The status bar's own timing ("12.3 ms on CPU") as milliseconds, else None."""
+    for s in items:
+        m = re.search(r"([\d.]+) ms on ", s)
+        if m:
+            return float(m.group(1))
+    return None
 
 
 def m1():
-    """Cell and column formatting: the toolbar's and the Format menu's tools on a cell and a column, Undo, Clear
-    formatting, number formats, a document's round trip; GTK and the web agree; the pixels (test_cellstyle)."""
+    """The package at 7cbcc04; the 100M-row streamed file as goal 20 proved it; the times measured."""
     problems = []
-    OUT.mkdir(parents=True, exist_ok=True)
-    # GTK and the web: the same steps give the same styled cell
-    steps = f"pick:Choose a file={small()};tap:Create table;{STYLE_STEPS}"
+    commit = (ROOT / "vendor/MXFRAME_COMMIT").read_text().splitlines()[0]
+    if "7cbcc04" not in commit:
+        problems.append(f"vendor/MXFRAME_COMMIT isn't 7cbcc04: {commit[:120]}")
+    fresh = BUILD / "mxframe-src" / "build" / "mxframe.mojoc"
+    if not fresh.exists() or fresh.read_bytes() != (ROOT / "vendor/mxframe.mojoc").read_bytes():
+        problems.append("vendor/mxframe.mojoc isn't the package built from the archive in build/mxframe-src")
+    ok, msg = g20.m2()  # (100M rows streamed: rows, Sum, Average, a chart and a pivot equal pyarrow's; the file deleted or grown)
+    if not ok:
+        problems.append("goal 20's M2: " + msg)
+    opened = re.search(r"opened in ([\d.]+) s", msg)
+    big = g20.fixture("big", "big.parquet", g20.BIG_ROWS)
+    c = Client(BUILD / "omxplorer" / "web", env("times", OMX_STREAM_ROWS=10_000_000))
+    times = {}
     try:
-        og = gtk(steps, "style")
-        ow = web(steps, "style")
-        for host, out in (("GTK", og), ("web", ow)):
-            if f"LABEL: {STYLED}" not in out:
-                problems.append(f"{host}: the styled cell isn't '{STYLED}': {[l for l in out.splitlines() if 'amount on row' in l][-3:]}")
-        keys = f"pick:Choose a file={small()};tap:Create table;shortcut:Ctrl+B;shortcut:Ctrl+I;shortcut:Ctrl+U"  # (the Format menu's shortcuts)
-        for host, out in (("GTK", gtk(keys, "keys")), ("web", web(keys, "keys"))):
-            if "LABEL: amount on row 1: bold, italic, underlined" not in out:
-                problems.append(f"{host}: Ctrl+B, Ctrl+I, Ctrl+U didn't make the cell bold, italic and underlined: {[l for l in out.splitlines() if 'amount on' in l][-2:]}")
-    except RuntimeError as e:
-        problems.append(str(e))
-    # the agent host: tools, state, column formats, Undo, Clear, number formats, save and open
+        c.call(g20.opener(c), path=str(big))
+        c.call("create-table")
+        times["total"] = timing(status(c))
+        c.call("insert-chart")
+        chart = [s for s in status(c) if s.startswith("Chart: ")]
+        m = re.search(r"\(([\d.]+) ms on", chart[0]) if chart else None
+        times["group-by"] = float(m.group(1)) if m else None
+    finally:
+        c.close()
+    if None in times.values():
+        problems.append(f"the streamed total's or chart's time wasn't shown: {times}")
+    else:
+        (OUT / "times.txt").write_text(f"open {opened.group(1) if opened else '?'} s, total {times['total']:.0f} ms, group-by {times['group-by']:.0f} ms\n")
+    return not problems, "; ".join(problems) or (
+        f"vendored from 7cbcc04; 100M streamed rows open in {opened.group(1) if opened else '?'} s, a total takes {times['total']:.0f} ms, "
+        f"a group-by {times['group-by']:.0f} ms; rows, totals, a chart and a pivot equal pyarrow's (goal 20's M2)")
+
+
+def m2():
+    """A 100M-row streamed file edited, totalled, charted, undone, sorted (refused on a small machine) and saved."""
+    import pyarrow.parquet as pq
+    import pyarrow.compute as pc
+    problems = []
+    big = g20.fixture("big", "big.parquet", g20.BIG_ROWS)
+    pf = pq.ParquetFile(big)
+    first = pf.read_row_group(0).slice(0, 3).to_pylist()
+    total, by_region = D(0), {}
+    for g in range(pf.num_row_groups):
+        t = pf.read_row_group(g, columns=["amount", "region"])
+        total += pc.sum(t.column("amount")).as_py() or 0
+        grouped = t.group_by("region").aggregate([("amount", "sum")])
+        for region, amount in zip(grouped.column("region").to_pylist(), grouped.column("amount_sum").to_pylist()):
+            by_region[region] = by_region.get(region, D(0)) + (amount or 0)
+    new0 = D("1000000.00")
+    old0, old2 = first[0]["amount"] or D(0), first[2]["amount"] or D(0)
+    want_total = total - old0 + new0 - old2
+    want_regions = dict(by_region)
+    want_regions[first[0]["region"]] += new0 - old0
+    want_regions[first[2]["region"]] -= old2
+    in_memory = g20.BIG_ROWS * 5 * 8
     doc = None
-    c = Client(BUILD / "omxplorer" / "web", env("agent"))
+    c = Client(BUILD / "omxplorer" / "web", env("edit", OMX_MEMORY_BYTES=LAPTOP))
     try:
-        open_small(c)
-        names = set(c.names())
-        for t in ("bold", "italic", "underline", "strikethrough", "text-colour", "fill", "align-left", "align-center", "align-right",
-                  "currency", "percent", "decimals-less", "decimals-more", "clear-format"):
-            if t not in names:
-                problems.append(f"the sheet's toolbar has no {t} tool")
-        for t in ("format-bold", "format-italic", "format-underline", "format-strikethrough", "format-clear-formatting"):
-            if t not in names:
-                problems.append(f"the Format menu has no {t} item")
-        c.call("bold")
-        c.call("format-text-colour-green")
-        c.call("format-fill-colour-amber")
-        s = screen(c)
-        if not pressed(s, "Bold") or pressed(s, "Italic"):
-            problems.append("after Bold the toolbar doesn't show Bold on (and Italic off)")
-        if not any("amount on row 1: bold, green, fill amber" in t for t in status_of(c)):
-            problems.append(f"Bold, green and an amber fill aren't the cell's style: {status_of(c)}")
-        c.call("grid", gesture="tap", x=COLUMN_X, y=HEADER_Y)  # the whole column
-        c.call("italic")
-        if not any("Column amount: italic (the whole column)" in t for t in status_of(c)):
-            problems.append(f"Italic on the selected column didn't format the column: {status_of(c)}")
-        c.call("undo")
-        if pressed(screen(c), "Italic"):
-            problems.append("Undo didn't take the column's italic back")
-        c.call("currency")
-        c.call("bold")  # (the column is still what's selected)
-        if not any("Column amount: bold (the whole column)" in t for t in status_of(c)):
-            problems.append(f"after Currency, Bold didn't format the still-selected column: {status_of(c)}")
-        c.call("undo")
-        _, body = g20.grid_rows(c, 0, 3)
-        if not body or not all(r[1].startswith("$") or r[1] == "" for r in body):
-            problems.append(f"Currency didn't show the column as money: {body}")
-        if not pressed(screen(c), "Currency"):
-            problems.append("Currency isn't shown on after it was chosen")
-        c.call("grid", gesture="tap", x=COLUMN_X, y=60)  # (a cell: row 2)
-        c.call("underline")
-        c.call("clear-format")
-        if not any("amount on row 2: plain" in t for t in status_of(c)):
-            problems.append(f"Clear formatting didn't make the cell plain: {status_of(c)}")
-        c.call("grid", gesture="tap", x=COLUMN_X, y=86)  # (row 3: an edit, then a format, undone newest first)
-        c.call("value-or-formula", text="12.34", submit=True)
-        c.call("grid", gesture="tap", x=COLUMN_X, y=86)
-        c.call("strikethrough")
-        c.call("undo")
-        first = status_of(c)
-        c.call("undo")
-        second = status_of(c)
-        _, rows = g20.grid_rows(c, 2, 1)
-        if not any("Undid a format change" in t for t in first) or not any("Undid an edit" in t for t in second) or not rows or "12.34" in rows[0][1]:
-            problems.append(f"Undo didn't take back the format, then the edit: {first} then {second}, row 3 {rows}")
-        c.call("grid", gesture="tap", x=COLUMN_X, y=34)  # (row 1 again: still styled)
+        c.call(g20.opener(c), path=str(big))
+        if "streamed" not in g21.screen(c).lower():
+            problems.append("on an 8 GB machine the 100M-row file doesn't open streamed by itself")
+        c.call("create-table")
+        c.call("value-or-formula", text=str(new0), submit=True)  # (amount on row 1 is selected)
+        c.call("grid", gesture="tap", x=g21.COLUMN_X, y=86)  # (amount on row 3: empty it)
+        c.call("value-or-formula", text="", submit=True)
+        head, body = g20.grid_rows(c, 0, 3)
+        if not body or body[0][1] != "1000000.00" or body[2][1] != "":
+            problems.append(f"the streamed grid doesn't show the edits: {body}")
+        c.call("add-row")  # (the grid scrolls to the new last row)
+        if not any("Rows 100,000,001" in s for s in status(c)):
+            problems.append(f"Add row on the streamed sheet didn't make 100,000,001 rows: {status(c)}")
+        c.call("formula")
+        c.call("a-new-column-its-name-then-its-formula", text="double = amount * 2", submit=True)
+        head, body = g20.grid_rows(c, 0, 40)
+        doubles = [r for r in body or [] if r[1] != ""]
+        if (head or [""])[-1] != "double" or not doubles or any(D(r[-1]) != 2 * D(r[1]) for r in doubles) or body[-1][1] != "":
+            problems.append(f"the formula column over the streamed rows isn't amount × 2 (or the new row isn't last and empty): {head} {body}")
+        c.call("grid", gesture="tap", x=g21.COLUMN_X, y=12)  # (the column: its totals)
+        if not any(s == "Sum " + g20.money(want_total) for s in status(c)):
+            problems.append(f"the streamed Sum doesn't include the edits ({g20.money(want_total)}): {status(c)}")
+        c.call("insert-chart")
+        lines, _, err = c.call("read", name="chart-1")
+        got = dict(l.split("\t") for l in lines.splitlines()[1:]) if not err else {}
+        for region, amount in want_regions.items():
+            if got.get(region if region is not None else "(blank)") != g20.money(amount):
+                problems.append(f"the streamed chart's {region} is {got.get(region)}, not {g20.money(amount)} with the edits")
+        c.call("undo")  # (the added row goes: the last edit the table logged; a formula column isn't an edit to it)
+        c.call("grid", gesture="tap", x=g21.COLUMN_X, y=12)
+        if not any(s == "Rows 100,000,000" for s in status(c)) or not any(s == "Sum " + g20.money(want_total) for s in status(c)):
+            problems.append(f"Undo on the streamed sheet didn't take the added row back: {status(c)}")
+        c.call("sort")
+        if not any("sorting" in s and "GB" in s for s in status(c)):
+            problems.append(f"sorting 100M streamed rows on an 8 GB machine wasn't refused with the reason: {status(c)}")
+        t0 = time.time()
         c.call("save")
-        saved = [t for t in status_of(c) if t.startswith("Saved ")]
+        saved_s = time.time() - t0
+        saved = [s for s in status(c) if s.startswith("Saved ")]
         doc = saved[0][len("Saved "):] if saved else None
         if not doc:
-            problems.append(f"Save didn't say where it saved: {status_of(c)}")
+            problems.append(f"Save of the streamed sheet didn't save: {status(c)}")
+        peak = g20.peak_kb(c.p.pid) * 1024
+        if peak > in_memory // 4:
+            problems.append(f"peak memory {peak / 1e9:.2f} GB is over a quarter of the {in_memory / 1e9:.1f} GB table")
     finally:
         log = c.close()
     if "Traceback" in log:
         problems.append("the agent host logged a traceback: " + log[-400:])
     if doc:
-        c = Client(BUILD / "omxplorer" / "web", env("agent-reopen", OMX_OPEN=doc))
+        sf = pq.ParquetFile(doc)
+        rows = sf.metadata.num_rows
+        top = sf.read_row_group(0).slice(0, 3).to_pylist()
+        last = sf.read_row_group(sf.num_row_groups - 1).to_pylist()[-1]
+        want_last = pf.read_row_group(pf.num_row_groups - 1).to_pylist()[-1]
+        if rows != g20.BIG_ROWS or top[0]["amount"] != new0 or top[2]["amount"] is not None or last != want_last:
+            problems.append(f"the saved file isn't the edited table: {rows:,} rows, row 1 {top[0]['amount']}, row 3 {top[2]['amount']}, last {last} vs {want_last}")
+        c = Client(BUILD / "omxplorer" / "web", env("reopen", OMX_MEMORY_BYTES=LAPTOP, OMX_OPEN=doc))
         try:
-            s = screen(c)
-            if not (pressed(s, "Bold") and pressed(s, "Currency")) or pressed(s, "Italic"):
-                problems.append("the reopened document's row 1 isn't bold in a currency column (or is italic)")
-            if "Text colour: Green" not in s or "Fill: Amber" not in s:
-                problems.append(f"the reopened cell lost its colours: {[l for l in s.splitlines() if 'colour' in l]}")
+            s = g21.screen(c)
+            head, body = g20.grid_rows(c, 0, 2)
+            if "streamed" not in s.lower() or not body or body[0][1] != "1000000.00" or (head or [""])[-1] != "double":
+                problems.append(f"the saved document doesn't reopen streamed with its edit and formula: {head} {(body or [])[:1]}")
         finally:
             c.close()
-    err = g20.mojo_test("tests/test_cellstyle.mojo", "CELL STYLE TESTS PASSED", "test_cellstyle")
+    err = g20.mojo_test("tests/test_streamed.mojo", "STREAMED TESTS PASSED", "test_streamed")
     if err:
         problems.append(err)
     return not problems, "; ".join(problems) or (
-        "Bold, Italic, Underline, Strikethrough, colours, fills and alignment on a cell, identical on GTK and the web, and Ctrl+B/I/U; "
-        "a column's format (after Currency too), Undo in order with edits, Clear formatting; the document reopens styled; "
-        "the pixels (test_cellstyle)")
+        f"100M streamed rows: a typed value, an emptied cell, a new row and a formula show, total and chart with the edits; Undo takes the row back; "
+        f"sorting refused on an 8 GB machine with the reason; saved (streamed, {saved_s:.0f} s) to a file pyarrow reads with the edits, "
+        f"which reopens streamed; peak {peak / 1e9:.2f} GB")
 
 
-def m2():
-    """Tabs at the bottom, renamed in place, saved."""
-    problems = []
-    steps = f"pick:Choose a file={small()};tap:Create table;tap:small;enter:Tab name=Orders 2025;tap:Report;tap:Report;enter:Tab name=Board"
-    try:
-        for host, out in (("GTK", gtk(steps, "tabs")), ("web", web(steps, "tabs"))):
-            for want in ("BUTTON: Orders 2025", "LABEL: Renamed Report to Board"):  # (the labels are the last screen's)
-                if want not in out:
-                    problems.append(f"{host}: no {want!r}")
-            tabs, status, toolbar = box(out, "sheet-tabs"), box(out, "status-bar"), box(out, "toolbar")
-            if not (tabs and status and toolbar) or not (toolbar[1] < tabs[1] < status[1] and tabs[1] > 600):
-                problems.append(f"{host}: the tabs aren't along the bottom, above the status bar: tabs {tabs}, status {status}, toolbar {toolbar}")
-        out = web(f"pick:Choose a file={small()};tap:Create table;tap:small;type:Tab name=Nope;dismiss", "tabs-escape")
-        if "LABEL: Kept the name" not in out or "Nope" in "".join(l for l in out.splitlines() if l.startswith("BUTTON:")):
-            problems.append("Escape in the tab's name field didn't keep the old name")
-    except RuntimeError as e:
-        problems.append(str(e))
-    c = Client(BUILD / "omxplorer" / "web", env("tabs-agent"))
-    doc = None
-    try:
-        open_small(c)
-        c.call("tab-0")  # the current tab: rename it
-        if "tab-name" not in c.names():
-            problems.append("tapping the current tab didn't put its name in a field")
-        c.call("tab-name", text="   ", submit=True)
-        if not any("A tab needs a name" in t for t in status_of(c)):
-            problems.append(f"an empty tab name wasn't refused: {status_of(c)}")
-        c.call("tab-name", text="Q3 orders", submit=True)
-        c.call("view-rename-tab")
-        c.call("tab-name", text="Q3 orders (all)", submit=True)
-        c.call("tab-1")
-        c.call("tab-1")
-        c.call("tab-name", text="Q3 board", submit=True)
-        c.call("save")
-        saved = [t for t in status_of(c) if t.startswith("Saved ")]
-        doc = saved[0][len("Saved "):] if saved else None
-        if not doc or not doc.endswith("/small.omx"):
-            problems.append(f"Save didn't keep the document's own name (small.omx): {status_of(c)}")
-    finally:
-        c.close()
-    if doc:
-        c = Client(BUILD / "omxplorer" / "web", env("tabs-reopen", OMX_OPEN=doc))
-        try:
-            s = screen(c)
-            if 'Button "Q3 orders (all)"' not in s or 'Button "Q3 board"' not in s:
-                problems.append(f"the reopened document's tabs aren't Q3 orders (all) and Q3 board: {[l for l in s.splitlines() if 'Button' in l][-6:]}")
-        finally:
-            c.close()
-    return not problems, "; ".join(problems) or (
-        "the tabs sit along the bottom on GTK and the web; tapping the current one (or View > Rename tab…) renames it; "
-        "Escape keeps the name, an empty one is refused; both names survive save and open")
+def oracle_stats(path, west=False):
+    import pyarrow.parquet as pq
+    import statistics
+    t = pq.read_table(path).to_pylist()
+    if west:
+        t = [r for r in t if r["region"] == "West"]
+    amounts = sorted(r["amount"] for r in t if r["amount"] is not None)
+    median = statistics.median(amounts)  # (the mean of the two middle values: pandas, DuckDB, Excel)
+    return {"median": f"{median.quantize(D('0.01'), rounding=decimal.ROUND_HALF_UP):,}",
+            "regions": len({r["region"] for r in t if r["region"] is not None}),
+            "amounts": len(set(amounts))}
 
 
 def m3():
-    """A toolbar for the tab you're on; a streamed file shows no edit tools."""
+    """Distinct and Median tiles from the engine, in memory and streamed, filtered, saved; GTK and the web agree."""
     problems = []
-    c = Client(BUILD / "omxplorer" / "web", env("toolbar"))
+    small = g20.fixture("small", "small.parquet")
+    every, west = oracle_stats(small), oracle_stats(small, west=True)
+    docs = {}
+    for kind, more in (("memory", {}), ("streamed", {"OMX_STREAM_ROWS": 1000})):
+        c = Client(BUILD / "omxplorer" / "web", env("stats-" + kind, **more))
+        try:
+            g21.open_small(c, small)
+            c.call("tab-1")
+            c.call("median-tile")
+            c.call("distinct-tile")
+            c.call("tiles-of", option="region")
+            c.call("distinct-tile")
+            c.call("median-tile")  # (refused: region is text)
+            s = g21.screen(c)
+            for want in (f'"Median of amount"', f'"{every["median"]}"', '"Different amount"', f'"{every["amounts"]:,}"', '"Different region"', f'"{every["regions"]}"'):
+                if want not in s:
+                    problems.append(f"{kind}: the Report lacks {want}")
+            if not any("Median needs a number column" in t for t in status(c)):
+                problems.append(f"{kind}: a Median of a text column wasn't refused with the reason: {status(c)}")
+            c.call("filter-column", option="region")
+            c.call("filter-value", option="West")
+            s = g21.screen(c)
+            for want in (f'"{west["median"]}"', f'"{west["amounts"]:,}"'):
+                if want not in s:
+                    problems.append(f"{kind}: with region = West the tiles don't show {want}")
+            c.call("save")
+            saved = [t for t in status(c) if t.startswith("Saved ")]
+            docs[kind] = saved[0][len("Saved "):] if saved else None
+        finally:
+            log = c.close()
+        if "Traceback" in log:
+            problems.append(f"{kind}: the agent host logged a traceback: " + log[-300:])
+        if docs.get(kind):
+            c = Client(BUILD / "omxplorer" / "web", env("stats-reopen-" + kind, OMX_OPEN=docs[kind], **more))
+            try:
+                c.call("tab-1")
+                s = g21.screen(c)
+                if f'"{west["median"]}"' not in s or '"Different region"' not in s:
+                    problems.append(f"{kind}: the reopened Report lost its Median or Distinct tiles")
+            finally:
+                c.close()
+    steps = f"pick:Choose a file={small};tap:Create table;tap:Report;tap:Median tile;tap:Distinct tile;select:0=region;tap:Distinct tile"
     try:
-        open_small(c)
-        sheet = set(c.names())
-        for t in ("save", "undo", "add-row", "formula", "sort", "bold", "fill", "pivot", "chart"):
-            if t not in sheet:
-                problems.append(f"the sheet's toolbar lacks {t}")
-        for t in ("sum-tile", "chart-tile"):
-            if t in sheet:
-                problems.append(f"the sheet's toolbar offers the Report's {t}")
-        c.call("tab-1")
-        report = set(c.names())
-        s = screen(c)
-        for t in ("save", "undo", "sum-tile", "average-tile", "count-tile", "chart-tile"):
-            if t not in report:
-                problems.append(f"the Report's toolbar lacks {t}")
-        for t in ("bold", "add-row", "sort", "formula"):
-            if t in report:
-                problems.append(f"the Report's toolbar offers the sheet's {t}")
-        if "Filter · every tile" not in s or "Tiles of" not in s:
-            problems.append("the Report's toolbar doesn't carry the tile column and the filter")
-        if "Add a tile" in s:
-            problems.append("the Report page still has its own add-tile row")
-        c.call("sum-tile")
-        if "Sum of amount" not in screen(c):
-            problems.append("the toolbar's Sum tile didn't add a tile")
-    finally:
-        c.close()
-    c = Client(BUILD / "omxplorer" / "web", env("toolbar-streamed", OMX_STREAM_ROWS=1000))
-    try:
-        open_small(c)
-        for tab in ("tab-0", "tab-1"):
-            c.call(tab)
-            names = set(c.names())
-            for t in ("save", "add-row", "formula", "sort"):
-                if t in names:
-                    problems.append(f"a streamed file's {tab} toolbar offers {t}")
-        c.call("tab-0")
-        if "bold" not in c.names():
-            problems.append("a streamed file's sheet has no format tools (they're shown, not saved: D-202)")
-    finally:
-        c.close()
+        og, ow = g21.gtk(steps, "stats"), g21.web(steps, "stats")
+        for host, out in (("GTK", og), ("web", ow)):
+            for want in (every["median"], f'{every["amounts"]:,}', str(every["regions"])):
+                if f"LABEL: {want}" not in out:
+                    problems.append(f"{host}: the tiles don't show {want}")
+    except RuntimeError as e:
+        problems.append(str(e))
+    err = g20.mojo_test("tests/test_report_stats.mojo", "REPORT STATS TESTS PASSED", "test_report_stats")
+    if err:
+        problems.append(err)
     return not problems, "; ".join(problems) or (
-        "the sheet's toolbar has the sheet's tools and formats, the Report's its tiles and filter (its page has no add-tile row); "
-        "a streamed file shows no edit tools on either")
+        f"Median ({every['median']}) and Distinct (amounts {every['amounts']:,}, regions {every['regions']}) tiles equal pyarrow's, "
+        "in memory and streamed, through the filter (West), saved and reopened; a Median of text is refused; identical on GTK and the web")
 
 
 def m4():
-    """Nothing regressed: goal 20's milestones (goal 19's and every earlier goal's inside them); the components matrix."""
+    """Nothing regressed: goal 21's milestones (goal 20's and every earlier goal's inside them); the plans."""
     problems = []
-    for name, fn in [("20-M1", g20.m1), ("20-M2", g20.m2), ("20-M3", g20.m3), ("20-M4", g20.m4)]:
+    for name, fn in [("21-M1", g21.m1), ("21-M2", g21.m2), ("21-M3", g21.m3), ("21-M4", g21.m4)]:
         ok, msg = fn()
         if not ok:
             problems.append(f"{name}: {msg}")
-    r = run(["pixi", "run", "python", "scripts/components.py", "--check"])
-    if r.returncode != 0:
-        problems.append("docs/components.md is out of date: " + (r.stdout + r.stderr)[-300:])
-    return not problems, "; ".join(problems) or "goal 20's M1–M4 (goals 3–19 and F-138 inside them) pass; the components matrix is current"
+    plan = (ROOT / "docs/plans/needs-mxframe.md").read_text()
+    for needle in ("7cbcc04", "editable", "count_distinct"):
+        if needle not in plan:
+            problems.append(f"docs/plans/needs-mxframe.md doesn't mention {needle!r}")
+    return not problems, "; ".join(problems) or "goal 21's M1–M4 (goals 3–20 and F-138 inside them) pass; needs-mxframe.md is current"
 
 
 def main():
     import shutil
     import headless
     headless.ensure()
+    OUT.mkdir(parents=True, exist_ok=True)
     only = sys.argv[1:]
     if not only:
         for ex in g20.EXAMPLES:

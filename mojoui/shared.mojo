@@ -64,3 +64,23 @@ def make_dir(path: String):
         makedirs(path, exist_ok=True)
     except:
         pass
+
+
+def memory_bytes() -> Int:
+    """The machine's memory (Linux: /proc/meminfo); 8 GB where it can't be read. OMX_MEMORY_BYTES stands in for it
+    (checks use it to act as a smaller machine: what streams, what a sort may hold)."""
+    var asked = environment("OMX_MEMORY_BYTES")
+    if asked != "":
+        try:
+            return Int(asked)
+        except:
+            pass
+    try:
+        with open("/proc/meminfo", "r") as f:
+            for line in f.read().split("\n"):
+                if line.startswith("MemTotal:"):
+                    var parts = line.split()
+                    return Int(parts[1]) * 1024
+    except:
+        pass
+    return 8 << 30

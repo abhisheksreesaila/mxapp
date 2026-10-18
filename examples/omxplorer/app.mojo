@@ -20,7 +20,7 @@ from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
-from mojoui.sheet import Sheet, placeholder_sheet, blank_table, INT, DECIMAL, TEXT, DATE, READ_ONLY
+from mojoui.sheet import Sheet, placeholder_sheet, blank_table, INT, DECIMAL, TEXT, DATE
 from mojoui.shared import environment, make_dir
 from mojoui.files import file_name, file_stem, read_recent, remember, read_setting, write_setting
 from mojoui.csvio import read_table, empty_import, CsvImport, CsvColumn, kind_name
@@ -35,7 +35,7 @@ from mojoui.swatches import SwatchPicker, draw_swatches, swatch_at
 from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_text, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
                               CHART_BAR, CHART_LINE, HEADER_H)
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
-                               TILE_CHART)
+                               TILE_CHART, TILE_DISTINCT, TILE_MEDIAN, TILE_LAST, TILE_NAMES)
 from mojoui.chartview import ChartView
 from mojoui.view import TAP
 from mojoui.sample import sample_table
@@ -81,7 +81,7 @@ comptime OBJ_ACROSS = 32
 comptime REPORT_COL = 33
 comptime FILTER_COL = 34
 comptime FILTER_VALUE = 35
-comptime ADD_TILE = 50  # + TILE_SUM … TILE_CHART
+comptime ADD_TILE = 50  # + TILE_SUM … TILE_LAST (50–55)
 comptime OBJ_TAP = 100  # + object: its chart's canvas
 comptime OBJ_CLOSE = 200  # + object
 comptime OBJ_PICK = 300  # + object: show it in the inspector
@@ -377,7 +377,7 @@ struct Main(App):
         self.select_cell(self.grid.cur_row, self.grid.cur_col)
         self.message = ("Imported " + grouped(self.frame.rows()) + " rows from " + file_name(self.source)) if self.source != "sample" and self.source != "blank" else ""
         if self.frame.streamed():
-            self.message = "Streamed from " + file_name(self.source) + ": read-only"
+            self.message = "Streamed from " + file_name(self.source) + ": your edits are kept beside it until you save"
         self.version += 1
 
     def numbers(self) -> List[Int]:
@@ -610,8 +610,6 @@ struct Main(App):
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
                 if action == GRID_EDIT:
                     self.message = "Editing " + self.frame.name(self.grid.cur_col) + " on row " + grouped(self.grid.cur_row + 1) + ": Enter writes it, Escape cancels"
-                elif action == GRID_READ_ONLY and self.frame.streamed():
-                    self.message = "Can't edit " + self.frame.name(self.grid.cur_col) + ": " + READ_ONLY
                 elif action == GRID_READ_ONLY:
                     self.message = self.frame.name(self.grid.cur_col) + " is a formula: edit the columns it uses"
                 elif action == GRID_COLUMN:
@@ -699,9 +697,7 @@ struct Main(App):
                 self.message = String(e)
             self.version += 1
         elif m == NEW_FORMULA:
-            self.formula_open = not self.formula_open and not self.frame.streamed()
-            if self.frame.streamed():
-                self.message = "No formula columns: " + READ_ONLY
+            self.formula_open = not self.formula_open
             self.version += 1
         elif m == FORMULA_SUBMIT:
             try:
@@ -754,9 +750,6 @@ struct Main(App):
             self.sheet_tab = 1 if m == SHOW_REPORT else 0
             self.renaming = -1
             self.picking = 0
-            self.version += 1
-        elif m == SAVE and self.frame.streamed():
-            self.message = "Can't save: " + READ_ONLY
             self.version += 1
         elif m == SAVE:
             var folder = environment("OMX_DOCUMENTS", environment("HOME", ".") + "/Documents/omxplorer")
@@ -857,17 +850,19 @@ struct Main(App):
                 except e:
                     self.message = "Couldn't compute: " + String(e)
                 self.version += 1
-        elif m == REPORT_COL:
-            var nums = self.numbers()
-            if 0 <= event.number < len(nums):
-                self.report_col = nums[event.number]
+        elif m == REPORT_COL:  # (every column: Distinct counts text too; the number tiles say so on a text column)
+            if 0 <= event.number < self.frame.columns():
+                self.report_col = event.number
             self.version += 1
-        elif m >= ADD_TILE and m <= ADD_TILE + TILE_CHART:
+        elif m >= ADD_TILE and m <= ADD_TILE + TILE_LAST:
             var texts = self.groupings()
             var col = self.report_col
             var t = new_tile(m - ADD_TILE, col, texts[0] if len(texts) > 0 else -1)
+            var number = col >= 0 and (self.frame.kind(col) == INT or self.frame.kind(col) == DECIMAL)
             if col < 0:
-                self.message = "A tile needs a number column"
+                self.message = "A tile needs a column: pick one in Tiles of"
+            elif not number and t.kind != TILE_DISTINCT and t.kind != TILE_COUNT:
+                self.message = materialize[TILE_NAMES]()[t.kind] + " needs a number column: " + self.frame.name(col) + " isn't one (Distinct counts any column)"
             elif len(self.tiles) >= MAX_OBJECTS:
                 self.message = "A report holds up to " + String(MAX_OBJECTS) + " tiles: remove one first"
             elif t.kind == TILE_CHART and len(texts) == 0:
@@ -1048,7 +1043,7 @@ struct Main(App):
         side.append(Divider().fill())
         side.append(Button("Settings…", SETTINGS, SUBTLE, icon="gear").fill())
         side.append(Spacer())
-        side.append(Card(Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), Text("Parquet files bigger than memory open too: streamed from disk, read-only.", CAPTION), spacing=4, tone=CARD_GOOD).fill())
+        side.append(Card(Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), Text("Parquet files bigger than memory open too: streamed from disk, and you can still edit and save them.", CAPTION), spacing=4, tone=CARD_GOOD).fill())
         var sidebar = Card(VStack(side^, spacing=6).fill().grow().align(START), spacing=0).width(300).fill()
         var drop = Card(
             HStack(Icon("upload", 28),
@@ -1109,7 +1104,7 @@ struct Main(App):
         if len(self.imp.skipped) > 0:
             skipped = String(len(self.imp.skipped)) + " more columns aren't read (4,096 is the limit)"
         if self.imp.streamed():
-            skipped = "Too big for memory: streamed from disk, a row group at a time. The table is read-only, and its empty cells aren't counted up front."
+            skipped = "Too big for memory: streamed from disk, a row group at a time. You can edit, chart and save it as usual; its empty cells aren't counted up front."
         var dialog = Card(
             HStack(VStack(Text("Import " + file_name(self.imp.path), HEADLINE),
                           Text(grouped(self.imp.rows) + " rows · " + String(len(self.imp.columns)) + " columns · "
@@ -1127,7 +1122,7 @@ struct Main(App):
     def menu_bar(self) -> View:
         """The menus every screen carries (on a Mac, the system menu bar): the same actions as the toolbar, with shortcuts."""
         var on_sheet = self.screen == SHEET
-        var edits = on_sheet and not self.frame.streamed()  # (a streamed file is read-only, D-185)
+        var edits = on_sheet  # (a streamed file edits too, D-213)
         var col = self.ctx_col if self.ctx_col >= 0 else self.grid.cur_col
         var style = self.frame.format_of(col).style if on_sheet and col >= 0 else AUTO
         var format_as = Submenu("Format as", [Item("Number", FMT_NUMBER, checked=style == NUMBER, disabled=not on_sheet),
@@ -1175,7 +1170,7 @@ struct Main(App):
         var col = self.ctx_col
         var numeric = self.frame.kind(col) == INT or self.frame.kind(col) == DECIMAL
         var style = self.frame.format_of(col).style
-        var edits = not self.frame.streamed()
+        var edits = True
         return ContextMenu("grid", self.ctx_x, self.ctx_y, [
             Item("Sort smallest first", SORT_ASC, icon="sort", disabled=not edits), Item("Sort largest first", SORT_DESC, disabled=not edits), Separator(),
             Submenu("Format as", [Item("Number", FMT_NUMBER, checked=style == NUMBER), Item("Currency", FMT_CURRENCY, checked=style == CURRENCY),
@@ -1220,23 +1215,19 @@ struct Main(App):
 
     def toolbar(self) -> View:
         """The tools for the tab you're on: the sheet's (edit, data, formats, insert) or the Report's (tiles, filter)."""
-        var streamed = self.frame.streamed()  # (read-only: no Save, rows, formulas or sorting, D-185; formats show but aren't saved)
-        var left = List[Tool]()
-        if not streamed:
-            left.append(Tool("Save", "save", SAVE, False, "Save the document (Ctrl+S)"))
-        left.append(Tool("Undo", "undo", UNDO, False, "Undo the last change (Ctrl+Z)"))
+        var streamed = self.frame.streamed()  # (from disk, editable: D-213)
+        var left: List[Tool] = [Tool("Save", "save", SAVE, False, "Save the document (Ctrl+S)"), Tool("Undo", "undo", UNDO, False, "Undo the last change (Ctrl+Z)")]
         var right: List[Tool] = [Tool("Format", "format", TOGGLE_INSPECTOR, self.inspector_open, "Show or hide the inspector (Ctrl+Shift+I)")]
         var extra = List[View]()
         if streamed:
-            extra.append(Text("Streamed · read-only", CAPTION).tone(TONE_WARN).tooltip("This Parquet file is too big for memory: its rows are read from disk as they're shown, so it can't be edited, sorted or saved").tag("streamed"))
+            extra.append(Text("Streamed from disk", CAPTION).tone(TONE_ACCENT).tooltip("This file is bigger than memory: its rows are read from disk as they're shown, and your edits are kept beside it until you save").tag("streamed"))
         extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt,.parquet,.omx").tooltip("Open a CSV, Parquet or .omx file"))
         if self.sheet_tab == 1:
             return Toolbar(left, self.report_tools(), right, extra, before=self.report_controls(), after=self.filter_controls())
         var middle = List[Tool]()
-        if not streamed:
-            middle.append(Tool("Add row", "row-plus", ADD_ROW, False, "A new row at the end (Ctrl+Shift+R)"))
-            middle.append(Tool("Formula", "formula", NEW_FORMULA, self.formula_open, "A new column computed from others"))
-            middle.append(Tool("Sort", "sort", SORT, self.grid.sort_col >= 0, "Sort by the selected column; again to flip"))
+        middle.append(Tool("Add row", "row-plus", ADD_ROW, False, "A new row at the end (Ctrl+Shift+R)"))
+        middle.append(Tool("Formula", "formula", NEW_FORMULA, self.formula_open, "A new column computed from others"))
+        middle.append(Tool("Sort", "sort", SORT, self.grid.sort_col >= 0, "Sort by the selected column; again to flip"))
         middle.append(Tool("Pivot", "pivot", INSERT_PIVOT, False, "A pivot table of the selected column (Ctrl+Shift+P)"))
         middle.append(Tool("Chart", "chart-bar", INSERT_CHART, False, "A chart of the selected column (Ctrl+Shift+C)"))
         return Toolbar(left, middle, right, extra, toggles=self.format_tools())
@@ -1266,14 +1257,18 @@ struct Main(App):
     def report_tools(self) -> List[Tool]:
         return [Tool("Sum tile", "plus", ADD_TILE + TILE_SUM, False, "A tile with the column's total"),
                 Tool("Average tile", "plus", ADD_TILE + TILE_AVERAGE, False, "A tile with the column's average"),
+                Tool("Median tile", "plus", ADD_TILE + TILE_MEDIAN, False, "A tile with the column's middle value"),
+                Tool("Distinct tile", "plus", ADD_TILE + TILE_DISTINCT, False, "A tile with how many different values the column holds (text too)"),
                 Tool("Count tile", "plus", ADD_TILE + TILE_COUNT, False, "A tile with the number of rows"),
                 Tool("Chart tile", "chart-bar", ADD_TILE + TILE_CHART, False, "A chart of the column by group")]
 
     def report_controls(self) -> List[View]:
         """Before the Report's tile tools: the column new tiles use; after them, the filter every tile reads through."""
-        var nums = self.numbers()
+        var every = List[Int]()
+        for c in range(self.frame.columns()):
+            every.append(c)
         var out = List[View]()
-        out.append(VStack(Text("Tiles of", CAPTION), Dropdown(self.names_of(nums), self.index_in(nums, self.report_col), REPORT_COL).tooltip("The column new tiles add up"), spacing=2).align(START))
+        out.append(VStack(Text("Tiles of", CAPTION), Dropdown(self.names_of(every), max(self.report_col, 0), REPORT_COL).tag("tiles-of").tooltip("The column new tiles add up, average or count"), spacing=2).align(START))
         return out^
 
     def filter_controls(self) -> List[View]:
@@ -1287,12 +1282,12 @@ struct Main(App):
             if texts[k] == self.filter.col:
                 at_col = k + 1
         var out = List[View]()
-        out.append(VStack(Text("Filter · every tile", CAPTION), Dropdown(cols, at_col, FILTER_COL), spacing=2).align(START))
+        out.append(VStack(Text("Filter · every tile", CAPTION), Dropdown(cols, at_col, FILTER_COL).tag("filter-column"), spacing=2).align(START))
         if self.filter.col >= 0:
             var values = List[String]()
             for code in range(groups_of(self.frame, self.filter.col)):
                 values.append(self.frame.text_of(self.filter.col, Int64(code)))
-            out.append(VStack(Text("is", CAPTION), Dropdown(values, self.filter.code, FILTER_VALUE), spacing=2).align(START))
+            out.append(VStack(Text("is", CAPTION), Dropdown(values, self.filter.code, FILTER_VALUE).tag("filter-value"), spacing=2).align(START))
         return out^
 
     def report_inspector(self) -> View:

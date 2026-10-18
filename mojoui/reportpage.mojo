@@ -14,17 +14,20 @@ comptime TILE_SUM = 0
 comptime TILE_AVERAGE = 1
 comptime TILE_COUNT = 2
 comptime TILE_CHART = 3
-comptime TILE_NAMES: List[String] = ["Sum", "Average", "Count", "Chart"]
+comptime TILE_DISTINCT = 4  # different values of any column (text too): the engine's count_distinct
+comptime TILE_MEDIAN = 5  # the middle value of a number column: the engine's median
+comptime TILE_LAST = TILE_MEDIAN
+comptime TILE_NAMES: List[String] = ["Sum", "Average", "Count", "Chart", "Distinct", "Median"]
 
 
 @fieldwise_init
 struct ReportTile(Copyable, Movable):
-    var kind: Int  # TILE_SUM, TILE_AVERAGE, TILE_COUNT, TILE_CHART
+    var kind: Int  # TILE_SUM … TILE_MEDIAN
     var col: Int  # the value column
     var group: Int  # charts: group by
     var total: Int  # (computed) the sum over the filtered rows
     var count: Int  # (computed) how many rows
-    var present: Int  # (computed) how many of them have a value (an average divides by this)
+    var present: Int  # (computed) how many of them have a value (an average divides by this; a median: 1 when there is one)
     var chart: SheetObject  # (charts) the chart's numbers
 
 
@@ -55,6 +58,14 @@ def compute_tile(mut t: ReportTile, sheet: Sheet, filter: ReportFilter) raises:
         t.chart.group = t.group
         compute(t.chart, sheet, condition^)
         return
+    if t.kind == TILE_DISTINCT:
+        t.total = sheet.distinct(t.col, condition^)
+        return
+    if t.kind == TILE_MEDIAN:
+        var m = sheet.median(t.col, condition^)
+        t.total = Int(m[0])
+        t.present = 1 if m[1] else 0
+        return
     var r = sheet.totals(t.col, None, 1, condition^)
     t.total = r.sums[0]
     t.count = r.counts[0]
@@ -65,6 +76,10 @@ def tile_value(t: ReportTile, sheet: Sheet) -> String:
     """The KPI's number in its column's format (an average as the status bar shows it; counts are plain)."""
     if t.kind == TILE_COUNT:
         return grouped(t.count)
+    if t.kind == TILE_DISTINCT:
+        return grouped(t.total)
+    if t.kind == TILE_MEDIAN:
+        return sheet.format_median(t.col, Int64(t.total)) if t.present > 0 else "—"
     if t.kind == TILE_SUM:
         return sheet.format_value(t.col, Int64(t.total), total=True)
     return sheet.format_average(t.col, t.total, t.present)
@@ -73,6 +88,8 @@ def tile_value(t: ReportTile, sheet: Sheet) -> String:
 def tile_label(t: ReportTile, sheet: Sheet) -> String:
     if t.kind == TILE_COUNT:
         return "Count of rows"
+    if t.kind == TILE_DISTINCT:
+        return "Different " + sheet.name(t.col)
     return materialize[TILE_NAMES]()[t.kind] + " of " + sheet.name(t.col)
 
 

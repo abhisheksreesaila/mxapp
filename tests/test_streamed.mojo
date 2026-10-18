@@ -1,12 +1,15 @@
-# A streamed sheet (mojoui.sheet, D-185) equals the same file read whole: every cell (text, decimals, dates, booleans,
-# empty cells) across row groups and back again (only a few groups are kept), the totals, a chart's and a pivot's
-# group-bys, a column's span; and it refuses edits, formulas, rows and sorting with the reason.
+# A streamed sheet (mojoui.sheet, D-185, D-213: the package's Frame over a scan) equals the same file read whole: every
+# cell (text, decimals, dates, booleans, empty cells) across row groups and back again, the totals, a chart's and a
+# pivot's group-bys, a column's span; and the same edits (typed values, an empty cell, a new word, an added row, a
+# formula), undone or not, give the same cells, totals and sort on both, and save (streamed) to a file that reads back
+# with them.
 #   scripts/mxbuild.sh tests/test_streamed.mojo -o build/test_streamed && build/test_streamed
 from std.testing import assert_equal, assert_true, assert_false
 from std.os import remove
 from std.python import Python
 from mxframe import read_parquet, write_parquet, scan_parquet, UNCOMPRESSED
-from mojoui.sheet import Sheet, KEPT_GROUPS, READ_ONLY, TEXT
+from mojoui.sheet import Sheet, TEXT
+from mojoui.omxfile import save_omx, open_omx
 from mojoui.sheetpage import SheetObject, compute
 
 comptime SMALL = "tests/fixtures/small.parquet"  # (pyarrow wrote it: 5,000 rows, one row group)
@@ -38,10 +41,9 @@ def main() raises:
         for c in range(s.columns()):
             assert_equal(s.display(c, row), whole.display(c, row))
         row -= 1 + (row * 7919) % 900
-    assert_true(len(s.pages[].groups) <= KEPT_GROUPS)
     for c in range(s.columns()):
-        assert_false(s.grid_editable(c))  # read-only...
-        assert_false(s.grid_formula(c))  # ...but not a formula (no ƒ on its header)
+        assert_true(s.grid_editable(c))
+        assert_false(s.grid_formula(c))
     assert_false(s.edited(1, 3))
     assert_equal(s.read_problem(), "")
 
@@ -71,28 +73,54 @@ def main() raises:
     assert_equal(span[0], span_whole[0])
     assert_equal(span[1], span_whole[1])
 
-    # read-only, with the reason
-    var refused = 0
-    try:
-        s.set_text(1, 0, "1.00")
-    except e:
-        assert_equal(String(e), READ_ONLY)
-        refused += 1
-    try:
-        _ = s.formula("double = amount * 2")
-    except e:
-        refused += 1
-    try:
-        _ = s.append()
-    except e:
-        refused += 1
-    try:
-        _ = s.permutation(1)
-    except e:
-        refused += 1
-    assert_equal(refused, 4)
-    assert_false(s.undo())
+    # the same edits on both: they read, total and sort the same, and undo the same
+    for sheet_k in range(2):
+        ref x = s if sheet_k == 0 else whole
+        x.set_text(1, 0, "1.00")
+        x.set_text(1, 4000, "")  # (empty)
+        x.set_text(2, 17, "Antarctica")  # (a word the file doesn't have)
+        var added = x.append()
+        x.set_text(1, added, "99.99")
+        x.set_text(2, added, "West")
+        _ = x.formula("double = amount * 2")
+    assert_equal(s.rows(), whole.rows())
+    for row in [0, 17, 4000, 4999, s.rows() - 1]:
+        for c in range(s.columns()):
+            assert_equal(s.display(c, row), whole.display(c, row), s.name(c) + " row " + String(row) + " after edits")
+        assert_equal(s.edited(1, row), whole.edited(1, row))
+    for c in [1, 5]:
+        var a = s.totals(c)
+        var b = whole.totals(c)
+        assert_equal(a.sums[0], b.sums[0], "totals after edits: " + s.name(c))
+        assert_equal(a.present[0], b.present[0])
+    var by_region = SheetObject.chart(1, 2, 0, 0)
+    var by_region_whole = by_region.copy()
+    compute(by_region, s)
+    compute(by_region_whole, whole)
+    assert_equal(by_region.labels, by_region_whole.labels)
+    assert_equal(by_region.sums, by_region_whole.sums)
+    var order = s.permutation(1, True)
+    var order_whole = whole.permutation(1, True)
+    for k in range(50):
+        assert_equal(s.display(1, order[k]), whole.display(1, order_whole[k]))
+    # saved (streamed out), it reads back with the edits
+    var saved = "build/test_streamed_saved.omx"
+    save_omx(saved, s)
+    var back = open_omx(saved, False)
+    assert_equal(back.rows(), whole.rows())
+    for row in [0, 17, 4000, back.rows() - 1]:
+        for c in range(back.columns()):
+            assert_equal(back.display(c, row), whole.display(c, row), "saved " + back.name(c) + " row " + String(row))
+    # undone, both back where they were
+    var undone = 0
+    while s.undo():
+        undone += 1
+    while whole.undo():
+        pass
+    assert_true(undone >= 6, "undid " + String(undone))
+    assert_equal(s.rows(), 5000)
     assert_equal(s.display(1, 0), whole.display(1, 0))
+    assert_equal(s.totals(1).sums[0], whole.totals(1).sums[0])
     # the package holds the file open (since MX frame 581250b): one deleted after it was opened still reads right
     var gone = "build/test_streamed_gone.parquet"
     var again = read_parquet(SMALL)
@@ -117,5 +145,5 @@ def main() raises:
     _ = h.display(1, 100)
     assert_equal(h.read_problem(), "")
     assert_equal(h.display(1, 100), whole.display(1, 100))
-    print("STREAMED: " + String(cells) + " cells over 17 row groups equal the whole read; totals, chart, pivot, span")
+    print("STREAMED: " + String(cells) + " cells over 17 row groups equal the whole read; totals, chart, pivot, span; edits, undo, sort and save")
     print("STREAMED TESTS PASSED")

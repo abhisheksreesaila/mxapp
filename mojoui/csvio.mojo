@@ -11,7 +11,7 @@ from mxframe import (read_csv as mx_read_csv, CsvOptions, CsvResult, Table, Shar
                      scan_parquet, ParquetScan)
 from mojoui.sheet import INT, DECIMAL, TEXT, DATE, BOOL
 from mojoui.numformat import date_text, decimal_text
-from mojoui.shared import environment
+from mojoui.shared import environment, memory_bytes
 from std.time import perf_counter_ns
 
 
@@ -84,19 +84,6 @@ def read_table(path: String) raises -> CsvImport:
     if path.lower().endswith(".parquet"):
         return read_parquet_file(path)
     return read_csv(path)
-
-
-def memory_bytes() -> Int:
-    """The machine's memory (Linux: /proc/meminfo); 8 GB where it can't be read."""
-    try:
-        with open("/proc/meminfo", "r") as f:
-            for line in f.read().split("\n"):
-                if line.startswith("MemTotal:"):
-                    var parts = line.split()
-                    return Int(parts[1]) * 1024
-    except:
-        pass
-    return 8 << 30
 
 
 def streams(rows: Int, columns: Int) -> Bool:

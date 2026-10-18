@@ -168,7 +168,7 @@ def m1():
 
 def m2():
     """Files bigger than memory: 100M rows streamed; rows far down, the totals, a chart and a pivot equal pyarrow's;
-    edits off; peak memory under a quarter of the table."""
+    edits offered (goal 22: they were off until then); peak memory under a quarter of the table."""
     import pyarrow.parquet as pq
     problems = []
     big = fixture("big", "big.parquet", BIG_ROWS)
@@ -213,15 +213,16 @@ def m2():
             if want not in status:
                 problems.append(f"the streamed status bar lacks {want!r}: {status}")
         names_now = set(c.names())
-        for off in ("data-sort-largest-first", "data-sort-smallest-first", "file-save", "insert-formula-column", "edit-add-row"):
-            if off in names_now:
-                problems.append(f"{off} is offered on a streamed (read-only) sheet")
-        if "read-only" not in screen.lower():
-            problems.append("the streamed sheet doesn't say it's read-only")
-        text, _, err = c.call("grid", gesture="double", x=160, y=60)  # (a cell: try to edit it)
+        # (goal 22, D-216: a streamed file is editable since MX frame 7cbcc04 (F-147); this used to require these off)
+        for on in ("data-sort-largest-first", "data-sort-smallest-first", "file-save", "insert-formula-column", "edit-add-row"):
+            if on not in names_now:
+                problems.append(f"{on} isn't offered on a streamed sheet (editable since goal 22)")
+        if "streamed" not in screen.lower():
+            problems.append("the streamed sheet doesn't say it's streamed")
+        text, _, err = c.call("grid", gesture="double", x=160, y=60)  # (a cell: edit it)
         status = status_of(c)
-        if err or not any("Can't edit" in s and "read-only" in s for s in status) or any("is a formula" in s for s in status):
-            problems.append(f"editing a streamed cell doesn't say it's read-only: {status}")
+        if err or not any(s.startswith("Editing ") for s in status):
+            problems.append(f"a double tap on a streamed cell doesn't open its editor: {status}")
         text, _, err = c.call("insert-chart")
         lines, _, err2 = c.call("read", name="chart-1") if "chart-1" in c.names() else ("", None, True)
         if err or err2:
@@ -274,7 +275,7 @@ def m2():
     err = mojo_test("tests/test_streamed.mojo", "STREAMED TESTS PASSED", "test_streamed")
     if err:
         problems.append(err)
-    return not problems, "; ".join(problems) or f"100,000,000 rows streamed (opened in {opened:.1f} s): rows far down, Sum, Average, a chart and a pivot equal pyarrow's; edits, sorts, formulas and Save off; peak {peak / 1e9:.2f} GB for a {in_memory / 1e9:.1f} GB table"
+    return not problems, "; ".join(problems) or f"100,000,000 rows streamed (opened in {opened:.1f} s): rows far down, Sum, Average, a chart and a pivot equal pyarrow's; edits, sorts, formulas and Save offered (goal 22); peak {peak / 1e9:.2f} GB for a {in_memory / 1e9:.1f} GB table"
 
 
 def m3():
