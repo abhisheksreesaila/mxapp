@@ -129,9 +129,11 @@ def m1():
                 problems.append(f"the Import step shows no {k} column")
         empties = {n: table.column(n).null_count for n in names}
         texts, _, _ = c.call("read")
-        for n in ("amount", "region"):
-            if f"{empties[n]:,}" not in texts:
-                problems.append(f"the Import step doesn't show {n}'s {empties[n]} empty cells")
+        lines = [l.split(": ", 1)[-1] for l in texts.splitlines()]
+        for n, kind in (("amount", "Decimal"), ("region", "Text")):  # (the Import step's row: COLUMN, TYPE, EMPTY)
+            at = lines.index(n) if n in lines else -1
+            if at < 0 or lines[at + 1:at + 3] != [kind, f"{empties[n]:,}"]:
+                problems.append(f"the Import step's {n} row doesn't show {kind} and {empties[n]} empty cells: {lines[at:at + 3] if at >= 0 else lines[:30]}")
         text, _, err = c.call("create-table")
         if err:
             problems.append(f"create-table failed: {text[:200]!r}")
@@ -216,6 +218,10 @@ def m2():
                 problems.append(f"{off} is offered on a streamed (read-only) sheet")
         if "read-only" not in screen.lower():
             problems.append("the streamed sheet doesn't say it's read-only")
+        text, _, err = c.call("grid", gesture="double", x=160, y=60)  # (a cell: try to edit it)
+        status = status_of(c)
+        if err or not any("Can't edit" in s and "read-only" in s for s in status) or any("is a formula" in s for s in status):
+            problems.append(f"editing a streamed cell doesn't say it's read-only: {status}")
         text, _, err = c.call("insert-chart")
         lines, _, err2 = c.call("read", name="chart-1") if "chart-1" in c.names() else ("", None, True)
         if err or err2:

@@ -3,6 +3,7 @@
 # group-bys, a column's span; and it refuses edits, formulas, rows and sorting with the reason.
 #   scripts/mxbuild.sh tests/test_streamed.mojo -o build/test_streamed && build/test_streamed
 from std.testing import assert_equal, assert_true, assert_false
+from std.os import remove
 from mxframe import read_parquet, write_parquet, scan_parquet, UNCOMPRESSED
 from mojoui.sheet import Sheet, KEPT_GROUPS, READ_ONLY, TEXT
 from mojoui.sheetpage import SheetObject, compute
@@ -37,8 +38,11 @@ def main() raises:
             assert_equal(s.display(c, row), whole.display(c, row))
         row -= 1 + (row * 7919) % 900
     assert_true(len(s.pages[].groups) <= KEPT_GROUPS)
-    assert_false(s.grid_editable(0))
+    for c in range(s.columns()):
+        assert_false(s.grid_editable(c))  # read-only...
+        assert_false(s.grid_formula(c))  # ...but not a formula (no ƒ on its header)
     assert_false(s.edited(1, 3))
+    assert_equal(s.read_problem(), "")
 
     # totals (kept per column: the second call is the same), a chart and a pivot, a span
     for c in [0, 1, 3, 4]:
@@ -88,5 +92,13 @@ def main() raises:
     assert_equal(refused, 4)
     assert_false(s.undo())
     assert_equal(s.display(1, 0), whole.display(1, 0))
+    # a file that goes away after it was opened: the rows read say so instead of showing zeros
+    var gone = "build/test_streamed_gone.parquet"
+    var again = read_parquet(SMALL)
+    write_parquet(gone, again.take_table(), "", UNCOMPRESSED, 312)
+    var g = Sheet(scan_parquet(gone))
+    remove(gone)
+    _ = g.display(1, 4000)
+    assert_true(g.read_problem() != "", "a failed read left no problem")
     print("STREAMED: " + String(cells) + " cells over 17 row groups equal the whole read; totals, chart, pivot, span")
     print("STREAMED TESTS PASSED")

@@ -233,3 +233,13 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - Linking: `-L` at the pixi lib folder (and an rpath there) made ld resolve libappstream's curl symbols against the env's libcurl and fail; the codecs go through their own folder (D-175).
 - First run of goal 14 M2 (the 1M CSV import, GTK and web, sums equal to the Python csv pass) passed unchanged; M3 (formats, formula, sort, add row), M4 (save and reopen; only the bad-file fixture changed) and M5 (budgets) too: import 0.2 s, sort 0.02 s, format 8 ms.
 - Goal 15 M2 to M5 (chart, pivot, filtered Report, saved objects) passed with the new engine on both hosts.
+
+## 2026-10-18 · goal 20: omxplorer on what MX frame can do now
+- F-138 reached main at 93f6dbe (fast-forward, by the F-138 session). The package was re-vendored from MX frame main 05332ac (F-140's `scan_parquet`) via `git archive` into `build/mxframe-src`: the MX frame checkout had another session's unfinished F-141 (a conflicted plan.md), so building there would have shipped half-done work (D-186). It built with this repo's Mojo in 11 s and omxplorer linked unchanged.
+- Probed the package on pyarrow-written files first: decimal128 stored either as fixed-length bytes or as int64 (`store_decimal_as_integer`), date32, bool, dictionary text with nulls: all read with the right kinds and scales.
+- Timings on 100M rows (5 columns, 96 row groups of 2^20, 1.1 GB file): `scan_parquet` opens in 6 ms; a streamed sum takes 4.5 s, a group-by 7.5 s, one row group decodes in 177 ms. So a streamed sheet keeps each column's plain totals (the file doesn't change) and the last 4 decoded groups; a chart costs one group-by, a pivot three.
+- `ArcPointer[Pages]` gives the sheet's read-only methods (the grid draws through `self`) a cache they can fill; probed first.
+- A row group read by `ParquetScan.read_group` has its text codes mapped to the file's dictionary and its own words cleared: the Import step's samples for text columns go through `scan.text_of`, not the group's table.
+- test_streamed's first pivot was across a BOOL column ("groups must be at least 1, got 0"): only text columns group. The test's mistake, not the app's (the inspector only offers text columns).
+- The Start screen's copy now names Parquet; goals 14, 15 and 17's checkers looked for the old labels and were updated (D-187). The Workbook and analytics now need the package, so the earlier checkers build their tests with `scripts/mxbuild.sh` (D-189).
+- The agent check's peak memory for 100M streamed rows: 0.16 GB, in the agent host's own process (it imports the app module; no subprocess).

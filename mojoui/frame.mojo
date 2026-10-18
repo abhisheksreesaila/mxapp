@@ -485,6 +485,9 @@ struct Frame(Movable, GridSource):
     def grid_editable(self, c: Int) -> Bool:
         return c < self.stored()
 
+    def grid_formula(self, c: Int) -> Bool:
+        return c >= self.stored()
+
     def grid_text(self, c: Int, row: Int) -> String:
         return self.display(c, row)
 

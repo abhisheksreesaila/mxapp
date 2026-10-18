@@ -12,7 +12,8 @@
 
 from std.memory import ArcPointer
 from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of,
-                     AUTO as MX_AUTO, GPU as MX_GPU, CPU as MX_CPU, TEXT as MX_TEXT, gpu_available, ParquetScan)
+                     AUTO as MX_AUTO, GPU as MX_GPU, CPU as MX_CPU, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL, DATE as MX_DATE,
+                     gpu_available, ParquetScan)
 from mojoui.datagrid import GridSource
 from mojoui.numformat import (ColumnFormat, format_number, format_date, date_text, parse_decimal, decimal_text, AUTO, NUMBER, PERCENT,
                               CURRENCY)
@@ -36,7 +37,8 @@ struct Sums(Copyable, Movable):
     var on_gpu: Bool
 
 
-comptime KEPT_GROUPS = 4  # decoded row groups a streamed sheet keeps (a 2^20-row group of 5 columns is 40 MB)
+comptime KEPT_GROUPS = 4  # decoded row groups a streamed sheet keeps at most (a 2^20-row group of 5 columns is 40 MB)
+comptime KEPT_BYTES = 512 << 20  # ...and while they fit in this much (always at least the group on screen)
 comptime READ_ONLY = "the file is streamed from disk (too big for memory), so it's read-only"
 
 
@@ -48,12 +50,17 @@ struct Pages(Movable):
     var groups: List[Int]  # the row groups kept, least recently used first
     var tables: List[Table]
     var plain: List[Optional[Sums]]  # per column: its totals over every row, once asked
+    var problem: String  # the last read that failed (a file changed or cut short since it was opened): shown, not hidden
 
     def __init__(out self):
         self.starts = List[Int]()
         self.groups = List[Int]()
         self.tables = List[Table]()
         self.plain = List[Optional[Sums]]()
+        self.problem = ""
+
+    def bytes(self, k: Int) -> Int:
+        return self.tables[k].rows() * self.tables[k].columns() * 8
 
     def group_of(self, row: Int) -> Int:
         var lo = 0
@@ -80,7 +87,11 @@ struct Pages(Movable):
         for c in range(scan.columns()):
             cols.append(c)
         var t = scan.read_group(g, cols)
-        if len(self.groups) >= KEPT_GROUPS:
+        var kept = t.rows() * t.columns() * 8
+        for k in range(len(self.tables)):
+            kept += self.bytes(k)
+        while len(self.groups) > 0 and (len(self.groups) >= KEPT_GROUPS or kept > KEPT_BYTES):
+            kept -= self.bytes(0)
             _ = self.tables.pop(0)
             _ = self.groups.pop(0)
         self.tables.append(t^)
@@ -94,6 +105,20 @@ def empty_table() raises -> Table:
     var c = t.add_column("A", MX_TEXT)
     _ = t.add_word(c, "")
     t.append(c, 0)
+    return t^
+
+
+def blank_table(rows: Int = 20) raises -> Table:
+    """A new blank sheet's table: Item (text), Amount (decimal, 2 places) and Date, `rows` empty-ish rows."""
+    var t = Table.empty()
+    var item = t.add_column("Item", MX_TEXT)
+    _ = t.add_word(item, "")
+    var amount = t.add_column("Amount", MX_DECIMAL, 2)
+    var day = t.add_column("Date", MX_DATE)
+    for _ in range(rows):
+        t.append(item, 0)
+        t.append(amount, 0)
+        t.append(day, 20089)  # (2025-01-01)
     return t^
 
 
@@ -150,6 +175,10 @@ struct Sheet(Movable, GridSource):
 
     def streamed(self) -> Bool:
         return Bool(self.scan)
+
+    def read_problem(self) -> String:
+        """Why the last rows read from a streamed file failed ("" when they didn't)."""
+        return self.pages[].problem
 
     def release(mut self):
         """Gives the GPU copy back (the document closed or was replaced)."""
@@ -213,7 +242,9 @@ struct Sheet(Movable, GridSource):
                 var k = p.slot(g, self.scan.value())
                 return p.tables[k].get(c, row - p.starts[g])
             return self.frame.get(c, row)
-        except:
+        except e:
+            if self.scan:
+                self.pages[].problem = String(e)
             return 0
 
     def is_null(self, c: Int, row: Int) -> Bool:
@@ -224,7 +255,9 @@ struct Sheet(Movable, GridSource):
                 var k = p.slot(g, self.scan.value())
                 return p.tables[k].is_null(c, row - p.starts[g])
             return self.frame.is_null(c, row)
-        except:
+        except e:
+            if self.scan:
+                self.pages[].problem = String(e)
             return False
 
     def edited(self, c: Int, row: Int) -> Bool:
@@ -403,6 +436,9 @@ struct Sheet(Movable, GridSource):
 
     def grid_editable(self, c: Int) -> Bool:
         return c < self.stored() and not self.scan
+
+    def grid_formula(self, c: Int) -> Bool:
+        return c >= self.stored()
 
     def grid_text(self, c: Int, row: Int) -> String:
         return self.display(c, row)

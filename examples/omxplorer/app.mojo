@@ -18,8 +18,7 @@ from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
-from mxframe import Table, ColumnKind, DECIMAL as MX_DECIMAL, TEXT as MX_TEXT, DATE as MX_DATE
-from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT, DATE, READ_ONLY
+from mojoui.sheet import Sheet, placeholder_sheet, blank_table, INT, DECIMAL, TEXT, DATE, READ_ONLY
 from mojoui.shared import environment, make_dir
 from mojoui.files import file_name, file_stem, read_recent, remember, read_setting, write_setting
 from mojoui.csvio import read_table, empty_import, CsvImport, CsvColumn, kind_name
@@ -307,16 +306,7 @@ struct Main(App):
 
     def open_blank(mut self):
         try:
-            var t = Table.empty()
-            var names: List[String] = ["Item", "Amount", "Date"]
-            var kinds: List[ColumnKind] = [MX_TEXT, MX_DECIMAL, MX_DATE]
-            for k in range(3):
-                var c = t.add_column(names[k], kinds[k], 2 if kinds[k] == MX_DECIMAL else 0)
-                if kinds[k] == MX_TEXT:
-                    _ = t.add_word(c, "")
-                for _ in range(20):
-                    t.append(c, Int64(20089 if kinds[k] == MX_DATE else 0))
-            self.use_table(Sheet(t^.share()))
+            self.use_table(Sheet(blank_table().share()))
         except e:
             self.message = String(e)
             self.version += 1
@@ -555,6 +545,8 @@ struct Main(App):
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
                 if action == GRID_EDIT:
                     self.message = "Editing " + self.frame.name(self.grid.cur_col) + " on row " + grouped(self.grid.cur_row + 1) + ": Enter writes it, Escape cancels"
+                elif action == GRID_READ_ONLY and self.frame.streamed():
+                    self.message = "Can't edit " + self.frame.name(self.grid.cur_col) + ": " + READ_ONLY
                 elif action == GRID_READ_ONLY:
                     self.message = self.frame.name(self.grid.cur_col) + " is a formula: edit the columns it uses"
                 elif action == GRID_COLUMN:
@@ -727,7 +719,7 @@ struct Main(App):
                 self.insp_tab = 2
                 self.reveal = self.active + 1  # (child 0 is the table)
                 self.reveal_count += 1
-                self.message = ("Chart: " if m == INSERT_CHART else "Pivot: ") + object_title(self.objects[self.active], self.frame) + " (" + fixed(self.objects[self.active].milliseconds, 1) + " ms on the GPU)"
+                self.message = ("Chart: " if m == INSERT_CHART else "Pivot: ") + object_title(self.objects[self.active], self.frame) + " (" + fixed(self.objects[self.active].milliseconds, 1) + " ms" + (", streamed from disk on the CPU" if self.frame.streamed() else "") + ")"
             self.version += 1
         elif m == MOVE or m == RESIZE:  # a sheet object (child 0: the table) dragged by its title bar, or by its corner
             var k = event.number - 1
@@ -1201,6 +1193,8 @@ struct Main(App):
             items.append("Average " + self.frame.format_average(col, self.sum, self.count))
         if self.message != "":
             items.append(self.message)
+        if self.frame.read_problem() != "":
+            items.append("Couldn't read the file: " + self.frame.read_problem())
         return StatusBar(items, (fixed(self.milliseconds, 1) + " ms on " + (self.frame.device_name if self.ran_gpu else "CPU")) if self.show_timings else "")
 
     def sheet_width(self) -> Int:

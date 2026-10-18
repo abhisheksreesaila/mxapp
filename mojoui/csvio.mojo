@@ -37,14 +37,16 @@ struct CsvImport(Movable):
     var seconds: Float64  # read + parse
     var table: SharedTable  # the columns; the app builds its Sheet from it, then lets go (let_go)
     var parse_seconds: Float64
-    var scan: Optional[ParquetScan]  # a streamed file: the sheet reads its rows from here (no table)
+    var scan: Optional[ParquetScan]  # a streamed file: the sheet reads its rows from here (no table); let go with the table
+    var is_streamed: Bool  # (still true once the sheet holds the scan)
 
     def streamed(self) -> Bool:
-        return Bool(self.scan)
+        return self.is_streamed
 
     def let_go(mut self) raises:
-        """Drops this import's hold on the table, so a replaced document's memory is freed."""
+        """Drops this import's hold on the table (and the scan), so a replaced document's memory is freed."""
         self.table = SharedTable(Table.empty())
+        self.scan = None
 
 
 def kind_name(kind: Int) -> String:
@@ -60,7 +62,7 @@ def kind_name(kind: Int) -> String:
 
 
 def empty_import() -> CsvImport:
-    return CsvImport("", 0, List[CsvColumn](), List[String](), 0, SharedTable(Table.empty()), 0, None)
+    return CsvImport("", 0, List[CsvColumn](), List[String](), 0, SharedTable(Table.empty()), 0, None, False)
 
 
 def read_csv(path: String) raises -> CsvImport:
@@ -74,12 +76,12 @@ def read_csv(path: String) raises -> CsvImport:
     for c in r.columns:
         info.append(CsvColumn(c.name, c.kind.value, c.scale, c.empty, c.distinct, c.sample.copy(), c.failed_count))
     var skipped = r.skipped.copy()
-    return CsvImport(path, r.rows, info^, skipped^, r.seconds, r.take_table().share(), r.seconds, None)
+    return CsvImport(path, r.rows, info^, skipped^, r.seconds, r.take_table().share(), r.seconds, None, False)
 
 
 def read_table(path: String) raises -> CsvImport:
     """A CSV or Parquet file (by its extension), as the Import step shows it."""
-    if path.lower().endswith(".parquet") or path.lower().endswith(".parq"):
+    if path.lower().endswith(".parquet"):
         return read_parquet_file(path)
     return read_csv(path)
 
@@ -135,6 +137,12 @@ def read_parquet_file(path: String) raises -> CsvImport:
         raise Error("couldn't read " + path + " as Parquet: " + String(e))
     var info = List[CsvColumn]()
     if streams(scan.rows(), scan.columns()):
+        var biggest = 0
+        for g in range(scan.row_groups()):
+            biggest = max(biggest, scan.group_rows(g))
+        if biggest * scan.columns() * 8 > memory_bytes() // 8:  # (streaming reads a row group at a time: one must fit)
+            raise Error("couldn't open " + path + ": it's too big for memory and its row groups (" + String(biggest)
+                        + " rows each) are too big to stream; write it with smaller row groups")
         var cols = List[Int]()
         for c in range(scan.columns()):
             cols.append(c)
@@ -147,7 +155,7 @@ def read_parquet_file(path: String) raises -> CsvImport:
                 sample.append(text)
             info.append(CsvColumn(scan.name(c), kind, scan.scale(c), -1, scan.word_count(c) if kind == TEXT else 0, sample^, 0))
         var seconds = Float64(perf_counter_ns() - t0) / 1e9
-        return CsvImport(path, scan.rows(), info^, List[String](), seconds, SharedTable(Table.empty()), seconds, scan^)
+        return CsvImport(path, scan.rows(), info^, List[String](), seconds, SharedTable(Table.empty()), seconds, scan^, True)
     var r = read_parquet(path)
     var t = r.take_table()
     for c in range(t.columns()):
@@ -158,4 +166,4 @@ def read_parquet_file(path: String) raises -> CsvImport:
         info.append(CsvColumn(t.name(c), kind, t.scale(c), t.null_count(c), len(t.dictionary(c)) if kind == TEXT else 0, sample^, 0))
     var seconds = Float64(perf_counter_ns() - t0) / 1e9
     var rows = t.rows()
-    return CsvImport(path, rows, info^, List[String](), seconds, t^.share(), seconds, None)
+    return CsvImport(path, rows, info^, List[String](), seconds, t^.share(), seconds, None, False)

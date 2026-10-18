@@ -61,7 +61,11 @@ trait GridSource:
         ...
 
     def grid_editable(self, c: Int) -> Bool:
-        """False for computed columns (drawn in the formula colour, marked ƒ)."""
+        """False for a column that can't be typed into (a formula's, or a read-only table's)."""
+        ...
+
+    def grid_formula(self, c: Int) -> Bool:
+        """A computed column (drawn in the formula colour, marked ƒ)."""
         ...
 
     def grid_text(self, c: Int, row: Int) -> String:
@@ -145,7 +149,7 @@ struct DataGrid(Copyable, Movable):
         self.min_widths = List[Float64](capacity=n)
         self.type_widths = List[Float64](capacity=n)
         for c in range(n):
-            var name = src.grid_name(c) + ("" if src.grid_editable(c) else "ƒ ")
+            var name = src.grid_name(c) + ("ƒ " if src.grid_formula(c) else "")
             self.min_widths.append(font.measure(name, 12.5, pal.medium) + 26)
             self.type_widths.append(src.grid_type_width(c))  # (once: it may scan a dictionary)
 
@@ -708,7 +712,7 @@ struct DataGrid(Copyable, Movable):
     def badge_x[S: GridSource](self, c: Int, src: S, font: Font) -> Float64:
         """Where column c's type badge starts (points): after its name."""
         var name = src.grid_name(c)
-        if not src.grid_editable(c):
+        if src.grid_formula(c):
             name = "ƒ " + name
         return self.col_left(c, src) + 8 + font.measure(name, 12.5) + 6
 
@@ -747,7 +751,7 @@ struct DataGrid(Copyable, Movable):
                 rect(s, x, 0, cw, h, p.accent_wash)  # the column, tinted top to bottom
                 rect(s, x, 0, cw, head, p.accent)
             var name = src.grid_name(c)
-            if not src.grid_editable(c):
+            if src.grid_formula(c):
                 name = "ƒ " + name
             var ink = p.accent_ink if c == col_pick else (p.accent if c == self.sort_col else p.ink2)
             var badge = src.grid_badge(c)
