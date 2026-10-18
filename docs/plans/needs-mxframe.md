@@ -29,15 +29,17 @@ covers MX Studio's Sheet and Report. These need MX frame and are skipped or stub
 - **Parquet files open** (goal 20, D-183): the package's `read_parquet`, through the same Import step as CSV.
 - **Files bigger than memory** (goal 20, D-184, D-185): a Parquet file whose table is over a quarter of memory opens
   streamed with F-140's `scan_parquet`: the grid reads row groups from disk as they're shown, totals, charts, pivots
-  and the Report are `Query(scan)` on the CPU, and the sheet is read-only. 100M rows open in 4.5 s and peak at 0.16 GB.
+  and the Report are `Query(scan)` on the CPU, and the sheet is read-only. With MX frame 581250b (F-141–F-143: bulk,
+  parallel and prefetched decode), 100M rows open in 0.4 s (a streamed total 0.44 s, a group-by 0.58 s) and peak at 0.18 GB.
 - **no Python** in the framework (goal 20): the Workbook's files and the analytics showcase's engine are on the package.
 
 ## Still waiting (the package has none of these yet)
 
 Query mode (SQL, joins, HAVING), Explore mode (multi-table plans), a second table, versions and the time machine,
 count distinct / percentiles / top-k as operators, Excel and JSON import, the DuckDB oracle, the GPU for a streamed
-file (the scan is CPU only), editing a streamed file (an overlay on a scan), and faster Parquet decoding (F-141: a
-streamed total over 100M rows takes 4.5 s, a group-by 7.5 s). The table above says what the app does meanwhile.
+file (the scan is CPU only), editing a streamed file (an overlay on a scan). The table above says what the app does
+meanwhile. MX frame's order (its session, 2026-10-18): F-145 (every core inside a row group), then the GPU for a
+streamed file, editing over a scan, count distinct / percentiles / top-k, SQL and joins (M8), CSV streaming, versions.
 
 When MX frame's Mojo API is ready, the switch is one layer: `GridSource`, the ops modules
 (`mojoui/orders_ops.mojo`, `orders_report.mojo`) and the Workbook's compute() call the engine; the components

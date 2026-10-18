@@ -20,6 +20,8 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 **What it means:** omxplorer can open a file bigger than the machine's memory and answer questions about it in seconds, with no Python anywhere in the app. What still waits is the engine's: SQL and joins, a second table, versions, distinct/percentile operators, the GPU for streamed files, faster Parquet decode (F-141).
 
+**Update, same night:** MX frame 581250b (F-141–F-143) re-vendored: 100M streamed rows open in 0.4 s (was 4.3 s), a streamed group-by takes 0.58 s (was 7.5 s).
+
 **Next small step:** the GPU for a streamed file (one row group at a time on the device), or editing over a scan, both in MX frame first.
 
 ---

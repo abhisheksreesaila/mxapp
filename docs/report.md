@@ -49,6 +49,10 @@ Without `OMX_STREAM_ROWS`, a file streams only when it wouldn't fit a quarter of
 - Narrow column headers truncate their names ("amou…") because the grid's minimum width doesn't count the type badge. This predates goal 20.
 - The Mac and iPad builds of the streamed path haven't been run.
 
+## Update: MX frame 581250b (same night)
+
+The MX frame session finished F-141–F-143 (bulk, parallel and prefetched Parquet decode) and F-140's review fixes. Re-vendored (D-196); a streamed sheet now asks the scan for its words, which are built on first use (D-197); a file deleted while open keeps reading, one that changes size says so (D-198). Measured on the same 100M-row file: opening (with the first column's total) 4.3 s → 0.4 s, a streamed total 4.5 s → 0.44 s, a group-by 7.5 s → 0.58 s, one row group 177 ms → 12 ms; peak 0.18 GB.
+
 ## Next
 
 The GPU for a streamed file, or editing over a scan. Both need MX frame first, as does faster Parquet decoding (F-141).
