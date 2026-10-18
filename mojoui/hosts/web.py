@@ -518,8 +518,10 @@ CANVAS_JS = r"""
   }
   const scan = () => document.querySelectorAll('[data-kind=canvas]').forEach(attach);
   // nothing has the keyboard: the first canvas that takes keys (the grid) gets it, so arrows work at once
+  // (a button or file picker left focused by the click that changed the screen doesn't count: only a field that takes typing does)
+  const typing = el => el && (el.matches('textarea, select, [contenteditable]') || (el.matches('input') && !el.matches('[type=file], [type=checkbox], [type=radio]')));
   function focusFirst() {
-    if (window.mojouiKeyCanvas !== undefined || (document.activeElement && document.activeElement !== document.body)) return;
+    if (window.mojouiKeyCanvas !== undefined || typing(document.activeElement)) return;
     const first = document.querySelector('[data-kind=canvas][data-keys="1"]');
     if (first) { if (!first.mojoui) attach(first); first.querySelector('canvas').focus({ preventScroll: true }); }
   }
