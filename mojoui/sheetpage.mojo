@@ -50,25 +50,80 @@ def groups_of(sheet: Sheet, c: Int) -> Int:
     return sheet.word_count(c)
 
 
+comptime BLANK = "(blank)"
+
+
+def total_of(xs: List[Int]) -> Int:
+    var t = 0
+    for x in xs:
+        t += x
+    return t
+
+
+def with_blanks(cells: List[Int], by_row: List[Int], by_col: List[Int], total: Int, ng: Int, nc: Int, blank_row: Bool, blank_col: Bool) -> List[Int]:
+    """The grid of `cells` (ng rows × nc columns, rows whose row and column are both known) with a "(blank)" row
+    and/or column added, so every row of the table lands in some cell: a row with an empty column value is the row's
+    total (`by_row`) less its cells, one with an empty row value is the column's total (`by_col`) less its cells, and
+    one with both empty is what is left of the table's `total`."""
+    var cols = nc + (1 if blank_col else 0)
+    var rows = ng + (1 if blank_row else 0)
+    var out = List[Int](length=rows * cols, fill=0)
+    var corner = total - total_of(by_row) - total_of(by_col) + total_of(cells)
+    for r in range(ng):
+        var seen = 0
+        for c in range(nc):
+            out[r * cols + c] = cells[r * nc + c]
+            seen += cells[r * nc + c]
+        if blank_col:
+            out[r * cols + nc] = by_row[r] - seen
+    if blank_row:
+        for c in range(nc):
+            var seen = 0
+            for r in range(ng):
+                seen += cells[r * nc + c]
+            out[ng * cols + c] = by_col[c] - seen
+        if blank_col:
+            out[ng * cols + nc] = corner
+    return out^
+
+
 def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) raises:
-    """The object's numbers: one group-by of its value column by its text column(s), on the GPU for a big table."""
+    """The object's numbers: one group-by of its value column by its text column(s), on the GPU for a big table.
+    Rows whose group is empty make a "(blank)" group (a row and/or a column of a pivot), as in a spreadsheet's pivot
+    table, so the numbers add up to the column's total."""
     var ng = groups_of(sheet, obj.group)
     obj.labels = List[String]()
     for code in range(ng):
         obj.labels.append(sheet.text_of(obj.group, Int64(code)))
-    var key = col(sheet.name(obj.group))
-    var groups = ng
     obj.cols = List[String]()
-    if obj.kind == OBJ_PIVOT and obj.across >= 0:
-        var nc = groups_of(sheet, obj.across)
-        for code in range(nc):
-            obj.cols.append(sheet.text_of(obj.across, Int64(code)))
-        key = key * lit(nc) + col(sheet.name(obj.across))  # (row × columns + column: one dense key)
-        groups = ng * nc
-    var r = sheet.totals(obj.value, key^, groups, filter)
-    obj.sums = r.sums.copy()
-    obj.counts = r.counts.copy()
-    obj.milliseconds = r.milliseconds
+    var all = sheet.totals(obj.value, None, 1, filter)
+    var by_row = sheet.totals(obj.value, col(sheet.name(obj.group)), ng, filter)
+    var blank_row = all.counts[0] > total_of(by_row.counts)
+    var pivot = obj.kind == OBJ_PIVOT and obj.across >= 0
+    if not pivot:
+        obj.sums = by_row.sums.copy()
+        obj.counts = by_row.counts.copy()
+        if blank_row:
+            obj.labels.append(BLANK)
+            obj.sums.append(all.sums[0] - total_of(by_row.sums))
+            obj.counts.append(all.counts[0] - total_of(by_row.counts))
+        obj.milliseconds = all.milliseconds + by_row.milliseconds
+        return
+    var nc = groups_of(sheet, obj.across)
+    for code in range(nc):
+        obj.cols.append(sheet.text_of(obj.across, Int64(code)))
+    var across = col(sheet.name(obj.across))
+    var key = col(sheet.name(obj.group)) * lit(nc) + across  # (row × columns + column: one dense key)
+    var cells = sheet.totals(obj.value, key^, ng * nc, filter)
+    var by_col = sheet.totals(obj.value, across.copy(), nc, filter)
+    var blank_col = all.counts[0] > total_of(by_col.counts)
+    obj.sums = with_blanks(cells.sums, by_row.sums, by_col.sums, all.sums[0], ng, nc, blank_row, blank_col)
+    obj.counts = with_blanks(cells.counts, by_row.counts, by_col.counts, all.counts[0], ng, nc, blank_row, blank_col)
+    if blank_row:
+        obj.labels.append(BLANK)
+    if blank_col:
+        obj.cols.append(BLANK)
+    obj.milliseconds = all.milliseconds + by_row.milliseconds + cells.milliseconds + by_col.milliseconds
 
 
 comptime BINS = 16

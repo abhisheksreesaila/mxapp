@@ -302,7 +302,7 @@ struct Sheet(Movable, GridSource):
         if kind == DATE:
             return "date"
         if kind == BOOL:
-            return "✓"
+            return "bool"
         if kind == INT:
             return "#"
         var f = self.format_of(c)

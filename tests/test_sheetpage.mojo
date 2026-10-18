@@ -2,7 +2,7 @@
 # edit), the readout in the column's format, free-space placement, and a Report tile through a filter.
 #   scripts/mxbuild.sh tests/test_sheetpage.mojo -o build/test_sheetpage && build/test_sheetpage
 from std.testing import assert_equal, assert_true
-from mxframe import gpu_available, GPU as MX_GPU
+from mxframe import gpu_available, GPU as MX_GPU, Table, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL
 from mojoui.sheet import Sheet, TEXT, DECIMAL
 from mojoui.sample import sample_table
 from mojoui.orders import REGION, PRODUCT, REVENUE, CARRIER, QTY, CUSTOMER
@@ -26,7 +26,71 @@ def cpu_sums(frame: Sheet, group: Int, value: Int, across: Int = -1, n_across: I
     return out^
 
 
+def blanks() raises:
+    """Rows whose group is empty make a "(blank)" group, so charts and pivots add up to the column's total."""
+    var t = Table.empty()
+    var who = t.add_column("who", MX_TEXT)
+    var kind = t.add_column("kind", MX_TEXT)
+    var amount = t.add_column("amount", MX_DECIMAL, 2)
+    for w in ["Acme", "Beta"]:
+        _ = t.add_word(who, w)
+    for w in ["x", "y"]:
+        _ = t.add_word(kind, w)
+    var whos = [0, 1, -1, -1, 0]
+    var kinds = [0, 1, 0, -1, -1]
+    var amounts = [100, 200, 400, 800, 1600]
+    for r in range(5):
+        if whos[r] < 0:
+            t.append_null(who)
+        else:
+            t.append(who, Int64(whos[r]))
+        if kinds[r] < 0:
+            t.append_null(kind)
+        else:
+            t.append(kind, Int64(kinds[r]))
+        t.append(amount, Int64(amounts[r]))
+    var sheet = Sheet(t^.share(), False)
+    var chart = SheetObject.chart(amount, who, 0, 0)
+    compute(chart, sheet)
+    assert_equal(chart.labels[0] + "|" + chart.labels[1] + "|" + chart.labels[2], "Acme|Beta|(blank)")
+    assert_equal(chart.sums[0], 1700)
+    assert_equal(chart.sums[1], 200)
+    assert_equal(chart.sums[2], 1200)
+    assert_equal(chart.counts[2], 2)
+    var pivot = SheetObject.pivot(amount, who, kind, 0, 0)
+    compute(pivot, sheet)
+    assert_equal(len(pivot.labels), 3)
+    assert_equal(pivot.cols[2], "(blank)")
+    var want_sums = [100, 0, 1600, 0, 200, 0, 400, 0, 800]
+    var want_counts = [1, 0, 1, 0, 1, 0, 1, 0, 1]
+    assert_equal(len(pivot.sums), 9)
+    for k in range(9):
+        assert_equal(pivot.sums[k], want_sums[k])
+        assert_equal(pivot.counts[k], want_counts[k])
+    # a Report filter keeps the blank rows of the other column in its blank group too
+    var filtered = SheetObject.chart(amount, who, 0, 0)
+    compute(filtered, sheet, sheet.where_is(kind, 0))  # kind = x: rows 0 and 2
+    assert_equal(filtered.sums[0], 100)
+    assert_equal(filtered.sums[1], 0)
+    assert_equal(filtered.sums[2], 400)
+    # no blanks, no blank group: the sample's regions
+    var plain = SheetObject.chart(amount, kind, 0, 0)
+    compute(plain, sheet)
+    assert_equal(len(plain.labels), 3)  # (kind has a null)
+    var full = Table.empty()
+    var c0 = full.add_column("g", MX_TEXT)
+    var c1 = full.add_column("v", MX_DECIMAL, 2)
+    _ = full.add_word(c0, "a")
+    full.append(c0, 0)
+    full.append(c1, 5)
+    var s2 = Sheet(full^.share(), False)
+    var no_blank = SheetObject.chart(1, 0, 0, 0)
+    compute(no_blank, s2)
+    assert_equal(len(no_blank.labels), 1)
+
+
 def main() raises:
+    blanks()
     # the GPU when there is one (forced: under a million rows AUTO would stay on the CPU), else the CPU; the oracle below is plain loops
     var gpu = gpu_available()
     var frame = Sheet(sample_table(200_000).share(), gpu)
