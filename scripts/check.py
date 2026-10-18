@@ -261,7 +261,7 @@ def m6():
     if re.search(r"^Py_Initialize", strings, re.M):
         problems.append("strings shows Py_Initialize")
     for needle in ("from std.python", "import pyarrow", "from mojoui.frame ", "from mojoui.frame_gpu"):
-        for f in ("mojoui/csvio.mojo", "mojoui/omxfile.mojo", "mojoui/sheet.mojo", "mojoui/sheetpage.mojo", "mojoui/reportpage.mojo", "examples/omxplorer/app.mojo"):
+        for f in ("mojoui/csvio.mojo", "mojoui/omxfile.mojo", "mojoui/sample.mojo", "mojoui/json.mojo", "mojoui/sheet.mojo", "mojoui/sheetpage.mojo", "mojoui/reportpage.mojo", "examples/omxplorer/app.mojo"):
             if needle in (ROOT / f).read_text():
                 problems.append(f"{f} uses {needle}")
     if not (ROOT / "vendor/mxframe.mojoc").exists() or not (ROOT / "vendor/MXFRAME_COMMIT").read_text().strip():

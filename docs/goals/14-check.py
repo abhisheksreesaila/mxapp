@@ -153,7 +153,8 @@ def m1():
     for src, name, marker, args in (("tests/test_omx_components.mojo", "test_omx_components", "OMX COMPONENT TESTS PASSED", []),
                                     ("tests/test_csvio.mojo", "test_csvio", "CSVIO TESTS PASSED", [str(CSV_1M)]),
                                     ("tests/test_omx_files.mojo", "test_omx_files", "OMX FILE TESTS PASSED", [str(BUILD / "omx-files")]),
-                                    ("tests/test_json.mojo", "test_json", "JSON TESTS PASSED", [])):
+                                    ("tests/test_json.mojo", "test_json", "JSON TESTS PASSED", []),
+                                    ("tests/test_sample.mojo", "test_sample", "SAMPLE TESTS PASSED", [])):
         b = run(["scripts/mxbuild.sh", src, "-o", str(BUILD / name)], timeout=900)  # (F-138c: the tests link the MX frame package)
         t = run(["pixi", "run", str(BUILD / name)] + args, timeout=600) if b.returncode == 0 else b
         if marker not in t.stdout:

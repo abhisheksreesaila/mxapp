@@ -72,6 +72,41 @@ def freight_of(carrier: Int, grams: Int, day: Int) -> Int:
     return 250 + grams * 50 // 1000
 
 
+def order_row(i: Int) -> SIMD[DType.int64, 16]:
+    """Order i (before the double import is applied): a value per column, in column order (the other four lanes are 0)."""
+    var day = Int(uniform(i, 1) * Float64(DAYS))
+    var pick = uniform(i, 2) * 100.0
+    var product = 0
+    var mix = materialize[MIX]()
+    while product < 7 and pick >= Float64(mix[product]):
+        pick -= Float64(mix[product])
+        product += 1
+    var qty = 1 if uniform(i, 3) < 0.7 else (2 if uniform(i, 4) < 0.7 else 3)
+    var grams = materialize[GRAMS]()[product] * qty
+    var region = Int(uniform(i, 7) * 4.0)
+    # Carrier A carries most heavy parcels, nearly all of them in the West (where the story's margin falls)
+    var a_share = (0.92 if region == 0 else 0.68) if grams > 4000 else 0.45
+    var carrier = 0 if uniform(i, 5) < a_share else (1 if uniform(i, 6) < 0.6 else 2)
+    var revenue = materialize[PRICE]()[product] * qty
+    var cost = revenue * materialize[COST_PCT]()[product] // 100
+    var row = SIMD[DType.int64, 16](0)
+    row[ORDER] = Int64(100000 + i)
+    row[DAY] = Int64(YEAR_START + day)
+    row[CUSTOMER] = Int64(customer_of(i))
+    row[REGION] = Int64(region)
+    row[PRODUCT] = Int64(product)
+    row[CARRIER] = Int64(carrier)
+    row[ZIP] = Int64(10001 + Int(uniform(i, 8) * 89000.0))
+    if row[ZIP] == DUP_ZIP:
+        row[ZIP] = Int64(DUP_ZIP + 1)  # (only the double import uses 94110)
+    row[WEIGHT] = Int64(grams)
+    row[QTY] = Int64(qty)
+    row[REVENUE] = Int64(revenue)
+    row[COST] = Int64(cost)
+    row[FREIGHT] = Int64(freight_of(carrier, grams, day))
+    return row
+
+
 def order_columns(n: Int) -> Columns:
     """n rows: n - 412 orders, then 412 of them again (the double import, all at ZIP 94110)."""
     var originals = max(n - DUPLICATES, DUPLICATES)
@@ -80,35 +115,9 @@ def order_columns(n: Int) -> Columns:
     for _ in range(12):
         cols.append(List[Int64](length=total, fill=0))
     for i in range(originals):
-        var day = Int(uniform(i, 1) * Float64(DAYS))
-        var pick = uniform(i, 2) * 100.0
-        var product = 0
-        var mix = materialize[MIX]()
-        while product < 7 and pick >= Float64(mix[product]):
-            pick -= Float64(mix[product])
-            product += 1
-        var qty = 1 if uniform(i, 3) < 0.7 else (2 if uniform(i, 4) < 0.7 else 3)
-        var grams = materialize[GRAMS]()[product] * qty
-        var region = Int(uniform(i, 7) * 4.0)
-        # Carrier A carries most heavy parcels, nearly all of them in the West (where the story's margin falls)
-        var a_share = (0.92 if region == 0 else 0.68) if grams > 4000 else 0.45
-        var carrier = 0 if uniform(i, 5) < a_share else (1 if uniform(i, 6) < 0.6 else 2)
-        var revenue = materialize[PRICE]()[product] * qty
-        var cost = revenue * materialize[COST_PCT]()[product] // 100
-        cols[ORDER][i] = Int64(100000 + i)
-        cols[DAY][i] = Int64(YEAR_START + day)
-        cols[CUSTOMER][i] = Int64(customer_of(i))
-        cols[REGION][i] = Int64(region)
-        cols[PRODUCT][i] = Int64(product)
-        cols[CARRIER][i] = Int64(carrier)
-        cols[ZIP][i] = Int64(10001 + Int(uniform(i, 8) * 89000.0))
-        if cols[ZIP][i] == DUP_ZIP:
-            cols[ZIP][i] = DUP_ZIP + 1  # (only the double import uses 94110)
-        cols[WEIGHT][i] = Int64(grams)
-        cols[QTY][i] = Int64(qty)
-        cols[REVENUE][i] = Int64(revenue)
-        cols[COST][i] = Int64(cost)
-        cols[FREIGHT][i] = Int64(freight_of(carrier, grams, day))
+        var row = order_row(i)
+        for c in range(12):
+            cols[c][i] = row[c]
     # the double import: 412 orders from late September, copied whole, their ZIP set to 94110 in both copies
     var start = originals - DUPLICATES * 7
     for d in range(DUPLICATES):
