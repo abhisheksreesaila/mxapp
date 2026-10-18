@@ -1,13 +1,13 @@
-"""Milestone checker for GOAL.md (goal 19: the agent host; goal 18's checks run as M4, earlier goals' inside them).
-Rebuilds from scratch, prints PASS/FAIL per milestone. The agent host is driven by scripts/agent_client.py, a small MCP
-client over stdio: no LLM runs here.
+"""Milestone checker for GOAL.md (goal 20: omxplorer on what MX frame can do now; goal 19's checks run as M4, every
+earlier goal's inside them). Rebuilds from scratch, prints PASS/FAIL per milestone. omxplorer is driven through the
+agent host (scripts/agent_client.py); the Parquet files are written by pyarrow (scripts/parquet_fixture.py), which
+is also the oracle for their rows and sums.
 
 Run: scripts/check   (a subset without rebuilding: scripts/check M1 M2; earlier goals: through docs/goals/NN-check.py)
 """
 
-import base64
+import decimal
 import importlib.util
-import io
 import os
 import re
 import sys
@@ -25,207 +25,263 @@ def load(name, path):
     return mod
 
 
-g18 = load("goal18", "docs/goals/18-check.py")
-run, BUILD, EXAMPLES, kit, labels, lines = g18.run, g18.BUILD, g18.EXAMPLES, g18.kit, g18.labels, g18.lines
+g19 = load("goal19", "docs/goals/19-check.py")
+g18 = g19.g18
+run, BUILD, EXAMPLES = g18.run, g18.BUILD, g18.EXAMPLES
 from agent_client import Client  # noqa: E402
 
-CORE = ("screen", "act", "read", "render")
+DATA = BUILD / "g20"
+BIG_ROWS = 100_000_000
+GROUP = 1 << 20
 
 
-def env():
-    """Where the apps keep documents and settings during a check (never the owner's own)."""
-    d = BUILD / "agent-home"
-    (d / "documents").mkdir(parents=True, exist_ok=True)
-    (d / "config").mkdir(parents=True, exist_ok=True)
-    return {"OMX_DOCUMENTS": str(d / "documents"), "OMX_CONFIG": str(d / "config"), "OMXAPP_UPLOADS": str(d / "uploads")}
+def env(**more):
+    return dict(g19.env(), **{k: str(v) for k, v in more.items()})
 
 
-def png_size(image):
-    from PIL import Image
-    pic = Image.open(io.BytesIO(base64.b64decode(image["data"])))
-    return pic.size, len(pic.convert("RGB").getcolors(maxcolors=4096) or [None] * 4097)
+def fixture(kind, name, *args):
+    """A pyarrow-written Parquet file in build/g20 (the big one is kept between runs: it takes a minute)."""
+    DATA.mkdir(parents=True, exist_ok=True)
+    path = DATA / name
+    marker = DATA / (name + ".done")
+    if not marker.exists() or marker.read_text() != (ROOT / "scripts/parquet_fixture.py").read_text():
+        r = run(["pixi", "run", "python", "scripts/parquet_fixture.py", kind, str(path), *map(str, args)], timeout=1800)
+        if r.returncode != 0:
+            raise RuntimeError("parquet_fixture.py failed: " + (r.stdout + r.stderr)[-600:])
+        marker.write_text((ROOT / "scripts/parquet_fixture.py").read_text())
+    return path
+
+
+def cell(v):
+    """A value as omxplorer's grid shows it in a column with no format."""
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    return str(v)
+
+
+def money(d):
+    return f"{d:,.2f}"
+
+
+def average(total, n):
+    return money((total / n).quantize(decimal.Decimal("0.01"), rounding=decimal.ROUND_HALF_UP))
+
+
+def opener(c):
+    """The tool that opens a file (a FilePicker: it takes a path)."""
+    return next((t["name"] for t in c.tools() if t["inputSchema"].get("required") == ["path"]), None)
+
+
+def status_of(c):
+    texts, _, _ = c.call("read")
+    return [t[len("status-bar: "):] for t in texts.splitlines() if t.startswith("status-bar: ")]
+
+
+def grid_rows(c, first, count):
+    text, _, err = c.call("read", name="grid", first=first, count=count)
+    if err or not text:
+        return None, text
+    head, *body = text.splitlines()
+    return head.split("\t"), [r.split("\t") for r in body]
+
+
+def peak_kb(pid):
+    for line in Path(f"/proc/{pid}/status").read_text().splitlines():
+        if line.startswith("VmHWM:"):
+            return int(line.split()[1])
+    return 0
+
+
+def mojo_test(src, marker, name, *includes):
+    b = run(["scripts/mxbuild.sh", *sum((["-I", i] for i in includes), []), src, "-o", str(BUILD / name)], timeout=1800)
+    if b.returncode != 0:
+        return f"{src} doesn't build: " + (b.stdout + b.stderr)[-600:]
+    t = run([str(BUILD / name)], timeout=1800)
+    if t.returncode != 0 or marker not in t.stdout:
+        return f"{src} fails: " + (t.stdout + t.stderr)[-600:]
+    return None
 
 
 def m1():
-    """The agent host drives the kit: tools from the tree, act, the dialog's tools while it is open, the design, a picture,
-    the context menu's tools, the sort; GTK with the same steps shows the same status lines."""
+    """omxplorer opens Parquet: the Import step, the sheet's rows and sum equal pyarrow's; a bad file says so."""
+    import pyarrow.parquet as pq
     problems = []
-    c = Client(BUILD / "kit" / "web", env())
+    small = fixture("small", "small.parquet")
+    table = pq.read_table(small)
+    rows = table.to_pylist()
+    names = table.column_names
+    bad = DATA / "not.parquet"
+    bad.write_text("order,amount\n1,2\n")
+    c = Client(BUILD / "omxplorer" / "web", env())
     try:
-        if not c.init.get("capabilities", {}).get("tools", {}).get("listChanged"):
-            problems.append("initialize doesn't announce tools.listChanged")
-        tools = {t["name"]: t for t in c.tools()}
-        for name in CORE + ("file-save", "view-skin-graphite", "save", "open-dialog", "canvas", "show-grid-lines", "sum-average-count"):
-            if name not in tools:
-                problems.append(f"no tool {name} (have {sorted(tools)[:12]}…)")
-        for name in ("file-open", "edit-redo"):  # disabled items are not tools
-            if name in tools:
-                problems.append(f"the disabled item {name} is a tool")
-        if "file-save" in tools and "Ctrl+S" not in tools["file-save"]["description"]:
-            problems.append("file-save's description lacks its shortcut")
-        if "save" in tools and tools["save"]["description"] != "Save the document (Ctrl+S)":
-            problems.append(f"the Save button's tooltip isn't its description: {tools['save']['description']!r}")
-        if "show-grid-lines" in tools and tools["show-grid-lines"]["inputSchema"].get("required") != ["on"]:
-            problems.append("a checkbox tool doesn't require `on`")
-        screen, _, err = c.call("screen")
-        if err or "Menu bar: File, Edit, View, Help" not in screen or "design: Ledger" not in screen or "Canvas" not in screen:
-            problems.append(f"screen lacks the menu bar, the design or the canvas: {screen[:300]!r}")
-        text, _, err = c.call("open-dialog")
-        names = set(c.names())
-        if err or 'dialog "Settings"' not in text or not {"close-dialog", "settings-done", "settings-ledger-graphite-blueprint", "settings-show-grid-lines"} <= names:
-            problems.append(f"open-dialog didn't open Settings with its tools: {text!r} {sorted(names)[-8:]}")
-        if "notifications/tools/list_changed" not in c.notifications:
-            problems.append("no tools/list_changed notification after acting")
-        text, _, err = c.call("act", name="settings-ledger-graphite-blueprint", value={"option": "Graphite"})
-        if err or "Design: Graphite" not in text:
-            problems.append(f"the dialog's radio didn't switch the design: {text!r}")
-        text, _, err = c.call("settings-done")
-        names = set(c.names())
-        if err or "settings-done" in names or "close-dialog" in names:
-            problems.append(f"Done didn't close the dialog (its tools remain): {text!r}")
+        tool = opener(c)
+        desc = next((t["description"] for t in c.tools() if t["name"] == tool), "")
+        if tool is None or "parquet" not in desc.lower():
+            problems.append(f"the Start screen's file picker doesn't say it takes Parquet: {tool} {desc!r}")
+        text, _, err = c.call(tool, path=str(small)) if tool else ("", None, True)
         screen, _, _ = c.call("screen")
-        if "design: Graphite" not in screen:
-            problems.append("screen doesn't say the design is Graphite")
-        text, _, err = c.call("file-save")
-        if err or "Saved kit.omx" not in text or "toast" not in text:
-            problems.append(f"file-save didn't save with a toast: {text!r}")
-        text, images, err = c.call("render", name="canvas", width=460, height=214)
-        if err or len(images) != 1:
-            problems.append(f"render gave no picture: {text!r}")
-        else:
-            size, colours = png_size(images[0])
-            if size != (460, 214) or colours < 3:
-                problems.append(f"the canvas picture is {size} with {colours} colours")
-        text, _, err = c.call("canvas", gesture="secondary", x=120, y=80)
-        names = set(c.names())
-        if err or "context menu" not in text or not {"sort-z-a", "sort-a-z", "delete-column", "close-menu"} <= names:
-            problems.append(f"a secondary gesture opened no context menu with its items as tools: {text!r}")
-        text, _, err = c.call("sort-z-a")
-        if err or "Sorted Z→A" not in text or "sort-z-a" in set(c.names()):
-            problems.append(f"sort-z-a didn't sort and close the menu: {text!r}")
-        text, _, err = c.call("nope")
-        if not err or "no tool" not in text:
-            problems.append(f"a wrong name isn't an error for the agent: {text!r}")
-        text, _, err = c.call("act", name="ledger-graphite-blueprint", value={"option": "Ledger"})
-        if err or "Design: Ledger" not in text:
-            problems.append(f"the inspector's segmented control didn't switch the design back: {text!r}")
+        if err or "Import small.parquet" not in screen or "5,000 rows · 5 columns" not in screen:
+            problems.append(f"small.parquet didn't open the Import step with 5,000 rows and 5 columns: {screen[:400]!r}")
+        for k in ("Integer", "Decimal", "Text", "Date", "Yes/No"):
+            if k not in screen:
+                problems.append(f"the Import step shows no {k} column")
+        empties = {n: table.column(n).null_count for n in names}
         texts, _, _ = c.call("read")
-        status = [t[len("status-bar: "):] for t in texts.splitlines() if t.startswith("status-bar: ")]
+        for n in ("amount", "region"):
+            if f"{empties[n]:,}" not in texts:
+                problems.append(f"the Import step doesn't show {n}'s {empties[n]} empty cells")
+        text, _, err = c.call("create-table")
+        if err:
+            problems.append(f"create-table failed: {text[:200]!r}")
+        head, body = grid_rows(c, 0, 40)
+        if head != names:
+            problems.append(f"the grid's header isn't pyarrow's columns: {head} {body!r}")
+        else:
+            want = [[cell(r[n]) for n in names] for r in rows[:40]]
+            if body != want:
+                diff = next(((i, a, b) for i, (a, b) in enumerate(zip(body, want)) if a != b), None)
+                problems.append(f"the grid's first 40 rows differ from pyarrow's (first difference {diff})")
+        status = status_of(c)
+        total = sum((v for v in table.column("amount").to_pylist() if v is not None), decimal.Decimal(0))
+        present = len(rows) - empties["amount"]
+        for want in ("Rows 5,000", "Sum " + money(total), "Average " + average(total, present)):
+            if want not in status:
+                problems.append(f"the status bar lacks {want!r}: {status}")
+        tool = opener(c)
+        text, _, err = c.call(tool, path=str(bad)) if tool else ("", None, True)
+        status = status_of(c)
+        if not any("not a Parquet file" in s for s in status) or "Rows 5,000" not in status:
+            problems.append(f"a file that isn't Parquet didn't say so, or the sheet changed: {status}")
     finally:
         log = c.close()
     if "Traceback" in log:
         problems.append("the agent host logged a traceback: " + log[-400:])
-    gtk = kit("tap:Open dialog;radio:0=Graphite;tap:Done;menu:File>Save;rightclick:0=400,500;menu:>Sort Z→A;segment:0=Ledger", "kit-agent")  # (the web: a toast over a button blocks it, so the dialog first)
-    if gtk[0] is None:
-        problems.append(gtk[1])
-    else:
-        for host, k in (("GTK", 0), ("web", 1)):
-            missing = [s for s in status if s not in labels(gtk[k])]
-            if missing or not status:
-                problems.append(f"{host}'s status lines after the same steps differ from the agent's: missing {missing} (agent: {status})")
-    return not problems, "; ".join(problems) or f"the kit: {len(tools)} tools at the start, the dialog's and the context menu's while open, the same status as GTK and the web"
+    err = mojo_test("tests/test_parquet_import.mojo", "PARQUET IMPORT TESTS PASSED", "test_parquet_import")
+    if err:
+        problems.append(err)
+    return not problems, "; ".join(problems) or "small.parquet (pyarrow) through the Import step; 40 rows, the sum and the average equal pyarrow's; a bad file says so and the sheet stays"
 
 
 def m2():
-    """omxplorer by an agent: the sample opens, Data > Sort largest first sorts, read gives the grid's rows, render a picture."""
+    """Files bigger than memory: 100M rows streamed; rows far down, the totals, a chart and a pivot equal pyarrow's;
+    edits off; peak memory under a quarter of the table."""
+    import pyarrow.parquet as pq
     problems = []
-    c = Client(BUILD / "omxplorer" / "web", env())
+    big = fixture("big", "big.parquet", BIG_ROWS)
+    pf = pq.ParquetFile(big)
+    names = pf.schema_arrow.names
+    in_memory = BIG_ROWS * len(names) * 8
+    total, present, by_region, rows_by_region = decimal.Decimal(0), 0, {}, {}
+    import pyarrow.compute as pc
+    for g in range(pf.num_row_groups):
+        t = pf.read_row_group(g, columns=["amount", "region"])
+        s = pc.sum(t.column("amount")).as_py()
+        total += s if s is not None else 0
+        present += len(t) - t.column("amount").null_count
+        grouped = t.group_by("region").aggregate([("amount", "sum"), ("amount", "count")])
+        for region, amount in zip(grouped.column("region").to_pylist(), grouped.column("amount_sum").to_pylist()):
+            by_region[region] = by_region.get(region, decimal.Decimal(0)) + (amount or 0)
+    far = 73_456_789
+    want_far = [[cell(v) for v in r.values()] for r in pf.read_row_group(far // GROUP).slice(far % GROUP, 5).to_pylist()]
+    want_top = [[cell(v) for v in r.values()] for r in pf.read_row_group(0).slice(0, 20).to_pylist()]
+    c = Client(BUILD / "omxplorer" / "web", env(OMX_STREAM_ROWS=10_000_000))
     try:
-        screen, _, err = c.call("screen")
-        if err or "open-the-sample" not in c.names():
-            problems.append(f"the Start screen has no open-the-sample tool: {screen[:300]!r}")
-        text, _, err = c.call("open-the-sample")
-        if err or "Rows 1,000,000" not in text:
-            problems.append(f"the sample didn't open with its rows: {text[:300]!r}")
+        base = peak_kb(c.p.pid)
+        tool = opener(c)
+        t0 = time.time()
+        c.call(tool, path=str(big)) if tool else None
         screen, _, _ = c.call("screen")
-        for needle in ("data-sort-largest-first", "status-bar", "Sum ", "Average ", "Rows 1,000,000", "Canvas"):
-            if needle not in screen:
-                problems.append(f"the sheet's screen lacks {needle!r}")
-        before, _, _ = c.call("read", name="grid", count=50)
-        text, _, err = c.call("data-sort-largest-first")
-        if err or "Sorted by revenue" not in text:
-            problems.append(f"Data > Sort largest first didn't sort: {text[:300]!r}")
-        rows, _, err = c.call("read", name="grid", count=50)
-        head, *body = rows.splitlines()
-        cols = head.split("\t")
-        if err or cols[:2] != ["order", "day"] or "revenue" not in cols or len(body) != 50:
-            problems.append(f"read grid isn't the header and 50 rows: {rows[:200]!r}")
+        if "streamed" not in screen.lower() or "100,000,000 rows" not in screen:
+            problems.append(f"the Import step doesn't say the 100M-row file is streamed: {screen[:400]!r}")
+        text, _, err = c.call("create-table")
+        opened = time.time() - t0
+        screen, _, _ = c.call("screen")
+        if err or "Rows 100,000,000" not in screen:
+            problems.append(f"the streamed sheet didn't open with 100,000,000 rows: {screen[:400]!r}")
+        head, body = grid_rows(c, 0, 20)
+        if head != names or body != want_top:
+            problems.append(f"the streamed grid's first 20 rows differ from pyarrow's: {head} {(body or [])[:2]}")
+        head, body = grid_rows(c, far, 5)
+        if body != want_far:
+            problems.append(f"rows {far:,}… differ from pyarrow's: {(body or [])[:2]} vs {want_far[:2]}")
+        status = status_of(c)
+        for want in ("Sum " + money(total), "Average " + average(total, present)):
+            if want not in status:
+                problems.append(f"the streamed status bar lacks {want!r}: {status}")
+        names_now = set(c.names())
+        for off in ("data-sort-largest-first", "data-sort-smallest-first", "file-save", "insert-formula-column", "edit-add-row"):
+            if off in names_now:
+                problems.append(f"{off} is offered on a streamed (read-only) sheet")
+        if "read-only" not in screen.lower():
+            problems.append("the streamed sheet doesn't say it's read-only")
+        text, _, err = c.call("insert-chart")
+        lines, _, err2 = c.call("read", name="chart-1") if "chart-1" in c.names() else ("", None, True)
+        if err or err2:
+            problems.append(f"the chart on the streamed sheet can't be read: {text[:200]!r} {lines[:200]!r} (tools {sorted(c.names())[:40]})")
         else:
-            rev = [float(r.split("\t")[cols.index("revenue")].replace(",", "")) for r in body]
-            if rev != sorted(rev, reverse=True):
-                problems.append(f"the rows aren't sorted by revenue, largest first: {rev[:6]}")
-            if rows == before:
-                problems.append("the grid reads the same before and after the sort")
-        text, images, err = c.call("render", name="grid", width=900, height=400)
-        if err or len(images) != 1:
-            problems.append(f"render grid gave no picture: {text!r}")
-        else:
-            size, colours = png_size(images[0])
-            if size != (900, 400) or colours < 4:
-                problems.append(f"the grid picture is {size} with {colours} colours")
+            got = dict(l.split("\t") for l in lines.splitlines()[1:])
+            for region, amount in by_region.items():
+                if got.get(region if region is not None else "(blank)") != money(amount):
+                    problems.append(f"the chart's {region} is {got.get(region)} (pyarrow {money(amount)})")
+        text, _, err = c.call("insert-pivot-table")
+        texts, _, _ = c.call("read")
+        missing = [r for r, a in by_region.items() if money(a) not in texts]
+        if err or missing:
+            problems.append(f"the pivot on the streamed sheet lacks pyarrow's sums for {missing}: {text[:200]!r}")
+        peak = peak_kb(c.p.pid) * 1024
+        if peak > in_memory // 4:
+            problems.append(f"peak memory {peak / 1e9:.2f} GB is over a quarter of the table's {in_memory / 1e9:.1f} GB (at the start {base * 1024 / 1e9:.2f} GB)")
     finally:
         log = c.close()
     if "Traceback" in log:
         problems.append("the agent host logged a traceback: " + log[-400:])
-    return not problems, "; ".join(problems) or "omxplorer: the sample, a sort from the Data menu, the grid's rows as text, a picture of it"
+    err = mojo_test("tests/test_streamed.mojo", "STREAMED TESTS PASSED", "test_streamed")
+    if err:
+        problems.append(err)
+    return not problems, "; ".join(problems) or f"100,000,000 rows streamed (opened in {opened:.1f} s): rows far down, Sum, Average, a chart and a pivot equal pyarrow's; edits, sorts, formulas and Save off; peak {peak / 1e9:.2f} GB for a {in_memory / 1e9:.1f} GB table"
 
 
 def m3():
-    """A fifth host: the matrix has an Agent column, the one command, the doc."""
+    """No Python in the framework: the Workbook's files and the analytics engine are on the package."""
     problems = []
-    r = run(["pixi", "run", "python", "scripts/components.py", "--check"], timeout=120)
-    if r.returncode != 0:
-        problems.append("docs/components.md is stale")
-    doc = (ROOT / "docs/components.md").read_text()
-    if "Agent (MCP)" not in doc.splitlines()[10]:
-        problems.append("docs/components.md has no Agent (MCP) column")
-    for row in ("`Button`", "`MenuBar`", "`Item`", "`Dialog`", "`Canvas`", "`Toggle`"):
-        line = next((l for l in doc.splitlines() if l.startswith(f"| {row} |")), "")
-        if line.split("|")[-3].strip() != "✅":
-            problems.append(f"{row} isn't ✅ for the agent: {line!r}")
-    r = run(["scripts/agent.sh", "kit"], timeout=600)
-    if r.returncode != 0 or not r.stdout.startswith("claude mcp add kit -- ") or "mojoui/hosts/agent.py" not in r.stdout:
-        problems.append(f"scripts/agent.sh kit doesn't print the Claude Code command: {r.stdout!r} {r.stderr[-200:]!r}")
-    p = ROOT / "docs/agent.md"
-    text = p.read_text() if p.exists() else ""
-    for needle in ("screen", "act", "read", "render", "list_changed", "nothing a person couldn't", "claude mcp add"):
-        if needle not in text:
-            problems.append(f"docs/agent.md lacks {needle!r}")
-    return not problems, "; ".join(problems) or "the matrix's Agent column, scripts/agent.sh, docs/agent.md"
+    for f in sorted((ROOT / "mojoui").rglob("*.mojo")):
+        if re.search(r"^\s*from std\.python|^\s*import std\.python", f.read_text(), re.M):
+            problems.append(f"{f.relative_to(ROOT)} imports std.python")
+    for app in ("workbook", "analytics"):
+        exe = BUILD / app / "linux" / app
+        if not exe.exists():
+            problems.append(f"{exe} isn't built")
+            continue
+        if "libpython" in run(["ldd", str(exe)]).stdout.lower():
+            problems.append(f"{app}'s Linux binary links libpython")
+        if "KGEN_CompilerRT_Python" in run(["nm", "-D", str(exe)]).stdout:
+            problems.append(f"{app}'s Linux binary uses Mojo's Python interop")
+    for src, marker, name, inc in (("tests/test_workbook.mojo", "WORKBOOK TESTS PASSED", "test_workbook", ()),
+                                   ("tests/test_analytics.mojo", "ANALYTICS TESTS PASSED", "test_analytics", ("examples/analytics",))):
+        err = mojo_test(src, marker, name, *inc)
+        if err:
+            problems.append(err)
+    t = (ROOT / "tests/test_workbook.mojo").read_text()
+    if "workbook-pyarrow.mxwb" not in t:
+        problems.append("test_workbook doesn't open the workbook pyarrow saved (tests/fixtures/workbook-pyarrow.mxwb)")
+    return not problems, "; ".join(problems) or "no mojoui module imports std.python; the Workbook and analytics binaries link no libpython; workbooks round-trip and the pyarrow-saved one opens; analytics' engine totals pass"
 
 
 def m4():
-    """Nothing regressed: goal 18's milestones (every earlier goal's inside them)."""
+    """Nothing regressed: goal 19's milestones (goal 18's, F-138's guard and every earlier goal's inside them); the
+    plans are current."""
     problems = []
-    for name, fn in [("18-M1", g18.m1), ("18-M2", g18.m2), ("18-M3", g18.m3), ("18-M4", g18.m4), ("18-M5", g18.m5)]:
+    for name, fn in [("19-M1", g19.m1), ("19-M2", g19.m2), ("19-M3", g19.m3), ("19-M4", g19.m4), ("19-M5", g19.m5)]:
         ok, msg = fn()
         if not ok:
             problems.append(f"{name}: {msg}")
-    return not problems, "; ".join(problems) or "goal 18's M1–M5 (goals 3–17 inside them) pass"
-
-
-def m5():
-    """F-138c (goal 18's M-numbers moved to docs/goals/18-check.py): omxplorer runs on the MX frame package, and its Linux binary carries no Python."""
-    problems = []
-    exe = BUILD / "omxplorer" / "linux" / "omxplorer"
-    if not exe.exists():
-        return False, f"{exe} isn't built"
-    ldd = run(["ldd", str(exe)]).stdout
-    if "libpython" in ldd.lower():
-        problems.append("ldd shows libpython")
-    nm = run(["nm", "-D", str(exe)]).stdout
-    if "KGEN_CompilerRT_Python" in nm:
-        problems.append("nm -D shows KGEN_CompilerRT_Python (Mojo's Python interop)")
-    strings = run(["strings", str(exe)]).stdout
-    if re.search(r"^Py_Initialize", strings, re.M):
-        problems.append("strings shows Py_Initialize")
-    for needle in ("from std.python", "import pyarrow", "from mojoui.frame ", "from mojoui.frame_gpu"):
-        for f in ("mojoui/csvio.mojo", "mojoui/omxfile.mojo", "mojoui/sample.mojo", "mojoui/json.mojo", "mojoui/sheet.mojo", "mojoui/sheetpage.mojo", "mojoui/reportpage.mojo", "examples/omxplorer/app.mojo"):
-            if needle in (ROOT / f).read_text():
-                problems.append(f"{f} uses {needle}")
-    if not (ROOT / "vendor/mxframe.mojoc").exists() or not (ROOT / "vendor/MXFRAME_COMMIT").read_text().strip():
-        problems.append("vendor/mxframe.mojoc or its recorded source commit is missing")
-    return not problems, "; ".join(problems) or "the omxplorer Linux binary has no libpython (ldd), no KGEN_CompilerRT_Python (nm -D) and no Py_Initialize (strings); its engine modules import only the MX frame package; the package is vendored with its source commit"
+    plan = (ROOT / "docs/plans/needs-mxframe.md").read_text()
+    for needle in ("scan_parquet", "Parquet files open", "no Python"):
+        if needle not in plan:
+            problems.append(f"docs/plans/needs-mxframe.md doesn't mention {needle!r}")
+    return not problems, "; ".join(problems) or "goal 19's M1–M5 (goals 3–18 and F-138 inside them) pass; needs-mxframe.md is current"
 
 
 def main():
@@ -247,7 +303,7 @@ def main():
                 if a.returncode != 0:
                     print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4)]:
         if only and name not in only:
             continue
         t0 = time.time()
