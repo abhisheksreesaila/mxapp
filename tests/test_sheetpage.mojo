@@ -2,6 +2,7 @@
 # edit), the readout in the column's format, free-space placement, and a Report tile through a filter.
 #   scripts/mxbuild.sh tests/test_sheetpage.mojo -o build/test_sheetpage && build/test_sheetpage
 from std.testing import assert_equal, assert_true
+from mxframe import gpu_available, GPU as MX_GPU
 from mojoui.sheet import Sheet, TEXT, DECIMAL
 from mojoui.sample import sample_table
 from mojoui.orders import REGION, PRODUCT, REVENUE, CARRIER, QTY, CUSTOMER
@@ -26,7 +27,12 @@ def cpu_sums(frame: Sheet, group: Int, value: Int, across: Int = -1, n_across: I
 
 
 def main() raises:
-    var frame = Sheet(sample_table(200_000).share(), False)  # (the CPU: under a million rows AUTO stays there)
+    # the GPU when there is one (forced: under a million rows AUTO would stay on the CPU), else the CPU; the oracle below is plain loops
+    var gpu = gpu_available()
+    var frame = Sheet(sample_table(200_000).share(), gpu)
+    if gpu:
+        frame.mode = MX_GPU
+    assert_equal(frame.totals(REVENUE).on_gpu, gpu)
     frame.set_text(REVENUE, 0, "99999.99")  # an edit the GPU's copy doesn't have: added as a delta
 
     # a chart: revenue by region
@@ -128,4 +134,4 @@ def main() raises:
     assert_true("|Nets to zero|" in listed, "a row that nets to zero shows")
     assert_true("|Unused|" not in listed, "a row with no rows doesn't")
     assert_true("|$8.00|" in listed and "|−$3.00|" in listed and "|$5.00|" in listed, "column totals and grand total: " + listed)
-    print("SHEETPAGE TESTS PASSED")
+    print("SHEETPAGE TESTS PASSED · sums on the " + ("GPU" if gpu else "CPU (no GPU here)") + " equal a CPU pass")

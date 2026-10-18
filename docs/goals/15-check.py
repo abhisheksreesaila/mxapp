@@ -85,7 +85,7 @@ def m1():
         states = [c.strip() for c in row.split("|") if c.strip() in ("✅", "🔨", "❌")]
         if states[:2] != ["✅", "✅"]:
             problems.append(f"the matrix shows {name} as {states[:2]} on Linux and web")
-    return not problems, "; ".join(problems) or "sheet objects (charts, pivots: GPU sums = a CPU pass, with an edit) and the report page (tiles through a filter) in mojoui with a test; ✅ on Linux and web in the matrix"
+    return not problems, "; ".join(problems) or "sheet objects (charts, pivots: sums on the GPU, forced, when there is one, = a CPU pass, with an edit) and the report page (tiles through a filter) in mojoui with a test; ✅ on Linux and web in the matrix"
 
 
 def m2():

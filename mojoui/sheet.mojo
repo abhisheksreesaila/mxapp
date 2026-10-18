@@ -53,12 +53,14 @@ struct Sheet(Movable, GridSource):
     var formats: List[ColumnFormat]  # per column (stored, then formulas): how its values read; AUTO = by type
     var device: Optional[DeviceTable]  # the table on the GPU (None: no GPU, or the table didn't fit)
     var device_name: String
+    var mode: Int  # CPU, GPU or AUTO (the default: the GPU from a million rows); tests force the GPU to compare it with the CPU
 
     def __init__(out self, table: SharedTable, use_gpu: Bool = True):
         self.frame = MxFrame(table)
         self.formats = List[ColumnFormat]()
         self.device = None
         self.device_name = "CPU"
+        self.mode = MX_AUTO
         if use_gpu and gpu_available():
             try:
                 var dt = DeviceTable(table)
@@ -253,13 +255,13 @@ struct Sheet(Movable, GridSource):
             q = q^.group_by(key.value().copy(), groups)
         var v = col(self.name(value))
         q = q^.agg(sum(v), count(), count(v))
-        var r = q^.compute(MX_AUTO)
+        var r = q^.compute(self.mode)
         return Sums(r.values(0), r.counts.copy(), r.values(2), r.milliseconds, r.device == MX_GPU)
 
     def span(self, c: Int) raises -> Tuple[Int64, Int64, Bool]:
         """The smallest and largest value of column c over its non-empty rows (False: there are none)."""
         var v = col(self.name(c))
-        var r = self.query().agg(min_of(v), max_of(v)).compute(MX_AUTO)
+        var r = self.query().agg(min_of(v), max_of(v)).compute(self.mode)
         if not r.present(0, 0):
             return (Int64(0), Int64(0), False)
         return (Int64(r.values(0)[0]), Int64(r.values(1)[0]), True)
