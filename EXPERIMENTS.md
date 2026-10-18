@@ -4,6 +4,25 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-17 · Experiment 18: omxapp on the iPad: the kit app, the UIKit and AppKit hosts (autopilot, evening)
+
+**Goal:** the owner's definite target is iPadOS; MX frame is still cooking. So: the kit app (`examples/kit`, every component on one screen) runs on GTK and the web, and the UIKit and AppKit hosts catch up with everything omxplorer's screens use: menus and shortcuts, context menus, popovers, dialogs, toasts, checkboxes, tooltips, Board, Overlay, button styles, tones, the canvas gestures and hardware keys, the skins and the bundled fonts. Contract: `GOAL.md` (goal 18). Report: `docs/report.md`.
+
+**What worked:**
+- **The kit app** on Linux and the web, driven by the check (menus, Ctrl+S, a right-click menu, a dialog, a toast with Undo, a popover, checkboxes, a Board drag, a skin switch), identical dumps, light and dark.
+- **The UIKit host** builds every kind, links, bundles and signs for iPad with only the allowed symbols; Info.plist allows every iPad orientation and multitasking; the fonts ship in the .ipa.
+- **The AppKit host** builds every kind, with the app's menus in the system menu bar and ⌘ shortcuts; links, bundles and signs.
+
+**Not verified:** none of the Apple builds has run. Every Apple cell in `docs/components.md` is 🔨 (built, never run). The owner runs them at the weekend; `docs/journal.md` lists what to look at first.
+
+**What broke and how it was fixed:** see `docs/journal.md` (a `ref` invalidated by building a child; file IO that doesn't compile for Apple targets; the archived checker's ROOT).
+
+**What it means:** the day the Apple builds run, omxplorer's screens have their native pieces on the iPad; what's left for omxplorer there is MX frame (no Python) and D-151's own-drawn chrome.
+
+**Next small step:** the owner's weekend run; then fix what it shows, and goal 16's polish.
+
+---
+
 ## 2026-10-17 · Experiment 17: omxplorer's universal theme and the components it needs (autopilot, afternoon)
 
 **Goal:** one fixed look for omxplorer on every platform (Claude's Ledger by default, Graphite and Blueprint as skins; `docs/design/universal/kit.html`), and the components the kit showed were missing: a menu bar, menus and context menus, keyboard shortcuts, dialogs, toasts, popovers, tooltips, checkboxes, grid badges. Contract: `GOAL.md` (goal 17). Report: `docs/report.md`.

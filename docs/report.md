@@ -1,30 +1,40 @@
-# Goal 17 report: omxplorer's universal theme and the components it needs
+# Goal 18 report: omxapp on the iPad: the kit app, the UIKit and AppKit hosts
 
-**End goal:** one look for omxplorer on every platform (Claude's Ledger by default; Graphite and Blueprint as skins), and the components the design kit showed were missing: a menu bar, menus, dialogs, toasts, tooltips, popovers, checkboxes, grid badges.
+**End goal:** the owner's definite target is iPadOS. While MX frame is still being written, everything omxplorer's screens use should exist in the iPad host too, the iPad's own way, proven as far as Linux can prove it.
+
+**Plainly: no Apple build has run on hardware yet.** This goal proves that the kit links, bundles and signs for iPad and Mac with only the allowed symbols, and that the hosts build every kind the kit uses. The owner runs them at the weekend; every Apple cell in `docs/components.md` stays 🔨 until then.
 
 ## How far it got
-`scripts/check` (see `build/check-goal17.log` for the run):
+`scripts/check` (`build/check-goal18.log`):
 
 | # | Milestone | Result |
 |---|---|---|
-| M1 | The skins: exact tokens, vendored and baked fonts, both hosts report `DESIGN: ledger` / `graphite`, light and dark screenshots | PASS |
-| M2 | Menus: the bar on both hosts, Data > Sort largest first sorts, Ctrl+S saves, a right-click context menu sorts; identical dumps | PASS |
-| M3 | Settings dialog switches the skin live and saves it; a sort's toast undoes it; tooltips on every tool; ƒx's popover | PASS |
-| M4 | Grid badges and corner marks, read back from pixels | PASS |
-| M5 | The Ledger Start screen and the sheet carry the menu bar; About | PASS |
-| M6 | Goal 15's checks (goals 3–14 inside them) and the matrix | PASS (build/check-goal17-m6.log) |
+| M1 | The kit app on GTK and the web: menus, Ctrl+S, a context menu, a dialog, a toast with Undo, a popover, checkboxes, a Board drag, a skin switch; identical dumps; light and dark | PASS |
+| M2 | The UIKit host builds every kind the kit uses; the kit links, bundles and signs for iPad; 🔨 on iPhone | PASS |
+| M3 | iPad: every orientation, multitasking, ⌘ shortcuts from menu items, pointer tooltips, right click / long press, hardware keys, bundled fonts | PASS |
+| M4 | The AppKit host: the same, with the app's menus in the system menu bar; the kit links, bundles and signs for Mac | PASS |
+| M5 | Goal 17's checks (goals 3–15 inside them) and the matrix | PASS |
 
 ## 30-second demo
 ```
-scripts/omxplorer.sh                    # Linux: the Ledger; File > Settings… to switch skins
-pixi run python mojoui/hosts/web.py build/omxplorer/web   # the web, the same look
+scripts/build.sh kit all      # Linux, web, Mac (.app + zip), iPad/iPhone (.ipa)
+build/kit/linux/kit           # the kit on Linux: right-click the canvas, File > Save, Ctrl+S, the skin segments
+apple/install_iphone.sh kit   # the owner's wizard: xtool installs build/kit/ios/KitMojo.ipa on a device
 ```
-Right-click a column header for its menu; Ctrl+S saves; Data > Sort largest first shows a toast with Undo. Screenshots from the check: `build/omxplorer/skin-ledger-*.png`, `skin-graphite-*.png`, `menu-context-web.png`, `settings-web.png`, `popover-web.png`, `start-*.png`.
+
+## What to look at first on the iPad (the weekend)
+1. Does the window show the kit at all (the Board with the table and note, the inspector)?
+2. File menu button → a UIMenu with Save (⌘S shown); ⌘S from a hardware keyboard saves (the status bar says so).
+3. Right-click (trackpad) or long-press the canvas → a popover of items; "Sort Z→A" updates the status bar; tapping outside closes it (on_close).
+4. "Open dialog" → a form sheet with the radio skins and checkboxes; Done closes it; Graphite turns the window dark.
+5. "Show toast" → a strip at the bottom with Undo and ✕; it leaves after 6 s.
+6. Drag the note by its title (the Board's on_move).
+7. Hover a tool button with a trackpad → a tooltip.
 
 ## Three decisions worth a second look
-- **D-154** menus are flat buttons inside the hosts' own popovers, not GMenu models: the skin styles them and tests read them. GMenu would have given Mac-style menus for free later; the Mac gets its own path anyway (D-151).
-- **D-155** Inter replaces Noto Sans for canvas text on every design (not only the skins), and the plain JetBrains Mono replaces the Nerd Font build: one atlas set. The Fluent showcase's canvas type changed slightly.
-- **D-156** the skin reloads live: the GTK host swaps its CSS provider and the web page swaps a `<style>` and the body class. Everything else in the window stays; nothing restarts.
+- **D-157** the kit app is the proving ground: every host builds it, and its screen is the contract the matrix reads.
+- **D-158** on iPad, context menus and popovers are popover-presented controllers of plain buttons, not UIKit's context-menu interaction (which needs the menu at interaction time; our model opens it after a round trip).
+- **D-159** "Ctrl" means ⌘ on Apple platforms.
 
 ## What's next
-Goal 16's polish list (sheet tabs on the left, hairlines between tool groups, the Σ total row), then the command palette and the Import dialog once MX frame streams.
+The weekend run; then fix what it shows. omxplorer itself reaches the iPad once MX frame replaces its Python shims. The wasm target stays parked (D-90).
