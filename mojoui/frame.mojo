@@ -13,7 +13,7 @@ from std.collections import Dict, Set
 from std.memory import Pointer, stack_allocation
 from std.memory.alloc import alloc, Layout
 from mojoui.datagrid import GridSource
-from mojoui.numformat import ColumnFormat, format_number, format_date, AUTO, NUMBER, PERCENT, CURRENCY
+from mojoui.numformat import ColumnFormat, format_number, format_date, date_text, parse_decimal, decimal_text, AUTO, NUMBER, PERCENT, CURRENCY
 
 comptime INT = 0
 comptime DECIMAL = 1
@@ -141,11 +141,6 @@ def two(n: Int) -> String:
     return ("0" if n < 10 else "") + String(n)
 
 
-def date_text(days: Int64) -> String:
-    var ymd = civil_from_days(Int(days))
-    return String(ymd[0]) + "-" + two(ymd[1]) + "-" + two(ymd[2])
-
-
 def parse_date(text: String) raises -> Int64:
     var parts = text.strip().split("-")
     if len(parts) != 3:
@@ -160,61 +155,6 @@ def parse_date(text: String) raises -> Int64:
     if back[1] != m or back[2] != d:
         raise Error("not a date: '" + text + "'")
     return Int64(days)
-
-
-def parse_decimal(text: String, scale: Int) raises -> Int64:
-    """"12.5" with scale 2 → 1250; rounds extra digits away. Reads what the formats print back: "$1,234.50",
-    "−3.0" (a real minus sign), "(1,234)" (negative), "€9", "36.4%" (0.364)."""
-    var t = String(text.strip())
-    for sym in ["$", "€", "£", "₹", ",", " "]:
-        t = t.replace(sym, "")
-    t = t.replace("−", "-")
-    var neg = False
-    if t.startswith("(") and t.endswith(")"):
-        var inner = String(t[byte = 1 : t.byte_length() - 1])
-        t = inner
-        neg = True
-    var percent = t.endswith("%")
-    if percent:
-        var number = String(t[byte = : t.byte_length() - 1])
-        t = number
-    if t.startswith("-"):
-        neg = not neg
-        var rest = String(t[byte=1:])
-        t = rest
-    if percent:  # 36.4% is 0.364: two more places, then shift
-        var scaled = parse_decimal(t, scale + 2)  # (36.4 at scale+2 places, ÷ 10^4 = 0.364 at scale places)
-        var div = pow10(4)
-        var v = (scaled + div // 2) // div
-        return -v if neg else v
-    var dot = t.find(".")
-    var whole = t if dot < 0 else String(t[byte=:dot])
-    var frac = String("") if dot < 0 else String(t[byte=dot + 1:])
-    for c in (whole + frac).codepoint_slices():
-        if not (ord("0") <= ord(c) <= ord("9")):
-            raise Error("not a number: '" + text + "'")
-    var v = (Int64(Int(whole)) if whole != "" else 0) * pow10(scale)
-    var f: Int64 = 0
-    var digits = 0
-    for c in frac.codepoint_slices():
-        if digits < scale:
-            f = f * 10 + Int64(ord(c) - ord("0"))
-            digits += 1
-    for _ in range(scale - digits):
-        f *= 10
-    v += f
-    return -v if neg else v
-
-
-def decimal_text(v: Int64, scale: Int) -> String:
-    if scale == 0:
-        return String(v)
-    var p = pow10(scale)
-    var a = v if v >= 0 else -v
-    var frac = String(a % p)
-    while frac.byte_length() < scale:
-        frac = "0" + frac
-    return ("-" if v < 0 else "") + String(a // p) + "." + frac
 
 
 # ---------- columns ----------

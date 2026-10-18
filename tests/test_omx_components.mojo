@@ -7,7 +7,7 @@ from mojoui import View, Button, FilePicker, Toggle, Dropdown, TOOL, TOOL_ON, BU
 from mojoui.numformat import (ColumnFormat, format_number, format_date, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT,
                               DATE_LONG, DATE_MONTH, DATE_ISO)
 from mojoui.inspector import Inspector, Section, Row, Stepper
-from mojoui.frame import parse_decimal
+from mojoui.numformat import parse_decimal
 from mojoui.sheetchrome import Tool, Toolbar, SheetTabs, FormulaBar, StatusBar
 
 

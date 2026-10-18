@@ -4,6 +4,7 @@
 # Parquet is written and read through pyarrow (Python) on Linux and the web; the Mojo-level MX frame
 # API (docs/mxframe-mojo-api.md, item 19) replaces that later. The JSON is plain enough for an agent to write.
 
+from mojoui.json import json_string
 from std.python import Python, PythonObject
 from mojoui.frame import Column, Columns, Frame, Row, Edit, share, base_at, INT, DECIMAL, TEXT, DATE, MAX_COLS
 
@@ -40,26 +41,6 @@ def write_text(path, text):
     with open(path, "w") as f:
         f.write(text)
 """
-
-
-def json_string(s: String) -> String:
-    var out = String('"')
-    for c in s.codepoint_slices():
-        if c == '"':
-            out += '\\"'
-        elif c == "\\":
-            out += "\\\\"
-        elif c == "\n":
-            out += "\\n"
-        elif c == "\t":
-            out += "\\t"
-        elif c == "\r":
-            out += "\\r"
-        elif ord(c) < 32:
-            out += "\\u00" + ("0" if ord(c) < 16 else "1") + String(ord(c) % 16) if ord(c) % 16 < 10 else "\\u00" + ("0" if ord(c) < 16 else "1") + chr(ord("a") + ord(c) % 16 - 10)
-        else:
-            out += c
-    return out + '"'
 
 
 struct Bridge(Movable):

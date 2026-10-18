@@ -1,8 +1,9 @@
 # Frame: typed columns, formulas with a dependency graph, edits, tombstones, sort permutation, undo.
 # Run: pixi run mojo run -I . tests/test_frame.mojo
 from std.testing import assert_equal, assert_true, assert_false
-from mojoui.frame import (Column, Columns, Frame, Range, share, INT, DECIMAL, TEXT, DATE, date_text, parse_date,
-                          decimal_text, parse_decimal, OP_COL)
+from mojoui.numformat import date_text, parse_decimal, decimal_text
+from mojoui.frame import (Column, Columns, Frame, Range, share, INT, DECIMAL, TEXT, DATE, parse_date,
+                          OP_COL)
 
 
 def sample() -> Int:
