@@ -6,7 +6,7 @@
 #
 # Format 1 (the pyarrow shim's files) is refused with a message that says so.
 
-from mxframe import write_parquet, read_parquet, Table
+from mxframe import write_parquet, read_parquet, Table, UNCOMPRESSED
 from mojoui.sheet import Sheet, INT, DECIMAL, TEXT
 from mojoui.json import Json, json_string
 from mojoui.numformat import ColumnFormat
@@ -48,7 +48,8 @@ def save_omx(path: String, sheet: Sheet, objects: List[SheetObject] = [], tiles:
              filter: ReportFilter = ReportFilter(-1, 0)) raises:
     """Writes the table as it stands (every alive row, the edits applied), the sheet's charts and pivots, and the
     Report (its tiles and filter) to `path` (.omx)."""
-    write_parquet(path, sheet.frame.bake(), metadata(sheet, objects, tiles, filter))
+    # uncompressed for now: a document saved on Linux must open on the Mac build, which has no zstd or snappy (vendoring static codecs for it is a follow-up)
+    write_parquet(path, sheet.frame.bake(), metadata(sheet, objects, tiles, filter), UNCOMPRESSED)
 
 
 def format_from(j: Json, node: Int) -> ColumnFormat:

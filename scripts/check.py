@@ -226,6 +226,11 @@ def m4():
         problems.append(msg)
     if g05.same_source("kit", ["mac"]):
         problems.append("the Mac build isn't from the current kit app")
+    ok, msg = g05.apple_ok("omxplorer", "mac")  # F-138c: omxplorer links for Mac on the MX frame package, with only the allowed symbols
+    if not ok:
+        problems.append(msg)
+    if g05.same_source("omxplorer", ["mac"]):
+        problems.append("the Mac build isn't from the current omxplorer")
     for name in NEW_ROWS:
         states = matrix_states(name)
         if len(states) < 4 or states[3] not in ("🔨", "✅"):

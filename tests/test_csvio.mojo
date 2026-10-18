@@ -64,6 +64,7 @@ def main() raises:
     assert_equal(s.columns[1].empty, 1)
     assert_equal(s.columns[2].kind, BOOL)
     var t = Sheet(s.table, False)
+    assert_equal(t.grid_badge(2), "bool")
     assert_equal(t.display(0, 1), "")
     assert_equal(t.display(1, 1), "")
     assert_equal(t.display(1, 0), "10.50")

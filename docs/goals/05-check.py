@@ -34,7 +34,7 @@ ALLOWED = {
     "_dlsym", "_dup", "_fclose", "_fdopen", "_fflush", "_memcpy", "_memmove", "_memset", "_bzero",
     "_strlen", "_write", "_posix_memalign", "_free",
     # libSystem, for the MX frame package (files, mmap, time)
-    "___error", "_close", "_getpid", "_lseek", "_lstat", "_mkdir", "_mmap", "_munmap", "_open", "_read", "_rename", "_stat", "_strerror", "_unlink", "_clock_gettime_nsec_np",
+    "___error", "_close", "_getpid", "_lseek", "_lstat", "_mkdir", "_mmap", "_munmap", "_open", "_read", "_rename", "_stat", "_strerror", "_unlink", "_clock_gettime_nsec_np", "_getenv", "_log10",
     # UIKit
     "_UIApplicationMain",
 }
