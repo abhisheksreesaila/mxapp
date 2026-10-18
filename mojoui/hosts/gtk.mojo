@@ -1355,7 +1355,8 @@ struct GtkHost[A: App](Movable):
                     if self.rt.shown.nodes[p.node].style == TOOL or self.rt.shown.nodes[p.node].style == TOOL_ON:
                         external_call["gtk_label_set_text", NoneType](external_call["gtk_widget_get_last_child", Int](external_call["gtk_button_get_child", Int](w)), t.as_c_string_span())
                     elif self.rt.shown.nodes[p.node].style == ICON_ONLY or self.rt.shown.nodes[p.node].style == ICON_ON:
-                        external_call["gtk_widget_set_tooltip_text", NoneType](w, t.as_c_string_span())
+                        if self.rt.shown.nodes[p.node].tip == "":  # (a tooltip of its own stays)
+                            external_call["gtk_widget_set_tooltip_text", NoneType](w, t.as_c_string_span())
                     else:
                         external_call["adw_button_content_set_label", NoneType](external_call["gtk_button_get_child", Int](w), t.as_c_string_span())
                 elif kind == BUTTON or kind == TOGGLE:
@@ -2662,7 +2663,7 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
             if n.style == TOOL or n.style == TOOL_ON:
                 print("BUTTON: " + c_str(external_call["gtk_label_get_text", Int](external_call["gtk_widget_get_last_child", Int](external_call["gtk_button_get_child", Int](w)))))
             elif n.hint != "" and (n.style == ICON_ONLY or n.style == ICON_ON):
-                print("BUTTON: " + c_str(external_call["gtk_widget_get_tooltip_text", Int](w)))
+                print("BUTTON: " + n.text)  # (only its icon shows; its own tooltip, when it has one, replaces the title there)
             elif n.hint != "":
                 print("BUTTON: " + c_str(external_call["adw_button_content_get_label", Int](external_call["gtk_button_get_child", Int](w))))
             else:
