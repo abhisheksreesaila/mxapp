@@ -162,7 +162,7 @@ def m6():
 
 def m7():
     problems = []
-    b = run(["pixi", "run", "mojo", "build", "-I", "examples/workbook", "-I", ".", "tests/bench_workbook.mojo", "-o",
+    b = run(["scripts/mxbuild.sh", "-I", "examples/workbook", "-I", ".", "tests/bench_workbook.mojo", "-o",
              str(BUILD / "bench_workbook")], timeout=900)
     t = run(["pixi", "run", str(BUILD / "bench_workbook")], timeout=900) if b.returncode == 0 else b
     m = re.search(r"WORKBOOK: recompute ([\d.]+) ms, grid redraw ([\d.]+) ms", t.stdout)
@@ -173,7 +173,7 @@ def m7():
         problems.append(f"a page recompute took {recompute:.1f} ms (> 15)")
     if redraw > 16:
         problems.append(f"a grid redraw took {redraw:.1f} ms (> 16)")
-    b2 = run(["pixi", "run", "mojo", "build", "-I", ".", "tests/bench_frame.mojo", "-o", str(BUILD / "bench_frame")], timeout=900)
+    b2 = run(["scripts/mxbuild.sh", "-I", ".", "tests/bench_frame.mojo", "-o", str(BUILD / "bench_frame")], timeout=900)
     t2 = run([str(BUILD / "bench_frame")], timeout=900) if b2.returncode == 0 else b2
     calls = [float(x) for x in re.findall(r"kernel\+copies ([\d.]+) ms", t2.stdout)]
     sorts = {k: float(v) for k, v in re.findall(r"SORT: (\w+) \d+ rows in ([\d.]+) ms, ordered", t2.stdout)}
@@ -207,7 +207,7 @@ def m10():
     problems = []
     if "return OMARCHY" not in APP.read_text():
         problems.append("the Workbook doesn't use the Omarchy design")
-    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tests/test_theme.mojo", "-o", str(BUILD / "test_theme")], timeout=900)
+    b = run(["scripts/mxbuild.sh", "-I", ".", "tests/test_theme.mojo", "-o", str(BUILD / "test_theme")], timeout=900)
     if b.returncode != 0:
         return False, f"test_theme build: {(b.stdout + b.stderr)[-300:]}"
     import os, tempfile
@@ -269,7 +269,7 @@ def m12():
             problems.append(f"{host}: a double click on the header didn't fit the column")
     if shown(fit[0]) != shown(fit[1]):
         problems.append("GTK and web fit to different widths")
-    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tests/test_workbook.mojo", "-o", str(BUILD / "test_workbook")], timeout=900)
+    b = run(["scripts/mxbuild.sh", "-I", ".", "tests/test_workbook.mojo", "-o", str(BUILD / "test_workbook")], timeout=900)
     t = run(["pixi", "run", str(BUILD / "test_workbook")], timeout=900) if b.returncode == 0 else b
     if "WORKBOOK TESTS PASSED" not in t.stdout:
         problems.append(f"widths don't survive save → open: {(t.stdout + t.stderr)[-200:]}")

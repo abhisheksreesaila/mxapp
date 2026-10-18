@@ -133,7 +133,7 @@ def average(total, count, places=2):
 def ensure_csv():
     if CSV_1M.exists():
         return True, ""
-    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tools/orders_csv.mojo", "-o", str(BUILD / "orders_csv")], timeout=900)
+    b = run(["scripts/mxbuild.sh", "-I", ".", "tools/orders_csv.mojo", "-o", str(BUILD / "orders_csv")], timeout=900)
     if b.returncode != 0:
         return False, f"orders_csv build: {(b.stdout + b.stderr)[-300:]}"
     r = run(["pixi", "run", str(BUILD / "orders_csv"), "1000000", str(CSV_1M)], timeout=900)

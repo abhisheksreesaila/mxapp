@@ -69,7 +69,7 @@ def both(steps, name):
 
 
 def built_test(src, out_name, marker, includes=(".",)):
-    args = ["pixi", "run", "mojo", "build"]
+    args = ["scripts/mxbuild.sh"]  # (goal 20: the tests link the MX frame package, D-189)
     for inc in includes:
         args += ["-I", inc]
     b = run(args + [src, "-o", str(BUILD / out_name)], timeout=900)

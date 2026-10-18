@@ -52,7 +52,7 @@ def settings(tag, text):
 
 
 def mojo_test(name, passed):
-    b = run(["pixi", "run", "mojo", "build", "-I", ".", f"tests/{name}.mojo", "-o", str(BUILD / name)], timeout=900)
+    b = run(["scripts/mxbuild.sh", "-I", ".", f"tests/{name}.mojo", "-o", str(BUILD / name)], timeout=900)
     t = run(["pixi", "run", str(BUILD / name)], timeout=600) if b.returncode == 0 else b
     return None if passed in t.stdout else f"{name}: {(t.stdout + t.stderr)[-300:]}"
 

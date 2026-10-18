@@ -1,5 +1,6 @@
 # A workbook saved and opened again is the same workbook: columns, dictionaries, formulas, edits,
-# added and removed rows, objects and layout. Build it: pixi run mojo build -I . tests/test_workbook.mojo -o build/test_workbook
+# added and removed rows, objects and layout; and one the pyarrow code saved opens the same.
+# Build it: scripts/mxbuild.sh tests/test_workbook.mojo -o build/test_workbook
 from std.testing import assert_equal, assert_true
 from mojoui.frame import Column, Columns, Frame, share, INT, DECIMAL, TEXT, DATE
 from mojoui.workbook import save_workbook, open_workbook, read_widths, ObjectSpec
@@ -47,6 +48,17 @@ def main() raises:
             assert_equal(of.display(c, r), f.display(c, r), f.name(c) + " row " + String(r))
             compared += 1
     assert_equal(of.display(0, 1), "Stool")
+    # a workbook the pyarrow code saved (goal 20 took Python out; tests/fixtures/workbook-pyarrow.mxwb) opens the same
+    var old_specs = List[ObjectSpec]()
+    var old = open_workbook("tests/fixtures/workbook-pyarrow.mxwb", "contoso", 0, old_specs, addr)
+    assert_equal(old.columns(), f.columns())
+    assert_equal(old.rows(), f.rows())
+    for c in range(f.columns()):
+        for r in range(f.rows()):
+            assert_equal(old.alive(r), f.alive(r))
+            assert_equal(old.display(c, r), f.display(c, r), "pyarrow-saved " + f.name(c) + " row " + String(r))
+    assert_equal(len(old_specs), 2)
+    assert_equal(old_specs[1].text, objects[1].text)
     assert_equal(of.display(4, 6), "8.75")  # total of the appended row: 7 × 1.25
     assert_equal(len(specs), 2)
     assert_equal(specs[1].text, objects[1].text)

@@ -1,56 +1,24 @@
 # mojoui.workbook: a workbook on disk, a folder `name.mxwb/`:
 #   workbook.json    the tables (their source or Parquet file, formulas, the session's edits), the objects, the layout
 #   table-<k>.parquet  a table's stored columns (only when it has no reproducible source)
-# Parquet is written and read through pyarrow (Python) on Linux and the web; the Mojo-level MX frame
-# API (docs/mxframe-mojo-api.md, item 19) replaces that later. The JSON is plain enough for an agent to write.
+# Parquet is written and read by the MX frame package (no Python, goal 20): each stored column is a plain integer
+# column, as the pyarrow code before it wrote them, so older workbooks open. The JSON is read by mojoui.json and is
+# plain enough for an agent to write.
 
-from mojoui.json import json_string
-from std.python import Python, PythonObject
+from std.os import makedirs
+from mxframe import Table as MxTable, read_parquet, write_parquet, UNCOMPRESSED, INT as MX_INT
+from mojoui.json import json_string, Json
 from mojoui.frame import Column, Columns, Frame, Row, Edit, share, base_at, INT, DECIMAL, TEXT, DATE, MAX_COLS
 
-comptime BRIDGE = """
-import ctypes, json, os
 
-import numpy as np
-import pyarrow as pa
-import pyarrow.parquet as pq
-
-
-def write_parquet(path, names, addresses, rows):
-    cols = {}
-    for name, address in zip(names, addresses):
-        raw = (ctypes.c_int64 * int(rows)).from_address(int(address))
-        cols[name] = pa.array(np.frombuffer(raw, dtype=np.int64))
-    pq.write_table(pa.table(cols), path)
-
-
-def read_parquet(path):
-    \"\"\"[names, arrays] where each array is a contiguous int64 numpy array (kept alive by the caller).\"\"\"
-    t = pq.read_table(path)
-    arrays = [np.ascontiguousarray(t.column(n).to_numpy().astype(np.int64)) for n in t.column_names]
-    return [list(t.column_names), arrays, [a.ctypes.data for a in arrays], [len(a) for a in arrays]]
-
-
-def read_json(path):
-    with open(path) as f:
-        return json.load(f)
-
-
-def write_text(path, text):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+def write_text(path: String, text: String) raises:
     with open(path, "w") as f:
         f.write(text)
-"""
 
 
-struct Bridge(Movable):
-    var py: PythonObject
-
-    def __init__(out self) raises:
-        var types = Python.import_module("types")
-        var builtins = Python.import_module("builtins")
-        self.py = types.ModuleType("mojoui_workbook_bridge")
-        _ = builtins.exec(BRIDGE, self.py.__dict__)
+def read_text(path: String) raises -> String:
+    with open(path, "r") as f:
+        return f.read()
 
 
 @fieldwise_init
@@ -119,17 +87,15 @@ def table_json(frame: Frame, source: String, parquet: String) raises -> String:
 def save_workbook(path: String, frame: Frame, source: String, objects: List[ObjectSpec], widths: List[Int] = []) raises:
     """Writes `path` (a folder ending in .mxwb). Tables with a source name aren't copied: the JSON
     says how to rebuild them; others get a Parquet file beside the JSON."""
-    var bridge = Bridge()
     var parquet = String("") if source != "" else String("table-0.parquet")
+    makedirs(path, exist_ok=True)
     if parquet != "":
         ref base = frame.base()[]
-        var names = Python.list()
-        var addresses = Python.list()
-        for c in range(len(base.cols)):
-            names.append(PythonObject(base.cols[c].name))
-            addresses.append(PythonObject(Int(base.cols[c].values.unsafe_ptr())))
-        _ = bridge.py.write_text(path + "/workbook.json", "")  # (makes the folder)
-        _ = bridge.py.write_parquet(path + "/" + parquet, names, addresses, base.rows)
+        var t = MxTable.empty()
+        for c in range(len(base.cols)):  # (each stored column as plain integers: kinds and dictionaries are in the JSON)
+            var k = t.add_column(base.cols[c].name, MX_INT)
+            t.cols[k].values = base.cols[c].values.copy()
+        write_parquet(path + "/" + parquet, t, "", UNCOMPRESSED)
     var out = String('{"mojoui_workbook": 1, "tables": [') + table_json(frame, source, parquet) + '], "widths": ['
     for k in range(len(widths)):  # the grid's column widths in points (0 = the default for its type)
         out += ("," if k > 0 else "") + String(widths[k])
@@ -137,96 +103,94 @@ def save_workbook(path: String, frame: Frame, source: String, objects: List[Obje
     for k in range(len(objects)):
         out += ("," if k > 0 else "") + objects[k].to_json()
     out += "]}\n"
-    _ = bridge.py.write_text(path + "/workbook.json", out)
-
-
-def py_str(o: PythonObject) raises -> String:
-    return String(o)
+    write_text(path + "/workbook.json", out)
 
 
 def open_workbook(path: String, shared_source: String, shared_addr: Int, mut objects: List[ObjectSpec], mut base_addr: Int) raises -> Frame:
     """Reads `path`: returns the frame (its session edits applied), fills `objects` and sets `base_addr`.
     A table whose source matches the process's shared data reuses it; otherwise its Parquet file is
     loaded (and shared for the rest of the process)."""
-    var bridge = Bridge()
-    var doc = bridge.py.read_json(path + "/workbook.json")
-    var t = doc["tables"][0]
-    var source = py_str(t["source"])
+    var j = Json.parse(read_text(path + "/workbook.json"))
+    var t = j.at(j.get(0, "tables"), 0)
+    if t < 0:
+        raise Error("the workbook has no table")
+    var source = j.text(j.get(t, "source"))
     var addr = shared_addr
     if source == "" or source != shared_source:
-        if py_str(t["parquet"]) == "":
+        var file = j.text(j.get(t, "parquet"))
+        if file == "":
             raise Error("the workbook's table has no source and no Parquet file")
-        var read = bridge.py.read_parquet(path + "/" + py_str(t["parquet"]))
+        var read = read_parquet(path + "/" + file)
+        var stored = read.take_table()
+        var specs = j.get(t, "columns")
+        if j.size(specs) != stored.columns():
+            raise Error("the workbook's table has " + String(j.size(specs)) + " columns, its Parquet file " + String(stored.columns()))
         var cols = Columns()
-        var n = Int(py=read[0].__len__())
-        for c in range(n):
-            var spec = t["columns"][c]
-            var col = Column(py_str(spec["name"]), Int(py=spec["kind"]), Int(py=spec["scale"]))
-            var rows = Int(py=read[3][c])
-            var p = Pointer[Int64, MutUntrackedOrigin](unsafe_from_address=Int(py=read[2][c]))
-            col.values = List[Int64](capacity=rows)
-            for i in range(rows):
-                col.values.append(p[unsafe_offset=i])
+        for c in range(stored.columns()):
+            var spec = j.at(specs, c)
+            var col = Column(j.text(j.get(spec, "name")), j.number(j.get(spec, "kind")), j.number(j.get(spec, "scale")))
+            col.values = List[Int64](capacity=stored.rows())
+            for v in stored.values(c):
+                col.values.append(v)
             if col.kind == TEXT:
-                var words = spec["dictionary"]
-                for k in range(Int(py=words.__len__())):
-                    col.dictionary.append(py_str(words[k]))
+                var words = j.get(spec, "dictionary")
+                for k in range(j.size(words)):
+                    col.dictionary.append(j.text(j.at(words, k)))
             cols.add(col^)
         addr = share(cols^)
     var frame = Frame(addr)
     var stored = frame.stored()
-    var rows = frame.base()[].rows
-    var formulas = t["formulas"]
-    for k in range(Int(py=formulas.__len__())):
-        _ = frame.formula(py_str(formulas[k]))
-    var words = t["words"]
-    for k in range(Int(py=words.__len__())):
-        var c = Int(py=words[k][0])
+    var formulas = j.get(t, "formulas")
+    for k in range(j.size(formulas)):
+        _ = frame.formula(j.text(j.at(formulas, k)))
+    var words = j.get(t, "words")
+    for k in range(j.size(words)):
+        var w = j.at(words, k)
+        var c = j.number(j.at(w, 0))
         if c < 0 or c >= stored:
             raise Error("words: column " + String(c) + " doesn't exist")
-        frame.words[c].append(py_str(words[k][1]))
-    var added = t["added"]
-    for k in range(Int(py=added.__len__())):
+        frame.words[c].append(j.text(j.at(w, 1)))
+    var added = j.get(t, "added")
+    for k in range(j.size(added)):
+        var a = j.at(added, k)
         var r = Row(0)
-        var width = Int(py=added[k].__len__())
+        var width = j.size(a)
         if width > stored:
             raise Error("added row " + String(k) + " has " + String(width) + " values for " + String(stored) + " columns")
         for c in range(width):
-            r[c] = Int64(Int(py=added[k][c]))
+            r[c] = Int64(j.number(j.at(a, c)))
         frame.added.append(r)
-    var edits = t["edits"]
-    for k in range(Int(py=edits.__len__())):
-        var c = Int(py=edits[k][0])
-        var row = Int(py=edits[k][1])
+    var edits = j.get(t, "edits")
+    for k in range(j.size(edits)):
+        var e = j.at(edits, k)
+        var c = j.number(j.at(e, 0))
+        var row = j.number(j.at(e, 1))
         if c < 0 or c >= stored or row < 0 or row >= frame.rows():
             raise Error("edit " + String(k) + " names column " + String(c) + ", row " + String(row) + ": not in the table")
-        frame.set(c, row, Int64(Int(py=edits[k][2])))
-    var removed = t["removed"]
-    for k in range(Int(py=removed.__len__())):
-        var row = Int(py=removed[k])
+        frame.set(c, row, Int64(j.number(j.at(e, 2))))
+    var removed = j.get(t, "removed")
+    for k in range(j.size(removed)):
+        var row = j.number(j.at(removed, k))
         if row < 0 or row >= frame.rows():
             raise Error("removed row " + String(row) + ": not in the table")
         frame.remove(row)
-    _ = rows
     frame.log = List[Edit]()  # what the file holds isn't undoable
     objects = List[ObjectSpec]()
-    var objs = doc["objects"]
-    for k in range(Int(py=objs.__len__())):
-        var o = objs[k]
-        objects.append(ObjectSpec(Int(py=o["kind"]), py_str(o["title"]), Int(py=o["x"]), Int(py=o["y"]), Int(py=o["w"]), Int(py=o["h"]),
-                                  Int(py=o["a"]), Int(py=o["b"]), Int(py=o["c"]), py_str(o["text"]), Int(py=o["selected"])))
+    var objs = j.get(0, "objects")
+    for k in range(j.size(objs)):
+        var o = j.at(objs, k)
+        objects.append(ObjectSpec(j.number(j.get(o, "kind")), j.text(j.get(o, "title")), j.number(j.get(o, "x")), j.number(j.get(o, "y")),
+                                  j.number(j.get(o, "w")), j.number(j.get(o, "h")), j.number(j.get(o, "a")), j.number(j.get(o, "b")),
+                                  j.number(j.get(o, "c")), j.text(j.get(o, "text")), j.number(j.get(o, "selected"))))
     base_addr = addr
     return frame^
 
 
 def read_widths(path: String) raises -> List[Int]:
     """The grid's column widths saved with the workbook (empty if it has none: older files)."""
-    var bridge = Bridge()
-    var doc = bridge.py.read_json(path + "/workbook.json")
+    var j = Json.parse(read_text(path + "/workbook.json"))
     var out = List[Int]()
-    if Bool(py=doc.__contains__("widths")):
-        var w = doc["widths"]
-        for k in range(Int(py=w.__len__())):
-            out.append(max(0, min(Int(py=w[k]), 2000)))
+    var w = j.get(0, "widths")
+    for k in range(j.size(w)):
+        out.append(max(0, min(j.number(j.at(w, k)), 2000)))
     return out^
-

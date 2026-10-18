@@ -128,7 +128,7 @@ def m3():
 
 def bench():
     exe = BUILD / "bench_lens"
-    b = run(["pixi", "run", "mojo", "build", "-I", "examples/lens", "-I", ".", "tests/bench_lens.mojo", "-o", str(exe)], timeout=900)
+    b = run(["scripts/mxbuild.sh", "-I", "examples/lens", "-I", ".", "tests/bench_lens.mojo", "-o", str(exe)], timeout=900)
     if b.returncode != 0:
         return None, f"bench build failed: {(b.stdout + b.stderr)[-500:]}"
     r = run([str(exe)], timeout=600)
@@ -222,7 +222,7 @@ def m6():
     if not view_line(wout) or view_line(wout)[2] != 2.0:
         problems.append(f"real wheel/drag didn't reach the app on the web: {view_line(wout)}")
     # A frame that changes the screen's shape (playback ends, a button appears) must reach the page.
-    b = run(["pixi", "run", "mojo", "build", "-I", "tests/frame_rebuild", "-I", ".", "hosts/web_main.mojo", "--emit", "shared-lib",
+    b = run(["scripts/mxbuild.sh", "-I", "tests/frame_rebuild", "-I", ".", "hosts/web_main.mojo", "--emit", "shared-lib",
              "-o", str(BUILD / "frame_rebuild" / "web" / "mojoui_app.so")], timeout=900)
     import drive
     rr, rout = drive.web_run(BUILD / "frame_rebuild" / "web", "toggle:Play;wait:Replay;tap:Replay") if b.returncode == 0 else (None, b.stderr[-300:])

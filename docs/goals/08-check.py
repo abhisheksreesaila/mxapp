@@ -98,7 +98,7 @@ def m3():
         problems.append(f"chart tests: {out}")
     if "FlintChart(" not in (ROOT / "examples/analytics/app.mojo").read_text():
         problems.append("the dashboard's charts aren't Flint specs")
-    b = run(["pixi", "run", "mojo", "build", "-I", "examples/analytics", "-I", ".", "tests/flint_specs.mojo",
+    b = run(["scripts/mxbuild.sh", "-I", "examples/analytics", "-I", ".", "tests/flint_specs.mojo",
              "-o", str(BUILD / "flint_specs")], timeout=900)
     if b.returncode != 0:
         return False, f"spec export didn't build: {(b.stdout + b.stderr)[-300:]}"
@@ -119,7 +119,7 @@ def m3():
 
 
 def m4():
-    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tests/bench_groupby.mojo", "-o", str(BUILD / "bench_groupby")], timeout=900)
+    b = run(["scripts/mxbuild.sh", "-I", ".", "tests/bench_groupby.mojo", "-o", str(BUILD / "bench_groupby")], timeout=900)
     if b.returncode != 0:
         return False, f"bench build: {(b.stdout + b.stderr)[-300:]}"
     r = run([str(BUILD / "bench_groupby")], timeout=600)
@@ -186,7 +186,7 @@ def m5():
 
 def m6():
     problems = []
-    b = run(["pixi", "run", "mojo", "build", "-I", "examples/analytics", "-I", ".", "tests/test_analytics.mojo",
+    b = run(["scripts/mxbuild.sh", "-I", "examples/analytics", "-I", ".", "tests/test_analytics.mojo",
              "-o", str(BUILD / "test_analytics")], timeout=900)
     t = run(["pixi", "run", str(BUILD / "test_analytics")], timeout=900) if b.returncode == 0 else b
     engines = re.search(r"^ENGINES: identical on (\d+) numbers", t.stdout, re.M)
