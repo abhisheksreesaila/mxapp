@@ -63,6 +63,4 @@ def read_csv(path: String) raises -> CsvImport:
     for c in r.columns:
         info.append(CsvColumn(c.name, c.kind.value, c.scale, c.empty, c.distinct, c.sample.copy(), c.failed_count))
     var skipped = r.skipped.copy()
-    var table = Table()
-    swap(table, r.table)  # (r.table^ can't be moved out while the rest of r is still read)
-    return CsvImport(path, r.rows, info^, skipped^, r.seconds, table^.share(), r.seconds)
+    return CsvImport(path, r.rows, info^, skipped^, r.seconds, r.take_table().share(), r.seconds)

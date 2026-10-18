@@ -257,13 +257,17 @@ struct Json(Movable):
                 out.append(UInt8(e))
             elif e == ord("u"):
                 var cp = self.hex4()
-                if cp >= 0xD800 and cp < 0xDC00:  # a surrogate pair
+                if cp >= 0xDC00 and cp < 0xE000:
+                    raise self.fail("a lone low surrogate")
+                if cp >= 0xD800 and cp < 0xDC00:  # a high surrogate needs its low one right after
                     if self.pos + 1 < len(self.src) and self.src[self.pos] == ord("\\") and self.src[self.pos + 1] == ord("u"):
                         self.pos += 2
                         var lo = self.hex4()
+                        if lo < 0xDC00 or lo >= 0xE000:
+                            raise self.fail("a high surrogate not followed by a low one")
                         cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00)
                     else:
-                        raise self.fail("a lone surrogate")
+                        raise self.fail("a lone high surrogate")
                 for x in chr(cp).as_bytes():
                     out.append(x)
             else:

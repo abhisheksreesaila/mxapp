@@ -71,7 +71,9 @@ def is_text(sheet: Sheet, c: Int) -> Bool:
 def read_meta(path: String, mut table: Table) raises -> Json:
     """The file's table (moved into `table`) and its metadata, refused unless it is a format-2 omxplorer document."""
     var r = read_parquet(path)
-    swap(table, r.table)
+    table = r.take_table()
+    if table.columns() == 0:
+        raise Error("it has no columns")
     if r.metadata == "":
         raise Error("it isn't an omxplorer document")
     var j = Json.parse(r.metadata)

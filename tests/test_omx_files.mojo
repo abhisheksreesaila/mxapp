@@ -125,7 +125,9 @@ def main() raises:
     write_parquet(folder + "/bad-formula.omx", small_table(),
                   '{"omx": 2, "columns": [{"name": "name"}, {"name": "amount"}], "formulas": [{"text": "x = nothing + 1"}]}')
     refused(folder + "/bad-formula.omx", "a formula column can't be rebuilt")
+    refused("tests/fixtures/zero-columns.omx", "no columns")  # valid omx:2 metadata over a Parquet file with 0 columns (the writer refuses to make one)
+    refused("tests/fixtures/format1.omx", "older omxplorer")  # a real format-1 file, made by the old pyarrow writer (tests/fixtures/make_v1.py)
     with open(folder + "/garbage.omx", "w") as g:
         g.write("this is not a parquet file at all")
     refused(folder + "/garbage.omx", "can't open")
-    print("OMX FILE TESTS PASSED · round trip + 8 bad files refused")
+    print("OMX FILE TESTS PASSED · round trip + 10 bad files refused")

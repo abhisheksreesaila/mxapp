@@ -20,11 +20,58 @@ def main() raises:
     assert_equal(j.number(j.get(0, "missing"), 7), 7)
     var back = Json.parse(json_string('tab\t quote" back\\ é \x01'))
     assert_equal(back.text(0), 'tab\t quote" back\\ é \x01')
-    for bad in ["", "{", '{"a" 1}', "[1,]", '"open', "1.5", "{} x", '{"a": tru}']:
+    for bad in ["", "{", '{"a" 1}', "[1,]", '"open', "1.5", "{} x", '{"a": tru}', '"\\udc00"', '"\\udbff\\uffff"', '"\\ud800"', '"\\ud800x"', '"\\ud800\\n"']:
         var failed = False
         try:
             _ = Json.parse(bad)
         except e:
             failed = String(e).startswith("not JSON: ")
         assert_true(failed, "refuses: " + bad)
-    print("JSON TESTS PASSED")
+
+    # fuzz: random fragments and mutations of real metadata either parse or are refused; nothing aborts the app
+    var pieces: List[String] = ["{", "}", "[", "]", '"', ":", ",", "\\", "u", "d", "8", "0", "c", "f", "-", "1", "9", "t", "r", "e", "n", "l",
+                                "x", " ", "é", "😀", "\\u", "\\ud83d", "\\ude00", "\\udc00", "\\ud800", "\\uffff", "\\u0000", "\\n",
+                                "true", "false", "null", '"omx"', '"columns"', "123", "-5", "1.5", "1e3", "\x01"]
+    var real = String('{"omx": 2, "columns": [{"name": "a\\u00e9", "format": {"style": 2, "symbol": "\\ud83d\\ude00"}}], "formulas": [], "objects": [{"kind": 1, "x": -4}], "report": {"tiles": [], "filter": {"col": 0, "word": "West"}}}')
+    var seed = UInt64(12345)
+    var parsed = 0
+    var refused = 0
+    for i in range(40000):
+        var text = String("")
+        seed = seed * 6364136223846793005 + 1442695040888963407
+        if i % 2 == 0:  # random fragments
+            var n = Int((seed >> 33) % 24) + 1
+            for _ in range(n):
+                seed = seed * 6364136223846793005 + 1442695040888963407
+                text += pieces[Int((seed >> 33) % UInt64(len(pieces)))]
+        else:  # the real metadata with a piece dropped, doubled or replaced
+            var chars = List[String]()
+            for c in real.codepoint_slices():
+                chars.append(String(c))
+            var at = Int((seed >> 33) % UInt64(len(chars)))
+            seed = seed * 6364136223846793005 + 1442695040888963407
+            var how = Int((seed >> 33) % 4)
+            seed = seed * 6364136223846793005 + 1442695040888963407
+            var swap_in = pieces[Int((seed >> 33) % UInt64(len(pieces)))]
+            for k in range(len(chars)):
+                if k == at:
+                    if how == 0:
+                        continue  # dropped
+                    if how == 1:
+                        text += chars[k]  # doubled
+                    if how == 2:
+                        text += swap_in  # replaced
+                        continue
+                    if how == 3:
+                        text += swap_in  # inserted
+                text += chars[k]
+                if how == 3 and k > at + 20:
+                    break  # (and cut short)
+        try:
+            _ = Json.parse(text)
+            parsed += 1
+        except e:
+            assert_true(String(e).startswith("not JSON: "), String(e))
+            refused += 1
+    assert_true(parsed > 100 and refused > 100, "the fuzz reached both outcomes")
+    print("JSON TESTS PASSED · fuzz " + String(parsed) + " parsed, " + String(refused) + " refused")
