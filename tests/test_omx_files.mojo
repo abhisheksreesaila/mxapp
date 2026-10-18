@@ -1,49 +1,40 @@
-# mojoui.omxfile: a document round-trips everything a session can do to a table (edits, a new word, added and
-# removed rows, merged spellings, formulas, formats), and a file that isn't what its metadata says is refused
-# before it reaches the engine's memory.
-#   pixi run mojo build -I . tests/test_omx_files.mojo -o build/test_omx_files && pixi run build/test_omx_files build/omx-files
-from std.testing import assert_equal, assert_true, assert_false
-from std.python import Python
+# mojoui.omxfile (format 2, MX frame's Parquet): a document round-trips everything a session can do to a table (edits,
+# empty cells, a new word, added and removed rows, merged spellings, formulas, formats, charts, pivots, the Report and
+# its filter), and a file that isn't an omxplorer document is refused with a message.
+#   scripts/mxbuild.sh tests/test_omx_files.mojo -o build/test_omx_files && build/test_omx_files build/omx-files
+from std.testing import assert_equal, assert_true
 from std.sys import argv
-from mojoui.frame import Frame, Column, Columns, share, INT, DECIMAL, TEXT, DATE
+from mxframe import Table, write_parquet, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL, DATE as MX_DATE
+from mojoui.sheet import Sheet
 from mojoui.numformat import ColumnFormat, CURRENCY
-from mojoui.omxfile import save_omx, open_omx
+from mojoui.omxfile import save_omx, open_omx, open_document
+from mojoui.sheetpage import SheetObject, OBJ_PIVOT, CHART_LINE
+from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_CHART
 from mojoui.shared import make_dir
 
-comptime BAD_FILES = """
-import json, numpy as np, pyarrow as pa, pyarrow.parquet as pq
 
-def col(name, kind, scale=0, words=None):
-    spec = {"name": name, "kind": kind, "scale": scale, "format": {"style": 0, "decimals": -1, "thousands": True, "parens": False, "symbol": "$"}}
-    if words is not None:
-        spec["dictionary"] = words
-    return spec
+def small_table() raises -> Table:
+    var t = Table.empty()
+    var name = t.add_column("name", MX_TEXT)
+    var amount = t.add_column("amount", MX_DECIMAL, 2)
+    for w in ["Acme", "Beta"]:
+        _ = t.add_word(name, w)
+    t.append(name, 0)
+    t.append(name, 1)
+    t.append(amount, 100)
+    t.append(amount, 250)
+    return t^
 
-def write(path, arrays, specs, version=1, raw_meta=None):
-    meta = raw_meta if raw_meta is not None else json.dumps({"omx": version, "columns": specs, "formulas": []})
-    pq.write_table(pa.table(arrays).replace_schema_metadata({"omx": meta}), path)
 
-def make(folder):
-    ok = {"name": pa.array([0, 1], pa.int64()), "amount": pa.array([100, 250], pa.int64())}
-    good = [col("name", 2, 0, ["Acme", "Beta"]), col("amount", 1, 2)]
-    out = {}
-    out["too-many-columns"] = (dict((f"c{i}", pa.array([1], pa.int64())) for i in range(17)), [col(f"c{i}", 0) for i in range(17)], 1, None)
-    out["described-not-stored"] = (ok, good + [col("missing", 0)], 1, None)
-    out["code-past-dictionary"] = ({"name": pa.array([0, 2], pa.int64()), "amount": ok["amount"]}, good, 1, None)
-    out["negative-code"] = ({"name": pa.array([0, -1], pa.int64()), "amount": ok["amount"]}, good, 1, None)
-    out["nulls"] = ({"name": ok["name"], "amount": pa.array([100, None], pa.int64())}, good, 1, None)
-    out["not-integers"] = ({"name": ok["name"], "amount": pa.array([1.5, 2.5])}, good, 1, None)
-    out["unknown-type"] = (ok, [col("name", 2, 0, ["Acme", "Beta"]), col("amount", 9)], 1, None)
-    out["wrong-version"] = (ok, good, 2, None)
-    out["not-json"] = (ok, good, 1, "{not json")
-    out["good"] = (ok, good, 1, None)
-    paths = {}
-    for name, (arrays, specs, version, raw) in out.items():
-        p = f"{folder}/{name}.omx"
-        write(p, arrays, specs, version, raw)
-        paths[name] = p
-    return paths
-"""
+def refused(path: String, why: String) raises:
+    var raised = False
+    try:
+        _ = open_omx(path)
+    except e:
+        raised = True
+        assert_true(String(e).startswith("can't open"), why + ": " + String(e))
+        assert_true(why in String(e), why + " is not in: " + String(e))
+    assert_true(raised, why + ": the file was opened")
 
 
 def main() raises:
@@ -52,67 +43,89 @@ def main() raises:
     make_dir(folder)
 
     # ---- a round trip of everything a session does ----
-    var cols = Columns()
-    var name = Column("customer", TEXT)
+    var t = Table.empty()
+    var customer = t.add_column("customer", MX_TEXT)
+    var amount = t.add_column("amount", MX_DECIMAL, 2)
+    var day = t.add_column("day", MX_DATE)
     for w in ["Acme Corp", "ACME Corporation", "Beta"]:
-        name.dictionary.append(w)
-    var amount = Column("amount", DECIMAL)
-    var day = Column("day", DATE)
+        _ = t.add_word(customer, w)
     for k in range(6):
-        name.values.append(Int64(k % 3))
-        amount.values.append(Int64(1000 * (k + 1)))
-        day.values.append(Int64(20089 + k))
-    cols.add(name^)
-    cols.add(amount^)
-    cols.add(day^)
-    var frame = Frame(share(cols^))
-    frame.set_text(1, 0, "12.34")  # an edit
-    frame.set_text(0, 2, "Gamma")  # a word the dictionary didn't have
+        t.append(customer, Int64(k % 3))
+        t.append(amount, Int64(1000 * (k + 1)))
+        t.append(day, Int64(20089 + k))
+    var sheet = Sheet(t^.share(), False)
+    sheet.set_text(1, 0, "12.34")  # an edit
+    sheet.set_text(0, 2, "Gamma")  # a word the dictionary didn't have
+    sheet.set_text(1, 4, "")  # an empty cell
     var codes = List[Int64]()
     codes.append(1)
-    _ = frame.merge(0, codes, 0)  # "ACME Corporation" reads as "Acme Corp"
-    frame.remove(3)  # a removed row
+    _ = sheet.frame.merge(0, codes, 0)  # "ACME Corporation" reads as "Acme Corp"
+    sheet.frame.remove(3)  # a removed row
     var values: List[String] = ["Delta", "7.00", "2025-03-01"]
-    _ = frame.append(values)  # an added row (and another new word)
-    _ = frame.formula("double = amount * 2")
-    frame.set_format(1, ColumnFormat(CURRENCY, 2, True, True, "€"))
+    _ = sheet.frame.append(values)  # an added row (and another new word)
+    var margin = sheet.formula("double = amount * 2")
+    sheet.set_format(1, ColumnFormat(CURRENCY, 2, True, True, "€"))
+    sheet.set_format(margin, ColumnFormat(CURRENCY, 0, True, False, "$"))
+    var objects = List[SheetObject]()
+    var pie = SheetObject.pivot(1, 0, -1, 10, 20, 400, 300)
+    pie.style = CHART_LINE
+    objects.append(pie^)
+    var tiles = List[ReportTile]()
+    tiles.append(new_tile(TILE_SUM, 1, -1))
+    tiles.append(new_tile(TILE_CHART, 1, 0))
+    var beta = sheet.code_of(0, "Beta")
     var path = folder + "/roundtrip.omx"
-    save_omx(path, frame)
-    var back = open_omx(path)
-    assert_equal(back.rows(), 6)  # 6 − 1 removed + 1 added
-    var names = List[String]()
-    var amounts = List[String]()
-    for r in range(back.rows()):
-        names.append(back.display(0, r))
-        amounts.append(back.plain_text(1, r))
+    save_omx(path, sheet, objects, tiles, ReportFilter(0, beta))
+
+    var back_objects = List[SheetObject]()
+    var back_tiles = List[ReportTile]()
+    var back_filter = ReportFilter(-1, 0)
+    var back = open_document(path, back_objects, back_tiles, back_filter)
+    assert_equal(back.rows(), 6)  # 6 - 1 removed + 1 added
     var shown_names = String("")
-    for n in names:
-        shown_names += n + "|"
+    for r in range(back.rows()):
+        shown_names += back.display(0, r) + "|"
     assert_equal(shown_names, "Acme Corp|Acme Corp|Gamma|Acme Corp|Beta|Delta|")  # (row 3 gone; merged; new words)
-    assert_equal(amounts[0], "12.34")
-    assert_equal(amounts[5], "7.00")
+    assert_equal(back.plain_text(1, 0), "12.34")
+    assert_equal(back.display(1, 3), "")  # the empty cell (row 4 was removed: it is row 3 now) stays empty
+    assert_true(back.is_null(1, 3))
+    assert_equal(back.plain_text(1, 5), "7.00")
     assert_equal(back.display(2, 5), "2025-03-01")
     assert_equal(back.display(1, 0), "€12.34")  # the format came back
     assert_equal(back.name(3), "double")
     assert_equal(back.plain_text(3, 0), "24.68")  # the formula came back and computes
+    assert_equal(back.display(3, 0), "$25")
+    assert_equal(len(back_objects), 1)
+    assert_equal(back_objects[0].kind, OBJ_PIVOT)
+    assert_equal(back_objects[0].x, 10)
+    assert_equal(back_objects[0].h, 300)
+    assert_equal(back_objects[0].style, CHART_LINE)
+    assert_equal(len(back_tiles), 2)
+    assert_equal(back_tiles[1].kind, TILE_CHART)
+    assert_equal(back_filter.col, 0)
+    assert_equal(back.text_of(0, Int64(back_filter.code)), "Beta")  # the filter is stored as a word
 
     # ---- files that aren't what they say ----
-    var types = Python.import_module("types")
-    var builtins = Python.import_module("builtins")
-    var mod = types.ModuleType("bad_files")
-    _ = builtins.exec(BAD_FILES, mod.__dict__)
-    var paths = mod.make(folder)
-    var good = open_omx(String(py=paths["good"]))
-    assert_equal(good.rows(), 2)
-    var refused = 0
-    for bad in ["too-many-columns", "described-not-stored", "code-past-dictionary", "negative-code", "nulls", "not-integers",
-                "unknown-type", "wrong-version", "not-json"]:
-        var raised = False
-        try:
-            _ = open_omx(String(py=paths[bad]))
-        except e:
-            raised = True
-            assert_true(String(e).startswith("can't open"), bad + ": " + String(e))
-        assert_true(raised, bad + " was opened")
-        refused += 1
-    print("OMX FILE TESTS PASSED · round trip + " + String(refused) + " bad files refused")
+    var good = folder + "/good.omx"
+    save_omx(good, Sheet(small_table().share(), False))
+    assert_equal(open_omx(good).rows(), 2)
+    write_parquet(folder + "/old-format.omx", small_table(), '{"omx": 1, "columns": [], "formulas": []}')
+    refused(folder + "/old-format.omx", "older omxplorer")
+    write_parquet(folder + "/no-metadata.omx", small_table(), "")
+    refused(folder + "/no-metadata.omx", "isn't an omxplorer document")
+    write_parquet(folder + "/not-json.omx", small_table(), "{not json")
+    refused(folder + "/not-json.omx", "not JSON")
+    write_parquet(folder + "/future.omx", small_table(), '{"omx": 3, "columns": []}')
+    refused(folder + "/future.omx", "isn't an omxplorer document")
+    write_parquet(folder + "/described-not-stored.omx", small_table(),
+                  '{"omx": 2, "columns": [{"name": "name"}, {"name": "amount"}, {"name": "extra"}], "formulas": []}')
+    refused(folder + "/described-not-stored.omx", "describes 3 columns but stores 2")
+    write_parquet(folder + "/other-name.omx", small_table(), '{"omx": 2, "columns": [{"name": "name"}, {"name": "money"}], "formulas": []}')
+    refused(folder + "/other-name.omx", "another name")
+    write_parquet(folder + "/bad-formula.omx", small_table(),
+                  '{"omx": 2, "columns": [{"name": "name"}, {"name": "amount"}], "formulas": [{"text": "x = nothing + 1"}]}')
+    refused(folder + "/bad-formula.omx", "a formula column can't be rebuilt")
+    with open(folder + "/garbage.omx", "w") as g:
+        g.write("this is not a parquet file at all")
+    refused(folder + "/garbage.omx", "can't open")
+    print("OMX FILE TESTS PASSED · round trip + 8 bad files refused")

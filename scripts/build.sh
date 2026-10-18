@@ -18,13 +18,7 @@ BUNDLE_ID="${BUNDLE_PREFIX:-com.mojoui}.$EX"
 MOJO=(pixi run mojo build -I "examples/$EX" -I . -I vendor)
 # An example that uses the MX frame package (vendor/mxframe.mojoc, vendor/MXFRAME_COMMIT) links its Parquet codecs.
 LINK=()
-if grep -qx mxframe "examples/$EX/needs" 2>/dev/null; then
-  # Only the two codec libraries, through a folder of their own: an rpath at the whole env would also put its libcurl
-  # ahead of the system one for the GTK libraries (libappstream then fails to link).
-  LIB="$PWD/.pixi/envs/default/lib"; CODECS="$PWD/build/codecs"; mkdir -p "$CODECS"
-  for l in libzstd.so.1 libsnappy.so.1; do ln -sf "$(readlink -f "$LIB/$l")" "$CODECS/$l"; done
-  LINK=(-Xlinker "$CODECS/libzstd.so.1" -Xlinker "$CODECS/libsnappy.so.1" -Xlinker "-rpath=$CODECS")
-fi
+if grep -qx mxframe "examples/$EX/needs" 2>/dev/null; then source scripts/mxlink.sh; fi
 
 mojo_build() {  # mojo_build <args...>: fails if Mojo fails, hides the telemetry warning
   local log; log=$(mktemp)

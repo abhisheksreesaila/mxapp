@@ -144,7 +144,7 @@ def m1():
     problems = []
     for f, needle in (("mojoui/view.mojo", "comptime TOOL = 5"), ("mojoui/view.mojo", "def FilePicker("), ("mojoui/inspector.mojo", "def Inspector("),
                       ("mojoui/inspector.mojo", "def Stepper("), ("mojoui/sheetchrome.mojo", "def FormulaBar("), ("mojoui/numformat.mojo", "struct ColumnFormat"),
-                      ("mojoui/csvio.mojo", "SHIM"), ("mojoui/hosts/gtk.mojo", "gtk_file_dialog_open"), ("mojoui/hosts/web.py", '@app.post("/upload/{sid}")')):
+                      ("mojoui/csvio.mojo", "mx_read_csv"), ("mojoui/hosts/gtk.mojo", "gtk_file_dialog_open"), ("mojoui/hosts/web.py", '@app.post("/upload/{sid}")')):
         if needle not in (ROOT / f).read_text():
             problems.append(f"{f} lacks {needle}")
     ok, msg = ensure_csv()
@@ -152,8 +152,9 @@ def m1():
         return False, msg
     for src, name, marker, args in (("tests/test_omx_components.mojo", "test_omx_components", "OMX COMPONENT TESTS PASSED", []),
                                     ("tests/test_csvio.mojo", "test_csvio", "CSVIO TESTS PASSED", [str(CSV_1M)]),
-                                    ("tests/test_omx_files.mojo", "test_omx_files", "OMX FILE TESTS PASSED", [str(BUILD / "omx-files")])):
-        b = run(["pixi", "run", "mojo", "build", "-I", ".", src, "-o", str(BUILD / name)], timeout=900)
+                                    ("tests/test_omx_files.mojo", "test_omx_files", "OMX FILE TESTS PASSED", [str(BUILD / "omx-files")]),
+                                    ("tests/test_json.mojo", "test_json", "JSON TESTS PASSED", [])):
+        b = run(["scripts/mxbuild.sh", src, "-o", str(BUILD / name)], timeout=900)  # (F-138c: the tests link the MX frame package)
         t = run(["pixi", "run", str(BUILD / name)] + args, timeout=600) if b.returncode == 0 else b
         if marker not in t.stdout:
             problems.append(f"{name}: {(t.stdout + t.stderr)[-300:]}")
@@ -304,7 +305,7 @@ def m4():
                 problems.append(f"{where}: the formula column or the Currency format didn't come back")
         if shown(top[0]) != shown(top[1]) or shown(cust[0]) != shown(cust[1]):
             problems.append(f"{host}'s file: GTK and web differ: {sorted(set(shown(top[0])) ^ set(shown(top[1])))[:4]}")
-    bad = BUILD / "omx-files" / "nulls.omx"  # (written by tests/test_omx_files.mojo in M1)
+    bad = BUILD / "omx-files" / "old-format.omx"  # (a format-1 file, written by tests/test_omx_files.mojo in M1; F-138c: nulls are legal now, so the refused file is an old-format one)
     kept = both(f"tap:Open the sample;pick:Open={bad}", "open-bad")
     if kept[0] is None:
         return False, kept[1]
@@ -324,7 +325,7 @@ def m5():
         row = re.search(rf"^\| {size} \|(.*)$", text, re.M)
         if not row or row.group(1).count("|") != 7:
             problems.append(f"docs/scale.md: no full {size} row")
-    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tools/scale.mojo", "-o", str(BUILD / "scale")], timeout=900)
+    b = run(["scripts/mxbuild.sh", "tools/scale.mojo", "-o", str(BUILD / "scale")], timeout=900)
     if b.returncode != 0:
         return False, f"tools/scale.mojo build: {(b.stdout + b.stderr)[-300:]}"
     r = run(["pixi", "run", str(BUILD / "scale"), str(CSV_1M)], timeout=900)
