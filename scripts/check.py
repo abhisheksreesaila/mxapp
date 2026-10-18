@@ -243,24 +243,34 @@ def m2():
         log = c.close()
     if "Traceback" in log:
         problems.append("the agent host logged a traceback: " + log[-400:])
-    # a streamed file that goes away while it's open: the status bar says the rows couldn't be read
+    # a streamed file deleted while open keeps reading (the package holds it open); one that grows while open says
+    # so in the status bar instead of showing wrong rows
     import shutil
-    gone = DATA / "gone.parquet"
-    shutil.copy(fixture("big", "mid.parquet", 3_000_000), gone)
-    c = Client(BUILD / "omxplorer" / "web", env(OMX_STREAM_ROWS=1_000_000))
-    try:
-        c.call(opener(c), path=str(gone))
-        c.call("create-table")
-        gone.unlink()
-        grid_rows(c, 2_500_000, 3)  # (rows from a group not kept: they have to be read, and can't be)
-        c.call("grid", gesture="tap", x=160, y=60)  # (the next event shows it: the status bar is built before the grid draws)
-        status = status_of(c)
-        if not any(s.startswith("Couldn't read the file") for s in status):
-            problems.append(f"a streamed file deleted while open doesn't show in the status bar: {status}")
-    finally:
-        log = c.close()
-    if "Traceback" in log:
-        problems.append("the agent host logged a traceback: " + log[-400:])
+    for case in ("deleted", "grown"):
+        path = DATA / f"{case}.parquet"
+        shutil.copy(fixture("big", "mid.parquet", 3_000_000), path)
+        c = Client(BUILD / "omxplorer" / "web", env(OMX_STREAM_ROWS=1_000_000))
+        try:
+            c.call(opener(c), path=str(path))
+            c.call("create-table")
+            if case == "deleted":
+                path.unlink()
+            else:
+                with open(path, "ab") as f:
+                    f.write(b"grown")
+            head, body = grid_rows(c, 2_500_000, 3)  # (rows from a group not kept: they have to be read)
+            c.call("grid", gesture="tap", x=160, y=60)  # (the next event shows a problem: the status bar is built before the grid draws)
+            status = status_of(c)
+            problem = [s for s in status if s.startswith("Couldn't read the file")]
+            want = [[cell(v) for v in r.values()] for r in pq.ParquetFile(DATA / "mid.parquet").read_row_group(2).slice(2_500_000 - 2 * GROUP, 3).to_pylist()]
+            if case == "deleted" and (problem or body != want):
+                problems.append(f"a streamed file deleted while open stopped reading: {status} {(body or [])[:1]} vs {want[:1]}")
+            if case == "grown" and not any("changed since it was opened" in p for p in problem):
+                problems.append(f"a streamed file that grew while open doesn't say so in the status bar: {status}")
+        finally:
+            log = c.close()
+        if "Traceback" in log:
+            problems.append("the agent host logged a traceback: " + log[-400:])
     err = mojo_test("tests/test_streamed.mojo", "STREAMED TESTS PASSED", "test_streamed")
     if err:
         problems.append(err)

@@ -4,6 +4,7 @@
 #   scripts/mxbuild.sh tests/test_streamed.mojo -o build/test_streamed && build/test_streamed
 from std.testing import assert_equal, assert_true, assert_false
 from std.os import remove
+from std.python import Python
 from mxframe import read_parquet, write_parquet, scan_parquet, UNCOMPRESSED
 from mojoui.sheet import Sheet, KEPT_GROUPS, READ_ONLY, TEXT
 from mojoui.sheetpage import SheetObject, compute
@@ -92,19 +93,29 @@ def main() raises:
     assert_equal(refused, 4)
     assert_false(s.undo())
     assert_equal(s.display(1, 0), whole.display(1, 0))
-    # a file that goes away after it was opened: the rows read say so instead of showing zeros
+    # the package holds the file open (since MX frame 581250b): one deleted after it was opened still reads right
     var gone = "build/test_streamed_gone.parquet"
     var again = read_parquet(SMALL)
     write_parquet(gone, again.take_table(), "", UNCOMPRESSED, 312)
     var g = Sheet(scan_parquet(gone))
     remove(gone)
-    _ = g.display(1, 4000)
-    assert_true(g.read_problem() != "", "a failed read left no problem")
-    # ...and when the file is back, the next row group read clears it
-    var back = read_parquet(SMALL)
-    write_parquet(gone, back.take_table(), "", UNCOMPRESSED, 312)
-    _ = g.display(1, 100)
+    assert_equal(g.display(1, 4000), whole.display(1, 4000))
     assert_equal(g.read_problem(), "")
-    assert_equal(g.display(1, 100), whole.display(1, 100))
+    # one that changes size while open: the rows read say so instead of showing zeros...
+    var changed = "build/test_streamed_changed.parquet"
+    var third = read_parquet(SMALL)
+    write_parquet(changed, third.take_table(), "", UNCOMPRESSED, 312)
+    var h = Sheet(scan_parquet(changed))
+    var os = Python.import_module("os")
+    var size = Int(py=os.path.getsize(changed))
+    with open(changed, "a") as f:
+        f.write("grown")
+    _ = h.display(1, 4000)
+    assert_true("changed since it was opened" in h.read_problem(), h.read_problem())
+    # ...and once it's back to the size it had, the next row group read clears it
+    _ = os.truncate(changed, size)
+    _ = h.display(1, 100)
+    assert_equal(h.read_problem(), "")
+    assert_equal(h.display(1, 100), whole.display(1, 100))
     print("STREAMED: " + String(cells) + " cells over 17 row groups equal the whole read; totals, chart, pivot, span")
     print("STREAMED TESTS PASSED")

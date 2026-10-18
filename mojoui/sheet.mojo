@@ -230,13 +230,34 @@ struct Sheet(Movable, GridSource):
         return self.frame.edits
 
     def word_count(self, c: Int) -> Int:
-        """A text column's values now (its dictionary and the words typed into it): its codes run 0 up to this."""
-        return self.frame.word_count(c) if c < self.stored() and self.kind(c) == TEXT else 0
+        """A text column's values now (its dictionary and the words typed into it): its codes run 0 up to this.
+        Streamed: the file's dictionary, built by the package on first use."""
+        if not (c < self.stored() and self.kind(c) == TEXT):
+            return 0
+        if self.scan:
+            try:
+                return self.scan.value().word_count(c)
+            except e:
+                self.pages[].problem = String(e)
+                return 0
+        return self.frame.word_count(c)
 
     def text_of(self, c: Int, code: Int64) -> String:
+        if self.scan:
+            try:
+                return self.scan.value().text_of(c, Int(code))
+            except e:
+                self.pages[].problem = String(e)
+                return ""
         return self.frame.text_of(c, code)
 
     def code_of(self, c: Int, word: String) -> Int:
+        if self.scan:
+            try:
+                return self.scan.value().code_of(c, word)
+            except e:
+                self.pages[].problem = String(e)
+                return -1
         return self.frame.code_of(c, word)
 
     # ---------- values ----------
@@ -473,6 +494,8 @@ struct Sheet(Movable, GridSource):
         var kind = self.kind(c)
         if kind == DATE:
             return 104
+        if kind == TEXT and c < self.stored() and self.scan:
+            return 118  # (a streamed file's words aren't read just to size a column)
         if kind == TEXT and c < self.stored():
             var longest = 0
             for w in self.frame.base.dictionary(c):

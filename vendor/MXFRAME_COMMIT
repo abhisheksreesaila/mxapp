@@ -1,2 +1,2 @@
-mxframe.mojoc built from mxframe main 05332ac (F-140 merged at ec268d2: scan_parquet streams a Parquet file one row group at a time; after F-138b's 8c74693)
+mxframe.mojoc built from mxframe main 581250b (F-140 review fixes: lazy dictionaries, raising scan accessors, "the file changed since it was opened"; F-141–F-143: bulk, parallel and prefetched Parquet decode)
 rebuild: git -C <mxframe> archive <commit> mojo kernels_aot scripts/build_mojo_pkg.sh | tar -x -C build/mxframe-src; cd build/mxframe-src && pixi run --manifest-path ../../pixi.toml bash scripts/build_mojo_pkg.sh; cp build/mxframe.mojoc ../../vendor/
