@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>omxapp · agent-native · artboards</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../universal/omx.css">
+<style>
+main { --shadow:0 4px 16px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08); --scrim:rgba(17,22,28,.32); }
+main.graphite { --shadow:0 6px 20px rgba(0,0,0,.55), 0 0 0 1px #34363b; --scrim:rgba(0,0,0,.5); }
+.ico { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+.menu { position:absolute; z-index:4; min-width:270px; background:var(--surface); border:1px solid var(--line); border-radius:6px; box-shadow:var(--shadow); padding:4px; font-size:12.5px; color:var(--ink); }
+.mi { display:flex; align-items:center; gap:10px; height:28px; padding:0 10px; border-radius:4px; white-space:nowrap; }
+.mi .ico { color:var(--sub); } .mi .k { margin-left:auto; padding-left:24px; color:var(--sub); font:11px "JetBrains Mono"; }
+.mi.hi { background:var(--sel); } .mi.hi .ico { color:var(--accent); }
+.sep { height:1px; background:var(--line); margin:4px 6px; }
+.toast { position:absolute; z-index:5; display:flex; align-items:center; gap:14px; background:var(--ink); color:var(--surface); padding:10px 12px 10px 14px; border-radius:6px; font-size:12.5px; box-shadow:var(--shadow); }
+.toast .act { color:color-mix(in srgb, var(--accent) 55%, var(--surface)); font-weight:600; } .graphite .toast .act { color:#a0640a; }
+.toast .ico { color:var(--good); } .graphite .toast .ico { color:#1f8a4c; }
+.kbd { display:inline-block; font:500 10.5px "JetBrains Mono"; padding:1px 5px; border:1px solid var(--strong); border-bottom-width:2px; border-radius:4px; color:var(--body); background:var(--surface); }
+.btn { height:30px; padding:0 14px; display:inline-flex; align-items:center; gap:7px; border-radius:6px; border:1px solid var(--strong); background:var(--surface); color:var(--ink); font:500 12.5px Inter; white-space:nowrap; }
+.btn.pri { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.btn.subtle { border-color:transparent; background:transparent; color:var(--body); }
+.btn.sm { height:24px; padding:0 9px; font-size:11.5px; }
+.inp { height:30px; display:flex; align-items:center; gap:8px; padding:0 10px; border:1px solid var(--strong); border-radius:4px; background:var(--surface); color:var(--ink); font-size:12.5px; min-width:0; }
+.inp .ph2 { color:var(--sub); } .inp .ico { color:var(--sub); }
+.scrim { position:absolute; inset:0; z-index:3; background:var(--scrim); }
+.caret { display:inline-block; width:1px; height:15px; background:var(--accent); }
+.grid th .sorted { float:right; color:var(--accent); } .grid th .sorted svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2; }
+.count { font:500 11px "JetBrains Mono"; color:var(--sub); margin-left:auto; }
+
+/* who did it */
+.who { display:inline-flex; align-items:center; gap:4px; font:600 10px Inter; letter-spacing:.4px; text-transform:uppercase; padding:1px 6px; border-radius:3px; }
+.who.agent { background:color-mix(in srgb, var(--formula) 14%, transparent); color:var(--formula); } .who.you { background:var(--raised); color:var(--sub); }
+.who .ico { width:10px; height:10px; }
+.agentpill { display:inline-flex; align-items:center; gap:6px; color:var(--formula); font-weight:600; } .agentpill i { width:7px; height:7px; border-radius:50%; background:var(--formula); display:block; }
+
+/* pins */
+.pin { position:absolute; z-index:7; width:22px; height:22px; border-radius:50%; background:var(--formula); color:#fff; font:700 11px "JetBrains Mono"; display:grid; place-items:center; box-shadow:0 0 0 3px var(--surface), 0 2px 8px rgba(0,0,0,.25); }
+
+/* dark windows: the agent's side */
+.win { position:absolute; z-index:6; background:#15171b; color:#d7dae0; font:11.5px/1.55 "JetBrains Mono"; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.4), 0 0 0 1px #2c2f36; overflow:hidden; display:flex; flex-direction:column; }
+.graphite .win { box-shadow:0 20px 60px rgba(0,0,0,.7), 0 0 0 1px #3a3d44; }
+.win .wt { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#1d2025; color:#9aa0ab; font:500 11.5px Inter; border-bottom:1px solid #2c2f36; }
+.win .wt .dots i { background:#3a3e46; }
+.win .wb { padding:12px 14px; white-space:pre; overflow:hidden; flex:1; }
+.wb .k { color:#8fd3ff; } .wb .s { color:#c3e88d; } .wb .n { color:#f5a524; } .wb .c { color:#6b7380; } .wb .u { color:#e6e8ec; font-weight:600; } .wb .t { color:#b48cff; } .wb .ok { color:#3ddc97; } .wb .ev { color:#ff9f6b; }
+.num2 { display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; background:var(--formula); color:#fff; font:700 9.5px "JetBrains Mono"; margin-right:6px; vertical-align:-3px; }
+
+/* diagram boards */
+.diag { width:1440px; background:var(--page); color:var(--ink); font:13px Inter; padding:28px 32px; display:flex; flex-direction:column; gap:18px; position:relative; }
+.dcode { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:16px 18px; font:12px/1.6 "JetBrains Mono"; white-space:pre; color:var(--body); }
+.dcode b { color:var(--accent); font-weight:600; } .dcode i { color:var(--sub); font-style:normal; } .dcode em { color:var(--formula); font-style:normal; }
+.hosts { display:grid; grid-template-columns:repeat(5, 1fr); gap:14px; }
+.host { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:14px 16px; display:flex; flex-direction:column; gap:8px; min-height:150px; }
+.host h3 { margin:0; font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px; } .host h3 small { margin-left:auto; color:var(--sub); font-weight:400; font-size:11px; }
+.host p { margin:0; color:var(--sub); font-size:12px; line-height:1.45; }
+.host code { font:11px/1.5 "JetBrains Mono"; color:var(--body); background:var(--raised); border-radius:4px; padding:6px 8px; display:block; white-space:pre; overflow:hidden; }
+.host.new { border:2px solid var(--formula); padding:13px 15px; } .host.new h3 { color:var(--formula); } .host.new code { background:color-mix(in srgb, var(--formula) 8%, var(--surface)); }
+.arrows { display:flex; justify-content:center; color:var(--sub); font-size:12px; gap:8px; align-items:center; }
+.arrows::before, .arrows::after { content:""; flex:1; height:1px; background:var(--strong); }
+.protos { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.proto { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:16px 18px; display:flex; flex-direction:column; gap:10px; }
+.proto h3 { margin:0; font-size:14px; } .proto h3 span { color:var(--sub); font-weight:400; font-size:12px; margin-left:8px; }
+.proto ul { margin:0; padding-left:18px; color:var(--body); font-size:12.5px; line-height:1.55; }
+.proto .tag { align-self:flex-start; font:600 10.5px Inter; letter-spacing:.6px; text-transform:uppercase; padding:3px 8px; border-radius:4px; }
+.tag.now { background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); } .tag.next { background:color-mix(in srgb, var(--formula) 14%, transparent); color:var(--formula); } .tag.no { background:var(--raised); color:var(--sub); }
+.proto.dim { opacity:.6; }
+
+/* the palette and the operations panel */
+.pal { position:absolute; z-index:4; left:50%; transform:translateX(-50%); width:720px; top:96px; background:var(--surface); border-radius:8px; box-shadow:0 16px 48px rgba(0,0,0,.28); overflow:hidden; color:var(--ink); }
+.pal .ask { display:flex; align-items:center; gap:10px; height:50px; padding:0 18px; font-size:15px; border-bottom:1px solid var(--line); } .pal .ask .ico { width:18px; height:18px; color:var(--formula); }
+.pal .plan { padding:8px 6px; } .pal .plan .mi { height:34px; font-size:13px; }
+.pal .plan .mi code { font:12px "JetBrains Mono"; color:var(--body); } .pal .plan .mi code b { color:var(--formula); font-weight:600; }
+.pal .foot { display:flex; gap:12px; align-items:center; padding:10px 14px; border-top:1px solid var(--line); background:var(--raised); font-size:11.5px; color:var(--sub); }
+.ops { display:flex; flex-direction:column; }
+.oprow { display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--line); font-size:12.5px; }
+.oprow .no { width:18px; color:var(--sub); font:11px "JetBrains Mono"; } .oprow .what { flex:1; display:flex; flex-direction:column; gap:2px; } .oprow .what code { font:11px "JetBrains Mono"; color:var(--sub); }
+.oprow .undo { color:var(--accent); font-weight:600; font-size:11.5px; } .oprow.cur { background:var(--sel); }
+.gen { display:flex; flex-direction:column; gap:12px; padding:14px; width:420px; }
+.gen h3 { margin:0; font-size:13.5px; font-weight:600; } .gen p { margin:0; color:var(--body); font-size:12.5px; line-height:1.45; }
+.gen svg text { font:10.5px "JetBrains Mono"; fill:var(--sub); }
+.gen table { width:100%; border-collapse:collapse; font-size:12px; } .gen td, .gen th { padding:4px 8px; border-bottom:1px solid var(--line); text-align:right; font-family:"JetBrains Mono"; } .gen th { color:var(--sub); font-weight:500; font-family:Inter; } .gen td:first-child, .gen th:first-child { text-align:left; font-family:Inter; }
+.gen td.bad { color:var(--bad); font-weight:600; }
+.title2 { color:#9a9ca3; font-size:13px; margin:0 0 14px; max-width:980px; line-height:1.5; }
+.frame.wide { width:720px; height:auto; } .frame.wide > .diag { transform:scale(.5); transform-origin:0 0; }
+body.big .frame.wide { width:1440px; } body.big .frame.wide > .diag { transform:none; }
+</style>
+</head>
+<body>
+<header class="viewer">
+  <h1>omxapp · agent-native · six artboards</h1>
+  <div class="seg" id="skin"><button class="on" onclick="skin('ledger',this)">Ledger</button><button onclick="skin('graphite',this)">Graphite</button><button onclick="skin('blueprint',this)">Blueprint</button></div>
+  <div class="seg" id="sz"><button class="on" onclick="size(0,this)">Overview</button><button onclick="size(1,this)">Actual size</button></div>
+</header>
+<main id="main" class="ledger"></main>
+
+<script src="../universal/omx.js"></script>
+<script>
+const ic = (k, cls = "ico") => `<svg class="${cls}" viewBox="0 0 24 24">${I[k]}</svg>`;
+const mi = (label, o = {}) => `<div class="mi ${o.cls || ""}">${o.icon ? ic(o.icon) : `<span class="blank"></span>`}<span>${label}</span>${o.k ? `<span class="k">${o.k}</span>` : ""}</div>`;
+const SEP = `<div class="sep"></div>`;
+function at(app, sel, dx = 0, dy = 0) { let el = app.querySelector(sel), x = 0, y = 0; while (el && el !== app) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return [x + dx, y + dy]; }
+const placed = [];
+const scene = (id, html, overlays = "") => `<div class="app" id="${id}">${html.replace(/^<div class="app">/, "").replace(/<\/div>$/, "")}${overlays}</div>`;
+const win = (id, title, body, style) => `<div class="win" id="${id}" style="${style}"><div class="wt"><div class="dots"><i></i><i></i><i></i></div>${title}</div><div class="wb">${body}</div></div>`;
+const pin = (id, n) => `<span class="pin" id="${id}">${n}</span>`;
+const WHO = { agent:`<span class="who agent">${ic("sparkle")}agent</span>`, you:`<span class="who you">you</span>` };
+
+// 0 · one tree, five hosts
+function b0() {
+  return `<div class="diag" id="b0">
+  <div class="dcode"><i># examples/omxplorer/app.mojo — the only thing the app author writes</i>
+<b>fn</b> body(self) -> View:
+    <b>return</b> VStack(
+        MenuBar(self.menus()),
+        Toolbar(
+            Button(<em>"Sort"</em>, SORT_DESC, TOOL, icon=<em>"sort"</em>).tag(<em>"sort"</em>).tooltip(<em>"Sort by revenue, largest first"</em>),
+            Button(<em>"Filter"</em>, FILTER, TOOL, icon=<em>"filter"</em>).tag(<em>"filter"</em>).tooltip(<em>"Filter the selected column"</em>),
+        ),
+        DataGrid(self.frame, on_header=HEADER_MENU).tag(<em>"grid"</em>),
+    )</div>
+  <div class="arrows">one tree of nodes, with tags, messages and tooltips · each host turns it into its own thing and sends the messages back</div>
+  <div class="hosts">
+    <div class="host"><h3>GTK<small>Linux</small></h3><p>A GtkButton in a toolbar, the tooltip on hover, the message on click.</p><code>gtk_button_new()
+gtk_widget_set_tooltip_text(
+  "Sort by revenue, largest first")</code></div>
+    <div class="host"><h3>Web<small>FastHTML + htmx</small></h3><p>A button that posts its message; the tooltip is its title.</p><code>&lt;button hx-post="/msg/12"
+  title="Sort by revenue, largest first"&gt;</code></div>
+    <div class="host"><h3>iPad<small>UIKit</small></h3><p>A UIButton with a UIToolTipInteraction; ⌘⇧↓ becomes a UIKeyCommand.</p><code>UIButton · UIToolTipInteraction
+UIKeyCommand(⌘⇧↓)</code></div>
+    <div class="host"><h3>Mac<small>AppKit</small></h3><p>An NSButton; the same item in the system menu bar.</p><code>NSButton · setToolTip:
+NSMenuItem(keyEquivalent "↓")</code></div>
+    <div class="host new"><h3>Agent<small>new · hosts/agent.mojo</small></h3><p>A tool. The tag is its name, the tooltip its description, the message the call. Disabled nodes are left out.</p><code>{ "name": "sort",
+  "kind": "button",
+  "description":
+   "Sort by revenue, largest first",
+  "shortcut": "Ctrl+Shift+↓" }</code></div>
+  </div></div>`;
+}
+
+// 1 · what the agent sees: the screen and its tools, pinned to the same spots
+function b1() {
+  const body = `<span class="c"># GET screen</span>
+<span class="k">document</span>  <span class="s">"orders.csv"</span>  <span class="n">1,000,000</span> rows × <span class="n">10</span> columns
+<span class="k">selection</span> column <span class="s">"revenue"</span> (J) · cell J12
+<span class="k">status</span>    <span class="s">"Sum $72,061,236.00 · 0.3 ms on the GPU"</span>
+
+<span class="c"># tools — 6 of 41 (what a person could do right now)</span>
+<span class="num2">1</span><span class="k">sort</span>     button  <span class="s">"Sort by revenue, largest first"</span>  <span class="t">Ctrl+Shift+↓</span>
+<span class="num2">2</span><span class="k">filter</span>   button  <span class="s">"Filter the selected column"</span>     <span class="t">Ctrl+Shift+L</span>
+<span class="num2">3</span><span class="k">formula</span>  field   <span class="s">"margin = revenue − cost"</span>         <span class="t">value: text</span>
+<span class="num2">4</span><span class="k">grid</span>     column  <span class="s">"revenue · Currency · 812,441 distinct"</span>
+            actions: sort, filter, stats, rename, hide, delete
+<span class="num2">5</span><span class="k">save</span>     button  <span class="s">"Save the document"</span>              <span class="t">Ctrl+S</span>
+<span class="num2">6</span><span class="k">file</span>     menu    Open…, Save, Save as…, Export ▸, Close
+
+<span class="c"># no screenshots, no accessibility scraping: the tree is the API,
+# the same one on GTK, the web, the iPad and the Mac</span>`;
+  const w = win("w1", "omxplorer --mcp · screen", body, "left:770px;top:200px;width:630px;height:420px");
+  placed.push(["b1", ".toolbar .group:nth-child(3) .tool:nth-child(1)", "p1", 44, -6], ["b1", ".toolbar .group:nth-child(3) .tool:nth-child(2)", "p2", 44, -6],
+    ["b1", ".finput", "p3", -10, -10], ["b1", "th.selcol", "p4", 110, -8], ["b1", ".tbtn.primary", "p5", 44, 8], ["b1", ".menus span:first-child", "p6", -6, 8]);
+  return scene("b1", sheet(), w + [1,2,3,4,5,6].map(n => pin("p" + n, n)).join(""));
+}
+
+// 2 · an agent drives omxplorer from Claude Code; the person watches it happen
+function b2() {
+  const saved = rows.slice(); rows.sort((a, b) => b[7] - a[7]);
+  const top = rows.slice(0, 3), pad = n => n.padEnd(12);
+  const body = `<span class="u">› sort the orders by revenue, biggest first, and tell me who the top customer is</span>
+
+<span class="ok">●</span> omxplorer.<span class="k">screen</span>()
+  <span class="c">orders.csv · 1,000,000 rows · selection: revenue</span>
+<span class="ok">●</span> omxplorer.<span class="k">act</span>(<span class="s">"sort"</span>)
+  <span class="c">Sorted by revenue, largest first · 0.3 ms on the GPU</span>
+<span class="ok">●</span> omxplorer.<span class="k">read</span>(rows=<span class="n">3</span>, columns=[<span class="s">"customer"</span>, <span class="s">"revenue"</span>])
+  <span class="c">${top.map(r => pad(r[3]) + money(r[7])).join("\n  ")}</span>
+
+Sorted. The biggest single order is <span class="u">${top[0][3]}</span> at
+<span class="u">${money(top[0][7])}</span>. By total revenue across all orders it's
+Northwind: want me to group by customer instead?
+
+<span class="u">›</span> <span class="caret" style="background:#d7dae0"></span>`;
+  const term = win("w2", "Claude Code · ~/data", body, "left:36px;top:150px;width:640px;height:430px");
+  const toast = `<div class="toast" style="left:760px;bottom:76px">${ic("check")}Sorted by revenue, largest first<span class="act">Undo</span>${ic("x")}</div>`;
+  let html = sheet().replace('revenue<span class="badge ">$</span>', `revenue<span class="badge ">$</span><span class="sorted">${ic("down","")}</span>`)
+    .replace('<span class="gpu">', `<span class="agentpill"><i></i>Claude Code connected</span><span class="gpu">`);
+  rows.splice(0, rows.length, ...saved);
+  return scene("b2", html, term + toast);
+}
+
+// 3 · operations, not clicks: ⌘K intent → a plan of operations the person approves; history shows who did what
+function b3() {
+  const pal = `<div class="scrim"></div><div class="pal">
+    <div class="ask">${ic("sparkle")}top 10 customers by margin, Q3 only<span class="caret"></span><span class="count">⌘K</span></div>
+    <div class="plan">
+      ${mi(`<code><b>filter</b>  date in 2026-07-01 … 2026-09-30</code>`, {icon:"filter"})}
+      ${mi(`<code><b>column</b>  margin = revenue − cost</code>`, {icon:"formula"})}
+      ${mi(`<code><b>group</b>   by customer · sum(margin)</code>`, {icon:"group"})}
+      ${mi(`<code><b>sort</b>    margin, largest first</code>`, {icon:"sort", cls:"hi"})}
+      ${mi(`<code><b>keep</b>    10 rows</code>`, {icon:"row"})}
+    </div>
+    <div class="foot"><span>5 operations · the same ones you'd click · each one undoable</span><span style="flex:1"></span><span class="btn subtle">Edit</span><span class="btn pri">Apply ↵</span></div></div>`;
+  const ops = `<div class="itabs"><span>Format</span><span>Column</span><span class="on">History</span></div><div class="ops">
+    ${[["1","Open orders.csv","1,000,000 rows · 10 columns","you"],["2","Format revenue as currency","2 decimals · $ USD","you"],["3","Sort by revenue, largest first","0.3 ms","agent"],["4","Filter region = West","255,102 rows","you"]].map(([n,w,d,who],i) =>
+      `<div class="oprow ${i===3?"cur":""}"><span class="no">${n}</span><div class="what"><span>${w}</span><code>${d}</code></div>${WHO[who]}<span class="undo">Undo</span></div>`).join("")}
+    <div style="padding:12px 14px;color:var(--sub);font-size:11.5px;line-height:1.5">Saved with the document. Replay it on new data, or hand it to an agent as a script.</div></div>`;
+  let html = sheet().replace(/<div class="insp">[\s\S]*?<\/div><\/div>(?=<div class="bottom">)/, `<div class="insp">${ops}</div></div>`);
+  return scene("b3", html, pal);
+}
+
+// 4 · AG-UI: the agent generates a native card on demand, from kit components only
+function b4() {
+  const body = `<span class="c"># AG-UI events over SSE, as the agent answers "why did margin dip?"</span>
+<span class="ev">RUN_STARTED</span>          threadId <span class="s">"t_42"</span>
+<span class="ev">TEXT_MESSAGE_CONTENT</span> <span class="s">"Margin fell in the South: cost rose 11% …"</span>
+<span class="ev">TOOL_CALL_START</span>      <span class="k">render_ui</span>
+<span class="ev">TOOL_CALL_ARGS</span>       {
+  <span class="k">"Popover"</span>: { <span class="k">"anchor"</span>: <span class="s">"ask"</span>, <span class="k">"title"</span>: <span class="s">"Margin by region · Q3"</span>,
+    <span class="k">"children"</span>: [
+      { <span class="k">"BarChart"</span>: { <span class="k">"by"</span>: <span class="s">"region"</span>, <span class="k">"value"</span>: <span class="s">"margin %"</span>,
+                      <span class="k">"highlight"</span>: <span class="s">"South"</span> } },
+      { <span class="k">"Table"</span>: { <span class="k">"columns"</span>: [<span class="s">"region"</span>,<span class="s">"Q2"</span>,<span class="s">"Q3"</span>,<span class="s">"Δ"</span>], <span class="k">"rows"</span>: <span class="n">5</span> } },
+      { <span class="k">"HStack"</span>: [ { <span class="k">"Button"</span>: [<span class="s">"Add as sheet"</span>, <span class="t">ADD_SHEET</span>] },
+                   { <span class="k">"Button"</span>: [<span class="s">"Dismiss"</span>, <span class="t">CLOSE</span>] } ] } ] } }
+<span class="ev">STATE_DELTA</span>          [{ <span class="k">"op"</span>: <span class="s">"add"</span>, <span class="k">"path"</span>: <span class="s">"/ui/popover"</span>, … }]  <span class="c">← JSON Patch,
+                                           the same shape as mojoui's diff()</span>
+<span class="ev">RUN_FINISHED</span>
+
+<span class="c"># only kit components can appear: an agent can't draw what a
+# person couldn't. The same JSON is native on iPad, Mac, GTK, web.</span>`;
+  const w = win("w4", "agent ⇄ omxplorer · AG-UI event stream", body, "left:36px;top:150px;width:700px;height:340px");
+  const regions = [["West",33.1,-0.3],["East",31.8,0.4],["North",30.2,-0.9],["South",22.6,-8.1],["Central",29.4,0.2]];
+  const bars = `<svg width="100%" viewBox="0 0 392 130">${regions.map(([r,v,d],i)=>`<text x="2" y="${20+i*24}">${r}</text><rect x="58" y="${8+i*24}" width="${v/33.1*280}" height="16" rx="3" fill="${r==="South"?"var(--bad)":"var(--s1)"}"/><text x="${66+v/33.1*280}" y="${20+i*24}" style="fill:var(--ink)">${v}%</text>`).join("")}</svg>`;
+  const table = `<table><tr><th>region</th><th>Q2</th><th>Q3</th><th>Δ pts</th></tr>${regions.map(([r,v,d])=>`<tr><td>${r}</td><td>${(v-d).toFixed(1)}%</td><td>${v}%</td><td class="${d<-2?"bad":""}">${d>0?"+":""}${d}</td></tr>`).join("")}</table>`;
+  const card = `<div class="menu" id="g4" style="padding:0;min-width:0"><div class="gen">
+    <div style="display:flex;align-items:center;gap:8px">${WHO.agent}<h3 style="margin:0">Margin by region · Q3</h3><span class="count">${ic("x")}</span></div>
+    <p>Margin fell in the South: cost rose 11% while revenue was flat. The other regions held.</p>
+    ${bars}${table}
+    <div style="display:flex;gap:8px;justify-content:flex-end"><span class="btn subtle">Dismiss</span><span class="btn pri">Add as sheet</span></div></div></div>`;
+  placed.push(["b4", ".toolbar .group:nth-child(5) .tool:nth-child(2)", "g4", -392, 64]);
+  let html = sheet().replace(tool("format","Format","on"), tool("format","Format") + tool("sparkle","Ask","hover"));
+  return scene("b4", html, w + card);
+}
+
+// 5 · the protocols: what carries what
+function b5() {
+  return `<div class="diag" id="b5">
+  <div class="protos">
+    <div class="proto"><span class="tag now">build now</span><h3>MCP<span>agent → the app's tools</span></h3>
+      <ul><li><b>screen</b> · the tree as tools, with the selection and the status</li><li><b>act</b> · dispatch a message, by tag; returns what changed</li><li><b>read</b> · rows and columns of the document, typed</li><li><b>render</b> · a canvas as PNG, no window needed</li><li>Carried over stdio: <code>omxplorer --mcp</code>; Claude Code, Codex, any client</li></ul>
+      <p style="margin:auto 0 0;color:var(--sub);font-size:12px">This is the agent host. The driver in <code>scripts/check</code> is already most of it.</p></div>
+    <div class="proto"><span class="tag next">design now, build when MX frame lands</span><h3>AG-UI<span>agent ⇄ the app's screen</span></h3>
+      <ul><li>16 event types: text, tool calls, <b>state snapshots and deltas</b>, lifecycle</li><li>Deltas are JSON Patch: the shape <code>diff()</code> already produces</li><li><b>Generative UI</b>: the agent sends a view tree; the kit draws it natively</li><li><b>Shared state</b>: the operations log is the state both sides edit</li><li>Human in the loop: a plan is a Dialog the person approves</li></ul>
+      <p style="margin:auto 0 0;color:var(--sub);font-size:12px">Adopt the event vocabulary, not the SDK: ours is Mojo, theirs is TypeScript and Python.</p></div>
+    <div class="proto dim"><span class="tag no">not ours</span><h3>A2A<span>agent ⇄ agent</span></h3>
+      <ul><li>How agents find and delegate to each other</li><li>omxplorer is a tool and a surface, not a peer</li><li>If an agent that talks A2A wants data, it reaches us over MCP</li></ul></div>
+  </div></div>`;
+}
+
+function render() {
+  placed.length = 0; seed = 7;
+  const desk = (id, html, cap) => `<div><div class="frame desk">${html}</div><div class="cap">${cap}</div></div>`;
+  const wide = (html, cap) => `<div><div class="frame wide">${html}</div><div class="cap">${cap}</div></div>`;
+  document.getElementById("main").innerHTML = `
+  <section class="option"><h2>1 · The agent is a host</h2><p class="title2">GTK, the web, the iPad and the Mac each turn the same tree into their own widgets. An agent host turns it into tools. Nothing is written per app: the tag names the tool, the tooltip describes it, the message is the call.</p>
+    <div class="row">${wide(b0(), "One node, five hosts. The agent host is the only new file.")}</div></section>
+  <section class="option"><h2>2 · What the agent sees</h2><p class="title2">The same screen a person sees, as data. Each pin on the window is one line in the tool list: the agent can only do what a person could do right now, and sees exactly where it is.</p>
+    <div class="row">${desk("b1", b1(), "omxplorer --mcp · the tree as tools, pinned to the window")}${desk("b2", b2(), "Claude Code drives omxplorer: sort, read, answer; the person watches it happen, with Undo")}</div></section>
+  <section class="option"><h2>3 · Operations, not clicks</h2><p class="title2">For omxplorer the strong form: an intent becomes a short plan of column operations in the app's own vocabulary. The person approves it, every step is undoable, and the history says who did what. The document carries its own log, so it replays on new data.</p>
+    <div class="row">${desk("b3", b3(), "⌘K: an intent, the agent's plan, Apply · History in the inspector: you / agent")}</div></section>
+  <section class="option"><h2>4 · AG-UI: generative interface, on demand</h2><p class="title2">The agent answers with a card it composed from kit components, sent as a view tree in an AG-UI tool call. omxapp draws it natively, in the skin, on every platform. The agent can't draw anything a person couldn't: it only has the kit.</p>
+    <div class="row">${desk("b4", b4(), "An AG-UI run: events on the left, the generated card anchored to the Ask button on the right")}${wide(b5(), "The three protocols: what carries what, and which we build")}</div></section>`;
+  for (const [sid, sel, oid, dx, dy] of placed) {
+    const app = document.getElementById(sid), o = document.getElementById(oid);
+    const [x, y] = at(app, sel, dx, dy);
+    o.style.left = x + "px"; o.style.top = y + "px";
+  }
+  fit();
+}
+function fit() { const big = document.body.classList.contains("big"); document.querySelectorAll(".frame.wide").forEach(f => f.style.height = f.firstElementChild.offsetHeight * (big ? 1 : .5) + "px"); }
+function skin(name, btn) { document.getElementById("main").className = name; document.querySelectorAll("#skin button").forEach(b => b.classList.toggle("on", b === btn)); render(); }
+function size(big, btn) { document.body.classList.toggle("big", !!big); document.querySelectorAll("#sz button").forEach(b => b.classList.toggle("on", b === btn)); fit(); }
+const q = new URLSearchParams(location.search);
+if (q.get("skin")) document.getElementById("main").className = q.get("skin");
+if (q.get("big")) document.body.classList.add("big");
+render();
+</script>
+</body>
+</html>
