@@ -18,24 +18,23 @@ from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
-from mojoui.frame import Frame, Column, Columns, Range, share, release_columns, INT, DECIMAL, TEXT, DATE
-from mojoui.frame_gpu import GpuFrame, group_sum
-from mojoui.shared import keep, at, environment, make_dir
+from mxframe import Table, ColumnKind, DECIMAL as MX_DECIMAL, TEXT as MX_TEXT, DATE as MX_DATE
+from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT, DATE
+from mojoui.shared import environment, make_dir
 from mojoui.files import file_name, file_stem, read_recent, remember, read_setting, write_setting
-from mojoui.csvio import read_csv, CsvImport, CsvColumn, kind_name
+from mojoui.csvio import read_csv, empty_import, CsvImport, CsvColumn, kind_name
 from mojoui.omxfile import save_omx, open_document
 from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
                               NUMBER_STYLES, DATE_STYLES)
 from mojoui.inspector import Inspector, Section, Row, Stepper
 from mojoui.sheetchrome import Tool, Toolbar, FormulaBar, StatusBar, SheetTabs
-from mojoui.sheetpage import (SheetObject, compute, chart_view, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
+from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
                               CHART_BAR, CHART_LINE, HEADER_H)
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
                                TILE_CHART)
 from mojoui.chartview import ChartView
 from mojoui.view import TAP
-from mojoui.orders import order_columns
-from mojoui.orders_ops import col_program, histogram
+from mojoui.sample import sample_table
 
 # screens
 comptime START_SCREEN = 0
@@ -120,8 +119,8 @@ comptime NEGATIVE_STYLES: List[String] = ["−1,234", "(1,234)"]
 struct Main(App):
     var screen: Int
     var has_table: Bool
-    var frame: Frame
-    var gf_addr: Int
+    var frame: Sheet
+    var ran_gpu: Bool  # the last totals ran on the GPU
     var imp: CsvImport
     var source: String  # what the table came from (a path, "sample", "blank")
     var name: String  # the table's name (the file's name without .csv)
@@ -168,14 +167,9 @@ struct Main(App):
     def __init__(out self):
         self.screen = START_SCREEN
         self.has_table = False
-        var empty = Columns()
-        var c = Column("A", TEXT)
-        c.dictionary.append("")
-        c.values.append(0)
-        empty.add(c^)
-        self.frame = Frame(share(empty^))
-        self.gf_addr = 0
-        self.imp = CsvImport("", 0, List[CsvColumn](), List[String](), 0, 0, 0)
+        self.frame = placeholder_sheet()
+        self.ran_gpu = False
+        self.imp = empty_import()
         self.source = ""
         self.name = ""
         self.grid = DataGrid()
@@ -234,24 +228,14 @@ struct Main(App):
     def design(self) -> Int:
         return self.skin  # omxplorer's own skin on every platform (D-149), never the desktop's theme
 
-    def gf(self) -> Pointer[GpuFrame, MutUntrackedOrigin]:
-        return at[GpuFrame](self.gf_addr)
-
     # ---------- data in ----------
 
-    def use_table(mut self, var frame: Frame):
+    def use_table(mut self, var sheet: Sheet):
         """The new table takes over; only then is the old one's memory given back (CPU and GPU: ~26 GB at 100M
         rows). A file that fails to open never gets here, so the sheet on screen stays intact."""
-        var old_base = self.frame.base_addr
-        var old_gf = self.gf_addr
-        var had = self.has_table
-        self.gf_addr = keep(GpuFrame(frame.base_addr))
-        self.frame = frame^
+        swap(self.frame, sheet)  # (sheet is the old one now)
+        sheet.release()
         self.has_table = True
-        if old_gf != 0:
-            at[GpuFrame](old_gf)[].release()
-        if had and old_base != self.frame.base_addr:
-            release_columns(old_base)
 
     def open_path(mut self, path: String):
         """A CSV file → the Import step (its columns as read); an .omx document → straight to its sheet."""
@@ -277,7 +261,8 @@ struct Main(App):
             return
         try:
             var imp = read_csv(path)
-            self.use_table(Frame(imp.base_addr))
+            self.use_table(Sheet(imp.table))
+            imp.let_go()  # (the sheet holds the table now; the import keeps only what it showed)
             self.imp = imp^
             self.source = path
             self.name = file_stem(path)
@@ -294,16 +279,11 @@ struct Main(App):
         self.version += 1
 
     def shape_of(self, c: Int) -> List[Float64]:
-        """A column's distribution over every row (the GPU), for the header's small histogram."""
-        ref vals = self.frame.base()[].cols[c].values
-        if len(vals) == 0:
+        """A column's distribution over every row, for the header's small histogram."""
+        try:
+            return shape_of(self.frame, c)
+        except:
             return List[Float64]()
-        var lo = vals[0]
-        var hi = lo
-        for v in vals:
-            lo = min(lo, v)
-            hi = max(hi, v)
-        return histogram(self.frame, self.gf()[], c, lo, hi)
 
     def open_sample(mut self):
         var rows = 1_000_000
@@ -313,23 +293,32 @@ struct Main(App):
                 rows = max(Int(asked), 1000)
             except:
                 pass
-        self.use_table(Frame(share(order_columns(rows))))
+        try:
+            self.use_table(Sheet(sample_table(rows).share()))
+        except e:
+            self.message = String(e)
+            self.version += 1
+            return
         self.source = "sample"
         self.name = "orders"
         self.to_sheet()
 
     def open_blank(mut self):
-        var cols = Columns()
-        var names: List[String] = ["Item", "Amount", "Date"]
-        var kinds: List[Int] = [TEXT, DECIMAL, DATE]
-        for k in range(3):
-            var c = Column(names[k], kinds[k])
-            if kinds[k] == TEXT:
-                c.dictionary.append("")
-            for _ in range(20):
-                c.values.append(Int64(20089 if kinds[k] == DATE else 0))
-            cols.add(c^)
-        self.use_table(Frame(share(cols^)))
+        try:
+            var t = Table.empty()
+            var names: List[String] = ["Item", "Amount", "Date"]
+            var kinds: List[ColumnKind] = [MX_TEXT, MX_DECIMAL, MX_DATE]
+            for k in range(3):
+                var c = t.add_column(names[k], kinds[k], 2 if kinds[k] == MX_DECIMAL else 0)
+                if kinds[k] == MX_TEXT:
+                    _ = t.add_word(c, "")
+                for _ in range(20):
+                    t.append(c, Int64(20089 if kinds[k] == MX_DATE else 0))
+            self.use_table(Sheet(t^.share()))
+        except e:
+            self.message = String(e)
+            self.version += 1
+            return
         self.source = "blank"
         self.name = "Table 1"
         self.to_sheet()
@@ -348,7 +337,7 @@ struct Main(App):
         self.table_y = 0
         self.table_w = 0
         self.table_h_set = 0
-        self.seen_edits = self.frame.edits
+        self.seen_edits = self.frame.edits()
         self.grid = DataGrid()
         self.grid.prepare(self.frame, self.font, self.pal)
         for c in range(self.frame.stored()):
@@ -405,12 +394,15 @@ struct Main(App):
         return 0
 
     def refresh(mut self):
-        """Every chart, pivot and tile again (after an edit or a change to one): GPU group-bys."""
-        self.seen_edits = self.frame.edits
-        for k in range(len(self.objects)):
-            compute(self.objects[k], self.frame, self.gf()[])
-        for k in range(len(self.tiles)):
-            compute_tile(self.tiles[k], self.frame, self.gf()[], self.filter)
+        """Every chart, pivot and tile again (after an edit or a change to one)."""
+        self.seen_edits = self.frame.edits()
+        try:
+            for k in range(len(self.objects)):
+                compute(self.objects[k], self.frame)
+            for k in range(len(self.tiles)):
+                compute_tile(self.tiles[k], self.frame, self.filter)
+        except e:
+            self.message = "Couldn't compute: " + String(e)
         self.version += 1
 
     def table_h(self) -> Int:
@@ -432,19 +424,22 @@ struct Main(App):
         self.version += 1
 
     def totals(mut self):
-        """The selected column's sum and count over every row, on the GPU (edits included)."""
+        """The selected column's sum and count of values over every row (edits included)."""
         var col = self.grid.cur_col
         if col < 0 or not self.has_table or self.frame.kind(col) == TEXT:
             self.sum = 0
             self.count = self.frame.rows()
             return
-        var key = List[Int64]()
-        key.append(0)  # OP_CONST 0: one group
-        key.append(0)
-        var r = group_sum(self.frame, self.gf()[], key, self.frame.flatten(col_program(col)), List[Range](), 1)  # (a formula: its stored-column steps)
-        self.sum = r.sums[0]
-        self.count = r.counts[0]
-        self.milliseconds = r.milliseconds
+        try:
+            var r = self.frame.totals(col)
+            self.sum = r.sums[0]
+            self.count = r.present[0]  # (empty cells aren't averaged)
+            self.milliseconds = r.milliseconds
+            self.ran_gpu = r.on_gpu
+        except e:
+            self.sum = 0
+            self.count = 0
+            self.message = "Couldn't total " + self.frame.name(col) + ": " + String(e)
 
     def column_format(self) -> ColumnFormat:
         return self.frame.format_of(self.grid.cur_col) if self.grid.cur_col >= 0 else ColumnFormat.auto()
@@ -478,7 +473,7 @@ struct Main(App):
 
     def update(mut self, event: Event):
         self.handle(event)
-        if self.has_table and self.frame.edits != self.seen_edits:  # the table changed (any way): every object and tile again
+        if self.has_table and self.frame.edits() != self.seen_edits:  # the table changed (any way): every object and tile again
             self.refresh()
 
     def handle(mut self, event: Event):
@@ -631,7 +626,7 @@ struct Main(App):
             self.set_format(f^)
         elif m == ADD_ROW:
             try:
-                var row = self.frame.append(List[String]())
+                var row = self.frame.append()
                 self.grid.select(row, max(self.grid.cur_col, 0))
                 self.grid.keep_in_view(row, max(self.grid.cur_col, 0), self.frame)
                 self.select_cell(row, max(self.grid.cur_col, 0))
@@ -664,10 +659,13 @@ struct Main(App):
                     desc = False
                 elif m == SORT_DESC:
                     desc = True
-                self.grid.set_order(self.frame.permutation(col, desc), col, desc)
-                self.message = "Sorted by " + self.frame.name(col) + (" (largest first)" if desc else "")
-                self.toast = "Sorted by " + self.frame.name(col) + (", largest first" if desc else ", smallest first")
-                self.toast_undo = UNDO_SORT
+                try:
+                    self.grid.set_order(self.frame.permutation(col, desc), col, desc)
+                    self.message = "Sorted by " + self.frame.name(col) + (" (largest first)" if desc else "")
+                    self.toast = "Sorted by " + self.frame.name(col) + (", largest first" if desc else ", smallest first")
+                    self.toast_undo = UNDO_SORT
+                except e:
+                    self.message = "Couldn't sort: " + String(e)
             self.version += 1
         elif m == FMT_NUMBER or m == FMT_CURRENCY or m == FMT_PERCENT:
             var col = self.ctx_col if self.ctx_col >= 0 else self.grid.cur_col
@@ -711,7 +709,10 @@ struct Main(App):
                 var w = 520 if m == INSERT_CHART else max(width - 520 - 16, 520)  # (a chart and a pivot side by side)
                 var spot = free_spot(self.objects, self.table_y + (self.table_h_set if self.table_h_set > 0 else TABLE_H), width, w, 340)  # (below the table as it'll be once objects share the sheet, wherever it is)
                 var obj = SheetObject.chart(value, texts[0], spot[0], spot[1], w, 340) if m == INSERT_CHART else SheetObject.pivot(value, texts[0], texts[1] if len(texts) > 1 else -1, spot[0], spot[1], w, 340)
-                compute(obj, self.frame, self.gf()[])
+                try:
+                    compute(obj, self.frame)
+                except e:
+                    self.message = "Couldn't compute: " + String(e)
                 self.objects.append(obj^)
                 self.active = len(self.objects) - 1
                 self.insp_tab = 2
@@ -776,8 +777,11 @@ struct Main(App):
                 elif m == OBJ_ACROSS and 0 <= event.number <= len(texts):
                     o.across = texts[event.number - 1] if event.number > 0 else -1
                 o.selected = -1
-                compute(o, self.frame, self.gf()[])
-                self.message = object_title(o, self.frame)
+                try:
+                    compute(o, self.frame)
+                    self.message = object_title(o, self.frame)
+                except e:
+                    self.message = "Couldn't compute: " + String(e)
                 self.version += 1
         elif m == SHEET_TAB:
             self.sheet_tab = event.number
@@ -798,7 +802,10 @@ struct Main(App):
             elif t.kind == TILE_CHART and len(texts) == 0:
                 self.message = "A chart tile needs a text column to group by"
             else:
-                compute_tile(t, self.frame, self.gf()[], self.filter)
+                try:
+                    compute_tile(t, self.frame, self.filter)
+                except e:
+                    self.message = "Couldn't compute: " + String(e)
                 self.tiles.append(t^)
             self.version += 1
         elif m >= TILE_CLOSE and m < TILE_CLOSE + 100:
@@ -860,9 +867,9 @@ struct Main(App):
         return self.start_screen()
 
     def gpu_chip(self) -> String:
-        if self.gf_addr != 0 and self.gf()[].on_gpu():
-            return "● " + self.gf()[].device_name() + " · ready"
-        return "● GPU ready" if self.gf_addr == 0 else "● CPU"
+        if self.frame.device:
+            return "● " + self.frame.device_name + " · ready"
+        return "● CPU"
 
     def start_screen(self) -> View:
         """The Start screen (docs/design/universal/kit.html, 7): a side column of actions, a drop zone, recent files, samples."""
@@ -934,7 +941,7 @@ struct Main(App):
             cols.append(Text(first, CAPTION))
         var skipped = String("")
         if len(self.imp.skipped) > 0:
-            skipped = String(len(self.imp.skipped)) + " more columns aren't read yet (16 is the limit until MX frame)"
+            skipped = String(len(self.imp.skipped)) + " more columns aren't read (4,096 is the limit)"
         var dialog = Card(
             HStack(VStack(Text("Import " + file_name(self.imp.path), HEADLINE),
                           Text(grouped(self.imp.rows) + " rows · " + String(len(self.imp.columns)) + " columns · read in "
@@ -1146,7 +1153,7 @@ struct Main(App):
             items.append("Average " + self.frame.format_average(col, self.sum, self.count))
         if self.message != "":
             items.append(self.message)
-        return StatusBar(items, (fixed(self.milliseconds, 1) + " ms on " + (self.gf()[].device_name() if self.gf_addr != 0 else "CPU")) if self.show_timings else "")
+        return StatusBar(items, (fixed(self.milliseconds, 1) + " ms on " + (self.frame.device_name if self.ran_gpu else "CPU")) if self.show_timings else "")
 
     def sheet_width(self) -> Int:
         return W - 40 - (INSPECTOR_W + 16 if self.inspector_open else 0)

@@ -1,84 +1,19 @@
-# mojoui.omxfile: an omxplorer document on disk, one file `name.omx`: a Parquet file whose columns are the table
-# as it stands (the session's edits, added and removed rows baked in) and whose metadata ("omx") is JSON: each
-# column's kind, scale, dictionary and format, and the formula columns. Other tools can read its columns.
+# mojoui.omxfile: an omxplorer document on disk, one file `name.omx` (format 2): a Parquet file written by MX frame
+# (no Python) whose columns are the table as it stands (the session's edits, added and removed rows baked in; kinds,
+# decimal scales, dictionaries and empty cells are Parquet's own) and whose metadata ("omx") is JSON: each column's
+# format, the formula columns (their text and format), the sheet's charts and pivots, and the Report (its tiles and
+# its filter, as a column and a word). Other tools can read its columns.
 #
-# SHIM (labelled): Parquet is written and read by pyarrow (Python) until MX frame's own writer lands.
+# Format 1 (the pyarrow shim's files) is refused with a message that says so.
 
-from std.python import Python, PythonObject
-from std.ffi import external_call
-from mojoui.frame import Frame, Column, Columns, Edit, share, INT, DECIMAL, TEXT, DATE, MAX_COLS
+from mxframe import write_parquet, read_parquet, Table
+from mojoui.sheet import Sheet, INT, DECIMAL, TEXT
+from mojoui.json import Json, json_string
 from mojoui.numformat import ColumnFormat
-from mojoui.workbook import json_string
-from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT, groups_of
+from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT
 from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_CHART
 
-comptime OMX_BRIDGE = """
-import ctypes, json
-import numpy as np
-import pyarrow as pa
-import pyarrow.parquet as pq
-
-KEEP = []
-
-
-def write(path, rows, names, addresses, meta):
-    cols = {}
-    for name, address in zip(names, addresses):
-        raw = (ctypes.c_int64 * int(rows)).from_address(int(address))
-        cols[name] = pa.array(np.frombuffer(raw, dtype=np.int64).copy())
-    table = pa.table(cols).replace_schema_metadata({"omx": meta})
-    pq.write_table(table, path)
-
-
-def read(path, max_cols):
-    \"\"\"The file's columns in the metadata's order, refused unless every column is what the metadata says it is
-    (a file from somewhere else, or edited by hand, must not reach the engine's raw memory).\"\"\"
-    t = pq.read_table(path)
-    try:
-        meta = json.loads((t.schema.metadata or {}).get(b"omx", b"{}"))
-    except ValueError:
-        raise ValueError("its omx metadata isn't JSON")
-    if meta.get("omx") != 1:
-        raise ValueError("it isn't an omxplorer document")
-    specs = meta.get("columns", [])
-    if not 1 <= len(specs) <= max_cols:
-        raise ValueError(f"it has {len(specs)} columns (1 to {max_cols} can be opened)")
-    KEEP.clear()
-    for spec in specs:
-        name, kind = spec.get("name"), spec.get("kind")
-        if name not in t.column_names:
-            raise ValueError(f"column {name!r} is described but not stored")
-        if kind not in (0, 1, 2, 3) or not 0 <= int(spec.get("scale", 0)) <= 6:
-            raise ValueError(f"column {name!r} has an unknown type")
-        col = t.column(name)
-        if col.null_count:
-            raise ValueError(f"column {name!r} has empty values")
-        if not pa.types.is_integer(col.type):
-            raise ValueError(f"column {name!r} isn't stored as integers")
-        arr = np.ascontiguousarray(col.to_numpy().astype(np.int64))
-        if kind == 2 and len(arr) and (arr.min() < 0 or arr.max() >= len(spec.get("dictionary", []))):
-            raise ValueError(f"column {name!r} names texts it doesn't have")
-        KEEP.append(arr)
-    return {"rows": t.num_rows, "addresses": [a.ctypes.data for a in KEEP], "meta": meta}
-
-
-def done():
-    KEEP.clear()
-
-
-def meta_of(path):
-    \"\"\"The document's metadata alone (the sheet's objects and the Report).\"\"\"
-    t = pq.read_schema(path)
-    return json.loads((t.metadata or {}).get(b"omx", b"{}"))
-"""
-
-
-def bridge() raises -> PythonObject:
-    var types = Python.import_module("types")
-    var builtins = Python.import_module("builtins")
-    var mod = types.ModuleType("mojoui_omx_bridge")
-    _ = builtins.exec(OMX_BRIDGE, mod.__dict__)
-    return mod
+comptime FORMAT = 2
 
 
 def format_json(f: ColumnFormat) -> String:
@@ -86,57 +21,15 @@ def format_json(f: ColumnFormat) -> String:
             + ', "parens": ' + ("true" if f.parens else "false") + ', "symbol": ' + json_string(f.symbol) + "}")
 
 
-def save_omx(path: String, frame: Frame, objects: List[SheetObject] = [], tiles: List[ReportTile] = [],
-             filter: ReportFilter = ReportFilter(-1, 0)) raises:
-    """Writes the table as it stands (every alive row, the edits applied), the sheet's charts and pivots, and the
-    Report (its tiles and filter) to `path` (.omx)."""
-    ref base = frame.base()[]
-    var stored = frame.stored()
-    var alive = List[Int]()
-    var dense = len(frame.removed) == 0
-    if not dense:
-        for r in range(frame.rows()):
-            if frame.alive(r):
-                alive.append(r)
-    var rows = frame.rows() if dense else len(alive)
-    var columns = List[List[Int64]]()
-    var meta = String('{"omx": 1, "columns": [')
+def metadata(sheet: Sheet, objects: List[SheetObject], tiles: List[ReportTile], filter: ReportFilter) -> String:
+    var stored = sheet.stored()
+    var meta = String('{"omx": ' + String(FORMAT) + ', "columns": [')
     for c in range(stored):
-        var values = List[Int64](length=rows, fill=0)
-        if dense:
-            var base_rows = base.rows
-            if base_rows > 0:
-                _ = external_call["memcpy", Int](Int(values.unsafe_ptr()), Int(base.cols[c].values.unsafe_ptr()), base_rows * 8)
-            for i in range(len(frame.added)):
-                values[base_rows + i] = frame.added[i][c]
-            for item in frame.cells.items():
-                if item.key % MAX_COLS == c:
-                    values[item.key // MAX_COLS] = item.value
-        else:
-            for i in range(rows):
-                values[i] = frame.get(c, alive[i])
-        ref col = base.cols[c]
-        if col.kind == TEXT:  # merged spellings read as the one they joined
-            for i in range(rows):
-                values[i] = frame.alias(c, values[i])
-        meta += ("," if c > 0 else "") + '{"name": ' + json_string(col.name) + ', "kind": ' + String(col.kind) + ', "scale": ' + String(col.scale)
-        meta += ', "format": ' + format_json(frame.format_of(c))
-        if col.kind == TEXT:
-            meta += ', "dictionary": ['
-            var k = 0
-            for w in col.dictionary:
-                meta += ("," if k > 0 else "") + json_string(w)
-                k += 1
-            for w in frame.words[c]:
-                meta += ("," if k > 0 else "") + json_string(w)
-                k += 1
-            meta += "]"
-        meta += "}"
-        columns.append(values^)
+        meta += ("," if c > 0 else "") + '{"name": ' + json_string(sheet.name(c)) + ', "format": ' + format_json(sheet.format_of(c)) + "}"
     meta += '], "formulas": ['
-    for f in range(len(frame.formulas)):
-        meta += ("," if f > 0 else "") + '{"text": ' + json_string(frame.formulas[f].name + " = " + frame.formulas[f].formula)
-        meta += ', "format": ' + format_json(frame.format_of(stored + f)) + "}"
+    for f in range(sheet.columns() - stored):
+        meta += ("," if f > 0 else "") + '{"text": ' + json_string(sheet.frame.formula_text(stored + f))
+        meta += ', "format": ' + format_json(sheet.format_of(stored + f)) + "}"
     meta += '], "objects": ['
     for k in range(len(objects)):
         ref o = objects[k]
@@ -146,105 +39,119 @@ def save_omx(path: String, frame: Frame, objects: List[SheetObject] = [], tiles:
     meta += '], "report": {"tiles": ['
     for k in range(len(tiles)):
         meta += ("," if k > 0 else "") + '{"kind": ' + String(tiles[k].kind) + ', "col": ' + String(tiles[k].col) + ', "group": ' + String(tiles[k].group) + "}"
-    meta += '], "filter": {"col": ' + String(filter.col) + ', "code": ' + String(filter.code) + "}}}"
-    var names = Python.list()
-    var addresses = Python.list()
-    for c in range(stored):
-        names.append(base.cols[c].name)
-        addresses.append(Int(columns[c].unsafe_ptr()))
-    var py = bridge()
-    _ = py.write(path, rows, names, addresses, meta)
-    _ = len(columns)
+    meta += '], "filter": {"col": ' + String(filter.col) + ', "word": '
+    meta += json_string(sheet.text_of(filter.col, Int64(filter.code)) if filter.col >= 0 else "") + "}}}"
+    return meta
 
 
-def format_from(o: PythonObject) raises -> ColumnFormat:
+def save_omx(path: String, sheet: Sheet, objects: List[SheetObject] = [], tiles: List[ReportTile] = [],
+             filter: ReportFilter = ReportFilter(-1, 0)) raises:
+    """Writes the table as it stands (every alive row, the edits applied), the sheet's charts and pivots, and the
+    Report (its tiles and filter) to `path` (.omx)."""
+    write_parquet(path, sheet.frame.bake(), metadata(sheet, objects, tiles, filter))
+
+
+def format_from(j: Json, node: Int) -> ColumnFormat:
     """A saved format, or Automatic if it isn't one this code can draw."""
-    var f = ColumnFormat(Int(py=o["style"]), Int(py=o["decimals"]), Bool(py=o["thousands"]), Bool(py=o["parens"]), String(py=o["symbol"]))
+    if node < 0:
+        return ColumnFormat.auto()
+    var f = ColumnFormat(j.number(j.get(node, "style")), j.number(j.get(node, "decimals"), -1), j.flag(j.get(node, "thousands"), True),
+                         j.flag(j.get(node, "parens")), j.text(j.get(node, "symbol"), "$"))
     return f^ if f.valid() else ColumnFormat.auto()
 
 
-def is_number(frame: Frame, c: Int) -> Bool:
-    return 0 <= c < frame.columns() and (frame.kind(c) == INT or frame.kind(c) == DECIMAL)
+def is_number(sheet: Sheet, c: Int) -> Bool:
+    return 0 <= c < sheet.columns() and (sheet.kind(c) == INT or sheet.kind(c) == DECIMAL)
 
 
-def is_text(frame: Frame, c: Int) -> Bool:
-    return 0 <= c < frame.stored() and frame.kind(c) == TEXT
+def is_text(sheet: Sheet, c: Int) -> Bool:
+    return 0 <= c < sheet.stored() and sheet.kind(c) == TEXT
 
 
-def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[ReportTile], mut filter: ReportFilter) raises -> Frame:
-    """Reads `path` (.omx): returns the table and fills in the sheet's objects and the Report. An object or tile
-    that names a column the table doesn't have (or a kind this code doesn't know) is left out rather than trusted."""
-    var py = bridge()
-    var frame = open_omx(path)
-    var meta = py.meta_of(path)
-    var columns = frame.columns()
-    var stored = frame.stored()
-
-    objects = List[SheetObject]()
-    var specs = meta.get("objects", Python.list())
-    for k in range(Int(py=specs.__len__())):
-        var o = specs[k]
-        var kind = Int(py=o["kind"])
-        var value = Int(py=o["value"])
-        var group = Int(py=o["group"])
-        var across = Int(py=o["across"])
-        if (kind != OBJ_CHART and kind != OBJ_PIVOT) or not is_number(frame, value) or not is_text(frame, group) or not (across == -1 or is_text(frame, across)):
-            continue
-        var obj = SheetObject.chart(value, group, Int(py=o["x"]), Int(py=o["y"]), Int(py=o["w"]), Int(py=o["h"]))
-        obj.kind = kind
-        obj.across = across
-        obj.style = Int(py=o["style"])
-        objects.append(obj^)
-    tiles = List[ReportTile]()
-    var report = meta.get("report", Python.dict())
-    var tile_specs = report.get("tiles", Python.list())
-    for k in range(Int(py=tile_specs.__len__())):
-        var t = tile_specs[k]
-        var kind = Int(py=t["kind"])
-        var col = Int(py=t["col"])
-        var group = Int(py=t["group"])
-        if not (TILE_SUM <= kind <= TILE_CHART) or not is_number(frame, col) or (kind == TILE_CHART and not is_text(frame, group)):
-            continue
-        tiles.append(new_tile(kind, col, group))
-    var f = report.get("filter", Python.dict())
-    filter = ReportFilter(Int(py=f.get("col", -1)), Int(py=f.get("code", 0)))
-    if not (filter.col == -1 or (is_text(frame, filter.col) and 0 <= filter.code < groups_of(frame, filter.col))):
-        filter = ReportFilter(-1, 0)
-    return frame^
+def read_meta(path: String, mut table: Table) raises -> Json:
+    """The file's table (moved into `table`) and its metadata, refused unless it is a format-2 omxplorer document."""
+    var r = read_parquet(path)
+    swap(table, r.table)
+    if r.metadata == "":
+        raise Error("it isn't an omxplorer document")
+    var j = Json.parse(r.metadata)
+    var version = j.number(j.get(0, "omx"))
+    if version == 1:
+        raise Error("it was saved by an older omxplorer (format 1); open the original CSV and save it again")
+    if version != FORMAT:
+        raise Error("it isn't an omxplorer document")
+    return j^
 
 
-def open_omx(path: String) raises -> Frame:
+def open_omx(path: String, use_gpu: Bool = True) raises -> Sheet:
     """Reads `path` (.omx): the table, its formula columns and every column's format."""
-    var py = bridge()
-    var read: PythonObject
+    var j = Json()
+    return read_document(path, j, use_gpu)
+
+
+def read_document(path: String, mut j: Json, use_gpu: Bool) raises -> Sheet:
+    """The table with its formulas and formats; `j` is the file's metadata (the objects and the Report are in it)."""
+    var table = Table()
     try:
-        read = py.read(path, MAX_COLS)
+        j = read_meta(path, table)
     except e:
         raise Error("can't open " + path + ": " + String(e))
-    var meta = read["meta"]
-    var rows = Int(py=read["rows"])
-    var cols = Columns()
-    var specs = meta["columns"]
-    var n = Int(py=specs.__len__())
-    for c in range(n):
-        var spec = specs[c]
-        var col = Column(String(py=spec["name"]), Int(py=spec["kind"]), Int(py=spec["scale"]))
-        col.scale = Int(py=spec["scale"])
-        col.values = List[Int64](length=rows, fill=0)
-        if rows > 0:
-            _ = external_call["memcpy", Int](Int(col.values.unsafe_ptr()), Int(py=read["addresses"][c]), rows * 8)
-        if col.kind == TEXT:
-            var words = spec["dictionary"]
-            for k in range(Int(py=words.__len__())):
-                col.dictionary.append(String(py=words[k]))
-        cols.add(col^)
-    _ = py.done()
-    var frame = Frame(share(cols^))
-    for c in range(n):
-        frame.set_format(c, format_from(specs[c]["format"]))
-    var formulas = meta["formulas"]
-    for k in range(Int(py=formulas.__len__())):
-        var c = frame.formula(String(py=formulas[k]["text"]))
-        frame.set_format(c, format_from(formulas[k]["format"]))
-    frame.log = List[Edit]()  # (what the file holds isn't undoable)
-    return frame^
+    var specs = j.get(0, "columns")
+    if j.size(specs) != table.columns():
+        raise Error("can't open " + path + ": it describes " + String(j.size(specs)) + " columns but stores " + String(table.columns()))
+    for c in range(table.columns()):
+        if j.text(j.get(j.at(specs, c), "name")) != table.name(c):
+            raise Error("can't open " + path + ": column " + String(c + 1) + " is described as another name than it is stored under")
+    var sheet = Sheet(table^.share(), use_gpu)
+    for c in range(sheet.stored()):
+        sheet.set_format(c, format_from(j, j.get(j.at(specs, c), "format")))
+    var formulas = j.get(0, "formulas")
+    for k in range(j.size(formulas)):
+        var c: Int
+        try:
+            c = sheet.formula(j.text(j.get(j.at(formulas, k), "text")))
+        except e:
+            raise Error("can't open " + path + ": a formula column can't be rebuilt: " + String(e))
+        sheet.set_format(c, format_from(j, j.get(j.at(formulas, k), "format")))
+    return sheet^
+
+
+def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[ReportTile], mut filter: ReportFilter) raises -> Sheet:
+    """Reads `path` (.omx): returns the table and fills in the sheet's objects and the Report. An object or tile
+    that names a column the table doesn't have (or a kind this code doesn't know) is left out rather than trusted."""
+    var j = Json()
+    var sheet = read_document(path, j, True)
+    objects = List[SheetObject]()
+    var specs = j.get(0, "objects")
+    for k in range(j.size(specs)):
+        var o = j.at(specs, k)
+        var kind = j.number(j.get(o, "kind"))
+        var value = j.number(j.get(o, "value"), -1)
+        var group = j.number(j.get(o, "group"), -1)
+        var across = j.number(j.get(o, "across"), -1)
+        if (kind != OBJ_CHART and kind != OBJ_PIVOT) or not is_number(sheet, value) or not is_text(sheet, group) or not (across == -1 or is_text(sheet, across)):
+            continue
+        var obj = SheetObject.chart(value, group, j.number(j.get(o, "x")), j.number(j.get(o, "y")), j.number(j.get(o, "w"), 520), j.number(j.get(o, "h"), 340))
+        obj.kind = kind
+        obj.across = across
+        obj.style = j.number(j.get(o, "style"))
+        objects.append(obj^)
+    tiles = List[ReportTile]()
+    var report = j.get(0, "report")
+    var tile_specs = j.get(report, "tiles")
+    for k in range(j.size(tile_specs)):
+        var t = j.at(tile_specs, k)
+        var kind = j.number(j.get(t, "kind"), -1)
+        var col = j.number(j.get(t, "col"), -1)
+        var group = j.number(j.get(t, "group"), -1)
+        if not (TILE_SUM <= kind <= TILE_CHART) or not is_number(sheet, col) or (kind == TILE_CHART and not is_text(sheet, group)):
+            continue
+        tiles.append(new_tile(kind, col, group))
+    var f = j.get(report, "filter")
+    var fcol = j.number(j.get(f, "col"), -1)
+    filter = ReportFilter(-1, 0)
+    if is_text(sheet, fcol):
+        var code = sheet.code_of(fcol, j.text(j.get(f, "word")))
+        if code >= 0:
+            filter = ReportFilter(fcol, code)
+    return sheet^
