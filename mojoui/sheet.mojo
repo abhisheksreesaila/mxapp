@@ -87,6 +87,7 @@ struct Pages(Movable):
         for c in range(scan.columns()):
             cols.append(c)
         var t = scan.read_group(g, cols)
+        self.problem = ""  # (reads work again)
         var kept = t.rows() * t.columns() * 8
         for k in range(len(self.tables)):
             kept += self.bytes(k)

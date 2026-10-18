@@ -243,6 +243,24 @@ def m2():
         log = c.close()
     if "Traceback" in log:
         problems.append("the agent host logged a traceback: " + log[-400:])
+    # a streamed file that goes away while it's open: the status bar says the rows couldn't be read
+    import shutil
+    gone = DATA / "gone.parquet"
+    shutil.copy(fixture("big", "mid.parquet", 3_000_000), gone)
+    c = Client(BUILD / "omxplorer" / "web", env(OMX_STREAM_ROWS=1_000_000))
+    try:
+        c.call(opener(c), path=str(gone))
+        c.call("create-table")
+        gone.unlink()
+        grid_rows(c, 2_500_000, 3)  # (rows from a group not kept: they have to be read, and can't be)
+        c.call("grid", gesture="tap", x=160, y=60)  # (the next event shows it: the status bar is built before the grid draws)
+        status = status_of(c)
+        if not any(s.startswith("Couldn't read the file") for s in status):
+            problems.append(f"a streamed file deleted while open doesn't show in the status bar: {status}")
+    finally:
+        log = c.close()
+    if "Traceback" in log:
+        problems.append("the agent host logged a traceback: " + log[-400:])
     err = mojo_test("tests/test_streamed.mojo", "STREAMED TESTS PASSED", "test_streamed")
     if err:
         problems.append(err)

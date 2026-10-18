@@ -65,8 +65,9 @@ trait GridSource:
         ...
 
     def grid_formula(self, c: Int) -> Bool:
-        """A computed column (drawn in the formula colour, marked ƒ)."""
-        ...
+        """A computed column (drawn in the formula colour, marked ƒ). By default, any column that can't be typed into
+        (a source with a read-only column that isn't a formula says so, as a streamed Sheet does)."""
+        return not self.grid_editable(c)
 
     def grid_text(self, c: Int, row: Int) -> String:
         ...
