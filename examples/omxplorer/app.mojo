@@ -1454,9 +1454,9 @@ struct Main(App):
         var parts = List[View]()
         parts.append(self.menu_bar())
         parts.append(self.toolbar().height(64))
-        parts.append(row^.padding(8, 20))
+        parts.append(row^.padding(0, 20))
         parts.append(Spacer())
-        parts.append(BottomTabs(tabs, self.sheet_tab, TAB, self.renaming, RENAME_SUBMIT, RENAME_CANCEL, chip).height(40))  # (Excel's place for them)
+        parts.append(BottomTabs(tabs, self.sheet_tab, TAB, self.renaming, RENAME_SUBMIT, RENAME_CANCEL, chip).height(30))  # (Excel's place for them)
         parts.append(self.status().height(30))
         if self.ctx_col >= 0 and self.sheet_tab == 0:
             parts.append(self.context_menu())

@@ -4,6 +4,15 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 21 (2026-10-18): omxplorer's formatting, tabs at the bottom, a toolbar per tab (goal 21)
+- **Setup:** the owner tried a 1M-row Parquet file and asked for Excel's formatting, renamable tabs along the bottom, and controls that follow the tab.
+- **Worked:** cell and column styles (bold, italic, underline, strikethrough, eight text and fill colours, alignment) drawn by the grid on every host, kept in `.omx`, undone in order with edits; Currency/Percent/decimals in the toolbar; bottom tabs renamed in place; the Report's tiles and filter in its own toolbar. omxapp gained `cellstyle`, `swatches`, `Toggles`/`ICON_ON`, `BottomTabs`, an italic slant. M1–M4 PASS (`docs/report.md`).
+- **Broke and fixed:** Inter Medium as "bold" was invisible at 13 px (drawn twice now); GTK named icon toggles by their tooltip (goal 17's parity check caught it); after a screen change the web left the keyboard on a stale button, not the grid (goal 14 caught it); the page outgrew 900 px.
+- **Means:** the old checks' GTK-vs-web comparisons keep catching real host differences: keep them.
+- **Next:** goal 22 on MX frame 7cbcc04: editing a streamed file, count distinct and median in the Report.
+
+---
+
 ## 2026-10-18 · Experiment 20: omxplorer on what MX frame can do now: Parquet, files bigger than memory, no Python (autopilot, night)
 
 **Goal:** owner: "once its in main, please continue with tickets that depends on mxframe - and proceed on autopilot." After F-138 put omxplorer on the MX frame Mojo package, build what `docs/plans/needs-mxframe.md` waited for that the package can now serve.

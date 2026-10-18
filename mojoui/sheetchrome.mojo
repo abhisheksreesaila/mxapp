@@ -99,7 +99,7 @@ def BottomTabs(tabs: List[Tab], selected: Int, on_tap: Int, renaming: Int = -1, 
     items.append(Spacer())
     for v in right:
         items.append(v.copy())
-    return HStack(items^, spacing=4).fill().align(CENTER).padding(2, 14).tag("sheet-tabs")
+    return HStack(items^, spacing=4).fill().align(CENTER).padding(0, 14).tag("sheet-tabs")
 
 
 def FormulaBar(cell: String, text: String, on_submit: Int, on_cancel: Int = NO_MSG, placeholder: String = "Value or =formula",

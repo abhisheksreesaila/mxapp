@@ -4,7 +4,16 @@
 
 ## Result
 
-RESULT_PLACEHOLDER
+M1–M4 PASS. The full check passed on its third run. The first two runs found two real web and GTK differences, both fixed (D-210, D-211). A layout trim since then reran M1–M3 and goal 17's GTK-vs-web checks, which hold goals 3–15. Reviewer: PASS on round 2, subject to M4.
+
+```
+PASS  M1  Bold, Italic, Underline, Strikethrough, colours, fills and alignment on a cell, identical on GTK and the web, and Ctrl+B/I/U; a column's format (after Currency too), Undo in order with edits, Clear formatting; the document reopens styled; the pixels (test_cellstyle)
+PASS  M2  the tabs sit along the bottom on GTK and the web; tapping the current one (or View > Rename tab…) renames it; Escape keeps the name, an empty one is refused; both names survive save and open
+PASS  M3  the sheet's toolbar has the sheet's tools and formats, the Report's its tiles and filter (its page has no add-tile row); a streamed file shows no edit tools on either
+PASS  M4  goal 20's M1–M4 (goals 3–19 and F-138 inside them) pass; the components matrix is current  (2017 s)
+```
+
+**Try it:** `scripts/omxplorer.sh build/try/sales-1m.parquet` (1M rows). Select a cell, or a column by its header, then use the toolbar. Tap the current tab at the bottom to rename it.
 
 ## What changed
 
@@ -22,7 +31,9 @@ RESULT_PLACEHOLDER
   - On the Report: Save and Undo, the column new tiles use, Sum / Average / Count / Chart tile, and the filter. The Report page no longer has its own add-tile row.
 - **Fixed on the way:** column headers no longer cut to "amou…", and a single Report chart spans the page on the web.
 
-SCREENSHOTS_PLACEHOLDER
+![A column as bold currency, a red cell on an amber fill, an italic underlined date, the sheet renamed "Orders 2025" at the bottom](img/goal21-formatting.png)
+![The fill colour's swatches](img/goal21-fill-picker.png)
+![The Report's toolbar: the tile column, Sum / Average / Count / Chart tile, the filter](img/goal21-report-toolbar.png)
 
 ## Three decisions worth a second look
 
