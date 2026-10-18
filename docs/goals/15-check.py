@@ -72,7 +72,7 @@ def m1():
                       ("mojoui/omxfile.mojo", "def open_document(")):
         if needle not in (ROOT / f).read_text():
             problems.append(f"{f} lacks {needle}")
-    b = run(["pixi", "run", "mojo", "build", "-I", ".", "tests/test_sheetpage.mojo", "-o", str(BUILD / "test_sheetpage")], timeout=900)
+    b = run(["scripts/mxbuild.sh", "tests/test_sheetpage.mojo", "-o", str(BUILD / "test_sheetpage")], timeout=900)
     t = run(["pixi", "run", str(BUILD / "test_sheetpage")], timeout=600) if b.returncode == 0 else b
     if "SHEETPAGE TESTS PASSED" not in t.stdout:
         problems.append(f"test_sheetpage: {(t.stdout + t.stderr)[-300:]}")

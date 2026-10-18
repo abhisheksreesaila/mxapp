@@ -245,6 +245,30 @@ def m5():
     return not problems, "; ".join(problems) or "goal 17's checks (and goals 3–15's inside them) pass; the matrix is current"
 
 
+def m6():
+    """F-138c: omxplorer runs on the MX frame package, and its Linux binary carries no Python."""
+    problems = []
+    exe = BUILD / "omxplorer" / "linux" / "omxplorer"
+    if not exe.exists():
+        return False, f"{exe} isn't built"
+    ldd = run(["ldd", str(exe)]).stdout
+    if "libpython" in ldd.lower():
+        problems.append("ldd shows libpython")
+    nm = run(["nm", "-D", str(exe)]).stdout
+    if "KGEN_CompilerRT_Python" in nm:
+        problems.append("nm -D shows KGEN_CompilerRT_Python (Mojo's Python interop)")
+    strings = run(["strings", str(exe)]).stdout
+    if re.search(r"^Py_Initialize", strings, re.M):
+        problems.append("strings shows Py_Initialize")
+    for needle in ("from std.python", "import pyarrow", "from mojoui.frame ", "from mojoui.frame_gpu"):
+        for f in ("mojoui/csvio.mojo", "mojoui/omxfile.mojo", "mojoui/sheet.mojo", "mojoui/sheetpage.mojo", "mojoui/reportpage.mojo", "examples/omxplorer/app.mojo"):
+            if needle in (ROOT / f).read_text():
+                problems.append(f"{f} uses {needle}")
+    if not (ROOT / "vendor/mxframe.mojoc").exists() or not (ROOT / "vendor/MXFRAME_COMMIT").read_text().strip():
+        problems.append("vendor/mxframe.mojoc or its recorded source commit is missing")
+    return not problems, "; ".join(problems) or "the omxplorer Linux binary has no libpython (ldd), no KGEN_CompilerRT_Python (nm -D) and no Py_Initialize (strings); its engine modules import only the MX frame package; the package is vendored with its source commit"
+
+
 def main():
     import shutil
     import headless
@@ -264,7 +288,7 @@ def main():
                 if a.returncode != 0:
                     print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6)]:
         if only and name not in only:
             continue
         t0 = time.time()
