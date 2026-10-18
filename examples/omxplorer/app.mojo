@@ -841,6 +841,31 @@ struct Main(App):
 
     # ---------- drawing ----------
 
+    def describe(self, canvas: Int, first: Int, count: Int) -> String:
+        """The grid's shown rows as tab-separated text, for an agent (D-163): the header, then `count` rows from
+        shown row `first` (count 0: what fits on screen, or 25 before the grid has been drawn)."""
+        if canvas != 0 or self.screen != SHEET:
+            return ""
+        var cols = self.frame.grid_columns()
+        var out = String()
+        for c in range(cols):
+            out += ("\t" if c > 0 else "") + self.frame.grid_name(c)
+        var n = count if count > 0 else (self.grid.rows_in(self.grid.size[1]) if self.grid.size[1] > 0 else 25)
+        var i = self.grid.top + first
+        var got = 0
+        while got < n:
+            var r = self.grid.shown_row(i, self.frame)
+            if r < 0:
+                break
+            i += 1
+            if not self.frame.grid_alive(r):
+                continue
+            out += "\n"
+            for c in range(cols):
+                out += ("\t" if c > 0 else "") + self.frame.grid_text(c, r)
+            got += 1
+        return out
+
     def draw(mut self, canvas: Int, mut surface: Surface):
         if 0 <= canvas < len(self.chart_sizes):
             self.chart_sizes[canvas] = (surface.points_width(), surface.points_height())

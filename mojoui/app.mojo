@@ -66,6 +66,11 @@ trait App(Movable, Deinitable):
         """The text of one row of a LazyList (hosts ask only for rows on screen)."""
         return ""
 
+    def describe(self, canvas: Int, first: Int, count: Int) -> String:
+        """Canvas `canvas`'s content as text, for an agent (D-163): `count` rows from shown row `first`
+        (count 0: what's on screen), tab-separated; "" when the canvas has no text to offer."""
+        return ""
+
     def draw(mut self, canvas: Int, mut surface: Surface):
         """Paints Canvas `canvas` into `surface` (its real pixel size). May update state
         shown elsewhere on screen (e.g. how long drawing took); hosts refresh it afterwards."""

@@ -1,16 +1,16 @@
-"""Milestone checker for GOAL.md (goal 18: the kit app on every host; the UIKit and AppKit hosts catch up; goal 17's checks
-run as M5, earlier goals' inside them). Rebuilds from scratch, prints PASS/FAIL per milestone. GTK runs headless; the web in
-Chromium; the iPad and Mac builds are linked, bundled and signed here (they run on the owner's devices, not here).
+"""Milestone checker for GOAL.md (goal 19: the agent host; goal 18's checks run as M4, earlier goals' inside them).
+Rebuilds from scratch, prints PASS/FAIL per milestone. The agent host is driven by scripts/agent_client.py, a small MCP
+client over stdio: no LLM runs here.
 
-Run: scripts/check   (a subset without rebuilding: scripts/check M2 M3; earlier goals: through docs/goals/NN-check.py)
+Run: scripts/check   (a subset without rebuilding: scripts/check M1 M2; earlier goals: through docs/goals/NN-check.py)
 """
 
+import base64
 import importlib.util
-import plistlib
-import re
+import io
+import os
 import sys
 import time
-import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -24,234 +24,187 @@ def load(name, path):
     return mod
 
 
-g17 = load("goal17", "docs/goals/17-check.py")
-g05 = load("goal05", "docs/goals/05-check.py")
-run, BUILD, brightness = g17.run, g17.BUILD, g17.brightness
-g05.ROOT, g05.BUILD = ROOT, BUILD  # (the archived checker's paths, from here)
-EXAMPLES = g17.EXAMPLES + ["kit"]
-SHOWN = g17.SHOWN
-TIMING = re.compile(r"[\d.]+ ms on ")
-import drive  # noqa: E402
+g18 = load("goal18", "docs/goals/18-check.py")
+run, BUILD, EXAMPLES, kit, labels, lines = g18.run, g18.BUILD, g18.EXAMPLES, g18.kit, g18.labels, g18.lines
+from agent_client import Client  # noqa: E402
 
-KINDS = ["TEXT", "BUTTON", "VSTACK", "HSTACK", "SPACER", "FIELD", "TOGGLE", "DROPDOWN", "SLIDER", "PROGRESS", "DIVIDER", "SCROLL", "IMAGE",
-         "SEGMENTED", "RADIO", "TEXTAREA", "ALERT", "TABS", "NAVBAR", "DATE", "ICON", "GRID", "LAZYLIST", "CANVAS", "BOARD", "OVERLAY",
-         "MENUBAR", "MENU", "ITEM", "DIALOG", "TOAST", "POPOVER"]
-NEW_ROWS = ("`MenuBar`", "`Menu`", "`ContextMenu`", "`Dialog`", "`Toast`", "`Popover`", "`Checkbox`", "`Board`", "`Overlay`")
+CORE = ("screen", "act", "read", "render")
 
 
-def shown(out):
-    return sorted(l for l in out.splitlines() if re.match(SHOWN, l) and not TIMING.search(l))
+def env():
+    """Where the apps keep documents and settings during a check (never the owner's own)."""
+    d = BUILD / "agent-home"
+    (d / "documents").mkdir(parents=True, exist_ok=True)
+    (d / "config").mkdir(parents=True, exist_ok=True)
+    return {"OMX_DOCUMENTS": str(d / "documents"), "OMX_CONFIG": str(d / "config"), "OMXAPP_UPLOADS": str(d / "uploads")}
 
 
-def lines(out, prefix):
-    return [l[len(prefix):] for l in out.splitlines() if l.startswith(prefix)]
-
-
-def labels(out):
-    return lines(out, "LABEL: ")
-
-
-def kit(steps, name):
-    """Runs the kit app's steps on GTK (headless) and the web (Chromium); returns (gtk output, web output) or (None, why)."""
-    exe = BUILD / "kit" / "linux" / "kit"
-    r = run([str(exe)], env={"MOJOUI_TEST": steps, "MOJOUI_SHOT": str(BUILD / "kit" / f"{name}-gtk.png")}, timeout=300)
-    og = r.stdout + r.stderr
-    if r.returncode != 0 or "CRITICAL" in og or "TEST: " in og:
-        return None, f"GTK run failed (exit {r.returncode}): {og[-400:]}"
-    try:
-        rw, ow = drive.web_run(BUILD / "kit" / "web", steps, shot=str(BUILD / "kit" / f"{name}-web.png"), viewport=(1280, 800))
-    except Exception as ex:
-        return None, f"web run crashed: {ex!r}"
-    if rw.returncode != 0:
-        return None, f"web: {ow[-400:]}"
-    return og, ow
-
-
-def differ(name, a, b):
-    sa, sb = shown(a), shown(b)
-    return None if sa == sb else f"{name}: GTK and web differ: {sorted(set(sa) ^ set(sb))[:4]}"
-
-
-def branches(host_file):
-    """The node kinds a host builds: every `kind == X` in its source."""
-    return set(re.findall(r"kind == ([A-Z_]+)", (ROOT / host_file).read_text()))
-
-
-def matrix_states(name):
-    doc = (ROOT / "docs/components.md").read_text()
-    row = next((l for l in doc.splitlines() if l.startswith(f"| {name}")), "")
-    return [c.strip() for c in row.split("|") if c.strip() in ("✅", "🔨", "❌")]
+def png_size(image):
+    from PIL import Image
+    pic = Image.open(io.BytesIO(base64.b64decode(image["data"])))
+    return pic.size, len(pic.convert("RGB").getcolors(maxcolors=4096) or [None] * 4097)
 
 
 def m1():
+    """The agent host drives the kit: tools from the tree, act, the dialog's tools while it is open, the design, a picture,
+    the context menu's tools, the sort; GTK with the same steps shows the same status lines."""
     problems = []
-    plain = kit("", "kit")
-    saved = kit("menu:File>Save", "kit-save")
-    undone = kit("menu:File>Save;toast:Undo", "kit-undo")
-    key = kit("shortcut:Ctrl+S", "kit-shortcut")
-    ctx = kit("rightclick:0=400,500", "kit-context")
-    sorted_ = kit("rightclick:0=400,500;menu:>Sort Z→A", "kit-sorted")
-    dlg = kit("tap:Open dialog", "kit-dialog")
-    done = kit("tap:Open dialog;tap:Done", "kit-dialog-done")
-    pop = kit("tap:Show popover", "kit-popover")
-    closed = kit("tap:Show popover;dismiss:", "kit-popover-closed")
-    dark = kit("segment:0=Graphite", "kit-graphite")
-    check = kit("toggle:Show grid lines", "kit-check")
-    moved = kit("move:note=40,30", "kit-moved")
-    for r in (plain, saved, undone, key, ctx, sorted_, dlg, done, pop, closed, dark, check, moved):
-        if r[0] is None:
-            return False, r[1]
-    for host, k in (("GTK", 0), ("web", 1)):
-        menus = lines(plain[k], "MENU: ")
-        if not any(m.startswith("File:") and "Save (Ctrl+S)" in m for m in menus) or not any(m.startswith("View:") and "Skin ▸" in m for m in menus):
-            problems.append(f"{host}: the menu bar lacks File > Save or View > Skin ▸ ({menus[:2]})")
-        if len(lines(plain[k], "TIP: ")) < 5:
-            problems.append(f"{host}: the tool buttons lack tooltips")
-        if "BOARD: table at 0,0 460x270" not in plain[k] or "BOARD: note at 480,0 240x120" not in plain[k]:
-            problems.append(f"{host}: the Board's table and note aren't where the app put them")
-        if not any(l.startswith("CANVAS: ") and " painted " in l and int(l.rsplit(" ", 1)[1]) > 0 for l in plain[k].splitlines()):
-            problems.append(f"{host}: the canvas painted nothing")
-        if "DESIGN: ledger" not in plain[k]:
-            problems.append(f"{host}: the kit isn't the Ledger by default")
-        if "Saved kit.omx" not in labels(saved[k]) or "TOAST: Saved kit.omx | Undo" not in saved[k]:
-            problems.append(f"{host}: File > Save didn't save with a toast")
-        if "Save undone" not in labels(undone[k]) or lines(undone[k], "TOAST: "):
-            problems.append(f"{host}: the toast's Undo didn't undo (or the toast stayed)")
-        if "Saved kit.omx" not in labels(key[k]):
-            problems.append(f"{host}: Ctrl+S didn't save")
-        if not any(m.startswith("context:") and "Sort Z→A" in m and "Delete column" in m for m in lines(ctx[k], "MENU: ")):
-            problems.append(f"{host}: a right-click on the canvas opened no context menu")
-        if host == "GTK" and "MENUSHOWN: yes" not in ctx[k]:
-            problems.append("GTK: the context menu's popover isn't on screen")
-        if "Sorted Z→A" not in labels(sorted_[k]) or any(m.startswith("context:") for m in lines(sorted_[k], "MENU: ")):
-            problems.append(f"{host}: the context menu's Sort Z→A didn't sort and close")
-        if "DIALOG: Settings" not in dlg[k] or "RADIO: Ledger" not in dlg[k] or "CHECK: Show grid lines=on" not in dlg[k]:
-            problems.append(f"{host}: Open dialog showed no Settings dialog with its radio and checkboxes")
-        if "DIALOG: Settings" in done[k]:
-            problems.append(f"{host}: Done didn't close the dialog")
-        if "POPOVER: Formulas" not in pop[k]:
-            problems.append(f"{host}: Show popover opened no popover")
-        if "POPOVER: Formulas" in closed[k]:
-            problems.append(f"{host}: the popover didn't close")
-        if "DESIGN: graphite" not in dark[k] or "Skin graphite" not in labels(dark[k]):
-            problems.append(f"{host}: the Graphite segment didn't switch the skin")
-        if "CHECK: Show grid lines=off" not in check[k] or "Grid lines off" not in labels(check[k]):
-            problems.append(f"{host}: the checkbox didn't toggle")
-        if "BOARD: note at 520,30 240x120" not in moved[k]:
-            problems.append(f"{host}: dragging the note didn't move it ({lines(moved[k], 'BOARD: ')})")
-    for name, want_light in (("kit", True), ("kit-graphite", False)):
-        for host in ("gtk", "web"):
-            b = brightness(BUILD / "kit" / f"{name}-{host}.png")
-            if want_light and b < 170:
-                problems.append(f"{name} on {host}: not light (brightness {b:.0f})")
-            if not want_light and b > 100:
-                problems.append(f"{name} on {host}: not dark (brightness {b:.0f})")
-    for name, r in (("plain", plain), ("saved", saved), ("context", ctx), ("dialog", dlg), ("popover", pop), ("dark", dark), ("moved", moved)):
-        d = differ(name, r[0], r[1])
-        if d:
-            problems.append(d)
-    return not problems, "; ".join(problems[:8]) or "the kit app: menu bar, shortcuts, tooltips, a context menu on the canvas, a dialog, a toast with Undo, a popover, checkboxes, a Board with an island, a skin switch; identical on GTK and web, light and dark"
+    c = Client(BUILD / "kit" / "web", env())
+    try:
+        if not c.init.get("capabilities", {}).get("tools", {}).get("listChanged"):
+            problems.append("initialize doesn't announce tools.listChanged")
+        tools = {t["name"]: t for t in c.tools()}
+        for name in CORE + ("file-save", "view-skin-graphite", "save", "open-dialog", "canvas", "show-grid-lines", "sum-average-count"):
+            if name not in tools:
+                problems.append(f"no tool {name} (have {sorted(tools)[:12]}…)")
+        for name in ("file-open", "edit-redo"):  # disabled items are not tools
+            if name in tools:
+                problems.append(f"the disabled item {name} is a tool")
+        if "file-save" in tools and "Ctrl+S" not in tools["file-save"]["description"]:
+            problems.append("file-save's description lacks its shortcut")
+        if "save" in tools and tools["save"]["description"] != "Save the document (Ctrl+S)":
+            problems.append(f"the Save button's tooltip isn't its description: {tools['save']['description']!r}")
+        if "show-grid-lines" in tools and tools["show-grid-lines"]["inputSchema"].get("required") != ["on"]:
+            problems.append("a checkbox tool doesn't require `on`")
+        screen, _, err = c.call("screen")
+        if err or "Menu bar: File, Edit, View, Help" not in screen or "design: Ledger" not in screen or "Canvas" not in screen:
+            problems.append(f"screen lacks the menu bar, the design or the canvas: {screen[:300]!r}")
+        text, _, err = c.call("open-dialog")
+        names = set(c.names())
+        if err or 'dialog "Settings"' not in text or not {"close-dialog", "settings-done", "settings-ledger-graphite-blueprint", "settings-show-grid-lines"} <= names:
+            problems.append(f"open-dialog didn't open Settings with its tools: {text!r} {sorted(names)[-8:]}")
+        if "notifications/tools/list_changed" not in c.notifications:
+            problems.append("no tools/list_changed notification after acting")
+        text, _, err = c.call("act", name="settings-ledger-graphite-blueprint", value={"option": "Graphite"})
+        if err or "Design: Graphite" not in text:
+            problems.append(f"the dialog's radio didn't switch the design: {text!r}")
+        text, _, err = c.call("settings-done")
+        names = set(c.names())
+        if err or "settings-done" in names or "close-dialog" in names:
+            problems.append(f"Done didn't close the dialog (its tools remain): {text!r}")
+        screen, _, _ = c.call("screen")
+        if "design: Graphite" not in screen:
+            problems.append("screen doesn't say the design is Graphite")
+        text, _, err = c.call("file-save")
+        if err or "Saved kit.omx" not in text or "toast" not in text:
+            problems.append(f"file-save didn't save with a toast: {text!r}")
+        text, images, err = c.call("render", name="canvas", width=460, height=214)
+        if err or len(images) != 1:
+            problems.append(f"render gave no picture: {text!r}")
+        else:
+            size, colours = png_size(images[0])
+            if size != (460, 214) or colours < 3:
+                problems.append(f"the canvas picture is {size} with {colours} colours")
+        text, _, err = c.call("canvas", gesture="secondary", x=120, y=80)
+        names = set(c.names())
+        if err or "context menu" not in text or not {"sort-z-a", "sort-a-z", "delete-column", "close-menu"} <= names:
+            problems.append(f"a secondary gesture opened no context menu with its items as tools: {text!r}")
+        text, _, err = c.call("sort-z-a")
+        if err or "Sorted Z→A" not in text or "sort-z-a" in set(c.names()):
+            problems.append(f"sort-z-a didn't sort and close the menu: {text!r}")
+        text, _, err = c.call("nope")
+        if not err or "no tool" not in text:
+            problems.append(f"a wrong name isn't an error for the agent: {text!r}")
+        text, _, err = c.call("act", name="ledger-graphite-blueprint", value={"option": "Ledger"})
+        if err or "Design: Ledger" not in text:
+            problems.append(f"the inspector's segmented control didn't switch the design back: {text!r}")
+        texts, _, _ = c.call("read")
+        status = [t[len("status-bar: "):] for t in texts.splitlines() if t.startswith("status-bar: ")]
+    finally:
+        log = c.close()
+    if "Traceback" in log:
+        problems.append("the agent host logged a traceback: " + log[-400:])
+    gtk = kit("tap:Open dialog;radio:0=Graphite;tap:Done;menu:File>Save;rightclick:0=400,500;menu:>Sort Z→A;segment:0=Ledger", "kit-agent")  # (the web: a toast over a button blocks it, so the dialog first)
+    if gtk[0] is None:
+        problems.append(gtk[1])
+    else:
+        for host, k in (("GTK", 0), ("web", 1)):
+            missing = [s for s in status if s not in labels(gtk[k])]
+            if missing or not status:
+                problems.append(f"{host}'s status lines after the same steps differ from the agent's: missing {missing} (agent: {status})")
+    return not problems, "; ".join(problems) or f"the kit: {len(tools)} tools at the start, the dialog's and the context menu's while open, the same status as GTK and the web"
 
 
 def m2():
+    """omxplorer by an agent: the sample opens, Data > Sort largest first sorts, read gives the grid's rows, render a picture."""
     problems = []
-    have = branches("mojoui/hosts/uikit.mojo")
-    missing = [k for k in KINDS if k not in have]
-    if missing:
-        problems.append(f"uikit.mojo doesn't build {missing}")
-    src = (ROOT / "mojoui/hosts/uikit.mojo").read_text()
-    for needle, what in (("SECONDARY", "a right click / long press"), ("DOUBLE", "double taps"), ("PRESS", "press and release"), ("KEY", "hardware keys"),
-                         ("node.tip", "tooltips"), ("skin_palette", "the skins' colours"), ("TOOL", "tool buttons"), ("ICON_ONLY", "icon buttons"),
-                         ("TONE_WARN", "text tones"), ("sf_symbol", "icons")):
-        if needle not in src:
-            problems.append(f"uikit.mojo lacks {what} ({needle})")
-    ok, msg = g05.apple_ok("kit", "ios")
-    if not ok:
-        problems.append(msg)
-    if g05.same_source("kit", ["ios"]):
-        problems.append("the iOS build isn't from the current kit app")
-    r = run(["pixi", "run", "python", "scripts/components.py", "--check"], timeout=120)
-    if r.returncode != 0:
-        problems.append("docs/components.md is stale")
-    for name in NEW_ROWS:
-        states = matrix_states(name)
-        if len(states) < 5 or states[4] not in ("🔨", "✅"):
-            problems.append(f"the matrix shows {name} as {states[4:5]} on iPhone")
-    return not problems, "; ".join(problems[:8]) or "the UIKit host builds every kind the kit uses, the button styles, tones, tooltips, the canvas gestures and the skins; the kit links, bundles and signs for iPad with only the allowed symbols; 🔨 on iPhone in the matrix"
+    c = Client(BUILD / "omxplorer" / "web", env())
+    try:
+        screen, _, err = c.call("screen")
+        if err or "open-the-sample" not in c.names():
+            problems.append(f"the Start screen has no open-the-sample tool: {screen[:300]!r}")
+        text, _, err = c.call("open-the-sample")
+        if err or "Rows 1,000,000" not in text:
+            problems.append(f"the sample didn't open with its rows: {text[:300]!r}")
+        screen, _, _ = c.call("screen")
+        for needle in ("data-sort-largest-first", "status-bar", "Sum ", "Average ", "Rows 1,000,000", "Canvas"):
+            if needle not in screen:
+                problems.append(f"the sheet's screen lacks {needle!r}")
+        before, _, _ = c.call("read", name="grid", count=50)
+        text, _, err = c.call("data-sort-largest-first")
+        if err or "Sorted by revenue" not in text:
+            problems.append(f"Data > Sort largest first didn't sort: {text[:300]!r}")
+        rows, _, err = c.call("read", name="grid", count=50)
+        head, *body = rows.splitlines()
+        cols = head.split("\t")
+        if err or cols[:2] != ["order", "day"] or "revenue" not in cols or len(body) != 50:
+            problems.append(f"read grid isn't the header and 50 rows: {rows[:200]!r}")
+        else:
+            rev = [float(r.split("\t")[cols.index("revenue")].replace(",", "")) for r in body]
+            if rev != sorted(rev, reverse=True):
+                problems.append(f"the rows aren't sorted by revenue, largest first: {rev[:6]}")
+            if rows == before:
+                problems.append("the grid reads the same before and after the sort")
+        text, images, err = c.call("render", name="grid", width=900, height=400)
+        if err or len(images) != 1:
+            problems.append(f"render grid gave no picture: {text!r}")
+        else:
+            size, colours = png_size(images[0])
+            if size != (900, 400) or colours < 4:
+                problems.append(f"the grid picture is {size} with {colours} colours")
+    finally:
+        log = c.close()
+    if "Traceback" in log:
+        problems.append("the agent host logged a traceback: " + log[-400:])
+    return not problems, "; ".join(problems) or "omxplorer: the sample, a sort from the Data menu, the grid's rows as text, a picture of it"
 
 
 def m3():
+    """A fifth host: the matrix has an Agent column, the one command, the doc."""
     problems = []
-    plist = plistlib.loads((ROOT / "apple/ios/Info.plist").read_bytes())
-    ipad = plist.get("UISupportedInterfaceOrientations~ipad", [])
-    if len(ipad) != 4:
-        problems.append("Info.plist doesn't allow every iPad orientation")
-    if plist.get("UIRequiresFullScreen", True) is not False:
-        problems.append("Info.plist doesn't allow iPad multitasking (UIRequiresFullScreen must be false)")
-    if 2 not in plist.get("UIDeviceFamily", []):
-        problems.append("Info.plist doesn't list the iPad")
-    src = (ROOT / "mojoui/hosts/uikit.mojo").read_text()
-    for needle, what in (("UIKeyCommand", "keyboard shortcuts"), ("UIToolTipInteraction", "pointer tooltips"), ("ButtonMaskRequired", "a secondary-button tap"),
-                         ("UILongPressGestureRecognizer", "a long press"), ("CTFontManagerRegisterFontsForURL", "the bundled fonts"),
-                         ("UIPopoverPresentationController", "popovers"), ("pressesBegan", "hardware keys on a canvas")):
-        if needle not in src:
-            problems.append(f"uikit.mojo lacks {what} ({needle})")
-    ipa = next((BUILD / "kit" / "ios").glob("*.ipa"), None)
-    if not ipa:
-        problems.append("no kit .ipa")
-    else:
-        names = zipfile.ZipFile(ipa).namelist()
-        for f in ("Inter-Regular.ttf", "Inter-Medium.ttf", "JetBrainsMono-Regular.ttf"):
-            if not any(n.endswith("/fonts/" + f) for n in names):
-                problems.append(f"the .ipa doesn't carry fonts/{f}")
-    build = (ROOT / "scripts/build.sh").read_text()
-    if "fonts" not in build.split("build_ios()")[1].split("}")[0]:
-        problems.append("build.sh doesn't copy the fonts into the iOS app")
-    return not problems, "; ".join(problems) or "iPad: every orientation and multitasking allowed; Items' shortcuts become ⌘ key commands; pointer tooltips; a secondary tap or long press is SECONDARY; hardware keys reach the canvas; the fonts ship in the .ipa and register at start"
-
-
-def m4():
-    problems = []
-    have = branches("mojoui/hosts/appkit.mojo")
-    missing = [k for k in KINDS if k not in have]
-    if missing:
-        problems.append(f"appkit.mojo doesn't build {missing}")
-    src = (ROOT / "mojoui/hosts/appkit.mojo").read_text()
-    for needle, what in (("setMainMenu:", "the system menu bar"), ("setKeyEquivalent", "⌘ shortcuts"), ("NSPopover", "popovers"), ("setToolTip:", "tooltips"),
-                         ("beginSheet", "dialogs as sheets"), ("SECONDARY", "right clicks"), ("skin_palette", "the skins"), ("CTFontManagerRegisterFontsForURL", "the bundled fonts")):
-        if needle not in src:
-            problems.append(f"appkit.mojo lacks {what} ({needle})")
-    ok, msg = g05.apple_ok("kit", "mac")
-    if not ok:
-        problems.append(msg)
-    if g05.same_source("kit", ["mac"]):
-        problems.append("the Mac build isn't from the current kit app")
-    ok, msg = g05.apple_ok("omxplorer", "mac")  # F-138c: omxplorer links for Mac on the MX frame package, with only the allowed symbols
-    if not ok:
-        problems.append(msg)
-    if g05.same_source("omxplorer", ["mac"]):
-        problems.append("the Mac build isn't from the current omxplorer")
-    for name in NEW_ROWS:
-        states = matrix_states(name)
-        if len(states) < 4 or states[3] not in ("🔨", "✅"):
-            problems.append(f"the matrix shows {name} as {states[3:4]} on Mac")
-    return not problems, "; ".join(problems[:8]) or "the AppKit host builds every kind the kit uses, the menu bar as the system menu bar with ⌘ shortcuts, popovers, sheets, tooltips, right clicks and the skins; the kit links, bundles and signs for Mac; 🔨 on Mac in the matrix"
-
-
-def m5():
-    problems = []
-    for name in ("m1", "m2", "m3", "m4", "m5", "m6"):
-        ok, msg = getattr(g17, name)()
-        if not ok:
-            problems.append(f"goal 17 {name.upper()}: {msg[:300]}")
     r = run(["pixi", "run", "python", "scripts/components.py", "--check"], timeout=120)
     if r.returncode != 0:
         problems.append("docs/components.md is stale")
-    return not problems, "; ".join(problems) or "goal 17's checks (and goals 3–15's inside them) pass; the matrix is current"
+    doc = (ROOT / "docs/components.md").read_text()
+    if "Agent (MCP)" not in doc.splitlines()[10]:
+        problems.append("docs/components.md has no Agent (MCP) column")
+    for row in ("`Button`", "`MenuBar`", "`Item`", "`Dialog`", "`Canvas`", "`Toggle`"):
+        line = next((l for l in doc.splitlines() if l.startswith(f"| {row} |")), "")
+        if line.split("|")[-3].strip() != "✅":
+            problems.append(f"{row} isn't ✅ for the agent: {line!r}")
+    r = run(["scripts/agent.sh", "kit"], timeout=600)
+    if r.returncode != 0 or not r.stdout.startswith("claude mcp add kit -- ") or "mojoui/hosts/agent.py" not in r.stdout:
+        problems.append(f"scripts/agent.sh kit doesn't print the Claude Code command: {r.stdout!r} {r.stderr[-200:]!r}")
+    p = ROOT / "docs/agent.md"
+    text = p.read_text() if p.exists() else ""
+    for needle in ("screen", "act", "read", "render", "list_changed", "nothing a person couldn't", "claude mcp add"):
+        if needle not in text:
+            problems.append(f"docs/agent.md lacks {needle!r}")
+    return not problems, "; ".join(problems) or "the matrix's Agent column, scripts/agent.sh, docs/agent.md"
 
 
-def m6():
-    """F-138c: omxplorer runs on the MX frame package, and its Linux binary carries no Python."""
+def m4():
+    """Nothing regressed: goal 18's milestones (every earlier goal's inside them)."""
+    problems = []
+    for name, fn in [("18-M1", g18.m1), ("18-M2", g18.m2), ("18-M3", g18.m3), ("18-M4", g18.m4), ("18-M5", g18.m5)]:
+        ok, msg = fn()
+        if not ok:
+            problems.append(f"{name}: {msg}")
+    return not problems, "; ".join(problems) or "goal 18's M1–M5 (goals 3–17 inside them) pass"
+
+
+def m5():
+    """F-138c (goal 18's M-numbers moved to docs/goals/18-check.py): omxplorer runs on the MX frame package, and its Linux binary carries no Python."""
     problems = []
     exe = BUILD / "omxplorer" / "linux" / "omxplorer"
     if not exe.exists():
@@ -293,7 +246,7 @@ def main():
                 if a.returncode != 0:
                     print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5)]:
         if only and name not in only:
             continue
         t0 = time.time()

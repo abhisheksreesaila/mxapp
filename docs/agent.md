@@ -1,0 +1,59 @@
+# The agent host: an omxapp app as MCP tools
+
+The agent is a fifth host (D-160). GTK, the web, the iPad and the Mac each turn an app's tree of views into their own
+widgets; `mojoui/hosts/agent.py` turns it into tools for an agent, over MCP on stdio, from the same `mojoui_app` module
+the web host serves. An app changes nothing to be driven by an agent: the tag names the tool, the tooltip describes it,
+the message is the call. **An agent can do nothing a person couldn't:** a disabled item is no tool, a dialog's or a
+context menu's items are tools only while it is open.
+
+## Give an app to Claude Code
+```
+scripts/agent.sh omxplorer          # builds build/omxplorer/web if needed, prints the one command:
+claude mcp add omxplorer -- pixi run python …/mojoui/hosts/agent.py …/build/omxplorer/web
+```
+Any MCP client works the same way (the server speaks JSON-RPC over stdio, one object per line; D-161). By hand:
+```
+pixi run python scripts/agent_client.py build/kit/web screen
+pixi run python scripts/agent_client.py build/kit/web open-dialog
+pixi run python scripts/agent_client.py build/omxplorer/web read name=grid count=5
+```
+
+## The tools
+Four are always there:
+- **screen** · what the app shows right now, as text: every view, the menus with their items and shortcuts, the open
+  dialog, toast or popover, and the list of tools a person could use on it.
+- **act** · one tool by name, with its value (`{"name": "settings-ledger-graphite-blueprint", "value": {"option": "Graphite"}}`).
+  The same as calling the tool directly.
+- **read** · the texts on screen (grouped by their tagged container, e.g. `status-bar: Sum 114,007,922.00`); with a
+  name, one view's content: a drawn view's rows as tab-separated text where the app offers them (`App.describe`,
+  D-163: omxplorer's grid), or a list's rows.
+- **render** · a drawn view as a PNG (`{"name": "grid", "width": 900, "height": 400}`), for an agent that can see.
+
+The rest come from the screen (D-162):
+| On screen | Tool | Value |
+|---|---|---|
+| A menu item | `file-save`, `view-skin-graphite` (menu › submenu › item) | — |
+| A button with a tag | its tag: `popover-button` | — |
+| A button without one | a slug of its title: `open-dialog` | — |
+| A file picker | its title: `open-file` | `path` |
+| A text field | its tag or placeholder | `text`, `submit` |
+| A checkbox or switch | its label: `show-grid-lines` | `on` |
+| Segmented, radio, dropdown, tabs | its tag or its options: `ledger-graphite-blueprint` | `option` |
+| A slider, a list | its tag | `value`, `row` |
+| A canvas | its tag: `canvas`, `grid` | `gesture` (tap, double, secondary, press, release, key, pan, zoom), `x`, `y`, `key`, `modifiers` |
+| A context menu's items | the item: `sort-z-a`; `close-menu` | — |
+| A dialog's or popover's content | its title first: `settings-done`, `settings-show-grid-lines`; `close-dialog`, `close-popover` | as above |
+| A toast | its action: `undo`; `dismiss-toast` | — |
+
+After every call the server sends `notifications/tools/list_changed` (D-164): call `screen` or `tools/list` again to
+see what the screen offers now. A wrong name or value comes back as an error result that lists the tools, so the agent
+can correct itself.
+
+## What an agent gets back from act
+What changed, in words: the new texts (`Now: status-bar: Saved kit.omx`), what opened or closed (`Opened: dialog "Settings"`),
+a design change, and the tools that appeared or went. Enough to carry on without a second call.
+
+## What it can't do yet
+- Read cells on any app but omxplorer (the others don't `describe` their canvases); omxplorer reads the shown rows, not a range.
+- Move Board objects, drag, or scroll a grid by gesture beyond what `pan` sends.
+- Generate UI: that is AG-UI, after MX frame (the operations log is its state).

@@ -4,6 +4,23 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-17 · Experiment 19: the agent host: every omxapp app as MCP tools (autopilot, evening)
+
+**Goal:** the owner asked how omxapp becomes agent-native. The answer: the agent is a fifth host. `mojoui/hosts/agent.py` is an MCP server over the same `mojoui_app` module the web host serves; the screen's tree becomes tools (tags, tooltips, menu paths), plus `screen`, `act`, `read` and `render`. Contract: `GOAL.md` (goal 19). Report: `docs/report.md`. Artboards: `docs/design/agent/boards.html`.
+
+**What worked:**
+- **The kit and omxplorer, driven by a scripted MCP client** (`scripts/agent_client.py`): File > Save by name, a dialog's radios and checkboxes as tools while it is open, a `secondary` gesture that opens the context menu whose items become tools, a PNG of any canvas, omxplorer's grid rows as text through the new `App.describe` (a default on the trait: no other app changes).
+- **The tool list follows the screen:** `notifications/tools/list_changed` after every call; disabled items are not tools. An agent can do nothing a person couldn't.
+- **One command for Claude Code:** `scripts/agent.sh <app>` prints `claude mcp add …`. The matrix has an Agent column.
+
+**Not verified:** no LLM has driven it yet (the checks never call one); the next session points Claude Code at omxplorer.
+
+**What it means:** every app written with omxapp is agent-driveable the day it is written, on every platform, with no per-app work. AG-UI (generative UI, shared state) waits for MX frame: the operations log is its state.
+
+**Next small step:** a real agent session on omxplorer; tag the untagged buttons it stumbles on.
+
+---
+
 ## 2026-10-17 · Experiment 18: omxapp on the iPad: the kit app, the UIKit and AppKit hosts (autopilot, evening)
 
 **Goal:** the owner's definite target is iPadOS; MX frame is still cooking. So: the kit app (`examples/kit`, every component on one screen) runs on GTK and the web, and the UIKit and AppKit hosts catch up with everything omxplorer's screens use: menus and shortcuts, context menus, popovers, dialogs, toasts, checkboxes, tooltips, Board, Overlay, button styles, tones, the canvas gestures and hardware keys, the skins and the bundled fonts. Contract: `GOAL.md` (goal 18). Report: `docs/report.md`.

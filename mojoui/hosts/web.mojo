@@ -6,7 +6,7 @@
 from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
-from mojoui.view import View, DROPDOWN, IMAGE, SEGMENTED, RADIO, TABS, ALERT, LAZYLIST
+from mojoui.view import View, DROPDOWN, IMAGE, SEGMENTED, RADIO, TABS, ALERT, LAZYLIST, CANVAS
 from mojoui.diff import Diff
 from mojoui.app import App, Event, Runtime
 from mojoui.canvas import Surface
@@ -188,6 +188,14 @@ def web_rows[A: App](handle: Int, node: Int, first: Int, count: Int) -> String:
             out += ","
         out += json_str(rt[].app.row(n.msg2, i))
     return out + "]"
+
+
+def web_describe[A: App](handle: Int, node: Int, first: Int, count: Int) -> String:
+    """Canvas node `node`'s content as text (App.describe, D-163): "" for anything else."""
+    var rt = session_at[A](handle)
+    if node < 0 or node >= len(rt[].shown.nodes) or rt[].shown.nodes[node].kind != CANVAS:
+        return ""
+    return rt[].app.describe(rt[].shown.nodes[node].style, first, count)
 
 
 def web_image[A: App](handle: Int, node: Int) -> String:

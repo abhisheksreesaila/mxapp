@@ -8,92 +8,92 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 
 ## Components
 
-| Component | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Proven by |
-|---|---|---|---|---|---|---|
-| `Text` | ✅ | ✅ | ✅ | 🔨 | 🔨 | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
-| `Button` | ✅ | ✅ | ✅ | 🔨 | 🔨 | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
-| `VStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, mxstudio, omxplorer |
-| `HStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
-| `Spacer` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics, mxstudio, omxplorer |
-| `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | analytics, workbook, mxstudio, omxplorer |
-| `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | todo, omxplorer |
-| `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, omxplorer |
-| `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, kitchen, expenses, lens, analytics, omxplorer |
-| `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses, workbook, mxstudio |
-| `TextArea` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook, mxstudio |
-| `Toggle` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, lens, omxplorer |
-| `Dropdown` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, gpu, analytics, workbook, mxstudio, omxplorer |
-| `Slider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, gpu, lens |
-| `Segmented` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, lens, analytics, mxstudio, omxplorer |
-| `Radio` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, omxplorer |
-| `DatePicker` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
-| `ProgressBar` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, todo, expenses |
-| `Image` | ✅ | ✅ | ✅ | 🔨 | 🔨 | gallery, gpu |
-| `Icon` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, omxplorer |
-| `Alert` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
-| `Tabs` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout, mxstudio |
-| `NavBar` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses |
-| `LazyList` | ✅ | ✅ | ✅ | 🔨 | 🔨 | kitchen, expenses, layout |
-| `Canvas` | ✅ | ✅ | ✅ | 🔨 | 🔨 | lens, analytics, workbook, mxstudio, omxplorer |
-| `Board` | ✅ | ✅ | ❌ | 🔨 | 🔨 | workbook, mxstudio, omxplorer |
-| `Overlay` | ✅ | ✅ | ❌ | 🔨 | 🔨 | workbook, mxstudio |
-| `MenuBar` | ✅ | ✅ | ❌ | 🔨 | 🔨 | omxplorer |
-| `Menu` | ✅ | ✅ | ❌ | 🔨 | 🔨 | omxplorer |
-| `Item` | ✅ | ✅ | ❌ | 🔨 | 🔨 | omxplorer |
-| `ContextMenu` | ✅ | ✅ | ❌ | 🔨 | 🔨 | omxplorer |
-| `Dialog` | ✅ | ✅ | ❌ | 🔨 | 🔨 | omxplorer |
-| `Toast` | ✅ | ✅ | ❌ | 🔨 | 🔨 | omxplorer |
-| `Popover` | ✅ | ✅ | ❌ | 🔨 | 🔨 | omxplorer |
-| `Checkbox` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | omxplorer |
+| Component | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Agent (MCP) | Proven by |
+|---|---|---|---|---|---|---|---|
+| `Text` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
+| `Button` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
+| `VStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, mxstudio, omxplorer |
+| `HStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
+| `Spacer` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ❌ | analytics, mxstudio, omxplorer |
+| `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | analytics, workbook, mxstudio, omxplorer |
+| `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | todo, omxplorer |
+| `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | kitchen, expenses, omxplorer |
+| `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, kitchen, expenses, lens, analytics, omxplorer |
+| `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, expenses, workbook, mxstudio |
+| `TextArea` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook, mxstudio |
+| `Toggle` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, lens, omxplorer |
+| `Dropdown` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, gpu, analytics, workbook, mxstudio, omxplorer |
+| `Slider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | gallery, gpu, lens |
+| `Segmented` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | kitchen, expenses, lens, analytics, mxstudio, omxplorer |
+| `Radio` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | kitchen, omxplorer |
+| `DatePicker` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses |
+| `ProgressBar` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | gallery, todo, expenses |
+| `Image` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | gallery, gpu |
+| `Icon` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | kitchen, expenses, omxplorer |
+| `Alert` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses |
+| `Tabs` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, layout, mxstudio |
+| `NavBar` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses |
+| `LazyList` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, layout |
+| `Canvas` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | lens, analytics, workbook, mxstudio, omxplorer |
+| `Board` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | workbook, mxstudio, omxplorer |
+| `Overlay` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | workbook, mxstudio |
+| `MenuBar` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
+| `Menu` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
+| `Item` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
+| `ContextMenu` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
+| `Dialog` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
+| `Toast` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
+| `Popover` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
+| `Checkbox` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
 
 ## Variants, gestures, layout, design languages
 
-| Feature | API | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) |
-|---|---|---|---|---|---|---|
-| Button with an icon | `Button(icon=…)` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
-| Card tones | `Card(tone=CARD_WARN / CARD_GOOD)` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
-| Text tones | `Text(…).tone(TONE_WARN…)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Quiet buttons | `style=SUBTLE / ICON_ONLY` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
-| Lucide icon set | `Button(icon="table")…` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| In-place editor | `TextField(…).focused()` | ✅ | ✅ | ❌ | ❌ | 🔨 |
-| Layout modifiers | `.padding .width .grow .fill .align .justify` | ✅ | ✅ | ✅ | 🔨 | 🔨 |
-| Canvas: pan, zoom, tap | `on_gesture: PAN, ZOOM, TAP` | ✅ | ✅ | ✅ | 🔨 | 🔨 |
-| Canvas: press, release, double | `PRESS, RELEASE, DOUBLE` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
-| Canvas frames (animation) | `on_frame` | ✅ | ✅ | ✅ | 🔨 | 🔨 |
-| Canvas: keys (focus on press) | `on_gesture: KEY (event.text, modifiers)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| TextField: Escape cancels | `TextField(on_cancel=)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Editor that echoes the grid's typing | `TextField(…).echo()` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Board: drag, resize, snap | `Board(on_move, on_resize)` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
-| Board: scrolls, reveals a child | `Board(reveal=, reveal_count=)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Board: phone-width list | `(automatic under 720 pt)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Overlay islands | `Overlay(base, *islands) + .pin(h, v)` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
-| Design: Fluent 2 | `design() = FLUENT` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Design: Omarchy (your theme) | `design() = OMARCHY` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Shared data per process | `App.init_shared()` | ✅ | ✅ | 🔨 | 🔨 | 🔨 |
-| Toolbar button (icon over label) | `Button(style=TOOL / TOOL_ON)` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| File picker | `FilePicker(title, on_pick)` | 🔨 | ✅ | ❌ | ❌ | ❌ |
-| Design: Ledger, Graphite, Blueprint (omxplorer's skins) | `design() = LEDGER / GRAPHITE / BLUEPRINT` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Keyboard shortcuts (menu items) | `Item(shortcut="Ctrl+S")` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
-| Canvas: right-click | `on_gesture: SECONDARY (event.x, y)` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
-| Submenus, checked, disabled and danger items | `Submenu(…), Item(checked=, disabled=, danger=)` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
-| Tooltips | `.tooltip(text)` | ✅ | ✅ | ❌ | 🔨 | 🔨 |
+| Feature | API | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Agent (MCP) |
+|---|---|---|---|---|---|---|---|
+| Button with an icon | `Button(icon=…)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 |
+| Card tones | `Card(tone=CARD_WARN / CARD_GOOD)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
+| Text tones | `Text(…).tone(TONE_WARN…)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Quiet buttons | `style=SUBTLE / ICON_ONLY` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
+| Lucide icon set | `Button(icon="table")…` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| In-place editor | `TextField(…).focused()` | ✅ | ✅ | ❌ | ❌ | 🔨 | ❌ |
+| Layout modifiers | `.padding .width .grow .fill .align .justify` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ❌ |
+| Canvas: pan, zoom, tap | `on_gesture: PAN, ZOOM, TAP` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ❌ |
+| Canvas: press, release, double | `PRESS, RELEASE, DOUBLE` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
+| Canvas frames (animation) | `on_frame` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ❌ |
+| Canvas: keys (focus on press) | `on_gesture: KEY (event.text, modifiers)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| TextField: Escape cancels | `TextField(on_cancel=)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Editor that echoes the grid's typing | `TextField(…).echo()` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Board: drag, resize, snap | `Board(on_move, on_resize)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 |
+| Board: scrolls, reveals a child | `Board(reveal=, reveal_count=)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Board: phone-width list | `(automatic under 720 pt)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Overlay islands | `Overlay(base, *islands) + .pin(h, v)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 |
+| Design: Fluent 2 | `design() = FLUENT` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Design: Omarchy (your theme) | `design() = OMARCHY` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Shared data per process | `App.init_shared()` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 |
+| Toolbar button (icon over label) | `Button(style=TOOL / TOOL_ON)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| File picker | `FilePicker(title, on_pick)` | 🔨 | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Design: Ledger, Graphite, Blueprint (omxplorer's skins) | `design() = LEDGER / GRAPHITE / BLUEPRINT` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Keyboard shortcuts (menu items) | `Item(shortcut="Ctrl+S")` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
+| Canvas: right-click | `on_gesture: SECONDARY (event.x, y)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
+| Submenus, checked, disabled and danger items | `Submenu(…), Item(checked=, disabled=, danger=)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
+| Tooltips | `.tooltip(text)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ |
 
 ## Composite components (Mojo, built from the ones above)
 
 A composite is only as far along on a platform as the least-proven piece it's made of.
 
-| Component | Module | Made of | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Used by |
-|---|---|---|---|---|---|---|---|---|
-| `DataGrid` | `mojoui/datagrid.mojo` | Canvas, Canvas: press, release, double, Canvas: keys (focus on press), In-place editor, TextField: Escape cancels, Editor that echoes the grid's typing, Board: drag, resize, snap | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, omxplorer, workbook |
-| `PivotTable` | `mojoui/pivot.mojo` | Grid, Scroll, Text tones | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio, workbook |
-| `ChartView` | `mojoui/chartview.mojo` | Canvas, Canvas: pan, zoom, tap | ✅ | ✅ | 🔨 | 🔨 | 🔨 | mxstudio, omxplorer, workbook |
-| `KpiView` | `mojoui/kpi.mojo` | Card tones, Text tones, Canvas | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio |
-| `FindingCard` | `mojoui/finding.mojo` | Card tones, Text tones, Quiet buttons | ✅ | ✅ | ❌ | ❌ | ❌ | mxstudio |
-| `Inspector` | `mojoui/inspector.mojo` | Segmented, Dropdown, Toggle, Card, Quiet buttons | ✅ | ✅ | ❌ | 🔨 | 🔨 | omxplorer |
-| `Toolbar · FormulaBar · StatusBar` | `mojoui/sheetchrome.mojo` | Toolbar button (icon over label), TextField, Text | ✅ | ✅ | ❌ | ❌ | ❌ | kit, omxplorer |
-| `Column number formats` | `mojoui/numformat.mojo` | Canvas, Text | ✅ | ✅ | 🔨 | 🔨 | 🔨 | omxplorer |
-| `Sheet objects (charts, pivots)` | `mojoui/sheetpage.mojo` | Board: drag, resize, snap, Canvas, Card, Grid | ✅ | ✅ | ❌ | 🔨 | 🔨 | omxplorer |
-| `Report page (KPI and chart tiles, filters)` | `mojoui/reportpage.mojo` | Grid, Card, Dropdown, Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | omxplorer |
+| Component | Module | Made of | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Agent (MCP) | Used by |
+|---|---|---|---|---|---|---|---|---|---|
+| `DataGrid` | `mojoui/datagrid.mojo` | Canvas, Canvas: press, release, double, Canvas: keys (focus on press), In-place editor, TextField: Escape cancels, Editor that echoes the grid's typing, Board: drag, resize, snap | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | mxstudio, omxplorer, workbook |
+| `PivotTable` | `mojoui/pivot.mojo` | Grid, Scroll, Text tones | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | mxstudio, workbook |
+| `ChartView` | `mojoui/chartview.mojo` | Canvas, Canvas: pan, zoom, tap | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ❌ | mxstudio, omxplorer, workbook |
+| `KpiView` | `mojoui/kpi.mojo` | Card tones, Text tones, Canvas | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | mxstudio |
+| `FindingCard` | `mojoui/finding.mojo` | Card tones, Text tones, Quiet buttons | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | mxstudio |
+| `Inspector` | `mojoui/inspector.mojo` | Segmented, Dropdown, Toggle, Card, Quiet buttons | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ | omxplorer |
+| `Toolbar · FormulaBar · StatusBar` | `mojoui/sheetchrome.mojo` | Toolbar button (icon over label), TextField, Text | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | kit, omxplorer |
+| `Column number formats` | `mojoui/numformat.mojo` | Canvas, Text | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
+| `Sheet objects (charts, pivots)` | `mojoui/sheetpage.mojo` | Board: drag, resize, snap, Canvas, Card, Grid | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 | omxplorer |
+| `Report page (KPI and chart tiles, filters)` | `mojoui/reportpage.mojo` | Grid, Card, Dropdown, Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
 
 ## Totals
 
@@ -104,6 +104,7 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | Android | 19 | 14 | 39 |
 | Mac (AppKit) | 0 | 54 | 18 |
 | iPhone (UIKit) | 0 | 55 | 17 |
+| Agent (MCP) | 28 | 14 | 30 |
 
 ## Inside one app, not components yet (the debt)
 

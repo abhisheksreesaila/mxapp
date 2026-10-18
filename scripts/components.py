@@ -19,7 +19,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 HOSTS = [("Linux (GTK)", "mojoui/hosts/gtk.mojo"), ("Web", "mojoui/hosts/web.py"), ("Android", "mojoui/hosts/android.mojo"),
-         ("Mac (AppKit)", "mojoui/hosts/appkit.mojo"), ("iPhone (UIKit)", "mojoui/hosts/uikit.mojo")]
+         ("Mac (AppKit)", "mojoui/hosts/appkit.mojo"), ("iPhone (UIKit)", "mojoui/hosts/uikit.mojo"),
+         ("Agent (MCP)", "mojoui/hosts/agent.py")]
 
 # The public constructor for each node kind (mojoui/view.mojo).
 COMPONENTS = [
@@ -41,6 +42,7 @@ RUN_ON = {
     "Android": ["hello", "gallery", "layout", "lens", "todo"],
     "Mac (AppKit)": [],
     "iPhone (UIKit)": [],
+    "Agent (MCP)": ["kit", "omxplorer"],
 }
 
 # Variants, gestures, layout and design languages: (name, the API, a pattern that shows a host implements it,
