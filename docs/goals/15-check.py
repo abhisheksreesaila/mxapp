@@ -21,7 +21,7 @@ run, BUILD, EXAMPLES = g14.run, g14.BUILD, g14.EXAMPLES
 both, env_for, has, label, labels, _shown, money, average, ensure_csv, CSV_1M = (
     g14.both, g14.env_for, g14.has, g14.label, g14.labels, g14.shown, g14.money, g14.average, g14.ensure_csv, g14.CSV_1M)
 
-OPEN = f"pick:Choose a CSV file={CSV_1M};tap:Create table;select:0=Currency"
+OPEN = f"pick:Choose a file={CSV_1M};tap:Create table;select:0=Currency"
 TIMES = re.compile(r"^LABEL: [\d.]+ ms$")  # (an object's own timing: a measurement, not content)
 
 

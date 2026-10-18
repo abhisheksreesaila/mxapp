@@ -170,6 +170,15 @@ def chart_view(obj: SheetObject, sheet: Sheet) -> ChartView:
     return cv^
 
 
+def chart_text(obj: SheetObject, sheet: Sheet) -> String:
+    """The chart's numbers as tab-separated text (its group column, the value column; a line per bar or point, in
+    the value column's format): what an agent reads (App.describe, D-163)."""
+    var out = sheet.name(obj.group) + "\t" + sheet.name(obj.value)
+    for k in range(min(len(obj.labels), len(obj.sums))):
+        out += "\n" + obj.labels[k] + "\t" + sheet.format_value(obj.value, Int64(obj.sums[k]), total=True)
+    return out
+
+
 def readout(obj: SheetObject, sheet: Sheet) -> String:
     """The picked bar or point, in the value column's format ("West · $72,061,236.00"); a hint when none is."""
     if 0 <= obj.selected < len(obj.sums) and obj.selected < len(obj.labels):
@@ -218,7 +227,7 @@ def object_card(obj: SheetObject, sheet: Sheet, canvas: Int, version: Int, on_ta
                       Button("Remove", on_close, ICON_ONLY, icon="close"), spacing=8).fill().align(CENTER).height(HEADER_H - 8)
     var body: View
     if obj.kind == OBJ_CHART:
-        body = VStack(Canvas(canvas, version, on_gesture=on_tap).fill().height(obj.h - HEADER_H - 40),
+        body = VStack(Canvas(canvas, version, on_gesture=on_tap).fill().height(obj.h - HEADER_H - 40).tag("chart-" + String(canvas - 9)),
                       Text(readout(obj, sheet), CAPTION).tag("readout"), spacing=4).fill()
     else:
         body = pivot_view(obj, sheet, obj.h - HEADER_H - 24)

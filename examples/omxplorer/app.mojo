@@ -19,16 +19,16 @@ from mojoui.charts import grouped, fixed
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
 from mxframe import Table, ColumnKind, DECIMAL as MX_DECIMAL, TEXT as MX_TEXT, DATE as MX_DATE
-from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT, DATE
+from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT, DATE, READ_ONLY
 from mojoui.shared import environment, make_dir
 from mojoui.files import file_name, file_stem, read_recent, remember, read_setting, write_setting
-from mojoui.csvio import read_csv, empty_import, CsvImport, CsvColumn, kind_name
+from mojoui.csvio import read_table, empty_import, CsvImport, CsvColumn, kind_name
 from mojoui.omxfile import save_omx, open_document
 from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
                               NUMBER_STYLES, DATE_STYLES)
 from mojoui.inspector import Inspector, Section, Row, Stepper
 from mojoui.sheetchrome import Tool, Toolbar, FormulaBar, StatusBar, SheetTabs
-from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
+from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_text, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
                               CHART_BAR, CHART_LINE, HEADER_H)
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
                                TILE_CHART)
@@ -238,7 +238,8 @@ struct Main(App):
         self.has_table = True
 
     def open_path(mut self, path: String):
-        """A CSV file → the Import step (its columns as read); an .omx document → straight to its sheet."""
+        """A CSV or Parquet file → the Import step (its columns as read; a Parquet file too big for memory is streamed,
+        D-184); an .omx document → straight to its sheet."""
         if path.endswith(".omx"):
             try:
                 var objects = List[SheetObject]()
@@ -260,16 +261,17 @@ struct Main(App):
             self.version += 1
             return
         try:
-            var imp = read_csv(path)
-            self.use_table(Sheet(imp.table))
+            var imp = read_table(path)
+            self.use_table(Sheet(imp.scan.value()) if imp.streamed() else Sheet(imp.table))
             imp.let_go()  # (the sheet holds the table now; the import keeps only what it showed)
             self.imp = imp^
             self.source = path
             self.name = file_stem(path)
             self.preview = DataGrid()
             self.preview.prepare(self.frame, self.font, self.pal)
-            for c in range(self.frame.stored()):
-                self.preview.histograms.append(self.shape_of(c))
+            if not self.frame.streamed():  # (a histogram reads every row: a streamed file's would take seconds a column)
+                for c in range(self.frame.stored()):
+                    self.preview.histograms.append(self.shape_of(c))
             self.import_col = 0
             self.screen = IMPORT
             self.message = ""
@@ -345,7 +347,9 @@ struct Main(App):
                 self.grid.fit(c, self.frame, self.font, self.pal)
         self.grid.select(0, min(self.first_number(), self.frame.columns() - 1))
         self.select_cell(self.grid.cur_row, self.grid.cur_col)
-        self.message = ("Imported " + grouped(self.frame.rows()) + " rows from " + self.name + ".csv") if self.source != "sample" and self.source != "blank" else ""
+        self.message = ("Imported " + grouped(self.frame.rows()) + " rows from " + file_name(self.source)) if self.source != "sample" and self.source != "blank" else ""
+        if self.frame.streamed():
+            self.message = "Streamed from " + file_name(self.source) + ": read-only"
         self.version += 1
 
     def numbers(self) -> List[Int]:
@@ -635,7 +639,9 @@ struct Main(App):
                 self.message = String(e)
             self.version += 1
         elif m == NEW_FORMULA:
-            self.formula_open = not self.formula_open
+            self.formula_open = not self.formula_open and not self.frame.streamed()
+            if self.frame.streamed():
+                self.message = "No formula columns: " + READ_ONLY
             self.version += 1
         elif m == FORMULA_SUBMIT:
             try:
@@ -684,6 +690,9 @@ struct Main(App):
                 self.version += 1
         elif m == SHOW_REPORT or m == SHOW_SHEET:
             self.sheet_tab = 1 if m == SHOW_REPORT else 0
+            self.version += 1
+        elif m == SAVE and self.frame.streamed():
+            self.message = "Can't save: " + READ_ONLY
             self.version += 1
         elif m == SAVE:
             var folder = environment("OMX_DOCUMENTS", environment("HOME", ".") + "/Documents/omxplorer")
@@ -842,9 +851,13 @@ struct Main(App):
     # ---------- drawing ----------
 
     def describe(self, canvas: Int, first: Int, count: Int) -> String:
-        """The grid's shown rows as tab-separated text, for an agent (D-163): the header, then `count` rows from
+        """A chart's numbers, or the grid's shown rows, as tab-separated text for an agent (D-163). The grid: the header, then `count` rows from
         shown row `first` (count 0: what fits on screen, or 25 before the grid has been drawn)."""
-        if canvas != 0 or self.screen != SHEET:
+        if self.screen != SHEET:
+            return ""
+        if 10 <= canvas < 10 + len(self.objects) and self.objects[canvas - 10].kind == OBJ_CHART:
+            return chart_text(self.objects[canvas - 10], self.frame)  # (a chart: its bars' numbers)
+        if canvas != 0:
             return ""
         var cols = self.frame.grid_columns()
         var out = String()
@@ -902,18 +915,18 @@ struct Main(App):
         side.append(Text("omxplorer", HEADLINE).tone(TONE_ACCENT))
         side.append(Button("Start", NO_MSG, SUBTLE, icon="file").fill())
         side.append(Button("New blank sheet", BLANK, SUBTLE, icon="grid").fill())
-        side.append(FilePicker("Open file…", PICK, style=SUBTLE, icon="open", accept=".csv,.tsv,.txt,.omx").fill())
+        side.append(FilePicker("Open file…", PICK, style=SUBTLE, icon="open", accept=".csv,.tsv,.txt,.parquet,.omx").fill())
         side.append(Text("Connect a database · with MX frame, next", CAPTION))
         side.append(Divider().fill())
         side.append(Button("Settings…", SETTINGS, SUBTLE, icon="gear").fill())
         side.append(Spacer())
-        side.append(Card(Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), Text("Files bigger than memory open too, with MX frame.", CAPTION), spacing=4, tone=CARD_GOOD).fill())
+        side.append(Card(Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), Text("Parquet files bigger than memory open too: streamed from disk, read-only.", CAPTION), spacing=4, tone=CARD_GOOD).fill())
         var sidebar = Card(VStack(side^, spacing=6).fill().grow().align(START), spacing=0).width(300).fill()
         var drop = Card(
             HStack(Icon("upload", 28),
-                   VStack(Text("Drop a CSV or .omx file here", HEADLINE),
+                   VStack(Text("Drop a CSV, Parquet or .omx file here", HEADLINE),
                           Text("or choose a file. A million rows is fine: you see a preview first, and the rest loads while you work.", CAPTION), spacing=4).align(START),
-                   Spacer(), FilePicker("Choose a CSV file", PICK, style=PROMINENT, icon="import", accept=".csv,.tsv,.txt,.omx"), spacing=16).fill().align(CENTER),
+                   Spacer(), FilePicker("Choose a file", PICK, style=PROMINENT, icon="import", accept=".csv,.tsv,.txt,.parquet,.omx"), spacing=16).fill().align(CENTER),
             spacing=0,
         ).fill()
         var recent = List[View]()
@@ -931,7 +944,7 @@ struct Main(App):
             spacing=16,
         )
         var main = VStack(
-            Text("Open a CSV file", HEADLINE),
+            Text("Open a file", HEADLINE),
             drop,
             Text("Recent", HEADLINE),
             Card(VStack(recent^, spacing=8).fill(), spacing=8).fill(),
@@ -961,16 +974,18 @@ struct Main(App):
                 first += ("  ·  " if s > 0 else "") + c.sample[s]
             cols.append(Text(c.name))
             cols.append(Text(kind_name(c.kind), CAPTION).tone(TONE_ACCENT))
-            cols.append(Text(grouped(c.empty), CAPTION).tone(TONE_WARN if c.empty > 0 else 0))
+            cols.append(Text(grouped(c.empty) if c.empty >= 0 else "—", CAPTION).tone(TONE_WARN if c.empty > 0 else 0))
             cols.append(Text(grouped(c.distinct) if c.kind == TEXT else "—", CAPTION))
             cols.append(Text(first, CAPTION))
         var skipped = String("")
         if len(self.imp.skipped) > 0:
             skipped = String(len(self.imp.skipped)) + " more columns aren't read (4,096 is the limit)"
+        if self.imp.streamed():
+            skipped = "Too big for memory: streamed from disk, a row group at a time. The table is read-only, and its empty cells aren't counted up front."
         var dialog = Card(
             HStack(VStack(Text("Import " + file_name(self.imp.path), HEADLINE),
-                          Text(grouped(self.imp.rows) + " rows · " + String(len(self.imp.columns)) + " columns · read in "
-                               + fixed(self.imp.seconds, 2) + " s", CAPTION).tone(TONE_GOOD), spacing=2).align(START),
+                          Text(grouped(self.imp.rows) + " rows · " + String(len(self.imp.columns)) + " columns · "
+                               + ("streamed, opened in " if self.imp.streamed() else "read in ") + fixed(self.imp.seconds, 2) + " s", CAPTION).tone(TONE_GOOD), spacing=2).align(START),
                    Spacer(), Text("1 File  ›  2 Columns  ›  3 Table", CAPTION), spacing=12).fill().align(CENTER),
             Canvas(1, self.version + self.preview.version, on_gesture=NO_MSG).fill().height(300),
             Scroll(Grid(cols^, 5, spacing=6).align(START), height=280).fill(),
@@ -984,6 +999,7 @@ struct Main(App):
     def menu_bar(self) -> View:
         """The menus every screen carries (on a Mac, the system menu bar): the same actions as the toolbar, with shortcuts."""
         var on_sheet = self.screen == SHEET
+        var edits = on_sheet and not self.frame.streamed()  # (a streamed file is read-only, D-185)
         var col = self.ctx_col if self.ctx_col >= 0 else self.grid.cur_col
         var style = self.frame.format_of(col).style if on_sheet and col >= 0 else AUTO
         var format_as = Submenu("Format as", [Item("Number", FMT_NUMBER, checked=style == NUMBER, disabled=not on_sheet),
@@ -991,19 +1007,19 @@ struct Main(App):
                                                Item("Percent", FMT_PERCENT, checked=style == PERCENT, disabled=not on_sheet)], icon="format")
         return MenuBar([
             Menu("File", [Item("New blank sheet", BLANK, icon="grid", shortcut="Ctrl+N"), Item("Open…", BACK, icon="open", shortcut="Ctrl+O", disabled=not on_sheet),
-                          Separator(), Item("Save", SAVE, icon="save", shortcut="Ctrl+S", disabled=not on_sheet), Separator(),
+                          Separator(), Item("Save", SAVE, icon="save", shortcut="Ctrl+S", disabled=not edits), Separator(),
                           Item("Settings…", SETTINGS, icon="gear", shortcut="Ctrl+,")]),
-            Menu("Edit", [Item("Undo", UNDO, icon="undo", shortcut="Ctrl+Z", disabled=not on_sheet), Separator(),
-                          Item("Add row", ADD_ROW, icon="row-plus", shortcut="Ctrl+Shift+R", disabled=not on_sheet)]),
+            Menu("Edit", [Item("Undo", UNDO, icon="undo", shortcut="Ctrl+Z", disabled=not edits), Separator(),
+                          Item("Add row", ADD_ROW, icon="row-plus", shortcut="Ctrl+Shift+R", disabled=not edits)]),
             Menu("View", [Item("Inspector", TOGGLE_INSPECTOR, checked=self.inspector_open, shortcut="Ctrl+Shift+I", disabled=not on_sheet), Separator(),
                           Item("Sheet", SHOW_SHEET, icon="sheet", checked=on_sheet and self.sheet_tab == 0, disabled=not on_sheet),
                           Item("Report", SHOW_REPORT, icon="chart-bar", checked=on_sheet and self.sheet_tab == 1, disabled=not on_sheet)]),
             Menu("Insert", [Item("Chart", INSERT_CHART, icon="chart-bar", shortcut="Ctrl+Shift+C", disabled=not on_sheet),
                             Item("Pivot table", INSERT_PIVOT, icon="pivot", shortcut="Ctrl+Shift+P", disabled=not on_sheet), Separator(),
-                            Item("Formula column", NEW_FORMULA, icon="formula", checked=self.formula_open, disabled=not on_sheet),
-                            Item("Row", ADD_ROW, icon="row-plus", disabled=not on_sheet)]),
-            Menu("Data", [Item("Sort smallest first", SORT_ASC, icon="sort", shortcut="Ctrl+Shift+↑", disabled=not on_sheet),
-                          Item("Sort largest first", SORT_DESC, shortcut="Ctrl+Shift+↓", disabled=not on_sheet), Separator(), format_as.copy()]),
+                            Item("Formula column", NEW_FORMULA, icon="formula", checked=self.formula_open, disabled=not edits),
+                            Item("Row", ADD_ROW, icon="row-plus", disabled=not edits)]),
+            Menu("Data", [Item("Sort smallest first", SORT_ASC, icon="sort", shortcut="Ctrl+Shift+↑", disabled=not edits),
+                          Item("Sort largest first", SORT_DESC, shortcut="Ctrl+Shift+↓", disabled=not edits), Separator(), format_as.copy()]),
             Menu("Format", [format_as.copy(), Separator(), Item("Format inspector", TOGGLE_INSPECTOR, icon="format", checked=self.inspector_open, disabled=not on_sheet)]),
             Menu("Help", [Item("About omxplorer", ABOUT, icon="file")]),
         ]).fill().padding(2, 8).tag("menubar")
@@ -1013,11 +1029,12 @@ struct Main(App):
         var col = self.ctx_col
         var numeric = self.frame.kind(col) == INT or self.frame.kind(col) == DECIMAL
         var style = self.frame.format_of(col).style
+        var edits = not self.frame.streamed()
         return ContextMenu("grid", self.ctx_x, self.ctx_y, [
-            Item("Sort smallest first", SORT_ASC, icon="sort"), Item("Sort largest first", SORT_DESC), Separator(),
+            Item("Sort smallest first", SORT_ASC, icon="sort", disabled=not edits), Item("Sort largest first", SORT_DESC, disabled=not edits), Separator(),
             Submenu("Format as", [Item("Number", FMT_NUMBER, checked=style == NUMBER), Item("Currency", FMT_CURRENCY, checked=style == CURRENCY),
                                   Item("Percent", FMT_PERCENT, checked=style == PERCENT)], icon="format").copy() if numeric else Item("Format as", NO_MSG, icon="format", disabled=True),
-            Separator(), Item("Insert formula column", NEW_FORMULA, icon="formula"), Item("Add row", ADD_ROW, icon="row-plus")], on_close=MENU_CLOSE)
+            Separator(), Item("Insert formula column", NEW_FORMULA, icon="formula", disabled=not edits), Item("Add row", ADD_ROW, icon="row-plus", disabled=not edits)], on_close=MENU_CLOSE)
 
     def overlays(self) -> List[View]:
         """What floats over the screen right now: a dialog, the toast, ƒx's popover (each is in the view only while open)."""
@@ -1049,15 +1066,21 @@ struct Main(App):
         return out^
 
     def toolbar(self) -> View:
-        var left: List[Tool] = [Tool("Save", "save", SAVE, False, "Save the document (Ctrl+S)"), Tool("Undo", "undo", UNDO, False, "Undo the last edit (Ctrl+Z)")]
+        var streamed = self.frame.streamed()  # (read-only: no Save, Undo, rows, formulas or sorting, D-185)
+        var left = List[Tool]()
+        if not streamed:
+            left = [Tool("Save", "save", SAVE, False, "Save the document (Ctrl+S)"), Tool("Undo", "undo", UNDO, False, "Undo the last edit (Ctrl+Z)")]
         var middle: List[Tool] = [Tool("Pivot", "pivot", INSERT_PIVOT, False, "A pivot table of the selected column (Ctrl+Shift+P)"),
-                                  Tool("Chart", "chart-bar", INSERT_CHART, False, "A chart of the selected column (Ctrl+Shift+C)"),
-                                  Tool("Add row", "row-plus", ADD_ROW, False, "A new row at the end (Ctrl+Shift+R)"),
-                                  Tool("Formula", "formula", NEW_FORMULA, self.formula_open, "A new column computed from others"),
-                                  Tool("Sort", "sort", SORT, self.grid.sort_col >= 0, "Sort by the selected column; again to flip")]
+                                  Tool("Chart", "chart-bar", INSERT_CHART, False, "A chart of the selected column (Ctrl+Shift+C)")]
+        if not streamed:
+            middle.append(Tool("Add row", "row-plus", ADD_ROW, False, "A new row at the end (Ctrl+Shift+R)"))
+            middle.append(Tool("Formula", "formula", NEW_FORMULA, self.formula_open, "A new column computed from others"))
+            middle.append(Tool("Sort", "sort", SORT, self.grid.sort_col >= 0, "Sort by the selected column; again to flip"))
         var right: List[Tool] = [Tool("Format", "format", TOGGLE_INSPECTOR, self.inspector_open, "Show or hide the inspector (Ctrl+Shift+I)")]
         var extra = List[View]()
-        extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt,.omx").tooltip("Open a CSV or .omx file"))
+        if streamed:
+            extra.append(Text("Streamed · read-only", CAPTION).tone(TONE_WARN).tooltip("This Parquet file is too big for memory: its rows are read from disk as they're shown, so it can't be edited, sorted or saved").tag("streamed"))
+        extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt,.parquet,.omx").tooltip("Open a CSV, Parquet or .omx file"))
         return Toolbar(left, middle, right, extra)
 
     def report_inspector(self) -> View:

@@ -233,7 +233,7 @@ def m5():
     for host, k in (("GTK", 0), ("web", 1)):
         if not any(m.startswith("File:") for m in lines(start[k], "MENU: ")):
             problems.append(f"{host}: the Start screen has no menu bar")
-        if not has(start[k], "Drop a CSV or .omx file here") or "BUTTON: Open file…" not in start[k]:  # (plain Parquet waits for MX frame)
+        if not has(start[k], "Drop a CSV, Parquet or .omx file here") or "BUTTON: Open file…" not in start[k]:  # (Parquet opens since goal 20)
             problems.append(f"{host}: the Start screen lacks the drop zone")
         if not has(start[k], "Recent") or not has(start[k], "Try a sample"):
             problems.append(f"{host}: the Start screen lacks Recent or the samples")

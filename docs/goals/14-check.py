@@ -188,15 +188,15 @@ def m2():
     problems = []
     o = oracle(CSV_1M)
     rows = o["rows"]
-    imp = both(f"pick:Choose a CSV file={CSV_1M}", "import")
-    sheet = both(f"pick:Choose a CSV file={CSV_1M};tap:Create table", "import-sheet")
-    qty = both(f"pick:Choose a CSV file={CSV_1M};tap:Create table;key:0=ArrowLeft", "import-qty")
+    imp = both(f"pick:Choose a file={CSV_1M}", "import")
+    sheet = both(f"pick:Choose a file={CSV_1M};tap:Create table", "import-sheet")
+    qty = both(f"pick:Choose a file={CSV_1M};tap:Create table;key:0=ArrowLeft", "import-qty")
     start = both("", "start")
     for r in (imp, sheet, qty, start):
         if r[0] is None:
             return False, r[1]
     for host, k in (("GTK", 0), ("web", 1)):
-        if not has(start[k], "omxplorer") or not has(start[k], "Open a CSV file"):
+        if not has(start[k], "omxplorer") or not has(start[k], "Open a file"):
             problems.append(f"{host}: no Start screen")
         if not has(imp[k], "Import orders_1m.csv") or label(imp[k], f"{rows:,} rows · 12 columns · read in ") is None:
             problems.append(f"{host}: the Import step doesn't show the file")
@@ -223,7 +223,7 @@ def m3():
     o = oracle(CSV_1M)
     rows = o["rows"]
     loss = -o["margin"] - 0  # (cost + freight − revenue, as the loss formula below reads it)
-    pick = f"pick:Choose a CSV file={CSV_1M};tap:Create table"
+    pick = f"pick:Choose a file={CSV_1M};tap:Create table"
     fmt = both(pick + ";select:0=Currency;tap:−;segment:1=(1,234)", "format")
     cpt = both(pick + ";select:0=Compact (1.2M)", "compact")
     pct = both(pick + ";select:0=Percent", "percent")
@@ -266,7 +266,7 @@ def m3():
     return not problems, "; ".join(problems) or f"the sheet on both hosts: Currency, decimals, Thousands off, Percent, parentheses (a negative total), Compact reach the cells and the totals; a formula column sums to the file's {money(o['margin'])}; Sort; Add row; identical on GTK and web"
 
 
-EDITS = (f"pick:Choose a CSV file={CSV_1M};tap:Create table;select:0=Currency;typekeys:0=99999⏎;key:0=ArrowUp;"
+EDITS = (f"pick:Choose a file={CSV_1M};tap:Create table;select:0=Currency;typekeys:0=99999⏎;key:0=ArrowUp;"
          "key:0=ArrowLeft;key:0=ArrowLeft;key:0=ArrowLeft;key:0=ArrowLeft;typekeys:0=Zed Co⏎;tap:Add row;"
          f"tap:Formula;enter:{FX}={MARGIN};tap:Save")
 

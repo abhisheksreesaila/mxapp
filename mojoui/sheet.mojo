@@ -4,10 +4,15 @@
 # corner mark) and it formats values for cells, totals, charts and pivots. Every aggregate goes through
 # `Sheet.totals`: one `Query(frame).on_device(dt)…compute(AUTO)` (docs/mxframe-mojo-api.md section 5).
 #
+# A sheet can also be *streamed* (D-185): a Parquet file too big for memory, opened with the package's `scan_parquet`.
+# Then the grid reads its rows a row group at a time (the last few decoded groups are kept), every aggregate is a
+# `Query(scan)` on the CPU, a column's plain totals are kept (the file doesn't change), and nothing can be edited.
+#
 # The stand-in engine (mojoui.frame, frame_gpu) stays for MX Studio and the Workbook.
 
+from std.memory import ArcPointer
 from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of,
-                     AUTO as MX_AUTO, GPU as MX_GPU, TEXT as MX_TEXT, gpu_available)
+                     AUTO as MX_AUTO, GPU as MX_GPU, CPU as MX_CPU, TEXT as MX_TEXT, gpu_available, ParquetScan)
 from mojoui.datagrid import GridSource
 from mojoui.numformat import (ColumnFormat, format_number, format_date, date_text, parse_decimal, decimal_text, AUTO, NUMBER, PERCENT,
                               CURRENCY)
@@ -29,6 +34,58 @@ struct Sums(Copyable, Movable):
     var present: List[Int]  # rows whose value is not null (averages divide by this)
     var milliseconds: Float64
     var on_gpu: Bool
+
+
+comptime KEPT_GROUPS = 4  # decoded row groups a streamed sheet keeps (a 2^20-row group of 5 columns is 40 MB)
+comptime READ_ONLY = "the file is streamed from disk (too big for memory), so it's read-only"
+
+
+struct Pages(Movable):
+    """A streamed sheet's decoded row groups (most recently used last) and each column's plain totals, behind an
+    ArcPointer so the sheet's read-only methods (a grid draws through them) can fill them."""
+
+    var starts: List[Int]  # the first row of each row group, then the row count
+    var groups: List[Int]  # the row groups kept, least recently used first
+    var tables: List[Table]
+    var plain: List[Optional[Sums]]  # per column: its totals over every row, once asked
+
+    def __init__(out self):
+        self.starts = List[Int]()
+        self.groups = List[Int]()
+        self.tables = List[Table]()
+        self.plain = List[Optional[Sums]]()
+
+    def group_of(self, row: Int) -> Int:
+        var lo = 0
+        var hi = len(self.starts) - 2
+        while lo < hi:
+            var mid = (lo + hi + 1) // 2
+            if self.starts[mid] <= row:
+                lo = mid
+            else:
+                hi = mid - 1
+        return lo
+
+    def slot(mut self, g: Int, scan: ParquetScan) raises -> Int:
+        """Where row group g's table is kept, decoding it (and letting the oldest go) when it isn't."""
+        for k in range(len(self.groups)):
+            if self.groups[k] == g:
+                if k != len(self.groups) - 1:  # (now the most recently used)
+                    var t = self.tables.pop(k)
+                    _ = self.groups.pop(k)
+                    self.tables.append(t^)
+                    self.groups.append(g)
+                return len(self.groups) - 1
+        var cols = List[Int]()
+        for c in range(scan.columns()):
+            cols.append(c)
+        var t = scan.read_group(g, cols)
+        if len(self.groups) >= KEPT_GROUPS:
+            _ = self.tables.pop(0)
+            _ = self.groups.pop(0)
+        self.tables.append(t^)
+        self.groups.append(g)
+        return len(self.groups) - 1
 
 
 def empty_table() raises -> Table:
@@ -54,6 +111,8 @@ struct Sheet(Movable, GridSource):
     var device: Optional[DeviceTable]  # the table on the GPU (None: no GPU, or the table didn't fit)
     var device_name: String
     var mode: Int  # CPU, GPU or AUTO (the default: the GPU from a million rows); tests force the GPU to compare it with the CPU
+    var scan: Optional[ParquetScan]  # a streamed file (D-185): rows come from here, a row group at a time
+    var pages: ArcPointer[Pages]
 
     def __init__(out self, table: SharedTable, use_gpu: Bool = True):
         self.frame = MxFrame(table)
@@ -61,6 +120,8 @@ struct Sheet(Movable, GridSource):
         self.device = None
         self.device_name = "CPU"
         self.mode = MX_AUTO
+        self.scan = None
+        self.pages = ArcPointer(Pages())
         if use_gpu and gpu_available():
             try:
                 var dt = DeviceTable(table)
@@ -68,6 +129,27 @@ struct Sheet(Movable, GridSource):
                 self.device = dt
             except:
                 self.device = None
+
+    def __init__(out self, scan: ParquetScan):
+        """A streamed sheet over a Parquet file: its columns and dictionaries now, its rows when they're shown."""
+        self.frame = MxFrame(scan.schema)
+        self.formats = List[ColumnFormat]()
+        self.device = None
+        self.device_name = "CPU"
+        self.mode = MX_CPU  # (the package streams on the CPU)
+        self.scan = scan.copy()
+        var pages = Pages()
+        var at = 0
+        for g in range(scan.row_groups()):
+            pages.starts.append(at)
+            at += scan.group_rows(g)
+        pages.starts.append(at)
+        for _ in range(scan.columns()):
+            pages.plain.append(None)
+        self.pages = ArcPointer(pages^)
+
+    def streamed(self) -> Bool:
+        return Bool(self.scan)
 
     def release(mut self):
         """Gives the GPU copy back (the document closed or was replaced)."""
@@ -87,9 +169,13 @@ struct Sheet(Movable, GridSource):
         return self.frame.columns()
 
     def rows(self) -> Int:
+        if self.scan:
+            return self.scan.value().rows()
         return self.frame.rows()
 
     def alive(self, row: Int) -> Bool:
+        if self.scan:
+            return 0 <= row < self.rows()
         return self.frame.alive(row)
 
     def name(self, c: Int) -> String:
@@ -121,18 +207,28 @@ struct Sheet(Movable, GridSource):
 
     def value(self, c: Int, row: Int) -> Int64:
         try:
+            if self.scan:
+                ref p = self.pages[]
+                var g = p.group_of(row)
+                var k = p.slot(g, self.scan.value())
+                return p.tables[k].get(c, row - p.starts[g])
             return self.frame.get(c, row)
         except:
             return 0
 
     def is_null(self, c: Int, row: Int) -> Bool:
         try:
+            if self.scan:
+                ref p = self.pages[]
+                var g = p.group_of(row)
+                var k = p.slot(g, self.scan.value())
+                return p.tables[k].is_null(c, row - p.starts[g])
             return self.frame.is_null(c, row)
         except:
             return False
 
     def edited(self, c: Int, row: Int) -> Bool:
-        return c < self.stored() and self.frame.edited(c, row)
+        return c < self.stored() and not self.scan and self.frame.edited(c, row)
 
     # ---------- formats (per column; applied only to what's shown) ----------
 
@@ -213,6 +309,8 @@ struct Sheet(Movable, GridSource):
     def set_text(mut self, c: Int, row: Int, text: String) raises:
         """A typed value: empty makes the cell empty (null); numbers read what the formats print back
         ("$1,234.50", "(1,234)", "36.4%"); the other kinds as the package parses them."""
+        if self.scan:
+            raise Error(READ_ONLY)
         var kind = self.kind(c)
         if String(text.strip()) == "" or (c >= self.stored()):
             self.frame.set_text(c, row, text)
@@ -225,21 +323,30 @@ struct Sheet(Movable, GridSource):
 
     def append(mut self) raises -> Int:
         """A new empty row; returns its number."""
+        if self.scan:
+            raise Error(READ_ONLY)
         return self.frame.append(List[String]())
 
     def undo(mut self) -> Bool:
-        return self.frame.undo()
+        return False if self.scan else self.frame.undo()
 
     def formula(mut self, text: String) raises -> Int:
+        if self.scan:
+            raise Error(READ_ONLY)
         return self.frame.formula(text)
 
     def permutation(self, c: Int, descending: Bool = False) raises -> List[Int]:
+        if self.scan:
+            raise Error(READ_ONLY)
         return self.frame.permutation(c, descending)
 
     # ---------- aggregates ----------
 
     def query(self) raises -> Query:
-        """A query over this session's view of the table, on the GPU copy when there is one."""
+        """A query over this session's view of the table, on the GPU copy when there is one; over the file, a row
+        group at a time, when the sheet is streamed."""
+        if self.scan:
+            return Query(self.scan.value())
         var q = Query(self.frame)
         if self.device:
             q = q^.on_device(self.device.value())
@@ -247,7 +354,11 @@ struct Sheet(Movable, GridSource):
 
     def totals(self, value: Int, key: Optional[Expr] = None, groups: Int = 1, filter: Optional[Expr] = None) raises -> Sums:
         """Sum of column `value` (a formula column too), the rows and the non-empty rows, per group of `key`
-        (0 … groups-1; none: one group), over the rows `filter` keeps. The session's edits are included."""
+        (0 … groups-1; none: one group), over the rows `filter` keeps. The session's edits are included.
+        A streamed sheet keeps each column's plain totals (no key, no filter): the file doesn't change."""
+        var plain = not key and not filter and Bool(self.scan) and value < len(self.pages[].plain)
+        if plain and self.pages[].plain[value]:
+            return self.pages[].plain[value].value().copy()
         var q = self.query()
         if filter:
             q = q^.where(filter.value().copy())
@@ -256,7 +367,10 @@ struct Sheet(Movable, GridSource):
         var v = col(self.name(value))
         q = q^.agg(sum(v), count(), count(v))
         var r = q^.compute(self.mode)
-        return Sums(r.values(0), r.counts.copy(), r.values(2), r.milliseconds, r.device == MX_GPU)
+        var sums = Sums(r.values(0), r.counts.copy(), r.values(2), r.milliseconds, r.device == MX_GPU)
+        if plain:
+            self.pages[].plain[value] = sums.copy()
+        return sums^
 
     def span(self, c: Int) raises -> Tuple[Int64, Int64, Bool]:
         """The smallest and largest value of column c over its non-empty rows (False: there are none)."""
@@ -288,7 +402,7 @@ struct Sheet(Movable, GridSource):
         return self.kind(c) == INT or self.kind(c) == DECIMAL
 
     def grid_editable(self, c: Int) -> Bool:
-        return c < self.stored()
+        return c < self.stored() and not self.scan
 
     def grid_text(self, c: Int, row: Int) -> String:
         return self.display(c, row)

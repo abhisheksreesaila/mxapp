@@ -1,11 +1,18 @@
-# mojoui.csvio: a CSV file → MX frame's typed columns, for "open your data".
+# mojoui.csvio: a CSV or Parquet file → MX frame's typed columns, for "open your data".
 #
-# MX frame's own reader (`mxframe.read_csv`, no Python): memory-mapped, parsed in parallel, types inferred from the
-# first rows. Types: integers → INT; decimals → DECIMAL (2 places if every value has at most 2, else 4); ISO dates
+# MX frame's own readers (no Python). CSV (`mxframe.read_csv`): memory-mapped, parsed in parallel, types inferred from
+# the first rows. Types: integers → INT; decimals → DECIMAL (2 places if every value has at most 2, else 4); ISO dates
 # and times → DATE; true/false → BOOL; anything else → TEXT (a dictionary). An empty cell is a null.
+# Parquet (`read_parquet`) carries its types. A Parquet file whose table wouldn't fit the memory budget (D-184) isn't
+# read: it's opened for streaming (`scan_parquet`: the footer and the dictionaries), and the sheet reads its rows a row
+# group at a time (mojoui.sheet).
 
-from mxframe import read_csv as mx_read_csv, CsvOptions, CsvResult, Table, SharedTable, ColumnKind
+from mxframe import (read_csv as mx_read_csv, CsvOptions, CsvResult, Table, SharedTable, ColumnKind, read_parquet,
+                     scan_parquet, ParquetScan)
 from mojoui.sheet import INT, DECIMAL, TEXT, DATE, BOOL
+from mojoui.numformat import date_text, decimal_text
+from mojoui.shared import environment
+from std.time import perf_counter_ns
 
 
 @fieldwise_init
@@ -15,7 +22,7 @@ struct CsvColumn(Copyable, Movable):
     var name: String
     var kind: Int  # INT, DECIMAL, TEXT, DATE, BOOL
     var scale: Int
-    var empty: Int  # empty cells (nulls)
+    var empty: Int  # empty cells (nulls); -1: not counted (a streamed file)
     var distinct: Int  # TEXT: values in its dictionary (0 for numbers)
     var sample: List[String]  # the first rows, as written in the file
     var failed: Int  # cells that didn't fit the column's type (now empty)
@@ -30,6 +37,10 @@ struct CsvImport(Movable):
     var seconds: Float64  # read + parse
     var table: SharedTable  # the columns; the app builds its Sheet from it, then lets go (let_go)
     var parse_seconds: Float64
+    var scan: Optional[ParquetScan]  # a streamed file: the sheet reads its rows from here (no table)
+
+    def streamed(self) -> Bool:
+        return Bool(self.scan)
 
     def let_go(mut self) raises:
         """Drops this import's hold on the table, so a replaced document's memory is freed."""
@@ -49,7 +60,7 @@ def kind_name(kind: Int) -> String:
 
 
 def empty_import() -> CsvImport:
-    return CsvImport("", 0, List[CsvColumn](), List[String](), 0, SharedTable(Table.empty()), 0)
+    return CsvImport("", 0, List[CsvColumn](), List[String](), 0, SharedTable(Table.empty()), 0, None)
 
 
 def read_csv(path: String) raises -> CsvImport:
@@ -63,4 +74,88 @@ def read_csv(path: String) raises -> CsvImport:
     for c in r.columns:
         info.append(CsvColumn(c.name, c.kind.value, c.scale, c.empty, c.distinct, c.sample.copy(), c.failed_count))
     var skipped = r.skipped.copy()
-    return CsvImport(path, r.rows, info^, skipped^, r.seconds, r.take_table().share(), r.seconds)
+    return CsvImport(path, r.rows, info^, skipped^, r.seconds, r.take_table().share(), r.seconds, None)
+
+
+def read_table(path: String) raises -> CsvImport:
+    """A CSV or Parquet file (by its extension), as the Import step shows it."""
+    if path.lower().endswith(".parquet") or path.lower().endswith(".parq"):
+        return read_parquet_file(path)
+    return read_csv(path)
+
+
+def memory_bytes() -> Int:
+    """The machine's memory (Linux: /proc/meminfo); 8 GB where it can't be read."""
+    try:
+        with open("/proc/meminfo", "r") as f:
+            for line in f.read().split("\n"):
+                if line.startswith("MemTotal:"):
+                    var parts = line.split()
+                    return Int(parts[1]) * 1024
+    except:
+        pass
+    return 8 << 30
+
+
+def streams(rows: Int, columns: Int) -> Bool:
+    """D-184: stream a file whose table (8 bytes a cell) is over a quarter of memory; OMX_STREAM_ROWS: over that many rows."""
+    var asked = environment("OMX_STREAM_ROWS")
+    if asked != "":
+        try:
+            return rows > Int(asked)
+        except:
+            pass
+    return rows * max(columns, 1) * 8 > memory_bytes() // 4
+
+
+def cell_text(t: Table, c: Int, row: Int) -> String:
+    """A cell as written (the first rows the Import step shows)."""
+    if t.is_null(c, row):
+        return ""
+    var v = t.get(c, row)
+    var kind = t.kind(c).value
+    if kind == TEXT:
+        return t.text_of(c, Int(v))
+    if kind == DATE:
+        return date_text(v)
+    if kind == DECIMAL:
+        return decimal_text(v, t.scale(c))
+    if kind == BOOL:
+        return "true" if v != 0 else "false"
+    return String(v)
+
+
+def read_parquet_file(path: String) raises -> CsvImport:
+    """A Parquet file: read whole, or opened for streaming when it's too big (then its empty cells aren't counted)."""
+    var t0 = perf_counter_ns()
+    var scan: ParquetScan
+    try:
+        scan = scan_parquet(path)
+    except e:
+        raise Error("couldn't read " + path + " as Parquet: " + String(e))
+    var info = List[CsvColumn]()
+    if streams(scan.rows(), scan.columns()):
+        var cols = List[Int]()
+        for c in range(scan.columns()):
+            cols.append(c)
+        var first = scan.read_group(0, cols) if scan.row_groups() > 0 else Table.empty()
+        for c in range(scan.columns()):
+            var sample = List[String]()
+            var kind = scan.kind(c).value
+            for r in range(min(3, first.rows())):  # (a read group's text codes are the file's: its words are the scan's)
+                var text = scan.text_of(c, Int(first.get(c, r))) if kind == TEXT and not first.is_null(c, r) else cell_text(first, c, r)
+                sample.append(text)
+            info.append(CsvColumn(scan.name(c), kind, scan.scale(c), -1, scan.word_count(c) if kind == TEXT else 0, sample^, 0))
+        var seconds = Float64(perf_counter_ns() - t0) / 1e9
+        return CsvImport(path, scan.rows(), info^, List[String](), seconds, SharedTable(Table.empty()), seconds, scan^)
+    var r = read_parquet(path)
+    var t = r.take_table()
+    for c in range(t.columns()):
+        var sample = List[String]()
+        for row in range(min(3, t.rows())):
+            sample.append(cell_text(t, c, row))
+        var kind = t.kind(c).value
+        info.append(CsvColumn(t.name(c), kind, t.scale(c), t.null_count(c), len(t.dictionary(c)) if kind == TEXT else 0, sample^, 0))
+    var seconds = Float64(perf_counter_ns() - t0) / 1e9
+    var rows = t.rows()
+    return CsvImport(path, rows, info^, List[String](), seconds, t^.share(), seconds, None)
