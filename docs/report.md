@@ -3,19 +3,16 @@
 **End goal (owner, 2026-10-18):** "once its in main, please continue with tickets that depends on mxframe - and proceed on autopilot."
 F-138 had put omxplorer on the MX frame Mojo package. This goal built the items in `docs/plans/needs-mxframe.md` that the package can serve today.
 
-## Result: M1–M3 pass; M4 passes except the report link, which this file fixes
+## Result: M1–M4 PASS
 
-The full check passed M1–M3. Goal 15's GTK-vs-web comparison then caught a reworded chart message, which I fixed (D-195).
-
-The following M4 runs were stopped by Chromium running out of resources (`ERR_INSUFFICIENT_RESOURCES`). This checkout had two orphaned Xvfb displays left from stopped runs. I cleared them, and M4's earlier-goal checks then passed except one, `README.md: missing docs/report.md`, which this file fixes.
+The full check passed M1–M3 on 59b49e3. Its M4 runs were first stopped by headless Chromium running out of resources (`ERR_INSUFFICIENT_RESOURCES`): two Xvfb displays left over from stopped runs (now in docs/lessons.md). With those cleared, M4 passed on 5736908. Only docs changed between the two runs.
 
 ```
 PASS  M1  small.parquet (pyarrow) through the Import step; 40 rows, the sum and the average equal pyarrow's; a bad file says so and the sheet stays
 PASS  M2  100,000,000 rows streamed (opened in 4.3 s): rows far down, Sum, Average, a chart and a pivot equal pyarrow's; edits, sorts, formulas and Save off; peak 0.16 GB for a 4.0 GB table
 PASS  M3  no mojoui module imports std.python; the Workbook and analytics binaries link no libpython; workbooks round-trip and the pyarrow-saved one opens; analytics' engine totals pass
+PASS  M4  goal 19's M1–M5 (goals 3–18 and F-138 inside them) pass; needs-mxframe.md is current  (1916 s)
 ```
-
-The final M4 line is in `build/check-goal20-m4.log`.
 
 **What's new**
 
