@@ -273,16 +273,17 @@ struct Main(App):
                 var objects = List[SheetObject]()
                 var tiles = List[ReportTile]()
                 var filter = ReportFilter(-1, 0)
-                var frame = open_document(path, objects, tiles, filter)
+                var tab_names = List[String]()
+                var frame = open_document(path, objects, tiles, filter, tab_names)
                 self.use_table(frame^)
                 self.source = path
                 self.name = file_stem(path)
                 remember(APP, path, self.recent)
                 self.to_sheet()
-                if len(self.frame.tab_names) > 0 and self.frame.tab_names[0] != "":  # (the tabs' names as saved)
-                    self.sheet_name = self.frame.tab_names[0]
-                if len(self.frame.tab_names) > 1 and self.frame.tab_names[1] != "":
-                    self.report_name = self.frame.tab_names[1]
+                if len(tab_names) > 0 and tab_names[0] != "":  # (the tabs' names as saved)
+                    self.sheet_name = tab_names[0]
+                if len(tab_names) > 1 and tab_names[1] != "":
+                    self.report_name = tab_names[1]
                 self.objects = objects^  # the sheet's charts and pivots, and the Report, as they were saved
                 self.tiles = tiles^
                 self.filter = filter^
@@ -658,6 +659,9 @@ struct Main(App):
                 if f.style == PERCENT and f.decimals < 0:
                     f.decimals = 1
             self.set_format(f^)
+        elif (m == DECIMALS_LESS or m == DECIMALS_MORE) and (self.grid.cur_col < 0 or not (self.frame.kind(self.grid.cur_col) == INT or self.frame.kind(self.grid.cur_col) == DECIMAL)):
+            self.message = "Decimal places apply to number columns"
+            self.version += 1
         elif m == DECIMALS_LESS or m == DECIMALS_MORE:
             var f = self.column_format()
             if f.style == AUTO:
@@ -733,9 +737,11 @@ struct Main(App):
             var col = self.ctx_col if self.ctx_col >= 0 else self.grid.cur_col
             self.ctx_col = -1
             if col >= 0 and self.frame.kind(col) != TEXT and self.frame.kind(col) != DATE:
-                self.grid.select(max(self.grid.cur_row, 0), col)
+                if col != self.grid.cur_col:  # (the context menu's column: select it, keeping a whole-column selection whole)
+                    self.grid.select(max(self.grid.cur_row, 0), col)
                 var f = self.frame.format_of(col)
-                f.style = NUMBER if m == FMT_NUMBER else (CURRENCY if m == FMT_CURRENCY else PERCENT)
+                var style = NUMBER if m == FMT_NUMBER else (CURRENCY if m == FMT_CURRENCY else PERCENT)
+                f.style = AUTO if f.style == style else style  # (chosen again: back to automatic)
                 if f.style == CURRENCY and f.decimals < 0:
                     f.decimals = 2
                 if f.style == PERCENT and f.decimals < 0:
@@ -956,11 +962,12 @@ struct Main(App):
             self.message = "Kept the name"
             self.version += 1
         elif m == UNDO:
+            var formats = len(self.frame.style_log)
             if self.frame.undo():
                 self.grid.redraw()
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
                 self.refresh()
-                self.message = "Undone"
+                self.message = "Undid a format change on " + self.sheet_name if len(self.frame.style_log) < formats else "Undid an edit to " + self.sheet_name
             else:
                 self.message = "Nothing to undo"
             self.version += 1
@@ -1137,7 +1144,7 @@ struct Main(App):
             Menu("File", [Item("New blank sheet", BLANK, icon="grid", shortcut="Ctrl+N"), Item("Open…", BACK, icon="open", shortcut="Ctrl+O", disabled=not on_sheet),
                           Separator(), Item("Save", SAVE, icon="save", shortcut="Ctrl+S", disabled=not edits), Separator(),
                           Item("Settings…", SETTINGS, icon="gear", shortcut="Ctrl+,")]),
-            Menu("Edit", [Item("Undo", UNDO, icon="undo", shortcut="Ctrl+Z", disabled=not edits), Separator(),
+            Menu("Edit", [Item("Undo", UNDO, icon="undo", shortcut="Ctrl+Z", disabled=not on_sheet), Separator(),  # (a streamed file's formats can be undone)
                           Item("Add row", ADD_ROW, icon="row-plus", shortcut="Ctrl+Shift+R", disabled=not edits)]),
             Menu("View", [Item("Inspector", TOGGLE_INSPECTOR, checked=self.inspector_open, shortcut="Ctrl+Shift+I", disabled=not on_sheet), Separator(),
                           Item("Sheet", SHOW_SHEET, icon="sheet", checked=on_sheet and self.sheet_tab == 0, disabled=not on_sheet),

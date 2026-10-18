@@ -4,11 +4,13 @@
 from std.testing import assert_equal, assert_true
 
 from mojoui import View, Button, FilePicker, Toggle, Dropdown, TOOL, TOOL_ON, BUTTON, SEGMENTED, TABS, FIELD, TEXT
+from mojoui.view import ICON_ONLY, ICON_ON, DIVIDER, PLAIN, SUBTLE
 from mojoui.numformat import (ColumnFormat, format_number, format_date, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT,
                               DATE_LONG, DATE_MONTH, DATE_ISO)
 from mojoui.inspector import Inspector, Section, Row, Stepper
 from mojoui.numformat import parse_decimal
-from mojoui.sheetchrome import Tool, Toolbar, SheetTabs, FormulaBar, StatusBar
+from mojoui.sheetchrome import Tool, Toolbar, SheetTabs, FormulaBar, StatusBar, Toggles, Tab, BottomTabs
+from mojoui.swatches import swatch_at, SWATCH_W
 
 
 def count(v: View, kind: Int) -> Int:
@@ -114,4 +116,52 @@ def main() raises:
     assert_true("ƒx" in texts(fx) and "G6" in texts(fx), "ƒx and the cell's name")
     var status: List[String] = ["Rows 1,000,000", "Sum $228.0M"]
     assert_true("Sum $228.0M" in texts(StatusBar(status, "2.1 ms on GPU")), "the status bar")
+
+    # ---- format toggles: icon-only, pressed while on; groups after the middle tools, a divider before each ----
+    var font_tools: List[Tool] = [Tool("Bold", "bold", 80, True, "Bold (Ctrl+B)"), Tool("Italic", "italic", 81, False, "")]
+    var t = Toggles(font_tools)
+    assert_equal(t[0].nodes[0].style, ICON_ON)
+    assert_equal(t[1].nodes[0].style, ICON_ONLY)
+    assert_equal(t[0].nodes[0].text, "Bold")  # (the title: what an agent and a screen reader use)
+    assert_equal(t[0].nodes[0].hint, "bold")
+    assert_equal(t[0].nodes[0].name, "bold")  # (tagged by icon: a popover anchors to it)
+    var groups: List[List[Tool]] = [font_tools.copy(), [Tool("Fill colour", "fill", 90, False, "")]]
+    var formatted = Toolbar(left, middle, right, toggles=groups)
+    assert_equal(count(formatted, DIVIDER), 2)
+    var pressed_icons = 0
+    for node in formatted.nodes:
+        if node.kind == BUTTON and node.style == ICON_ON:
+            pressed_icons += 1
+    assert_equal(pressed_icons, 1)
+
+    # ---- bottom tabs: the current one stands out; the one being renamed is a field with its name ----
+    var doc_tabs: List[Tab] = [Tab("Orders", "sheet"), Tab("Report", "chart-bar")]
+    var bottom = BottomTabs(doc_tabs, 1, 93)
+    var tab_styles = List[Int]()
+    var msgs = List[Int]()
+    for node in bottom.nodes:
+        if node.kind == BUTTON:
+            tab_styles.append(node.style)
+            msgs.append(node.msg)
+    assert_equal(len(tab_styles), 2)
+    assert_equal(tab_styles[0], SUBTLE)
+    assert_equal(tab_styles[1], PLAIN)
+    assert_equal(msgs[0], 93)
+    assert_equal(msgs[1], 94)
+    var renaming = BottomTabs(doc_tabs, 0, 93, 0, 96, 97)
+    assert_equal(count(renaming, FIELD), 1)
+    for node in renaming.nodes:
+        if node.kind == FIELD:
+            assert_equal(node.text, "Orders")
+            assert_equal(node.msg2, 96)  # (Enter)
+            assert_equal(node.value, 1)  # (.focused(): it takes the keyboard, its text selected)
+    assert_true("Report" in texts(renaming) and not ("Orders" in texts(renaming)), "the other tab stays a button")
+
+    # ---- the swatch picker: automatic, then eight colours, one row; gaps hit nothing ----
+    assert_equal(swatch_at(6 + 15, 21), 0)
+    assert_equal(swatch_at(6 + 6 * 36 + 15, 21), 6)
+    assert_equal(swatch_at(6 + 8 * 36 + 29, 35), 8)
+    assert_equal(swatch_at(6 + 30 + 3, 21), -1)
+    assert_equal(swatch_at(100, 2), -1)
+    assert_equal(swatch_at(Float64(SWATCH_W) + 10, 21), -1)
     print("OMX COMPONENT TESTS PASSED")

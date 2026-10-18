@@ -80,16 +80,9 @@ def kpi_of(t: ReportTile, sheet: Sheet, filter: ReportFilter, accent: Bool) -> K
     return KpiView(tile_label(t, sheet), tile_value(t, sheet), filter.words(sheet), List[Float64](), accent, 0)
 
 
-def ReportPage(title: String, subtitle: String, kpis: List[View], charts: List[View], add_row: View) -> View:
-    """The page: title, the KPI row (four across), the charts (two across), then the row that adds tiles."""
-    var parts = List[View]()
-    parts.append(ReportPage(title, subtitle, kpis, charts))
-    parts.append(add_row.copy())
-    return VStack(parts^, spacing=16).fill().align(START)
-
-
 def ReportPage(title: String, subtitle: String, kpis: List[View], charts: List[View]) -> View:
-    """The page without its own add-tile row (the app's toolbar adds tiles): title, the KPIs, the charts."""
+    """The page: title, the KPI row (four across), the charts (two across, one alone across the page). Tiles are
+    added from the app's toolbar."""
     var parts = List[View]()
     parts.append(HStack(Text(title, TITLE), Text(subtitle, CAPTION), spacing=14).align(CENTER))
     if len(kpis) > 0:

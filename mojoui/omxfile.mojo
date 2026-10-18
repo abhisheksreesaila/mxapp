@@ -145,10 +145,6 @@ def read_document(path: String, mut j: Json, use_gpu: Bool) raises -> Sheet:
         var row = j.number(j.at(spec, 1), -1)
         if 0 <= c < sheet.columns() and 0 <= row < sheet.rows():
             sheet.set_cell_style(c, row, style_from(j, j.at(spec, 2)))
-    var tabs = j.get(0, "tabs")
-    for k in range(min(j.size(tabs), 2)):
-        var name = j.text(j.at(tabs, k))
-        sheet.tab_names.append(name if name.byte_length() <= 64 else "")  # ("": the tab's own name)
     return sheet^
 
 
@@ -159,10 +155,22 @@ def style_from(j: Json, node: Int) -> Int:
 
 
 def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[ReportTile], mut filter: ReportFilter) raises -> Sheet:
-    """Reads `path` (.omx): returns the table and fills in the sheet's objects and the Report. An object or tile
-    that names a column the table doesn't have (or a kind this code doesn't know) is left out rather than trusted."""
+    var tab_names = List[String]()
+    return open_document(path, objects, tiles, filter, tab_names)
+
+
+def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[ReportTile], mut filter: ReportFilter,
+                  mut tab_names: List[String]) raises -> Sheet:
+    """Reads `path` (.omx): returns the table and fills in the sheet's objects, the Report and the tabs' names as
+    saved (the sheet's, the Report's; "" for one that keeps its own name). An object or tile that names a column the
+    table doesn't have (or a kind this code doesn't know) is left out rather than trusted."""
     var j = Json()
     var sheet = read_document(path, j, True)
+    tab_names = List[String]()
+    var tabs = j.get(0, "tabs")  # (missing in files saved before goal 21)
+    for k in range(min(j.size(tabs), 2)):
+        var name = j.text(j.at(tabs, k))
+        tab_names.append(name if name.byte_length() <= 64 else "")
     objects = List[SheetObject]()
     var specs = j.get(0, "objects")
     for k in range(j.size(specs)):

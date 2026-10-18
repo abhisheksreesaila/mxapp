@@ -168,7 +168,6 @@ struct Sheet(Movable, GridSource):
     var styles: List[Int]  # per column: its CellStyle's bits (mojoui.cellstyle); missing = plain
     var cell_styles: Dict[Int, Int]  # row * STYLE_COLS + column → the cell's own style, over its column's (sparse)
     var style_log: List[StyleChange]  # format changes Undo can take back, newest last
-    var tab_names: List[String]  # the names a document's tabs were saved under (the sheet's, the Report's); empty: none
 
     def __init__(out self, table: SharedTable, use_gpu: Bool = True):
         self.frame = MxFrame(table)
@@ -176,7 +175,6 @@ struct Sheet(Movable, GridSource):
         self.styles = List[Int]()
         self.cell_styles = Dict[Int, Int]()
         self.style_log = List[StyleChange]()
-        self.tab_names = List[String]()
         self.device = None
         self.device_name = "CPU"
         self.mode = MX_AUTO
@@ -197,7 +195,6 @@ struct Sheet(Movable, GridSource):
         self.styles = List[Int]()
         self.cell_styles = Dict[Int, Int]()
         self.style_log = List[StyleChange]()
-        self.tab_names = List[String]()
         self.device = None
         self.device_name = "CPU"
         self.mode = MX_CPU  # (the package streams on the CPU)

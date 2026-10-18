@@ -117,6 +117,10 @@ def m1():
         for host, out in (("GTK", og), ("web", ow)):
             if f"LABEL: {STYLED}" not in out:
                 problems.append(f"{host}: the styled cell isn't '{STYLED}': {[l for l in out.splitlines() if 'amount on row' in l][-3:]}")
+        keys = f"pick:Choose a file={small()};tap:Create table;shortcut:Ctrl+B;shortcut:Ctrl+I;shortcut:Ctrl+U"  # (the Format menu's shortcuts)
+        for host, out in (("GTK", gtk(keys, "keys")), ("web", web(keys, "keys"))):
+            if "LABEL: amount on row 1: bold, italic, underlined" not in out:
+                problems.append(f"{host}: Ctrl+B, Ctrl+I, Ctrl+U didn't make the cell bold, italic and underlined: {[l for l in out.splitlines() if 'amount on' in l][-2:]}")
     except RuntimeError as e:
         problems.append(str(e))
     # the agent host: tools, state, column formats, Undo, Clear, number formats, save and open
@@ -148,6 +152,10 @@ def m1():
         if pressed(screen(c), "Italic"):
             problems.append("Undo didn't take the column's italic back")
         c.call("currency")
+        c.call("bold")  # (the column is still what's selected)
+        if not any("Column amount: bold (the whole column)" in t for t in status_of(c)):
+            problems.append(f"after Currency, Bold didn't format the still-selected column: {status_of(c)}")
+        c.call("undo")
         _, body = g20.grid_rows(c, 0, 3)
         if not body or not all(r[1].startswith("$") or r[1] == "" for r in body):
             problems.append(f"Currency didn't show the column as money: {body}")
@@ -158,6 +166,17 @@ def m1():
         c.call("clear-format")
         if not any("amount on row 2: plain" in t for t in status_of(c)):
             problems.append(f"Clear formatting didn't make the cell plain: {status_of(c)}")
+        c.call("grid", gesture="tap", x=COLUMN_X, y=86)  # (row 3: an edit, then a format, undone newest first)
+        c.call("value-or-formula", text="12.34", submit=True)
+        c.call("grid", gesture="tap", x=COLUMN_X, y=86)
+        c.call("strikethrough")
+        c.call("undo")
+        first = status_of(c)
+        c.call("undo")
+        second = status_of(c)
+        _, rows = g20.grid_rows(c, 2, 1)
+        if not any("Undid a format change" in t for t in first) or not any("Undid an edit" in t for t in second) or not rows or "12.34" in rows[0][1]:
+            problems.append(f"Undo didn't take back the format, then the edit: {first} then {second}, row 3 {rows}")
         c.call("grid", gesture="tap", x=COLUMN_X, y=34)  # (row 1 again: still styled)
         c.call("save")
         saved = [t for t in status_of(c) if t.startswith("Saved ")]
@@ -174,16 +193,17 @@ def m1():
             s = screen(c)
             if not (pressed(s, "Bold") and pressed(s, "Currency")) or pressed(s, "Italic"):
                 problems.append("the reopened document's row 1 isn't bold in a currency column (or is italic)")
-            if not any("bold, green, fill amber" in t for t in status_of(c)) and "Fill: Amber" not in s:
-                problems.append(f"the reopened cell lost its colours: {s[:300]!r}")
+            if "Text colour: Green" not in s or "Fill: Amber" not in s:
+                problems.append(f"the reopened cell lost its colours: {[l for l in s.splitlines() if 'colour' in l]}")
         finally:
             c.close()
     err = g20.mojo_test("tests/test_cellstyle.mojo", "CELL STYLE TESTS PASSED", "test_cellstyle")
     if err:
         problems.append(err)
     return not problems, "; ".join(problems) or (
-        "Bold, Italic, Underline, Strikethrough, colours, fills and alignment on a cell, identical on GTK and the web; a column's "
-        "format, Undo, Clear formatting, Currency; the document reopens styled; the pixels (test_cellstyle)")
+        "Bold, Italic, Underline, Strikethrough, colours, fills and alignment on a cell, identical on GTK and the web, and Ctrl+B/I/U; "
+        "a column's format (after Currency too), Undo in order with edits, Clear formatting; the document reopens styled; "
+        "the pixels (test_cellstyle)")
 
 
 def m2():

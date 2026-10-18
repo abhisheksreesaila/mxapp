@@ -1,8 +1,8 @@
 # mojoui.cellstyle on a sheet (goal 21 M1): the grid draws each part of a cell's style (a fill, bold, italic,
 # underline, strikethrough, a text colour, centred and right-aligned text) in the pixels; the sheet keeps a column's
 # style and sparse cell overrides (a column's change reaches its overrides), Undo takes format changes and edits back
-# in the order they were made, Clear formatting works on a cell and a column; a document keeps the styles (a removed
-# row before a styled cell doesn't move it) and the tabs' names.
+# in the order they were made, Clear formatting works on a cell and a column; a document keeps the styles (through a
+# removed row before the styled cells and an added row after them) and the tabs' names.
 #   scripts/mxbuild.sh tests/test_cellstyle.mojo -o build/test_cellstyle && build/test_cellstyle
 from std.testing import assert_equal, assert_true, assert_false
 from mxframe import Table, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL
@@ -213,21 +213,29 @@ def main() raises:
     d.restyle(1, 5, FILL_MASK | INK_MASK, fill_bits(BLUE) | ink_bits(RED))
     d.restyle(0, 11, ITALIC, ITALIC)
     d.frame.remove(2)  # (a removed row before the styled cells: they move up one when saved)
+    var added = d.append()  # (and an added row, styled: saved after the table's own rows)
+    d.set_text(0, added, "Hello")
+    d.set_text(1, added, "1.00")
+    d.restyle(1, added, UNDERLINE, UNDERLINE)
     var tabs: List[String] = ["Orders 2025", "Board view"]
     var path = "build/cellstyle/styled.omx"
     save_omx(path, d, List[SheetObject](), List[ReportTile](), ReportFilter(-1, 0), tabs)
     var objects = List[SheetObject]()
     var tiles = List[ReportTile]()
     var filter = ReportFilter(-1, 0)
-    var back = open_document(path, objects, tiles, filter)
-    assert_equal(back.rows(), 11)
+    var names = List[String]()
+    var back = open_document(path, objects, tiles, filter, names)
+    assert_equal(back.rows(), 12)
     assert_true(back.column_style(0).bold())
     assert_equal(back.style_of(1, 4).fill(), BLUE)
     assert_equal(back.style_of(1, 4).ink(), RED)
     assert_true(back.style_of(1, 3).plain())
     assert_true(back.style_of(0, 10).italic() and back.style_of(0, 10).bold())
-    assert_equal(len(back.tab_names), 2)
-    assert_equal(back.tab_names[0], "Orders 2025")
-    assert_equal(back.tab_names[1], "Board view")
+    assert_equal(back.display(1, 11), "1.00")  # (the added row, last)
+    assert_true(back.style_of(1, 11).underline())
+    assert_equal(len(back.cell_styles), 3)
+    assert_equal(len(names), 2)
+    assert_equal(names[0], "Orders 2025")
+    assert_equal(names[1], "Board view")
     print("FILE: styles and tab names survive save and open")
     print("CELL STYLE TESTS PASSED")

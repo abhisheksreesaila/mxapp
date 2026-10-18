@@ -87,6 +87,7 @@ select { font: inherit; width: var(--control-width, auto); min-height: 48px; pad
 input[type=range] { width: var(--control-width, 240px); min-height: 48px; accent-color: var(--accent); }
 progress { width: var(--control-width, 240px); height: 8px; accent-color: var(--accent); }
 hr { width: var(--control-width, 280px); border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+button.icon-only.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
 .hstack > hr { width: 0; min-width: 0; align-self: center; height: var(--control-height, 28px); border-top: 0; border-left: 1px solid var(--line); margin: 0 6px; }
 body.skin .hstack > hr, body.omarchy .hstack > hr { border-left-color: var(--o-line); }
 img.image { max-width: 100%; height: auto; border-radius: 12px; image-rendering: auto; }
