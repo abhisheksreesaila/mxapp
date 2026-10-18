@@ -1,36 +1,25 @@
-# GOAL 18: omxapp on the iPad: the kit app, and the UIKit and AppKit hosts catch up (builds here, runs at the weekend)
+# GOAL 19: the agent host: every omxapp app as MCP tools, read from the tree (the kit and omxplorer, driven by an agent)
 
-**End goal (owner's words, 2026-10-17):** "the only target we definitely want is iPadOS"; while MX frame "is still cooking", "work on other things". So: everything omxplorer's screens use (goal 17's components, the Board and Overlay, the skins) exists in the iPad host too, the iPad's own way (hardware keyboard shortcuts, pointer tooltips, popovers, a context menu on right-click or long press), proven as far as Linux can prove it: a kit app that runs on GTK and the web, and links, bundles and signs for iPad and Mac. The owner runs the Apple builds on hardware at the weekend; until then every Apple cell stays 🔨 (built, never run).
-
-## Components this needs (from `docs/components.md`, before the build)
-| Component | iPhone/iPad today | Plan |
-|---|---|---|
-| MenuBar, Menu, Item, ContextMenu | ❌ | UIKit: a menu button per menu (UIMenu of UIActions with key commands); the context menu as a popover of items at the right-click point (D-158); AppKit: the real NSMenu bar (D-150) |
-| Dialog, Toast, Popover, Checkbox, tooltips | ❌ | UIKit: a form-sheet view controller, an overlay label, UIPopoverPresentationController, a checkmark button, UIToolTipInteraction; AppKit: a sheet, an overlay, NSPopover, a checkbox, setToolTip: |
-| Board, Overlay | ❌ | UIKit/AppKit: a scroll view with framed children; a view with pinned subviews |
-| Button styles (SUBTLE, ICON_ONLY, TOOL), text tones, icons | ❌ | UIButtonConfiguration variants with SF Symbols; label colours |
-| Canvas: PRESS, RELEASE, DOUBLE, SECONDARY, KEY | ❌ | pan began/ended, a two-tap recogniser, a secondary-button tap and a long press, pressesBegan for hardware keys |
-| Design: the skins (colours, Inter and JetBrains Mono) | ❌ | `design()` → UIColor/NSColor from the palette; the bundled fonts registered from the app bundle (D-155) |
-| A kit app (every component on one screen set) | — | `examples/kit`: the proving ground for every host (D-157) |
+**End goal (owner's words, 2026-10-17):** "what about agentic world. how do we make this agent native?" → the agent is a fifth host, "yah I agree, please proceed". An MCP server over any app's web module turns the current screen into tools (the tag names the tool, the tooltip describes it, the message is the call), lets the agent act, read what's on screen (a canvas's content as text where the app offers it) and look (a canvas as a PNG). Proven on the kit and omxplorer by a client in the checker; Claude Code is pointed at it with one command. No LLM runs in the checks.
 
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M1 | The kit app on Linux and the web | `examples/kit` shows a menu bar, tool buttons with tooltips, a canvas with a context menu, a dialog, a toast, a popover, checkboxes, a Board with an Overlay island, and a skin switch; driven on both hosts (menu, rightclick, dialog, toast, popover, skin steps) with identical dumps; Ledger light and Graphite dark screenshots |
-| M2 | The UIKit host catches up | `uikit.mojo` builds every kind the kit uses (a script lists each `kind ==` branch), the button styles, tones, tooltips, the canvas gestures and the skins; `scripts/build.sh kit ios` links, bundles and signs with only the allowed symbols; the matrix shows the new components 🔨 on iPhone |
-| M3 | iPad | Info.plist allows every iPad orientation and multitasking; shortcuts from Items become UIKeyCommands (Ctrl = ⌘, D-159); tooltips use UIToolTipInteraction; a secondary-button tap or long press sends SECONDARY; the bundled fonts go into the .app and are registered at start; the build links |
-| M4 | The AppKit host catches up | the same kinds on the Mac, the menu bar as the system menu bar with ⌘ shortcuts; `scripts/build.sh kit mac` links, bundles and signs; the matrix shows them 🔨 on Mac |
-| M5 | Nothing regressed | goal 17's checks (and every earlier goal's inside them) still pass; the matrix is current |
+| M1 | The agent host drives the kit | `mojoui/hosts/agent.py build/kit/web` speaks MCP over stdio (initialize, tools/list, tools/call, ping, tools/list_changed). `tools/list` has `screen`, `act`, `read`, `render` and one tool per actionable node (menu items as `file-save`, tagged views by tag, others by a slug of their text; tooltips are descriptions; disabled items are absent). The checker's client: `file-save` → the status reads "Saved kit.omx"; `open-dialog` → a Dialog "Settings" is on screen and its radios and checkboxes are tools; `graphite` → `screen` says the design is Graphite; `render` of the canvas returns a PNG of the asked size; `act` with a `secondary` gesture on the canvas → the context menu's items are tools; `sort-z-a` → "Sorted Z→A"; GTK run with the same steps prints the same status lines |
+| M2 | omxplorer by an agent | the sample opens from the Start screen's tool; `data-sort-largest-first` sorts; `read` of the grid returns its visible rows as text (a new `App.describe(canvas, first, count)` with a default, so no other app changes) and the first row's revenue is the largest; `render` of the grid is a PNG; the status bar's Sum/Average/Count are in `screen` |
+| M3 | A fifth host | `docs/components.md` has an "Agent (MCP)" column with every kind the host reads; `scripts/agent.sh <app>` prints the one Claude Code command; `docs/agent.md` says what the tools are and what an agent can't do (nothing a person couldn't) |
+| M4 | Nothing regressed | goal 18's checks (every earlier goal's inside them) still pass; the matrix is current |
 
 ## Done means
-`scripts/check` prints PASS for M1–M5; push to `origin` after. `docs/report.md` says plainly that the Apple builds haven't run on hardware.
+`scripts/check` prints PASS for M1–M4; push to `origin` after. `docs/report.md` is short and says what an agent can and can't do today.
 
 ## Out of bounds
-Running on Apple hardware (the owner's weekend); omxplorer itself on the iPad (its CSV and .omx shims need Python until MX frame lands); Android parity; the WebAssembly target (D-90: waits for a wasm32 Mojo); no deploying, no paid services, no secrets, nothing outside this repo; `../mojo-ui-apple-test` stays untouched.
+Calling an LLM anywhere in the checks (the client is a script); running Claude Code non-interactively; AG-UI and generative UI (after MX frame: the operations log is their state); reading a grid's cells on apps other than omxplorer; no deploying, no paid services, no secrets, nothing outside this repo; `../mojo-ui-apple-test` stays untouched.
 
 ## Assumptions
-- D-157: the kit app is the components' proving ground on every host (components first).
-- D-158: on iPad, context menus and popovers are popover-presented controllers of the app's own items (no public API presents a UIMenu at a point); the menu bar's menus are UIMenus on menu buttons.
-- D-159: "Ctrl" in a shortcut means ⌘ on Apple platforms.
-- Objective-C calls follow objc.mojo's style; new C functions go through `cfunc` (dlsym), so the .tbd stubs and ALLOWED don't change.
-- Budget: the evening (about 100 turns).
+- D-160: the agent is a host. The MCP server reads the same `mojoui_app` module the web host serves, so an app changes nothing to become agent-driveable.
+- D-161: MCP is hand-written JSON-RPC over stdio in `agent.py` (no SDK dependency: the protocol is small, the checker's client proves it).
+- D-162: tool names come from the tree: the tag, else a slug of the text; a menu item is `<menu>-<item>`; duplicates get `-2`, `-3`.
+- D-163: `App.describe(canvas, first, count) -> String` (default "") is how an app offers a canvas's content to an agent; omxplorer returns the grid's shown rows as tab-separated text.
+- D-164: the tool list changes with the screen: after every call the server sends `notifications/tools/list_changed`.
+- Budget: the evening (about 80 turns).

@@ -292,6 +292,7 @@ def web_run(module_dir, steps, shot=None, viewport=(900, 900), tabs=1):
             extra = ""
             for s in [s for s in steps.split(";") if s]:
                 line = step(page, s)
+                settle(page)  # (a menu item's click posts and rebuilds the page: the next step must not land mid-rebuild)
                 if line:
                     extra += line + "\n"
             out = "NATIVE: Chromium " + browser.version + "\n" + extra + page.evaluate(DUMP) + "\n"

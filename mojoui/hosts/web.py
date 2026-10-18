@@ -199,8 +199,14 @@ MENU_JS = r"""
   const menus = window.mojouiMenu = {
     closeAll() { document.querySelectorAll('.menu.open:not(.context)').forEach(m => m.classList.remove('open')); },
     // the app's on_close for a context menu (or a popover): its own node and session, never inherited hx-vals
-    dismiss(el) { if (el.dataset.closing) return; el.dataset.closing = '1';
-      htmx.ajax('POST', `/e/${el.dataset.sid}`, { values: { n: Number(el.dataset.node), second: 1, v: document.getElementById('mojoui-v').value }, swap: 'none', source: document.body }); },
+    dismiss(el) {
+      const v = document.getElementById('mojoui-v').value;
+      if (el.dataset.v !== undefined && el.dataset.v !== v) {  // the screen was rebuilt since (node numbers moved): its successor, by kind and title
+        el = [...document.querySelectorAll(`[data-kind="${el.dataset.kind}"]`)].find(x => x.dataset.title === el.dataset.title && x.dataset.v === v);
+        if (!el) return;
+      }
+      if (el.dataset.closing) return; el.dataset.closing = '1';
+      htmx.ajax('POST', `/e/${el.dataset.sid}`, { values: { n: Number(el.dataset.node), second: 1, v }, swap: 'none', source: document.body }); },
     toggle(title) { const m = title.parentElement, was = m.classList.contains('open'); menus.closeAll(); if (!was) m.classList.add('open'); },
     place() {
       document.querySelectorAll('.menu.context, .popover').forEach(m => {
@@ -213,7 +219,11 @@ MENU_JS = r"""
         m.style.left = x + 'px'; m.style.top = y + 'px';
       });
       document.querySelectorAll('.toast:not([data-timer])').forEach(t => {  // a toast leaves by itself
-        t.dataset.timer = setTimeout(() => { if (document.body.contains(t)) menus.dismiss(t); }, Number(t.dataset.seconds) * 1000);
+        // (mid-settle, htmx lends an element with a reused id the old attributes: no seconds → no timer; and the element
+        // the timer holds may be something else by the time it fires)
+        const ms = Number(t.dataset.seconds) * 1000;
+        if (!(ms > 0)) return;
+        t.dataset.timer = setTimeout(() => { if (document.body.contains(t) && t.dataset.kind === 'toast') menus.dismiss(t); }, ms);
       });
     },
   };
@@ -903,7 +913,7 @@ def render_node(s, i, sid):
         head = Div(H3(n["text"], id=f"{nid}-t"), close, cls="dialog-head")
         body = Div(*[render(s, c, sid) for c in n["children"]], cls="dialog-body")
         panel = Div(head, body, cls="dialog", role="dialog", aria_modal="true", aria_labelledby=f"{nid}-t", style=f"width:{n['w'] or 560}px")
-        return Div(Div(cls="scrim"), panel, cls="dialog-layer", id=nid, data_kind="dialog", data_title=n["text"], data_node=str(i), data_sid=sid)
+        return Div(Div(cls="scrim"), panel, cls="dialog-layer", id=nid, data_kind="dialog", data_title=n["text"], data_node=str(i), data_sid=sid, data_v=str(s.shape))
     if kind == TOAST:  # bottom centre; its action is msg, ✕ and its time running out are on_close
         action = n["options"][0] if n["options"] else ""
         parts = [Span(n["text"], cls="toast-text")]
@@ -911,18 +921,18 @@ def render_node(s, i, sid):
             parts.append(Button(action, type="button", cls="toast-action", data_action="1", **dict(common, hx_vals=json.dumps({"n": i, "second": 0}))))
         parts.append(Button("✕", type="button", cls="toast-close", aria_label="Close", **dict(common, hx_vals=json.dumps({"n": i, "second": 1}))))
         return Div(*parts, cls="toast", id=nid, data_kind="toast", data_title=n["text"], data_action=action, data_node=str(i), data_sid=sid,
-                   data_seconds=str(n["size"] or 6), role="status")
+                   data_seconds=str(n["size"] or 6), data_v=str(s.shape), role="status")
     if kind == POPOVER:  # a panel under (or at x, y inside) the view tagged text; placed by mojouiMenu.place
         head = (H4(n["hint"], cls="popover-title"),) if n["hint"] else ()
         return Div(*head, *[render(s, c, sid) for c in n["children"]], cls="popover", id=nid, data_kind="popover", data_title=n["hint"],
-                   data_anchor=n["text"], data_x=str(n["x"]), data_y=str(n["y"]), data_node=str(i), data_sid=sid, role="dialog")
+                   data_anchor=n["text"], data_x=str(n["x"]), data_y=str(n["y"]), data_node=str(i), data_sid=sid, data_v=str(s.shape), role="dialog")
     if kind == MENUBAR:
         return Div(*[render(s, c, sid) for c in n["children"]], cls="menubar", id=nid, data_kind="menubar", role="menubar")
     if kind == MENU:
         items = Div(*[render(s, c, sid) for c in n["children"]], cls="menu-items", role="menu")
         if n["style"] == 1:  # a context menu: open where the app said, inside its anchor; closes through on_close
             return Div(items, cls="menu context open", id=nid, data_kind="menu", data_title="context", data_anchor=n["text"],
-                       data_x=str(n["x"]), data_y=str(n["y"]), data_node=str(i), data_sid=sid)
+                       data_x=str(n["x"]), data_y=str(n["y"]), data_node=str(i), data_sid=sid, data_v=str(s.shape))
         return Div(Button(n["text"], type="button", cls="menu-title", onclick="mojouiMenu.toggle(this)", aria_haspopup="menu"), items,
                    cls="menu", id=nid, data_kind="menu", data_title=n["text"])
     if kind == ITEM:

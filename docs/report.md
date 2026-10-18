@@ -1,40 +1,36 @@
-# Goal 18 report: omxapp on the iPad: the kit app, the UIKit and AppKit hosts
+# Goal 19 report: the agent host: every omxapp app as MCP tools
 
-**End goal:** the owner's definite target is iPadOS. While MX frame is still being written, everything omxplorer's screens use should exist in the iPad host too, the iPad's own way, proven as far as Linux can prove it.
-
-**Plainly: no Apple build has run on hardware yet.** This goal proves that the kit links, bundles and signs for iPad and Mac with only the allowed symbols, and that the hosts build every kind the kit uses. The owner runs them at the weekend; every Apple cell in `docs/components.md` stays 🔨 until then.
+**End goal:** the agent is a fifth host. Without changing an app, an agent sees its screen as tools (the tag names the tool, the tooltip describes it, the message is the call), acts, reads, and looks.
 
 ## How far it got
-`scripts/check` (`build/check-goal18.log`):
+`scripts/check` (`build/check-goal19.log`):
 
 | # | Milestone | Result |
 |---|---|---|
-| M1 | The kit app on GTK and the web: menus, Ctrl+S, a context menu, a dialog, a toast with Undo, a popover, checkboxes, a Board drag, a skin switch; identical dumps; light and dark | PASS |
-| M2 | The UIKit host builds every kind the kit uses; the kit links, bundles and signs for iPad; 🔨 on iPhone | PASS |
-| M3 | iPad: every orientation, multitasking, ⌘ shortcuts from menu items, pointer tooltips, right click / long press, hardware keys, bundled fonts | PASS |
-| M4 | The AppKit host: the same, with the app's menus in the system menu bar; the kit links, bundles and signs for Mac | PASS |
-| M5 | Goal 17's checks (goals 3–15 inside them) and the matrix | PASS |
+| M1 | The agent host drives the kit: tools from the tree, the dialog's tools while it is open, the design, a PNG of the canvas, the context menu after a right click, the sort; GTK and the web show the same status after the same steps | PASS |
+| M2 | omxplorer by an agent: the sample, Data > Sort largest first, the grid's rows as text (`App.describe`), a picture of the grid | PASS |
+| M3 | A fifth host: the Agent column in `docs/components.md`, `scripts/agent.sh`, `docs/agent.md` | PASS |
+| M4 | Goal 18's checks (goals 3–17 inside them) and the matrix | PASS |
 
 ## 30-second demo
 ```
-scripts/build.sh kit all      # Linux, web, Mac (.app + zip), iPad/iPhone (.ipa)
-build/kit/linux/kit           # the kit on Linux: right-click the canvas, File > Save, Ctrl+S, the skin segments
-apple/install_iphone.sh kit   # the owner's wizard: xtool installs build/kit/ios/KitMojo.ipa on a device
+scripts/agent.sh omxplorer                                  # prints the one `claude mcp add …` command
+pixi run python scripts/agent_client.py build/omxplorer/web screen
+pixi run python scripts/agent_client.py build/omxplorer/web open-the-sample
+pixi run python scripts/agent_client.py build/omxplorer/web data-sort-largest-first
+pixi run python scripts/agent_client.py build/omxplorer/web read name=grid count=5
 ```
+In Claude Code after `claude mcp add`: "open the sample in omxplorer, sort by revenue largest first, and tell me the top order" works with the tools alone: no screenshots, no accessibility scraping.
 
-## What to look at first on the iPad (the weekend)
-1. Does the window show the kit at all (the Board with the table and note, the inspector)?
-2. File menu button → a UIMenu with Save (⌘S shown); ⌘S from a hardware keyboard saves (the status bar says so).
-3. Right-click (trackpad) or long-press the canvas → a popover of items; "Sort Z→A" updates the status bar; tapping outside closes it (on_close).
-4. "Open dialog" → a form sheet with the radio skins and checkboxes; Done closes it; Graphite turns the window dark.
-5. "Show toast" → a strip at the bottom with Undo and ✕; it leaves after 6 s.
-6. Drag the note by its title (the Board's on_move).
-7. Hover a tool button with a trackpad → a tooltip.
+## What an agent can and can't do today
+- Can: everything a person can click, type, tick, pick or press on any omxapp app, by name; read every text on screen; read omxplorer's grid rows; see any canvas as a PNG. A wrong name comes back as an error that lists the right ones.
+- Can't: read cells on apps that don't `describe` their canvases; drag Board objects; generate UI (AG-UI, after MX frame).
+- No LLM ran in the checks: `scripts/agent_client.py` is a plain MCP client.
 
 ## Three decisions worth a second look
-- **D-157** the kit app is the proving ground: every host builds it, and its screen is the contract the matrix reads.
-- **D-158** on iPad, context menus and popovers are popover-presented controllers of plain buttons, not UIKit's context-menu interaction (which needs the menu at interaction time; our model opens it after a round trip).
-- **D-159** "Ctrl" means ⌘ on Apple platforms.
+- **D-160** the agent is a host over the web module: nothing per app. The cost: an app must build for the web to be agent-driveable (every example does).
+- **D-162** tool names from tags, text and menu paths, dialog content prefixed by its title: stable names an agent can plan with. Untagged duplicates still get `-2` (the Start screen's two "Open" buttons).
+- **D-164** the tool list follows the screen, `list_changed` after every call: an agent can only do what a person could do right now.
 
 ## What's next
-The weekend run; then fix what it shows. omxplorer itself reaches the iPad once MX frame replaces its Python shims. The wasm target stays parked (D-90).
+Point Claude Code at omxplorer and watch a real agent use it; tag the untagged buttons it stumbles on. Then AG-UI once MX frame lands: the operations log as the shared state, generative cards from kit components.
