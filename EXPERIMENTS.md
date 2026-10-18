@@ -4,6 +4,26 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## 2026-10-18 · Experiment 20: omxplorer on what MX frame can do now: Parquet, files bigger than memory, no Python (autopilot, night)
+
+**Goal:** owner: "once its in main, please continue with tickets that depends on mxframe - and proceed on autopilot." After F-138 put omxplorer on the MX frame Mojo package, build what `docs/plans/needs-mxframe.md` waited for that the package can now serve.
+
+**What worked:**
+- **Parquet files open** in omxplorer through the same Import step as CSV (the package's `read_parquet`), checked against pyarrow through the agent host: rows, kinds, empty cells, sum and average.
+- **Files bigger than memory:** a Parquet file whose table is over a quarter of memory opens *streamed* (MX frame F-140's `scan_parquet`): the grid reads row groups from disk as they're shown (the last few kept, capped by bytes), totals, charts, pivots and the Report run as `Query(scan)`. 100,000,000 rows open in about 4.5 s and the process peaks at 0.16 GB for a 4 GB table; rows 73 million down, the sum, the average, a chart and a pivot equal pyarrow's. Read-only, and it says so.
+- **No Python left in the framework:** the Workbook's files go through the package and `mojoui.json` (a workbook pyarrow saved still opens), and the analytics showcase's "MX frame" engine is a package `Query`.
+- An agent reads a chart's numbers (`App.describe` for chart canvases).
+
+**What broke and how it was fixed:** see docs/journal.md: the package built from a clean `git archive` (MX frame's checkout had unfinished work); three review rounds (a streamed column looked like a formula; a trait method without a default broke two test stand-ins; a failed disk read was drawn as zeros and not shown); goal 3/5's "apps import only the framework" check had been failing on main since F-138, fixed in the app.
+
+**Not verified:** the Mac and iPad builds of the streamed path (Linux and web only here; the package's scan is CPU code, nothing platform-specific); a real file from outside (the checks use pyarrow-written files).
+
+**What it means:** omxplorer can open a file bigger than the machine's memory and answer questions about it in seconds, with no Python anywhere in the app. What still waits is the engine's: SQL and joins, a second table, versions, distinct/percentile operators, the GPU for streamed files, faster Parquet decode (F-141).
+
+**Next small step:** the GPU for a streamed file (one row group at a time on the device), or editing over a scan, both in MX frame first.
+
+---
+
 ## 2026-10-17 · Experiment 19: the agent host: every omxapp app as MCP tools (autopilot, evening)
 
 **Goal:** the owner asked how omxapp becomes agent-native. The answer: the agent is a fifth host. `mojoui/hosts/agent.py` is an MCP server over the same `mojoui_app` module the web host serves; the screen's tree becomes tools (tags, tooltips, menu paths), plus `screen`, `act`, `read` and `render`. Contract: `GOAL.md` (goal 19). Report: `docs/report.md`. Artboards: `docs/design/agent/boards.html`.
