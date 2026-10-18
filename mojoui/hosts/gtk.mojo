@@ -15,7 +15,7 @@ from mojoui.view import (
     View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, SECONDARY, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, KEY, SHIFT, CTRL, ALT,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, KEY, SHIFT, CTRL, ALT,
 )
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.app import App, Event, Runtime
@@ -571,10 +571,12 @@ struct GtkHost[A: App](Movable):
             set_tone(w, node.value)
         elif node.kind == BUTTON:
             var t = node.text
-            if node.hint != "" and node.style == ICON_ONLY:  # just the icon; the title is the tooltip
+            if node.hint != "" and (node.style == ICON_ONLY or node.style == ICON_ON):  # just the icon; the title is the tooltip
                 var icon = gtk_icon(node.hint)
                 w = external_call["gtk_button_new_from_icon_name", Int](icon.as_c_string_span())
                 external_call["gtk_widget_set_tooltip_text", NoneType](w, t.as_c_string_span())
+                if node.style == ICON_ON:
+                    add_class(w, "mui-tool-on")
             elif node.style == TOOL or node.style == TOOL_ON:  # the icon above a small title
                 w = external_call["gtk_button_new", Int]()
                 var box = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(2))
@@ -603,7 +605,7 @@ struct GtkHost[A: App](Movable):
                     add_class(w, "pill")
             elif node.style == DESTRUCTIVE:
                 add_class(w, "destructive-action")
-            elif node.style == SUBTLE or node.style == ICON_ONLY or node.style == TOOL or node.style == TOOL_ON:
+            elif node.style == SUBTLE or node.style == ICON_ONLY or node.style == ICON_ON or node.style == TOOL or node.style == TOOL_ON:
                 add_class(w, "flat")
             connect(w, "clicked", on_clicked[Self.A], self_addr)
         elif node.kind == FIELD:
@@ -1352,7 +1354,7 @@ struct GtkHost[A: App](Movable):
                 elif kind == BUTTON and self.rt.shown.nodes[p.node].hint != "":
                     if self.rt.shown.nodes[p.node].style == TOOL or self.rt.shown.nodes[p.node].style == TOOL_ON:
                         external_call["gtk_label_set_text", NoneType](external_call["gtk_widget_get_last_child", Int](external_call["gtk_button_get_child", Int](w)), t.as_c_string_span())
-                    elif self.rt.shown.nodes[p.node].style == ICON_ONLY:
+                    elif self.rt.shown.nodes[p.node].style == ICON_ONLY or self.rt.shown.nodes[p.node].style == ICON_ON:
                         external_call["gtk_widget_set_tooltip_text", NoneType](w, t.as_c_string_span())
                     else:
                         external_call["adw_button_content_set_label", NoneType](external_call["gtk_button_get_child", Int](w), t.as_c_string_span())
@@ -2659,7 +2661,7 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
         elif n.kind == BUTTON:
             if n.style == TOOL or n.style == TOOL_ON:
                 print("BUTTON: " + c_str(external_call["gtk_label_get_text", Int](external_call["gtk_widget_get_last_child", Int](external_call["gtk_button_get_child", Int](w)))))
-            elif n.hint != "" and n.style == ICON_ONLY:
+            elif n.hint != "" and (n.style == ICON_ONLY or n.style == ICON_ON):
                 print("BUTTON: " + c_str(external_call["gtk_widget_get_tooltip_text", Int](w)))
             elif n.hint != "":
                 print("BUTTON: " + c_str(external_call["adw_button_content_get_label", Int](external_call["gtk_button_get_child", Int](w))))

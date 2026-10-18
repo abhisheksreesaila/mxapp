@@ -15,7 +15,7 @@ from mojoui.view import (
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY,
     MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, PAN, ZOOM, TAP, PRESS, RELEASE, DOUBLE, SECONDARY, KEY,
     START, CENTER, END, STRETCH, BETWEEN, Node,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON,
     TONE_WARN, TONE_GOOD, TONE_STRONG, TONE_ACCENT, CARD, CARD_WARN, CARD_GOOD,
 )
 from mojoui.menus import CHECKED, DISABLED, DANGER
@@ -379,13 +379,16 @@ struct AppKitHost[A: App](Movable):
                 _ = msg(w, "setTextColor:", self.ink())
                 _ = msg(w, "setFont:", skin_font("Inter-SemiBold", Float64(13)) if self.skinned else msg(cls("NSFont"), "boldSystemFontOfSize:", Float64(13)))
         elif node.kind == BUTTON:
-            if node.style == ICON_ONLY and node.hint != "":
+            if (node.style == ICON_ONLY or node.style == ICON_ON) and node.hint != "":
                 w = msg(cls("NSButton"), "buttonWithImage:target:action:", msg(cls("NSImage"), "imageWithSystemSymbolName:accessibilityDescription:", ns_string(sf_symbol(node.hint)), ns_string(node.text)), self.target, sel("tap:"))
                 _ = msg(w, "setBordered:", 0)
+                if node.style == ICON_ON:  # (a toggle that is on: the accent, pressed)
+                    _ = msg(w, "setContentTintColor:", self.accent())
+                    _ = msg(w, "setState:", 1)
             else:
                 w = msg(cls("NSButton"), "buttonWithTitle:target:action:", ns_string(node.text), self.target, sel("tap:"))
             _ = msg(w, "setTag:", tag_for(self_addr, i))
-            if node.hint != "" and node.style != ICON_ONLY:
+            if node.hint != "" and node.style != ICON_ONLY and node.style != ICON_ON:
                 var image = msg(cls("NSImage"), "imageWithSystemSymbolName:accessibilityDescription:", ns_string(sf_symbol(node.hint)), 0)
                 if image != 0:
                     _ = msg(w, "setImage:", image)
@@ -405,7 +408,7 @@ struct AppKitHost[A: App](Movable):
                 if node.style == TOOL_ON:
                     _ = msg(w, "setContentTintColor:", self.accent())
                     _ = msg(w, "setState:", 1)
-            if self.skinned and node.style != TOOL_ON and node.style != DESTRUCTIVE and node.style != PROMINENT:
+            if self.skinned and node.style != TOOL_ON and node.style != ICON_ON and node.style != DESTRUCTIVE and node.style != PROMINENT:
                 _ = msg(w, "setContentTintColor:", self.ink())
         elif node.kind == FIELD:
             w = msg(cls("NSTextField"), "textFieldWithString:", ns_string(node.text))

@@ -20,3 +20,4 @@ One line per rule that prevents a mistake that happened.
 - To stop a check use scripts/stop-check (by argv and directory); never pkill -f / pgrep -f on its command line: it matched and killed my own shell twice.
 - On the Android emulator, heavy load can leave a "System UI isn't responding" dialog over the app ("no Button #0"): scripts/android_drive.py closes system dialogs before each launch.
 - 2026-10-18 · A stopped `scripts/check` leaves its Xvfb display running (`scripts/stop-check` ends only check.py); two orphaned displays made the next runs' headless Chromium fail with ERR_INSUFFICIENT_RESOURCES / "Target crashed" in earlier goals' web steps. After stopping a check, list `Xvfb :9N` processes whose cwd is this checkout and stop them by PID before rerunning.
+- GTK and web test runs print only the last screen's labels: check a state that lasts (a button's title), not a message a later step replaces.

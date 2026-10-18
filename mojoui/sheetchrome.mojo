@@ -1,8 +1,10 @@
-# mojoui.sheetchrome: the frame around a spreadsheet, as in Numbers: a toolbar of icon-over-label tools,
-# sheet tabs, a formula bar and a status bar. Built from native controls, so every host that has them draws it.
+# mojoui.sheetchrome: the frame around a spreadsheet, as in Numbers and Excel: a toolbar of icon-over-label tools
+# (with a group of small format toggles: Bold, Italic, Align…), the sheet's tabs (along the top, or along the bottom
+# as Excel has them, renamed in place), a formula bar and a status bar. Built from native controls, so every host that
+# has them draws it.
 
-from mojoui.view import (View, Text, Button, TextField, Tabs, HStack, VStack, Spacer, CAPTION, TOOL, TOOL_ON, ICON_ONLY,
-                         SUBTLE, CENTER, NO_MSG)
+from mojoui.view import (View, Text, Button, TextField, Tabs, HStack, VStack, Spacer, Divider, CAPTION, TOOL, TOOL_ON, ICON_ONLY,
+                         ICON_ON, SUBTLE, PLAIN, CENTER, NO_MSG)
 
 
 @fieldwise_init
@@ -24,13 +26,36 @@ def tool_views(tools: List[Tool]) -> List[View]:
     return out^
 
 
-def Toolbar(left: List[Tool], middle: List[Tool], right: List[Tool], extra: List[View] = []) -> View:
+def Toggles(tools: List[Tool]) -> List[View]:
+    """Small icon-only tools (Bold, Italic, Align left…), each shown pressed while it's `on`; the title is the tooltip
+    and the name an agent or a screen reader uses."""
+    var out = List[View]()
+    for t in tools:
+        var b = Button(t.title, t.message, ICON_ON if t.on else ICON_ONLY, icon=t.icon).tag(t.icon)
+        out.append(b^.tooltip(t.tip) if t.tip != "" else b^)
+    return out^
+
+
+def Toolbar(left: List[Tool], middle: List[Tool], right: List[Tool], extra: List[View] = [], toggles: List[List[Tool]] = [],
+            before: List[View] = [], after: List[View] = []) -> View:
     """Three groups, as in Numbers: view controls on the left, insert tools in the middle, organise and
-    format on the right. `extra` (a status chip, say) sits at the far right."""
+    format on the right. `toggles`: groups of small format toggles after the middle tools, a divider before each
+    (as Excel's Home tab has them). `before` and `after` (a dropdown with its caption, say) sit either side of the
+    middle tools; `extra` (a status chip) at the far right."""
     var items = tool_views(left)
     items.append(Spacer())
+    for v in before:
+        items.append(v.copy())
     for v in tool_views(middle):
         items.append(v.copy())
+    if len(after) > 0:
+        items.append(Divider().height(28))
+    for v in after:
+        items.append(v.copy())
+    for group in toggles:
+        items.append(Divider().height(28))
+        for v in Toggles(group):
+            items.append(v.copy())
     items.append(Spacer())
     for v in tool_views(right):
         items.append(v.copy())
@@ -47,6 +72,34 @@ def SheetTabs(names: List[String], selected: Int, on_select: Int, on_add: Int = 
         items.append(Button("Add sheet", on_add, ICON_ONLY, icon="plus"))
     items.append(Spacer())
     return HStack(items^, spacing=4).fill().align(CENTER).tag("sheet-tabs")
+
+
+@fieldwise_init
+struct Tab(Copyable, Movable):
+    """One of a document's tabs along the bottom: its name and icon."""
+
+    var name: String
+    var icon: String
+
+
+def BottomTabs(tabs: List[Tab], selected: Int, on_tap: Int, renaming: Int = -1, on_rename: Int = NO_MSG, on_cancel: Int = NO_MSG,
+               right: List[View] = []) -> View:
+    """A document's tabs along the bottom of the window, as Excel has them: tab k sends `on_tap + k`; the selected
+    one stands out, and tapping it again is the app's cue to rename it. While tab `renaming` is being renamed its
+    name is a field (Enter sends `on_rename` with the new name in event.text, Escape `on_cancel`). `right` (a
+    status chip) sits at the far right."""
+    var items = List[View]()
+    for k in range(len(tabs)):
+        if k == renaming:
+            items.append(TextField(tabs[k].name, placeholder="Tab name", on_submit=on_rename, on_cancel=on_cancel).focused().width(200).tag("tab-name"))
+        elif k == selected:
+            items.append(Button(tabs[k].name, on_tap + k, PLAIN, icon=tabs[k].icon).tooltip("Tap again to rename it").tag("tab-" + String(k)))
+        else:
+            items.append(Button(tabs[k].name, on_tap + k, SUBTLE, icon=tabs[k].icon).tag("tab-" + String(k)))
+    items.append(Spacer())
+    for v in right:
+        items.append(v.copy())
+    return HStack(items^, spacing=4).fill().align(CENTER).padding(2, 14).tag("sheet-tabs")
 
 
 def FormulaBar(cell: String, text: String, on_submit: Int, on_cancel: Int = NO_MSG, placeholder: String = "Value or =formula",

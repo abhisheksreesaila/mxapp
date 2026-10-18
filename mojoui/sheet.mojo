@@ -11,10 +11,12 @@
 # The stand-in engine (mojoui.frame, frame_gpu) stays for MX Studio and the Workbook.
 
 from std.memory import ArcPointer
+from std.collections import Dict
 from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of,
                      AUTO as MX_AUTO, GPU as MX_GPU, CPU as MX_CPU, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL, DATE as MX_DATE,
                      gpu_available, ParquetScan)
 from mojoui.datagrid import GridSource
+from mojoui.cellstyle import CellStyle, ALL_PARTS
 from mojoui.numformat import (ColumnFormat, format_number, format_date, date_text, parse_decimal, decimal_text, AUTO, NUMBER, PERCENT,
                               CURRENCY)
 
@@ -24,6 +26,28 @@ comptime DECIMAL = 1
 comptime TEXT = 2
 comptime DATE = 3
 comptime BOOL = 4
+comptime STYLE_COLS = 1 << 16  # a cell override's key: row * STYLE_COLS + column
+
+
+@fieldwise_init
+struct StyleStep(Copyable, Movable):
+    """One part of a format change, as it was before (Undo puts it back): a column's style (row -1), a cell's override
+    (`had`: there was one), or a column's number format."""
+
+    var col: Int
+    var row: Int
+    var bits: Int
+    var had: Bool
+    var number: ColumnFormat  # (a number-format step: the format before; `row` is -2)
+
+
+@fieldwise_init
+struct StyleChange(Copyable, Movable):
+    """One format change the user made (it may touch a column and many overrides at once); `edits` is how many of
+    the table's own edits there were then, so Undo knows which came last."""
+
+    var steps: List[StyleStep]
+    var edits: Int
 
 
 @fieldwise_init
@@ -141,10 +165,18 @@ struct Sheet(Movable, GridSource):
     var mode: Int  # CPU, GPU or AUTO (the default: the GPU from a million rows); tests force the GPU to compare it with the CPU
     var scan: Optional[ParquetScan]  # a streamed file (D-185): rows come from here, a row group at a time
     var pages: ArcPointer[Pages]
+    var styles: List[Int]  # per column: its CellStyle's bits (mojoui.cellstyle); missing = plain
+    var cell_styles: Dict[Int, Int]  # row * STYLE_COLS + column → the cell's own style, over its column's (sparse)
+    var style_log: List[StyleChange]  # format changes Undo can take back, newest last
+    var tab_names: List[String]  # the names a document's tabs were saved under (the sheet's, the Report's); empty: none
 
     def __init__(out self, table: SharedTable, use_gpu: Bool = True):
         self.frame = MxFrame(table)
         self.formats = List[ColumnFormat]()
+        self.styles = List[Int]()
+        self.cell_styles = Dict[Int, Int]()
+        self.style_log = List[StyleChange]()
+        self.tab_names = List[String]()
         self.device = None
         self.device_name = "CPU"
         self.mode = MX_AUTO
@@ -162,6 +194,10 @@ struct Sheet(Movable, GridSource):
         """A streamed sheet over a Parquet file: its columns and dictionaries now, its rows when they're shown."""
         self.frame = MxFrame(scan.schema)
         self.formats = List[ColumnFormat]()
+        self.styles = List[Int]()
+        self.cell_styles = Dict[Int, Int]()
+        self.style_log = List[StyleChange]()
+        self.tab_names = List[String]()
         self.device = None
         self.device_name = "CPU"
         self.mode = MX_CPU  # (the package streams on the CPU)
@@ -389,7 +425,111 @@ struct Sheet(Movable, GridSource):
         return self.frame.append(List[String]())
 
     def undo(mut self) -> Bool:
+        """Takes back the last change: a format change (styles, number formats) or an edit to the table, whichever
+        came last. A streamed sheet's formats can be undone; its table has no edits."""
+        var edits = 0 if self.scan else len(self.frame.log)
+        if len(self.style_log) > 0 and self.style_log[len(self.style_log) - 1].edits >= edits:
+            var change = self.style_log.pop()
+            var k = len(change.steps) - 1
+            while k >= 0:
+                ref s = change.steps[k]
+                if s.row == -2:
+                    self.set_format(s.col, s.number)
+                elif s.row < 0:
+                    self.set_column_style(s.col, s.bits)
+                elif s.had:
+                    self.cell_styles[s.row * STYLE_COLS + s.col] = s.bits
+                else:
+                    _ = self.cell_styles.pop(s.row * STYLE_COLS + s.col, 0)
+                k -= 1
+            return True
         return False if self.scan else self.frame.undo()
+
+    # ---------- cell styles (mojoui.cellstyle: a column's, and sparse cell overrides) ----------
+
+    def column_style(self, c: Int) -> CellStyle:
+        return CellStyle(self.styles[c]) if 0 <= c < len(self.styles) else CellStyle()
+
+    def style_of(self, c: Int, row: Int) -> CellStyle:
+        """How cell (c, row) looks: its own style if it has one, else its column's (row -1: the column's)."""
+        if row >= 0 and len(self.cell_styles) > 0:
+            var own = self.cell_styles.get(row * STYLE_COLS + c)
+            if own:
+                return CellStyle(own.value())
+        return self.column_style(c)
+
+    def set_column_style(mut self, c: Int, bits: Int):
+        while len(self.styles) <= c:
+            self.styles.append(0)
+        self.styles[c] = bits
+
+    def set_cell_style(mut self, c: Int, row: Int, bits: Int):
+        """A cell's own style, as read from a file (not logged)."""
+        self.cell_styles[row * STYLE_COLS + c] = bits
+
+    def styled_cells(self) -> List[Tuple[Int, Int, Int]]:
+        """Every cell override as (column, row, bits), in row then column order (a file writes them)."""
+        var out = List[Tuple[Int, Int, Int]]()
+        var keys = List[Int]()
+        for e in self.cell_styles.items():
+            keys.append(e.key)
+        sort(keys)
+        for key in keys:
+            out.append((key % STYLE_COLS, key // STYLE_COLS, self.cell_styles.get(key).value()))
+        return out^
+
+    def restyle(mut self, c: Int, row: Int, mask: Int, value: Int):
+        """Sets the parts of the style under `mask` (mojoui.cellstyle's bits) to `value`'s: on cell (c, row), or with
+        row -1 on the whole column, which sets the same parts of every cell override in it too, as a spreadsheet
+        does (an override left equal to its column's goes). Undo takes it back in one step."""
+        if not (0 <= c < self.columns()):
+            return
+        var steps = List[StyleStep]()
+        if row >= 0:
+            var key = row * STYLE_COLS + c
+            var own = self.cell_styles.get(key)
+            steps.append(StyleStep(c, row, own.value() if own else 0, Bool(own), ColumnFormat.auto()))
+            var bits = self.style_of(c, row).set(mask, value).bits
+            if bits == self.column_style(c).bits:
+                _ = self.cell_styles.pop(key, 0)
+            else:
+                self.cell_styles[key] = bits
+        else:
+            steps.append(StyleStep(c, -1, self.column_style(c).bits, False, ColumnFormat.auto()))
+            self.set_column_style(c, self.column_style(c).set(mask, value).bits)
+            var mine = List[Tuple[Int, Int]]()
+            for e in self.cell_styles.items():
+                if e.key % STYLE_COLS == c:
+                    mine.append((e.key, e.value))
+            var column = self.column_style(c).bits
+            for m in mine:
+                var key = m[0]
+                var before = m[1]
+                steps.append(StyleStep(c, key // STYLE_COLS, before, True, ColumnFormat.auto()))
+                var bits = CellStyle(before).set(mask, value).bits
+                if bits == column:
+                    _ = self.cell_styles.pop(key, 0)
+                else:
+                    self.cell_styles[key] = bits
+        self.style_log.append(StyleChange(steps^, 0 if self.scan else len(self.frame.log)))
+
+    def clear_style(mut self, c: Int, row: Int):
+        """Clear formatting: the cell (or with row -1 the column and every cell in it) back to plain, its number
+        format too when it's the whole column."""
+        if row < 0:
+            self.change_format(c, ColumnFormat.auto())
+            var number = self.style_log.pop()  # (one Undo step for both)
+            self.restyle(c, -1, ALL_PARTS, 0)
+            self.style_log[len(self.style_log) - 1].steps.insert(0, number.steps[0].copy())
+        else:
+            self.restyle(c, row, ALL_PARTS, 0)
+
+    def change_format(mut self, c: Int, f: ColumnFormat):
+        """A column's number format, changed by the user (Undo takes it back; set_format doesn't log)."""
+        var steps = List[StyleStep]()
+        steps.append(StyleStep(c, -2, 0, False, self.format_of(c)))
+        self.set_format(c, f)
+        self.style_log.append(StyleChange(steps^, 0 if self.scan else len(self.frame.log)))
 
     def formula(mut self, text: String) raises -> Int:
         if self.scan:
@@ -489,6 +629,9 @@ struct Sheet(Movable, GridSource):
 
     def grid_edited(self, c: Int, row: Int) -> Bool:
         return self.edited(c, row)
+
+    def grid_style(self, c: Int, row: Int) -> CellStyle:
+        return self.style_of(c, row)
 
     def grid_type_width(self, c: Int) -> Float64:
         var kind = self.kind(c)

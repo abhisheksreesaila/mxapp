@@ -241,7 +241,7 @@ class Host:
             if k == TEXT:
                 line(depth, f'"{text}"')
             elif k == BUTTON:
-                line(depth, f'Button "{text}"' + (f' ({n["tip"]})' if n["tip"] else "") + arrow(i))
+                line(depth, f'Button "{text}"' + (" = on" if n["style"] in (6, 7) else "") + (f' ({n["tip"]})' if n["tip"] else "") + arrow(i))  # (TOOL_ON, ICON_ON: pressed)
             elif k == FIELD:
                 line(depth, f'Field "{text}"' + (f' (placeholder "{n["hint"]}")' if n["hint"] else "") + arrow(i))
             elif k == TEXTAREA:

@@ -16,7 +16,7 @@ from mojoui.view import (
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY,
     MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, PAN, ZOOM, TAP, PRESS, RELEASE, DOUBLE, SECONDARY, KEY,
     START, CENTER, END, STRETCH, BETWEEN, Node,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON,
     TONE_WARN, TONE_GOOD, TONE_STRONG, TONE_ACCENT, CARD, CARD_WARN, CARD_GOOD,
 )
 from mojoui.menus import CHECKED, DISABLED, DANGER
@@ -1029,14 +1029,14 @@ def make_button(title: String, style: Int, icon: String = "", skinned: Bool = Fa
     var config_cls = cls("UIButtonConfiguration")
     var glass = msg[Int8](config_cls, "respondsToSelector:", sel("prominentGlassButtonConfiguration")) != 0
     var maker: String
-    if style == SUBTLE or style == ICON_ONLY or style == TOOL or style == TOOL_ON:
+    if style == SUBTLE or style == ICON_ONLY or style == ICON_ON or style == TOOL or style == TOOL_ON:
         maker = "plainButtonConfiguration"
     elif style == PROMINENT:
         maker = "filledButtonConfiguration" if skinned else ("prominentGlassButtonConfiguration" if glass else "filledButtonConfiguration")
     else:
         maker = "grayButtonConfiguration" if skinned else ("glassButtonConfiguration" if glass else "grayButtonConfiguration")
     var config = msg(config_cls, maker)
-    if style != ICON_ONLY:
+    if style != ICON_ONLY and style != ICON_ON:
         _ = msg(config, "setTitle:", ns_string(title))
     if icon != "":
         _ = msg(config, "setImage:", msg(cls("UIImage"), "systemImageNamed:", ns_string(sf_symbol(icon))))
@@ -1049,6 +1049,10 @@ def make_button(title: String, style: Int, icon: String = "", skinned: Bool = Fa
             _ = msg(config, "setBaseForegroundColor:", ui_color(pal.accent) if skinned else msg(cls("UIColor"), "tintColor"))
             _ = msg(config, "setCornerStyle:", 1)  # small
             config = msg(config, "copy")
+    elif style == ICON_ON:  # (a toggle that is on: Bold, Align left)
+        _ = msg(config, "setBaseBackgroundColor:", ui_color(pal.accent_wash) if skinned else msg(cls("UIColor"), "secondarySystemFillColor"))
+        _ = msg(config, "setBaseForegroundColor:", ui_color(pal.accent) if skinned else msg(cls("UIColor"), "tintColor"))
+        _ = msg(config, "setCornerStyle:", 1)
     else:
         _ = msg(config, "setButtonSize:", 2 if skinned else 3)  # medium / large
         _ = msg(config, "setCornerStyle:", 1 if skinned else 4)  # small radius / capsule
@@ -1057,12 +1061,12 @@ def make_button(title: String, style: Int, icon: String = "", skinned: Bool = Fa
     elif skinned and style == PROMINENT:
         _ = msg(config, "setBaseBackgroundColor:", ui_color(pal.accent))
         _ = msg(config, "setBaseForegroundColor:", ui_color(pal.accent_ink))
-    elif skinned and style != TOOL_ON:
+    elif skinned and style != TOOL_ON and style != ICON_ON:
         _ = msg(config, "setBaseForegroundColor:", ui_color(pal.ink))
         if style == 0:
             _ = msg(config, "setBaseBackgroundColor:", ui_color(pal.card))
     var b = msg(cls("UIButton"), "buttonWithConfiguration:primaryAction:", config, 0)
-    if style == ICON_ONLY:
+    if style == ICON_ONLY or style == ICON_ON:
         _ = msg(b, "setAccessibilityLabel:", ns_string(title))
     return b
 

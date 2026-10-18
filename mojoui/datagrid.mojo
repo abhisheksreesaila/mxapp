@@ -14,7 +14,8 @@
 from mojoui.app import Event
 from mojoui.view import View, TextField, TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE, KEY, SHIFT, CTRL, ALT
 from mojoui.canvas import Surface
-from mojoui.text import Font, MONO, RIGHT
+from mojoui.text import Font, MONO, RIGHT, CENTRE
+from mojoui.cellstyle import CellStyle, swatch, fill_over, AUTO_ALIGN, ALIGN_LEFT, ALIGN_CENTRE, ALIGN_RIGHT, ITALIC_SLANT
 from mojoui.draw import rect, hline, line
 from mojoui.theme import Palette
 from mojoui.maths import log2
@@ -80,6 +81,10 @@ trait GridSource:
         """The column's type, as the small badge beside its name: "#", "$", "0.0", "Aa", "date", "ƒx"."""
         ...
 
+    def grid_style(self, c: Int, row: Int) -> CellStyle:
+        """How cell (c, row) looks: bold, italic, underline, strikethrough, colours, alignment (mojoui.cellstyle)."""
+        return CellStyle()
+
     def grid_edited(self, c: Int, row: Int) -> Bool:
         """True for a cell changed in this session (it gets a corner mark)."""
         ...
@@ -143,7 +148,8 @@ struct DataGrid(Copyable, Movable):
         return GRID_HEADER_H + (GRID_HISTOGRAM_H if len(self.histograms) > 0 else 0.0)
 
     def prepare[S: GridSource](mut self, src: S, font: Font, pal: Palette):
-        """Measures the headers (a column is never narrower than its name). Cheap; call before using widths."""
+        """Measures the headers (a column is never narrower than its name and its type badge). Cheap; call before
+        using widths."""
         var n = src.grid_columns()
         if len(self.min_widths) == n:
             return
@@ -151,7 +157,9 @@ struct DataGrid(Copyable, Movable):
         self.type_widths = List[Float64](capacity=n)
         for c in range(n):
             var name = src.grid_name(c) + ("ƒ " if src.grid_formula(c) else "")
-            self.min_widths.append(font.measure(name, 12.5, pal.medium) + 26)
+            var badge = src.grid_badge(c)
+            var badge_w = (font.measure(badge, 9.5, MONO) + 8 + 6 + 4) if badge != "" else 0.0  # (as draw() places it, and a little room)
+            self.min_widths.append(font.measure(name, 12.5, pal.medium) + 26 + badge_w)
             self.type_widths.append(src.grid_type_width(c))  # (once: it may scan a dictionary)
 
     def col_width[S: GridSource](self, c: Int, src: S) -> Float64:
@@ -811,18 +819,37 @@ struct DataGrid(Copyable, Movable):
                 if x + cw <= gut:
                     continue
                 cw = min(cw, right - x)
-                var text = self.clip(src.grid_text(c, row), cw - 16 * k, 13 * k, p.regular, font)
+                var st = src.grid_style(c, row)
+                var weight = p.medium if st.bold() else p.regular
+                var text = self.clip(src.grid_text(c, row), cw - 16 * k - (3 * k if st.italic() else 0), 13 * k, weight, font)
                 var color = p.formula if src.grid_formula(c) else p.ink  # (a read-only column that isn't a formula reads as data)
+                if st.ink() > 0:
+                    color = swatch(st.ink())
+                if st.fill() > 0:
+                    rect(s, x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash if row == self.cur_row else p.card, st.fill()))
                 if row == self.cur_row and c == self.cur_col:
                     rect(s, x, y, cw, GRID_ROW_H * k, p.accent)
-                    rect(s, x + 2 * k, y + 2 * k, cw - 4 * k, GRID_ROW_H * k - 4 * k, p.card)
+                    rect(s, x + 2 * k, y + 2 * k, cw - 4 * k, GRID_ROW_H * k - 4 * k, fill_over(p.card, st.fill()) if st.fill() > 0 else p.card)
                 if src.grid_edited(c, row):  # changed this session: a small accent triangle in the corner
                     for r in range(Int(6 * k)):
                         rect(s, x + cw - 6 * k + Float64(r), y + Float64(r), 6 * k - Float64(r), 1, p.accent)
-                if src.grid_numeric(c):
-                    font.draw(s, text, x + cw - 8 * k, base, 13 * k, color, p.regular, RIGHT)
-                else:
-                    font.draw(s, text, x + 8 * k, base, 13 * k, color, p.regular)
+                var align = st.align()
+                if align == AUTO_ALIGN:
+                    align = ALIGN_RIGHT if src.grid_numeric(c) else ALIGN_LEFT  # (numbers right, text left)
+                var slant = ITALIC_SLANT if st.italic() else 0.0
+                var tx = x + 8 * k  # where the text starts
+                var tw = font.measure(text, 13 * k, weight) if st.underline() or st.strike() or align != ALIGN_LEFT else 0.0
+                if align == ALIGN_CENTRE:
+                    tx = x + (cw - tw) / 2
+                elif align != ALIGN_LEFT:
+                    tx = x + cw - 8 * k - tw - (3 * k if st.italic() else 0)
+                font.draw(s, text, tx, base, 13 * k, color, weight, slant=slant)
+                if st.bold():  # (Inter's medium is only a little heavier than regular: draw it again, a touch to the right)
+                    font.draw(s, text, tx + 0.6 * k, base, 13 * k, color, weight, slant=slant)
+                if st.underline():
+                    rect(s, tx, base + 2 * k, tw, max(1.0, k), color)
+                if st.strike():
+                    rect(s, tx, base - 4.5 * k, tw, max(1.0, k), color)
             rect(s, 0, y, gut, GRID_ROW_H * k, p.accent_wash if row == self.cur_row else p.card)
             font.draw(s, grouped(row + 1), (GRID_GUTTER - 10) * k, base, 12 * k, p.ink3, p.regular, RIGHT)
             y += GRID_ROW_H * k

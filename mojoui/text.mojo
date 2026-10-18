@@ -131,7 +131,8 @@ struct Face(Movable):
                 w += self.glyphs[g].advance * s
         return w
 
-    def draw(self, mut surface: Surface, text: String, x: Float64, baseline: Float64, size: Float64, color: UInt32):
+    def draw(self, mut surface: Surface, text: String, x: Float64, baseline: Float64, size: Float64, color: UInt32, slant: Float64 = 0):
+        """slant: each pixel row above the baseline moves right by this much of its height (0.2: italic)."""
         var s = size / self.size
         var pen = x
         var r = Float64(Int(color & 0xFF))
@@ -147,16 +148,19 @@ struct Face(Movable):
             ref g = self.glyphs[gi]
             var left = pen + Float64(g.left) * s
             var top = baseline + Float64(g.top) * s
-            var x0 = max(Int(left), 0)
+            var lean_top = slant * (baseline - top)  # (the glyph's top row moves furthest; below the baseline, left)
+            var lean_bottom = slant * (baseline - top - Float64(g.h) * s)
+            var x0 = max(Int(left + min(lean_bottom, 0.0)), 0)
             var y0 = max(Int(top), 0)
-            var x1 = min(Int(left + Float64(g.w) * s) + 1, surface.width)
+            var x1 = min(Int(left + Float64(g.w) * s + max(lean_top, 0.0)) + 1, surface.width)
             var y1 = min(Int(top + Float64(g.h) * s) + 1, surface.height)
             for py in range(y0, y1):
+                var row_left = left + slant * (baseline - Float64(py) - 0.5)
                 for px in range(x0, x1):
                     var cov = 0.0
                     for sy in range(sub):
                         for sx in range(sub):
-                            var ax = (Float64(px) + (Float64(sx) + 0.5) / Float64(sub) - left) / s
+                            var ax = (Float64(px) + (Float64(sx) + 0.5) / Float64(sub) - row_left) / s
                             var ay = (Float64(py) + (Float64(sy) + 0.5) / Float64(sub) - top) / s
                             if ax >= 0.0 and ax < Float64(g.w) and ay >= 0.0 and ay < Float64(g.h):
                                 cov += self.coverage(Float64(g.x) + ax, Float64(g.y) + ay)
@@ -223,7 +227,7 @@ struct Font(Movable):
 
     def draw(
         self, mut surface: Surface, text: String, x: Float64, baseline: Float64, size: Float64, color: UInt32,
-        weight: Int = REGULAR, align: Int = LEFT,
+        weight: Int = REGULAR, align: Int = LEFT, slant: Float64 = 0,
     ):
         """Draws `text` with its baseline at `baseline` (pixels), starting at x (or centred on / ending at x)."""
         var pen = x
@@ -232,12 +236,12 @@ struct Font(Movable):
             pen -= w / 2 if align == CENTRE else w
         var k = self.pick(weight, size, text)
         if k == 2:
-            self.display.draw(surface, text, pen, baseline, size, color)
+            self.display.draw(surface, text, pen, baseline, size, color, slant)
         elif k == 3:
-            self.mono.draw(surface, text, pen, baseline, size, color)
+            self.mono.draw(surface, text, pen, baseline, size, color, slant)
         elif k == 4:
-            self.mono_bold.draw(surface, text, pen, baseline, size, color)
+            self.mono_bold.draw(surface, text, pen, baseline, size, color, slant)
         elif k == 1:
-            self.medium.draw(surface, text, pen, baseline, size, color)
+            self.medium.draw(surface, text, pen, baseline, size, color, slant)
         else:
-            self.regular.draw(surface, text, pen, baseline, size, color)
+            self.regular.draw(surface, text, pen, baseline, size, color, slant)

@@ -2,7 +2,8 @@
 # (no Python) whose columns are the table as it stands (the session's edits, added and removed rows baked in; kinds,
 # decimal scales, dictionaries and empty cells are Parquet's own) and whose metadata ("omx") is JSON: each column's
 # format, the formula columns (their text and format), the sheet's charts and pivots, and the Report (its tiles and
-# its filter, as a column and a word). Other tools can read its columns.
+# its filter, as a column and a word), each column's style and every styled cell (mojoui.cellstyle: bold, colours,
+# alignment…), and the tabs' names. Other tools can read its columns.
 #
 # Format 1 (the pyarrow shim's files) is refused with a message that says so.
 
@@ -10,6 +11,7 @@ from mxframe import write_parquet, read_parquet, Table, UNCOMPRESSED
 from mojoui.sheet import Sheet, INT, DECIMAL, TEXT
 from mojoui.json import Json, json_string
 from mojoui.numformat import ColumnFormat
+from mojoui.cellstyle import ALL_PARTS
 from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT
 from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_CHART
 
@@ -21,15 +23,33 @@ def format_json(f: ColumnFormat) -> String:
             + ', "parens": ' + ("true" if f.parens else "false") + ', "symbol": ' + json_string(f.symbol) + "}")
 
 
-def metadata(sheet: Sheet, objects: List[SheetObject], tiles: List[ReportTile], filter: ReportFilter) -> String:
+def metadata(sheet: Sheet, objects: List[SheetObject], tiles: List[ReportTile], filter: ReportFilter, tab_names: List[String] = []) -> String:
     var stored = sheet.stored()
     var meta = String('{"omx": ' + String(FORMAT) + ', "columns": [')
     for c in range(stored):
-        meta += ("," if c > 0 else "") + '{"name": ' + json_string(sheet.name(c)) + ', "format": ' + format_json(sheet.format_of(c)) + "}"
+        meta += ("," if c > 0 else "") + '{"name": ' + json_string(sheet.name(c)) + ', "format": ' + format_json(sheet.format_of(c))
+        meta += ', "style": ' + String(sheet.column_style(c).bits) + "}"
     meta += '], "formulas": ['
     for f in range(sheet.columns() - stored):
         meta += ("," if f > 0 else "") + '{"text": ' + json_string(sheet.frame.formula_text(stored + f))
-        meta += ', "format": ' + format_json(sheet.format_of(stored + f)) + "}"
+        meta += ', "format": ' + format_json(sheet.format_of(stored + f)) + ', "style": ' + String(sheet.column_style(stored + f).bits) + "}"
+    meta += '], "cells": ['  # (column, row as saved: removed rows don't count, bits)
+    var cells = sheet.styled_cells()
+    var row = 0
+    var saved = 0  # rows alive before `row`
+    var first = True
+    for cell in cells:
+        if not sheet.alive(cell[1]):
+            continue
+        while row < cell[1]:
+            if sheet.alive(row):
+                saved += 1
+            row += 1
+        meta += ("" if first else ",") + "[" + String(cell[0]) + "," + String(saved) + "," + String(cell[2]) + "]"
+        first = False
+    meta += '], "tabs": ['
+    for k in range(len(tab_names)):
+        meta += ("," if k > 0 else "") + json_string(tab_names[k])
     meta += '], "objects": ['
     for k in range(len(objects)):
         ref o = objects[k]
@@ -45,11 +65,11 @@ def metadata(sheet: Sheet, objects: List[SheetObject], tiles: List[ReportTile], 
 
 
 def save_omx(path: String, sheet: Sheet, objects: List[SheetObject] = [], tiles: List[ReportTile] = [],
-             filter: ReportFilter = ReportFilter(-1, 0)) raises:
-    """Writes the table as it stands (every alive row, the edits applied), the sheet's charts and pivots, and the
-    Report (its tiles and filter) to `path` (.omx)."""
+             filter: ReportFilter = ReportFilter(-1, 0), tab_names: List[String] = []) raises:
+    """Writes the table as it stands (every alive row, the edits applied), its styles, the sheet's charts and pivots,
+    the Report (its tiles and filter) and the tabs' names to `path` (.omx)."""
     # uncompressed for now: a document saved on Linux must open on the Mac build, which has no zstd or snappy (vendoring static codecs for it is a follow-up)
-    write_parquet(path, sheet.frame.bake(), metadata(sheet, objects, tiles, filter), UNCOMPRESSED)
+    write_parquet(path, sheet.frame.bake(), metadata(sheet, objects, tiles, filter, tab_names), UNCOMPRESSED)
 
 
 def format_from(j: Json, node: Int) -> ColumnFormat:
@@ -108,6 +128,7 @@ def read_document(path: String, mut j: Json, use_gpu: Bool) raises -> Sheet:
     var sheet = Sheet(table^.share(), use_gpu)
     for c in range(sheet.stored()):
         sheet.set_format(c, format_from(j, j.get(j.at(specs, c), "format")))
+        sheet.set_column_style(c, style_from(j, j.get(j.at(specs, c), "style")))
     var formulas = j.get(0, "formulas")
     for k in range(j.size(formulas)):
         var c: Int
@@ -116,7 +137,25 @@ def read_document(path: String, mut j: Json, use_gpu: Bool) raises -> Sheet:
         except e:
             raise Error("can't open " + path + ": a formula column can't be rebuilt: " + String(e))
         sheet.set_format(c, format_from(j, j.get(j.at(formulas, k), "format")))
+        sheet.set_column_style(c, style_from(j, j.get(j.at(formulas, k), "style")))
+    var cells = j.get(0, "cells")  # (missing in files saved before goal 21: no styles)
+    for k in range(j.size(cells)):
+        var spec = j.at(cells, k)
+        var c = j.number(j.at(spec, 0), -1)
+        var row = j.number(j.at(spec, 1), -1)
+        if 0 <= c < sheet.columns() and 0 <= row < sheet.rows():
+            sheet.set_cell_style(c, row, style_from(j, j.at(spec, 2)))
+    var tabs = j.get(0, "tabs")
+    for k in range(min(j.size(tabs), 2)):
+        var name = j.text(j.at(tabs, k))
+        sheet.tab_names.append(name if name.byte_length() <= 64 else "")  # ("": the tab's own name)
     return sheet^
+
+
+def style_from(j: Json, node: Int) -> Int:
+    """A saved style's bits, or plain if it isn't a style this code knows."""
+    var bits = j.number(node, 0) if node >= 0 else 0
+    return bits if bits & ~ALL_PARTS == 0 and bits >= 0 else 0
 
 
 def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[ReportTile], mut filter: ReportFilter) raises -> Sheet:

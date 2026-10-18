@@ -75,6 +75,7 @@ FEATURES = [
     ("Canvas: right-click", "on_gesture: SECONDARY (event.x, y)", r"\bSECONDARY\b", "omxplorer"),
     ("Submenus, checked, disabled and danger items", "Submenu(…), Item(checked=, disabled=, danger=)", r"mui-danger|mi-danger|danger", "omxplorer"),
     ("Tooltips", ".tooltip(text)", r"node\.tip|data-tip|\"tip\"", "omxplorer"),
+    ("Icon toggle shown pressed", "Button(style=ICON_ON)", r"\bICON_ON\b", "omxplorer"),
 ]
 
 # Components built in Mojo from the ones above (drawn on a Canvas or assembled from native controls):
@@ -87,6 +88,10 @@ COMPOSITES = [
     ("FindingCard", "mojoui/finding.mojo", ["Card tones", "Text tones", "Quiet buttons"], "FindingCard("),
     ("Inspector", "mojoui/inspector.mojo", ["Segmented", "Dropdown", "Toggle", "Card", "Quiet buttons"], "Inspector("),
     ("Toolbar · FormulaBar · StatusBar", "mojoui/sheetchrome.mojo", ["Toolbar button (icon over label)", "TextField", "Text"], "Toolbar("),
+    ("Format toggles (Bold, Italic, Align…)", "mojoui/sheetchrome.mojo", ["Icon toggle shown pressed", "Lucide icon set", "Tooltips", "Divider"], "toggles="),
+    ("Bottom tabs, renamed in place", "mojoui/sheetchrome.mojo", ["Button", "In-place editor", "Quiet buttons"], "BottomTabs("),
+    ("Cell styles (bold, italic, underline, strikethrough, colours, alignment)", "mojoui/cellstyle.mojo", ["Canvas"], "restyle("),
+    ("Swatch picker", "mojoui/swatches.mojo", ["Canvas", "Canvas: pan, zoom, tap", "Popover"], "SwatchPicker("),
     ("Column number formats", "mojoui/numformat.mojo", ["Canvas", "Text"], "set_format("),
     ("Sheet objects (charts, pivots)", "mojoui/sheetpage.mojo", ["Board: drag, resize, snap", "Canvas", "Card", "Grid"], "object_card("),
     ("Report page (KPI and chart tiles, filters)", "mojoui/reportpage.mojo", ["Grid", "Card", "Dropdown", "Canvas"], "ReportPage("),
@@ -100,7 +105,7 @@ APP_LOCAL = [
     ("Selection totals (sum, average of a column on the GPU)", "examples/omxplorer", "the status bar's numbers: a group-by with one group, formatted by the column"),
     ("Import review (columns, types, empties, first rows)", "examples/omxplorer", "the Import step's table; a component once a second app imports files"),
     ("Chart / pivot inspector sections", "examples/omxplorer", "type, value, group by, rows and columns as Inspector sections; belongs beside mojoui.sheetpage"),
-    ("Report filter inspector and add-tile row", "examples/omxplorer", "the filter (column, value) and the Sum / Average / Count / Chart tile buttons; belongs in mojoui.reportpage"),
+    ("Report toolbar controls (tile column, add-tile tools, filter)", "examples/omxplorer", "the column new tiles use, the Sum / Average / Count / Chart tile tools and the filter (column, value), in the Report's toolbar; belongs in mojoui.reportpage"),
 ]
 
 

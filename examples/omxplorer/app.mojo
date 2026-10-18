@@ -2,7 +2,9 @@
 # omxapp (mojoui) components, following the Stitch "classic" designs (docs/design/mxstudio-app/):
 #   Start  → choose a file (or the sample, or a blank table)
 #   Import → the columns as read, with their types and shapes, before the table exists
-#   Sheet  → toolbar, sheet tabs, formula bar, the table, the format inspector, the status bar
+#   Sheet  → a toolbar for the tab you're on (the sheet's tools and formats, or the Report's tiles and filter), the formula
+#            bar, the table, the inspector, the tabs along the bottom (Excel's way: tap the current one to rename it),
+#            the status bar
 
 from mojoui.view import (View, Text, Button, FilePicker, TextField, Canvas, Board, VStack, HStack, Card, Spacer, Divider,
                          Dropdown, Segmented, Toggle, Tabs, Grid, Scroll, Icon, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
@@ -26,7 +28,10 @@ from mojoui.omxfile import save_omx, open_document
 from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
                               NUMBER_STYLES, DATE_STYLES)
 from mojoui.inspector import Inspector, Section, Row, Stepper
-from mojoui.sheetchrome import Tool, Toolbar, FormulaBar, StatusBar, SheetTabs
+from mojoui.sheetchrome import Tool, Toolbar, FormulaBar, StatusBar, Tab, BottomTabs
+from mojoui.cellstyle import (CellStyle, BOLD, ITALIC, UNDERLINE, STRIKE, INK_MASK, FILL_MASK, ALIGN_MASK, ink_bits, fill_bits, align_bits,
+                              AUTO_ALIGN, ALIGN_LEFT, ALIGN_CENTRE, ALIGN_RIGHT, SWATCH_NAMES, swatch_name)
+from mojoui.swatches import SwatchPicker, draw_swatches, swatch_at
 from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_text, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
                               CHART_BAR, CHART_LINE, HEADER_H)
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
@@ -69,7 +74,6 @@ comptime RECENT = 40  # + index (40–49): open a recent file
 comptime INSERT_CHART = 25
 comptime INSERT_PIVOT = 26
 comptime MOVE = 27  # a sheet object dragged by its title bar
-comptime SHEET_TAB = 28  # the table / Report tabs
 comptime CHART_STYLE = 29
 comptime OBJ_VALUE = 30
 comptime OBJ_GROUP = 31
@@ -103,6 +107,23 @@ comptime KEEP_INSPECTOR = 76  # Settings: the inspector opens with a sheet
 comptime ABOUT_CLOSE = 77
 comptime FX_HELP = 78  # the formula bar's ƒx: what formulas can do
 comptime HELP_CLOSE = 79
+comptime STYLE_BOLD = 80  # the format toggles: the selected cell, or the whole column when a column is selected
+comptime STYLE_ITALIC = 81
+comptime STYLE_UNDERLINE = 82
+comptime STYLE_STRIKE = 83
+comptime STYLE_ALIGN = 84  # + AUTO_ALIGN … ALIGN_RIGHT (84–87)
+comptime CLEAR_FORMAT = 88
+comptime PICK_INK = 89  # open the text colour's swatches (a popover), or the fill's
+comptime PICK_FILL = 90
+comptime PICK_CLOSE = 91
+comptime SWATCH = 92  # the swatches' canvas tapped
+comptime TAB = 93  # + 0 (the sheet), 1 (the Report): a bottom tab tapped
+comptime RENAME_TAB = 95  # Sheet > Rename tab…: the current tab's name becomes a field
+comptime RENAME_SUBMIT = 96
+comptime RENAME_CANCEL = 97
+comptime SET_INK = 600  # + 0 (automatic) … 8: the Format menu's text colours
+comptime SET_FILL = 610  # + 0 (none) … 8
+comptime SWATCH_CANVAS = 5  # the swatches' canvas id
 comptime SKINS: List[String] = ["Ledger", "Graphite", "Blueprint"]
 comptime MAX_OBJECTS = 40  # per sheet, and tiles per report (canvas ids 10…49, 60…99, 120…159)
 comptime TABLE_H = 400  # the table's height once objects share the sheet
@@ -162,6 +183,10 @@ struct Main(App):
     var toast: String  # the toast showing ("" none) and what its Undo does
     var toast_undo: Int
     var show_timings: Bool  # Settings: the GPU time in the status bar (settings.txt: timings)
+    var sheet_name: String  # the sheet tab's name (the document's name until it's renamed; the file keeps the document's)
+    var report_name: String  # the Report tab's name ("Report" until it's renamed)
+    var renaming: Int  # the tab being renamed (0 the sheet, 1 the Report), -1 none
+    var picking: Int  # the swatches open: PICK_INK or PICK_FILL, 0 none
 
     def __init__(out self):
         self.screen = START_SCREEN
@@ -209,6 +234,10 @@ struct Main(App):
         self.toast = ""
         self.toast_undo = NO_MSG
         self.show_timings = read_setting(APP, "timings", "yes") != "no"
+        self.sheet_name = ""
+        self.report_name = "Report"
+        self.renaming = -1
+        self.picking = 0
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -250,6 +279,10 @@ struct Main(App):
                 self.name = file_stem(path)
                 remember(APP, path, self.recent)
                 self.to_sheet()
+                if len(self.frame.tab_names) > 0 and self.frame.tab_names[0] != "":  # (the tabs' names as saved)
+                    self.sheet_name = self.frame.tab_names[0]
+                if len(self.frame.tab_names) > 1 and self.frame.tab_names[1] != "":
+                    self.report_name = self.frame.tab_names[1]
                 self.objects = objects^  # the sheet's charts and pivots, and the Report, as they were saved
                 self.tiles = tiles^
                 self.filter = filter^
@@ -322,6 +355,10 @@ struct Main(App):
         self.tiles = List[ReportTile]()
         self.filter = ReportFilter(-1, 0)
         self.sheet_tab = 0
+        self.sheet_name = self.name
+        self.report_name = "Report"
+        self.renaming = -1
+        self.picking = 0
         var nums = self.numbers()
         var money = self.first_number()  # (the first decimal column: revenue rather than an order number)
         self.report_col = money if self.frame.kind(money) == DECIMAL else (nums[0] if len(nums) > 0 else -1)
@@ -441,11 +478,38 @@ struct Main(App):
     def set_format(mut self, var f: ColumnFormat):
         if self.grid.cur_col < 0:
             return
-        self.frame.set_format(self.grid.cur_col, f)
+        self.frame.change_format(self.grid.cur_col, f)  # (Undo takes it back)
         self.grid.redraw()
         if self.grid.cur_row >= 0:
             self.select_cell(self.grid.cur_row, self.grid.cur_col)
         self.message = self.frame.name(self.grid.cur_col) + ": " + f.summary() + " (the whole column)"
+        self.version += 1
+
+    # ---------- cell formats ----------
+
+    def style_target(mut self) -> Tuple[Int, Int]:
+        """What a format tool changes: the selected cell (column, row), or (column, -1) when a whole column is
+        selected; (-1, -1) and a message when nothing is."""
+        if self.grid.cur_col < 0:
+            self.message = "Select a cell, or a column by its header, then format it"
+            self.version += 1
+            return (-1, -1)
+        return (self.grid.cur_col, self.grid.cur_row)
+
+    def restyle(mut self, mask: Int, value: Int):
+        var at = self.style_target()
+        if at[0] < 0:
+            return
+        self.frame.restyle(at[0], at[1], mask, value)
+        self.after_style(at[0], at[1])
+
+    def after_style(mut self, col: Int, row: Int):
+        var words = self.frame.style_of(col, row).words()
+        if row >= 0:
+            self.message = self.frame.name(col) + " on row " + grouped(row + 1) + ": " + words
+        else:
+            self.message = "Column " + self.frame.name(col) + ": " + words + " (the whole column)"
+        self.grid.redraw()
         self.version += 1
 
     # ---------- events ----------
@@ -682,6 +746,8 @@ struct Main(App):
                 self.version += 1
         elif m == SHOW_REPORT or m == SHOW_SHEET:
             self.sheet_tab = 1 if m == SHOW_REPORT else 0
+            self.renaming = -1
+            self.picking = 0
             self.version += 1
         elif m == SAVE and self.frame.streamed():
             self.message = "Can't save: " + READ_ONLY
@@ -691,7 +757,8 @@ struct Main(App):
             make_dir(folder)
             var path = folder + "/" + self.name + ".omx"
             try:
-                save_omx(path, self.frame, self.objects, self.tiles, self.filter)
+                var tabs: List[String] = [self.sheet_name, self.report_name]
+                save_omx(path, self.frame, self.objects, self.tiles, self.filter, tabs)
                 self.source = path
                 remember(APP, path, self.recent)
                 self.message = "Saved " + path
@@ -784,9 +851,6 @@ struct Main(App):
                 except e:
                     self.message = "Couldn't compute: " + String(e)
                 self.version += 1
-        elif m == SHEET_TAB:
-            self.sheet_tab = event.number
-            self.version += 1
         elif m == REPORT_COL:
             var nums = self.numbers()
             if 0 <= event.number < len(nums):
@@ -830,6 +894,67 @@ struct Main(App):
             if self.filter.col >= 0 and 0 <= event.number < groups_of(self.frame, self.filter.col):
                 self.filter.code = event.number
                 self.refresh()
+        elif m == STYLE_BOLD or m == STYLE_ITALIC or m == STYLE_UNDERLINE or m == STYLE_STRIKE:
+            var part = BOLD if m == STYLE_BOLD else (ITALIC if m == STYLE_ITALIC else (UNDERLINE if m == STYLE_UNDERLINE else STRIKE))
+            var at = self.style_target()
+            if at[0] >= 0:
+                var on = self.frame.style_of(at[0], at[1]).bits & part != 0
+                self.restyle(part, 0 if on else part)
+        elif m >= STYLE_ALIGN and m <= STYLE_ALIGN + ALIGN_RIGHT:
+            self.restyle(ALIGN_MASK, align_bits(m - STYLE_ALIGN))
+        elif m >= SET_INK and m <= SET_INK + 8:
+            self.picking = 0
+            self.restyle(INK_MASK, ink_bits(m - SET_INK))
+        elif m >= SET_FILL and m <= SET_FILL + 8:
+            self.picking = 0
+            self.restyle(FILL_MASK, fill_bits(m - SET_FILL))
+        elif m == PICK_INK or m == PICK_FILL:
+            self.picking = 0 if self.picking == m else m
+            self.version += 1
+        elif m == PICK_CLOSE:
+            self.picking = 0
+            self.version += 1
+        elif m == SWATCH:
+            var k = swatch_at(event.x, event.y)
+            if event.number == TAP and k >= 0 and self.picking != 0:
+                var fill = self.picking == PICK_FILL
+                self.picking = 0
+                self.restyle(FILL_MASK if fill else INK_MASK, fill_bits(k) if fill else ink_bits(k))
+        elif m == CLEAR_FORMAT:
+            var at = self.style_target()
+            if at[0] >= 0:
+                self.frame.clear_style(at[0], at[1])
+                self.after_style(at[0], at[1])
+        elif m == TAB or m == TAB + 1:
+            if self.sheet_tab == m - TAB and self.renaming < 0:  # the current tab again: rename it
+                self.renaming = m - TAB
+            else:
+                self.sheet_tab = m - TAB
+                self.renaming = -1
+                self.picking = 0
+            self.version += 1
+        elif m == RENAME_TAB:
+            self.renaming = self.sheet_tab
+            self.version += 1
+        elif m == RENAME_SUBMIT:
+            var name = String(event.text.strip())
+            if name == "":
+                self.message = "A tab needs a name: type one, or press Escape to keep " + (self.sheet_name if self.renaming == 0 else self.report_name)
+            elif name.byte_length() > 64:
+                self.message = "That name is too long: 64 letters at most"
+            else:
+                var was = self.sheet_name if self.renaming == 0 else self.report_name
+                if self.renaming == 0:
+                    self.sheet_name = name
+                elif self.renaming == 1:
+                    self.report_name = name
+                self.message = "Renamed " + was + " to " + name
+                self.renaming = -1
+            self.version += 1
+        elif m == RENAME_CANCEL:
+            self.renaming = -1
+            self.message = "Kept the name"
+            self.version += 1
         elif m == UNDO:
             if self.frame.undo():
                 self.grid.redraw()
@@ -878,6 +1003,10 @@ struct Main(App):
             self.grid.draw(surface, self.frame, self.font, self.pal)
         elif canvas == 1:
             self.preview.draw(surface, self.frame, self.font, self.pal)
+        elif canvas == SWATCH_CANVAS:
+            var col = self.grid.cur_col
+            var st = self.frame.style_of(col, self.grid.cur_row) if col >= 0 else CellStyle()
+            draw_swatches(surface, st.fill() if self.picking == PICK_FILL else st.ink(), self.picking == PICK_FILL, self.font, self.pal)
         elif 10 <= canvas < 10 + len(self.objects):
             var cv = chart_view(self.objects[canvas - 10], self.frame)
             cv.draw(surface, self.font, self.pal)
@@ -997,6 +1126,13 @@ struct Main(App):
         var format_as = Submenu("Format as", [Item("Number", FMT_NUMBER, checked=style == NUMBER, disabled=not on_sheet),
                                                Item("Currency", FMT_CURRENCY, checked=style == CURRENCY, disabled=not on_sheet),
                                                Item("Percent", FMT_PERCENT, checked=style == PERCENT, disabled=not on_sheet)], icon="format")
+        var cells = on_sheet and self.sheet_tab == 0  # (formats apply to the sheet's cells; the Report has none)
+        var st = self.frame.style_of(self.grid.cur_col, self.grid.cur_row) if cells and self.grid.cur_col >= 0 else CellStyle()
+        var inks = List[View]()
+        var fills = List[View]()
+        for k in range(9):
+            inks.append(Item(swatch_name(k), SET_INK + k, checked=st.ink() == k, disabled=not cells))
+            fills.append(Item("None" if k == 0 else swatch_name(k), SET_FILL + k, checked=st.fill() == k, disabled=not cells))
         return MenuBar([
             Menu("File", [Item("New blank sheet", BLANK, icon="grid", shortcut="Ctrl+N"), Item("Open…", BACK, icon="open", shortcut="Ctrl+O", disabled=not on_sheet),
                           Separator(), Item("Save", SAVE, icon="save", shortcut="Ctrl+S", disabled=not edits), Separator(),
@@ -1005,14 +1141,25 @@ struct Main(App):
                           Item("Add row", ADD_ROW, icon="row-plus", shortcut="Ctrl+Shift+R", disabled=not edits)]),
             Menu("View", [Item("Inspector", TOGGLE_INSPECTOR, checked=self.inspector_open, shortcut="Ctrl+Shift+I", disabled=not on_sheet), Separator(),
                           Item("Sheet", SHOW_SHEET, icon="sheet", checked=on_sheet and self.sheet_tab == 0, disabled=not on_sheet),
-                          Item("Report", SHOW_REPORT, icon="chart-bar", checked=on_sheet and self.sheet_tab == 1, disabled=not on_sheet)]),
+                          Item("Report", SHOW_REPORT, icon="chart-bar", checked=on_sheet and self.sheet_tab == 1, disabled=not on_sheet), Separator(),
+                          Item("Rename tab…", RENAME_TAB, icon="rename", disabled=not on_sheet)]),
             Menu("Insert", [Item("Chart", INSERT_CHART, icon="chart-bar", shortcut="Ctrl+Shift+C", disabled=not on_sheet),
                             Item("Pivot table", INSERT_PIVOT, icon="pivot", shortcut="Ctrl+Shift+P", disabled=not on_sheet), Separator(),
                             Item("Formula column", NEW_FORMULA, icon="formula", checked=self.formula_open, disabled=not edits),
                             Item("Row", ADD_ROW, icon="row-plus", disabled=not edits)]),
             Menu("Data", [Item("Sort smallest first", SORT_ASC, icon="sort", shortcut="Ctrl+Shift+↑", disabled=not edits),
                           Item("Sort largest first", SORT_DESC, shortcut="Ctrl+Shift+↓", disabled=not edits), Separator(), format_as.copy()]),
-            Menu("Format", [format_as.copy(), Separator(), Item("Format inspector", TOGGLE_INSPECTOR, icon="format", checked=self.inspector_open, disabled=not on_sheet)]),
+            Menu("Format", [Item("Bold", STYLE_BOLD, icon="bold", shortcut="Ctrl+B", checked=st.bold(), disabled=not cells),
+                            Item("Italic", STYLE_ITALIC, icon="italic", shortcut="Ctrl+I", checked=st.italic(), disabled=not cells),
+                            Item("Underline", STYLE_UNDERLINE, icon="underline", shortcut="Ctrl+U", checked=st.underline(), disabled=not cells),
+                            Item("Strikethrough", STYLE_STRIKE, icon="strikethrough", shortcut="Ctrl+5", checked=st.strike(), disabled=not cells), Separator(),
+                            Submenu("Text colour", inks^, icon="text-colour"), Submenu("Fill colour", fills^, icon="fill"),
+                            Submenu("Align", [Item("Automatic", STYLE_ALIGN + AUTO_ALIGN, checked=st.align() == AUTO_ALIGN, disabled=not cells),
+                                              Item("Left", STYLE_ALIGN + ALIGN_LEFT, checked=st.align() == ALIGN_LEFT, disabled=not cells),
+                                              Item("Centre", STYLE_ALIGN + ALIGN_CENTRE, checked=st.align() == ALIGN_CENTRE, disabled=not cells),
+                                              Item("Right", STYLE_ALIGN + ALIGN_RIGHT, checked=st.align() == ALIGN_RIGHT, disabled=not cells)], icon="align-left"),
+                            Separator(), format_as.copy(), Item("Clear formatting", CLEAR_FORMAT, icon="clear-format", disabled=not cells), Separator(),
+                            Item("Format inspector", TOGGLE_INSPECTOR, icon="format", checked=self.inspector_open, disabled=not on_sheet)]),
             Menu("Help", [Item("About omxplorer", ABOUT, icon="file")]),
         ]).fill().padding(2, 8).tag("menubar")
 
@@ -1048,6 +1195,13 @@ struct Main(App):
                 Text("Written once in Mojo with omxapp: the same app, the same look, on Linux, the web, Mac, iPhone and Android.", CAPTION),
                 HStack(Spacer(), Button("Done", ABOUT_CLOSE, PROMINENT), spacing=10).fill(),
                 spacing=10).align(START), on_close=ABOUT_CLOSE, width=480))
+        if self.picking != 0 and self.screen == SHEET:
+            var fill = self.picking == PICK_FILL
+            var names = String("Automatic") if not fill else String("None")
+            for n in materialize[SWATCH_NAMES]():
+                names += " · " + n
+            out.append(Popover("fill" if fill else "text-colour", "Fill colour" if fill else "Text colour", VStack(
+                SwatchPicker(SWATCH_CANVAS, self.version, SWATCH), Text(names, CAPTION), spacing=6).align(START), on_close=PICK_CLOSE))
         if self.help_open:
             out.append(Popover("formula-bar", "Formulas", VStack(
                 Text("A formula makes a whole column from other columns: margin = revenue - cost", CAPTION),
@@ -1058,25 +1212,64 @@ struct Main(App):
         return out^
 
     def toolbar(self) -> View:
-        var streamed = self.frame.streamed()  # (read-only: no Save, Undo, rows, formulas or sorting, D-185)
+        """The tools for the tab you're on: the sheet's (edit, data, formats, insert) or the Report's (tiles, filter)."""
+        var streamed = self.frame.streamed()  # (read-only: no Save, rows, formulas or sorting, D-185; formats show but aren't saved)
         var left = List[Tool]()
         if not streamed:
-            left = [Tool("Save", "save", SAVE, False, "Save the document (Ctrl+S)"), Tool("Undo", "undo", UNDO, False, "Undo the last edit (Ctrl+Z)")]
-        var middle: List[Tool] = [Tool("Pivot", "pivot", INSERT_PIVOT, False, "A pivot table of the selected column (Ctrl+Shift+P)"),
-                                  Tool("Chart", "chart-bar", INSERT_CHART, False, "A chart of the selected column (Ctrl+Shift+C)")]
-        if not streamed:
-            middle.append(Tool("Add row", "row-plus", ADD_ROW, False, "A new row at the end (Ctrl+Shift+R)"))
-            middle.append(Tool("Formula", "formula", NEW_FORMULA, self.formula_open, "A new column computed from others"))
-            middle.append(Tool("Sort", "sort", SORT, self.grid.sort_col >= 0, "Sort by the selected column; again to flip"))
+            left.append(Tool("Save", "save", SAVE, False, "Save the document (Ctrl+S)"))
+        left.append(Tool("Undo", "undo", UNDO, False, "Undo the last change (Ctrl+Z)"))
         var right: List[Tool] = [Tool("Format", "format", TOGGLE_INSPECTOR, self.inspector_open, "Show or hide the inspector (Ctrl+Shift+I)")]
         var extra = List[View]()
         if streamed:
             extra.append(Text("Streamed · read-only", CAPTION).tone(TONE_WARN).tooltip("This Parquet file is too big for memory: its rows are read from disk as they're shown, so it can't be edited, sorted or saved").tag("streamed"))
         extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt,.parquet,.omx").tooltip("Open a CSV, Parquet or .omx file"))
-        return Toolbar(left, middle, right, extra)
+        if self.sheet_tab == 1:
+            return Toolbar(left, self.report_tools(), right, extra, before=self.report_controls(), after=self.filter_controls())
+        var middle = List[Tool]()
+        if not streamed:
+            middle.append(Tool("Add row", "row-plus", ADD_ROW, False, "A new row at the end (Ctrl+Shift+R)"))
+            middle.append(Tool("Formula", "formula", NEW_FORMULA, self.formula_open, "A new column computed from others"))
+            middle.append(Tool("Sort", "sort", SORT, self.grid.sort_col >= 0, "Sort by the selected column; again to flip"))
+        middle.append(Tool("Pivot", "pivot", INSERT_PIVOT, False, "A pivot table of the selected column (Ctrl+Shift+P)"))
+        middle.append(Tool("Chart", "chart-bar", INSERT_CHART, False, "A chart of the selected column (Ctrl+Shift+C)"))
+        return Toolbar(left, middle, right, extra, toggles=self.format_tools())
 
-    def report_inspector(self) -> View:
-        """The Report's inspector: the filter every tile reads through, and where the numbers come from."""
+    def format_tools(self) -> List[List[Tool]]:
+        """Excel's Home tab, in small toggles: font, colours, alignment, number. Each shows the selection's state."""
+        var col = self.grid.cur_col
+        var st = self.frame.style_of(col, self.grid.cur_row) if col >= 0 else CellStyle()
+        var number = self.frame.format_of(col).style if col >= 0 else AUTO
+        var target = "the selected cell" if self.grid.cur_row >= 0 else "the selected column"
+        var font: List[Tool] = [Tool("Bold", "bold", STYLE_BOLD, st.bold(), "Bold: " + target + " (Ctrl+B)"),
+                                Tool("Italic", "italic", STYLE_ITALIC, st.italic(), "Italic (Ctrl+I)"),
+                                Tool("Underline", "underline", STYLE_UNDERLINE, st.underline(), "Underline (Ctrl+U)"),
+                                Tool("Strikethrough", "strikethrough", STYLE_STRIKE, st.strike(), "Strikethrough (Ctrl+5)")]
+        var colours: List[Tool] = [Tool("Text colour", "text-colour", PICK_INK, st.ink() > 0 or self.picking == PICK_INK, "Text colour: " + swatch_name(st.ink())),
+                                   Tool("Fill colour", "fill", PICK_FILL, st.fill() > 0 or self.picking == PICK_FILL, "Fill: " + (swatch_name(st.fill()) if st.fill() > 0 else "none"))]
+        var align: List[Tool] = [Tool("Align left", "align-left", STYLE_ALIGN + ALIGN_LEFT, st.align() == ALIGN_LEFT, "Align left"),
+                                 Tool("Align centre", "align-center", STYLE_ALIGN + ALIGN_CENTRE, st.align() == ALIGN_CENTRE, "Centre"),
+                                 Tool("Align right", "align-right", STYLE_ALIGN + ALIGN_RIGHT, st.align() == ALIGN_RIGHT, "Align right")]
+        var numbers: List[Tool] = [Tool("Currency", "currency", FMT_CURRENCY, number == CURRENCY, "Currency: the whole column (again: automatic)"),
+                                   Tool("Percent", "percent", FMT_PERCENT, number == PERCENT, "Percent: the whole column (again: automatic)"),
+                                   Tool("Fewer decimals", "decimals-less", DECIMALS_LESS, False, "One decimal place fewer: the whole column"),
+                                   Tool("More decimals", "decimals-more", DECIMALS_MORE, False, "One decimal place more: the whole column"),
+                                   Tool("Clear formatting", "clear-format", CLEAR_FORMAT, False, "Back to plain: " + target)]
+        return [font^, colours^, align^, numbers^]
+
+    def report_tools(self) -> List[Tool]:
+        return [Tool("Sum tile", "plus", ADD_TILE + TILE_SUM, False, "A tile with the column's total"),
+                Tool("Average tile", "plus", ADD_TILE + TILE_AVERAGE, False, "A tile with the column's average"),
+                Tool("Count tile", "plus", ADD_TILE + TILE_COUNT, False, "A tile with the number of rows"),
+                Tool("Chart tile", "chart-bar", ADD_TILE + TILE_CHART, False, "A chart of the column by group")]
+
+    def report_controls(self) -> List[View]:
+        """Before the Report's tile tools: the column new tiles use; after them, the filter every tile reads through."""
+        var nums = self.numbers()
+        var out = List[View]()
+        out.append(VStack(Text("Tiles of", CAPTION), Dropdown(self.names_of(nums), self.index_in(nums, self.report_col), REPORT_COL).tooltip("The column new tiles add up"), spacing=2).align(START))
+        return out^
+
+    def filter_controls(self) -> List[View]:
         var texts = self.texts()
         var cols = List[String]()
         cols.append("Every row")
@@ -1086,21 +1279,25 @@ struct Main(App):
         for k in range(len(texts)):
             if texts[k] == self.filter.col:
                 at_col = k + 1
-        var filters = List[View]()
-        filters.append(Row("Column", Dropdown(cols, at_col, FILTER_COL)))
+        var out = List[View]()
+        out.append(VStack(Text("Filter · every tile", CAPTION), Dropdown(cols, at_col, FILTER_COL), spacing=2).align(START))
         if self.filter.col >= 0:
             var values = List[String]()
             for code in range(groups_of(self.frame, self.filter.col)):
                 values.append(self.frame.text_of(self.filter.col, Int64(code)))
-            filters.append(Row("Is", Dropdown(values, self.filter.code, FILTER_VALUE)))
+            out.append(VStack(Text("is", CAPTION), Dropdown(values, self.filter.code, FILTER_VALUE), spacing=2).align(START))
+        return out^
+
+    def report_inspector(self) -> View:
+        """The Report's inspector: where its numbers come from (the tiles and the filter are in the toolbar)."""
         var sections = List[View]()
-        sections.append(Section("Filter · every tile", filters))
         var data = List[View]()
-        data.append(Row("Source", Text(self.name)))
+        data.append(Row("Source", Text(self.sheet_name)))
         data.append(Row("Rows", Text(grouped(self.frame.rows()))))
-        data.append(Text("Edits in the table show here at once.", CAPTION))
+        data.append(Row("Filter", Text(self.filter.words(self.frame), CAPTION)))
+        data.append(Text("Edits in the table show here at once. Add tiles and set the filter in the toolbar.", CAPTION))
         sections.append(Section("Data", data))
-        var tabs: List[String] = ["Report"]
+        var tabs: List[String] = [self.report_name]
         return Inspector(tabs, 0, NO_MSG, sections, INSPECTOR_W)
 
     def object_inspector(self) -> List[View]:
@@ -1111,7 +1308,7 @@ struct Main(App):
         var texts = self.texts()
         var head = List[View]()
         head.append(Text(object_title(o, self.frame), HEADLINE))
-        head.append(Text("Follows edits to " + self.name + " (" + fixed(o.milliseconds, 1) + " ms on the GPU)", CAPTION))
+        head.append(Text("Follows edits to " + self.sheet_name + " (" + fixed(o.milliseconds, 1) + " ms on the GPU)", CAPTION))
         sections.append(Section("Chart" if o.kind == OBJ_CHART else "Pivot", head))
         var data = List[View]()
         if o.kind == OBJ_CHART:
@@ -1141,7 +1338,7 @@ struct Main(App):
         var sections = List[View]()
         if self.insp_tab == 0:
             var info = List[View]()
-            info.append(Row("Name", Text(self.name)))
+            info.append(Row("Name", Text(self.sheet_name)))
             info.append(Row("Rows", Text(grouped(self.frame.rows()))))
             info.append(Row("Columns", Text(String(self.frame.columns()))))
             info.append(Row("From", Text(file_name(self.source) if self.source != "sample" else "the sample", CAPTION)))
@@ -1216,22 +1413,17 @@ struct Main(App):
                 kpis.append(HStack(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version).fill(),
                                    Button("Remove", TILE_CLOSE + k, ICON_ONLY, icon="close"), spacing=2).fill().align(START))
                 first_kpi = False
-        var nums = self.numbers()
-        var add = HStack(Text("Add a tile", CAPTION), Dropdown(self.names_of(nums), self.index_in(nums, self.report_col), REPORT_COL),
-                         Button("Sum tile", ADD_TILE + TILE_SUM, icon="plus"), Button("Average tile", ADD_TILE + TILE_AVERAGE, icon="plus"),
-                         Button("Count tile", ADD_TILE + TILE_COUNT, icon="plus"),
-                         Button("Chart tile", ADD_TILE + TILE_CHART, icon="chart-bar"), spacing=8).align(CENTER)
-        if len(self.tiles) == 0:
-            add = VStack(Text("An empty report: add a tile below. Every tile reads the table, so edits show here at once.", CAPTION), add^, spacing=8).align(START)
-        var page = ReportPage("Report", self.name + " · " + self.filter.words(self.frame), kpis, charts, Card(add, spacing=8).fill())
-        return Scroll(page^.padding(4, 4), height=GRID_H + 30).width(self.sheet_width())
+        var page = ReportPage(self.report_name, self.sheet_name + " · " + self.filter.words(self.frame), kpis, charts)
+        if len(self.tiles) == 0:  # (an empty report says where tiles come from)
+            page = VStack(page^, Card(Text("An empty report: add a tile from the toolbar above (Sum, Average, Count or Chart of the column you pick there). Every tile reads the table, so edits show here at once.", CAPTION), spacing=8).fill(), spacing=16).fill().align(START)
+        return Scroll(page^.width(self.sheet_width() - 8).padding(4, 4), height=GRID_H + 30).width(self.sheet_width())  # (full width: the charts span it)
 
     def sheet_screen(self) -> View:
         var width = self.sheet_width()
         var cell = (self.frame.name(self.grid.cur_col) if self.grid.cur_col >= 0 else "") + (" " + String(self.grid.cur_row + 1) if self.grid.cur_row >= 0 else "")
         var fx = FormulaBar("New column", "", FORMULA_SUBMIT, placeholder="A new column: its name, then its formula", on_help=FX_HELP) if self.formula_open else FormulaBar(cell, self.edit_text, FX_COMMIT, CELL_CANCEL, on_help=FX_HELP)
         var sorted = ("sorted by " + self.frame.name(self.grid.sort_col) + (" ↓" if self.grid.sort_desc else " ↑")) if self.grid.sort_col >= 0 else String("")
-        var head = HStack(Text(self.name, HEADLINE), Text(grouped(self.frame.rows()) + " rows", CAPTION).tone(TONE_ACCENT), Spacer(),
+        var head = HStack(Text(self.sheet_name, HEADLINE), Text(grouped(self.frame.rows()) + " rows", CAPTION).tone(TONE_ACCENT), Spacer(),
                           Text(sorted, CAPTION), spacing=12).fill().align(CENTER).height(HEADER_H - 8)
         var th = self.table_h()
         var items = List[View]()  # child 0: the table (its title bar is the drag handle; it stays put); then the objects; then the editor
@@ -1250,15 +1442,14 @@ struct Main(App):
                     .width(width).height(GRID_H + 30)) if self.sheet_tab == 0 else self.report_view()
         var main = VStack(fx, area^, spacing=6).width(width) if self.sheet_tab == 0 else VStack(area^, spacing=6).width(width)
         var row = HStack(main, self.inspector(), spacing=16).align(START) if self.inspector_open else HStack(main, spacing=0)
-        var names = List[String]()
-        names.append(self.name)
-        names.append("Report")
+        var tabs: List[Tab] = [Tab(self.sheet_name, "sheet"), Tab(self.report_name, "chart-bar")]
+        var chip: List[View] = [Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD)]
         var parts = List[View]()
         parts.append(self.menu_bar())
         parts.append(self.toolbar().height(64))
-        parts.append(HStack(SheetTabs(names, self.sheet_tab, SHEET_TAB), Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), spacing=8).fill().align(CENTER).padding(0, 20).height(36))
-        parts.append(row^.padding(0, 20))
+        parts.append(row^.padding(8, 20))
         parts.append(Spacer())
+        parts.append(BottomTabs(tabs, self.sheet_tab, TAB, self.renaming, RENAME_SUBMIT, RENAME_CANCEL, chip).height(40))  # (Excel's place for them)
         parts.append(self.status().height(30))
         if self.ctx_col >= 0 and self.sheet_tab == 0:
             parts.append(self.context_menu())

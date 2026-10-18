@@ -62,6 +62,7 @@ comptime ICON_NAMES: List[String] = [
     # Lucide icons drawn the same on every host (GTK loads the same SVGs)
     "table", "pivot", "chart-bar", "note", "undo", "save", "open", "close", "sort", "filter-off", "row-plus", "row-minus",
     "view", "zoom", "category", "formula", "comment", "shape", "text", "organise", "format", "share", "import", "database", "sample", "grid", "sheet", "file", "export", "upload", "chevron",
+    "bold", "italic", "underline", "strikethrough", "text-colour", "fill", "align-left", "align-center", "align-right", "currency", "percent", "decimals-less", "decimals-more", "clear-format", "rename",
 ]
 
 # Text styles (each platform maps them to its own type scale)
@@ -99,6 +100,7 @@ comptime SUBTLE = 3  # quiet: no fill until hovered (toolbars, card actions)
 comptime ICON_ONLY = 4  # quiet and only its icon shows; the title is its tooltip and accessible name
 comptime TOOL = 5  # a toolbar button: the icon above a small title (Numbers, Keynote)
 comptime TOOL_ON = 6  # the same, shown as the active tool
+comptime ICON_ON = 7  # ICON_ONLY shown pressed (a toggle that is on: Bold, Align left)
 
 comptime NO_MSG = 0
 
@@ -338,7 +340,7 @@ def Text(text: String, style: Int = BODY) -> View:
 
 
 def Button(title: String, on_tap: Int, style: Int = PLAIN, icon: String = "") -> View:
-    """Sends `on_tap` when tapped. Styles: PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON.
+    """Sends `on_tap` when tapped. Styles: PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON.
     `icon`: one of ICON_NAMES, shown before the title (or alone, with ICON_ONLY)."""
     return _one(Node(BUTTON, title, on_tap, style=style, hint=icon))
 

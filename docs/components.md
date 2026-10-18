@@ -77,6 +77,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | Canvas: right-click | `on_gesture: SECONDARY (event.x, y)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
 | Submenus, checked, disabled and danger items | `Submenu(…), Item(checked=, disabled=, danger=)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
 | Tooltips | `.tooltip(text)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ |
+| Icon toggle shown pressed | `Button(style=ICON_ON)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ |
 
 ## Composite components (Mojo, built from the ones above)
 
@@ -91,6 +92,10 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | `FindingCard` | `mojoui/finding.mojo` | Card tones, Text tones, Quiet buttons | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | mxstudio |
 | `Inspector` | `mojoui/inspector.mojo` | Segmented, Dropdown, Toggle, Card, Quiet buttons | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ | omxplorer |
 | `Toolbar · FormulaBar · StatusBar` | `mojoui/sheetchrome.mojo` | Toolbar button (icon over label), TextField, Text | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | kit, omxplorer |
+| `Format toggles (Bold, Italic, Align…)` | `mojoui/sheetchrome.mojo` | Icon toggle shown pressed, Lucide icon set, Tooltips, Divider | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | omxplorer |
+| `Bottom tabs, renamed in place` | `mojoui/sheetchrome.mojo` | Button, In-place editor, Quiet buttons | ✅ | ✅ | ❌ | ❌ | 🔨 | ❌ | omxplorer |
+| `Cell styles (bold, italic, underline, strikethrough, colours, alignment)` | `mojoui/cellstyle.mojo` | Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
+| `Swatch picker` | `mojoui/swatches.mojo` | Canvas, Canvas: pan, zoom, tap, Popover | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ | omxplorer |
 | `Column number formats` | `mojoui/numformat.mojo` | Canvas, Text | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
 | `Sheet objects (charts, pivots)` | `mojoui/sheetpage.mojo` | Board: drag, resize, snap, Canvas, Card, Grid | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 | omxplorer |
 | `Report page (KPI and chart tiles, filters)` | `mojoui/reportpage.mojo` | Grid, Card, Dropdown, Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
@@ -99,12 +104,12 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 71 | 1 | 0 |
-| Web | 72 | 0 | 0 |
-| Android | 19 | 14 | 39 |
-| Mac (AppKit) | 0 | 54 | 18 |
-| iPhone (UIKit) | 0 | 55 | 17 |
-| Agent (MCP) | 28 | 14 | 30 |
+| Linux (GTK) | 76 | 1 | 0 |
+| Web | 77 | 0 | 0 |
+| Android | 19 | 15 | 43 |
+| Mac (AppKit) | 0 | 57 | 20 |
+| iPhone (UIKit) | 0 | 59 | 18 |
+| Agent (MCP) | 30 | 14 | 33 |
 
 ## Inside one app, not components yet (the debt)
 
@@ -116,7 +121,7 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | `Selection totals (sum, average of a column on the GPU)` | examples/omxplorer | the status bar's numbers: a group-by with one group, formatted by the column |
 | `Import review (columns, types, empties, first rows)` | examples/omxplorer | the Import step's table; a component once a second app imports files |
 | `Chart / pivot inspector sections` | examples/omxplorer | type, value, group by, rows and columns as Inspector sections; belongs beside mojoui.sheetpage |
-| `Report filter inspector and add-tile row` | examples/omxplorer | the filter (column, value) and the Sum / Average / Count / Chart tile buttons; belongs in mojoui.reportpage |
+| `Report toolbar controls (tile column, add-tile tools, filter)` | examples/omxplorer | the column new tiles use, the Sum / Average / Count / Chart tile tools and the filter (column, value), in the Report's toolbar; belongs in mojoui.reportpage |
 
 ## The rule
 

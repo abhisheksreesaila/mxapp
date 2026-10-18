@@ -39,7 +39,7 @@ from PIL import Image
  DIALOG, TOAST, POPOVER) = range(1, 33)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
-PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON = 0, 1, 2, 3, 4, 5, 6
+PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, ICON_ON = 0, 1, 2, 3, 4, 5, 6, 7
 START, CENTER, END = 1, 2, 3
 SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
 KEY = 7  # a canvas gesture: a key pressed while it had focus (text = the key, dx = modifiers)
@@ -87,6 +87,8 @@ select { font: inherit; width: var(--control-width, auto); min-height: 48px; pad
 input[type=range] { width: var(--control-width, 240px); min-height: 48px; accent-color: var(--accent); }
 progress { width: var(--control-width, 240px); height: 8px; accent-color: var(--accent); }
 hr { width: var(--control-width, 280px); border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+.hstack > hr { width: 0; min-width: 0; align-self: center; height: var(--control-height, 28px); border-top: 0; border-left: 1px solid var(--line); margin: 0 6px; }
+body.skin .hstack > hr, body.omarchy .hstack > hr { border-left-color: var(--o-line); }
 img.image { max-width: 100%; height: auto; border-radius: 12px; image-rendering: auto; }
 .scroll { overflow-y: auto; width: 100%; display: flex; flex-direction: column; align-items: center; }  /* like a VStack */
 .segmented, .tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: var(--surface); }
@@ -114,6 +116,7 @@ dialog.alert h3 { margin: 0 0 6px; } dialog.alert p { margin: 0 0 16px; color: v
 dialog.alert .buttons { display: flex; gap: 8px; justify-content: center; }
 .icon { display: inline-flex; color: var(--accent); }
 .grid { display: grid; justify-items: center; align-items: center; }
+.grid > [style*="align-self:stretch"] { justify-self: stretch; }  /* a child that fills takes its cell's width, as on GTK */
 .lazylist { position: relative; overflow-y: auto; width: var(--control-width, 340px); max-width: 90vw; border-radius: 12px;
             background: light-dark(#fff, #2c2c2e); border: 1px solid var(--line); }
 .lazylist .row { position: absolute; left: 0; right: 0; display: flex; align-items: center; padding: 0 14px; cursor: pointer;
@@ -602,7 +605,7 @@ body.omarchy label.picker:not(.tool):not(.subtle) { border: 1px solid var(--o-st
 body.omarchy label.picker.prominent { background: var(--o-accent); color: var(--o-on-accent); border-color: transparent; font-weight: 700; }
 button.tool { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 58px; min-height: 48px; padding: 4px 6px; }
 button.tool span { font-size: 11px; line-height: 13px; }
-body.omarchy button.tool { border-radius: 6px; } body.omarchy button.tool.on { background: var(--o-raised); color: var(--o-accent); }
+body.omarchy button.tool { border-radius: 6px; } body.omarchy button.tool.on, body.omarchy button.icon-only.on { background: var(--o-raised); color: var(--o-accent); }
 body.omarchy select, body.omarchy input[type=text], body.omarchy input[type=date], body.omarchy textarea { border-radius: 3px; min-height: 28px;
   border: 1px solid var(--o-strong); background: var(--o-page); color: var(--o-ink); font: inherit; }
 body.omarchy select { padding: 2px 4px; }
@@ -662,7 +665,7 @@ body.skin label.picker:not(.tool):not(.subtle) { border: 1px solid var(--o-stron
 body.skin label.picker.prominent { background: var(--o-accent); color: var(--o-on-accent); border-color: transparent; font-weight: 600; }
 body.skin button.tool, body.skin label.picker.tool { min-width: 64px; min-height: 58px; border-radius: 6px; font-size: 11px; color: var(--o-chrome-ink); }
 body.skin button.tool:hover, body.skin label.picker.tool:hover { background: color-mix(in srgb, var(--o-chrome-ink) 8%, var(--o-chrome)); }
-body.skin button.tool.on { background: var(--o-wash); color: var(--o-accent); }
+body.skin button.tool.on, body.skin button.icon-only.on { background: var(--o-wash); color: var(--o-accent); }
 body.skin select, body.skin input[type=text], body.skin input[type=date], body.skin textarea { border-radius: 4px; min-height: 30px;
   border: 1px solid var(--o-strong); background: var(--o-card); color: var(--o-ink); font: inherit; padding: 3px 8px; }
 body.skin input[type=text]:focus, body.skin textarea:focus, body.skin select:focus { outline: none; border-color: var(--o-accent);
@@ -810,7 +813,7 @@ def render_node(s, i, sid):
         return tag(n["text"], cls=cls, id=nid, data_kind="label")
     if kind == BUTTON:
         cls = {PROMINENT: "prominent", DESTRUCTIVE: "destructive", SUBTLE: "subtle", ICON_ONLY: "subtle icon-only",
-               TOOL: "subtle tool", TOOL_ON: "subtle tool on"}.get(n["style"], "")
+               ICON_ON: "subtle icon-only on", TOOL: "subtle tool", TOOL_ON: "subtle tool on"}.get(n["style"], "")
         if n["msg2"]:  # a FilePicker: a file input styled as the button; the file uploads, then on_pick gets its path
             svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"')) if n["hint"] else ""
             accept = n["options"][0] if n["options"] else ""
@@ -825,7 +828,7 @@ def render_node(s, i, sid):
         if not n["hint"]:
             return Button(n["text"], id=nid, cls=cls, data_kind="button", **common)
         svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"'))
-        if n["style"] == ICON_ONLY:  # the title stays in the text (screen readers, tests), only the icon shows
+        if n["style"] in (ICON_ONLY, ICON_ON):  # the title stays in the text (screen readers, tests), only the icon shows
             return Button(svg, Span(n["text"], cls="sr-only"), id=nid, cls=cls, title=n["text"], data_kind="button", **common)
         return Button(svg, Span(n["text"]), id=nid, cls=cls + " with-icon", data_kind="button", **common)
     if kind == FIELD:

@@ -151,7 +151,7 @@ def m3():
     return not problems, "; ".join(problems[:6]) or f"Pivot puts revenue by carrier × region on the sheet with row, column and grand totals, all {len(carriers) * len(regions)} cells equal to the CSV's and in Currency; identical on GTK and web"
 
 
-REPORT = (OPEN + ";tab:0=Report;tap:Sum tile;tap:Average tile;tap:Count tile;tap:Chart tile;select:1=region;select:2=West")
+REPORT = (OPEN + ";tap:Report;tap:Sum tile;tap:Average tile;tap:Count tile;tap:Chart tile;select:1=region;select:2=West")
 
 
 def m4():
@@ -160,9 +160,9 @@ def m4():
         return False, msg
     o = oracle(CSV_1M)
     problems = []
-    every = both(OPEN + ";tab:0=Report;tap:Sum tile;tap:Count tile", "report-all")
+    every = both(OPEN + ";tap:Report;tap:Sum tile;tap:Count tile", "report-all")
     west = both(REPORT + ";tapat:3=500,200", "report-west")
-    qty = both(OPEN + ";tab:0=Report;select:0=qty;tap:Average tile;tap:Sum tile;select:1=region;select:2=West", "report-qty")  # (another column)
+    qty = both(OPEN + ";tap:Report;select:0=qty;tap:Average tile;tap:Sum tile;select:1=region;select:2=West", "report-qty")  # (another column)
     for r in (every, west, qty):
         if r[0] is None:
             return False, r[1]
@@ -196,7 +196,7 @@ def m5():
         return False, msg
     o = oracle(CSV_1M)
     problems = []
-    saved = both(OPEN + ";tap:Chart;tap:Pivot;tab:0=Report;tap:Sum tile;tap:Chart tile;select:1=region;select:2=West;tap:Save", "objects-save", split=True)
+    saved = both(OPEN + ";tap:Chart;tap:Pivot;tap:Report;tap:Sum tile;tap:Chart tile;select:1=region;select:2=West;tap:Save", "objects-save", split=True)
     if saved[0] is None:
         return False, saved[1]
     for host in ("gtk", "web"):
@@ -205,7 +205,7 @@ def m5():
             problems.append(f"{host}: Save didn't write {doc}")
             continue
         sheet = both("", f"objects-open-{host}", extra={"OMX_OPEN": str(doc)})
-        report = both("tab:0=Report", f"objects-report-{host}", extra={"OMX_OPEN": str(doc)})
+        report = both("tap:Report", f"objects-report-{host}", extra={"OMX_OPEN": str(doc)})
         for r in (sheet, report):
             if r[0] is None:
                 return False, r[1]
