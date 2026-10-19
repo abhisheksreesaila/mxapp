@@ -4,6 +4,15 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 22 (2026-10-18): files bigger than memory become editable; Distinct and Median tiles (goal 22, MX frame 7cbcc04)
+- **Setup:** MX frame 7cbcc04 (F-147 editing over a scan, F-148 count distinct / median / percentile / top-k, F-145/F-149 faster streaming), vendored from `git archive`.
+- **Worked:** a streamed sheet is the package's `Frame(scan)` (goal 20's own row-group cache deleted): typing, emptying, rows, formulas, Undo, totals and charts with the edits, a streamed Save (100M rows in 6 s, 0.27 GB peak), big documents reopen streamed; sort, median and distinct guarded by memory; Report tiles for Distinct and Median from the engine. 100M streamed: open 0.2 s, total 0.21 s, group-by 0.55 s. M1–M4 PASS (`docs/report.md`).
+- **Broke and fixed:** a "file changed" warning cleared by cached reads (now only a fresh read clears it); Count tiles of text lost on reopen; Undo didn't take back formula columns (the sheet logs them now), then took one from under a chart (now refused, saying what reads it); M4 found the README's link to `docs/report.md` dangling while the goal ran.
+- **Means:** omxplorer has no read-only mode left; the engine's memory costs (sort, median, distinct) are now the limits users meet, and they say so.
+- **Next:** goal 23 on MX frame 1889b7f: the GPU for streamed files.
+
+---
+
 ## Experiment 21 (2026-10-18): omxplorer's formatting, tabs at the bottom, a toolbar per tab (goal 21)
 - **Setup:** the owner tried a 1M-row Parquet file and asked for Excel's formatting, renamable tabs along the bottom, and controls that follow the tab.
 - **Worked:** cell and column styles (bold, italic, underline, strikethrough, eight text and fill colours, alignment) drawn by the grid on every host, kept in `.omx`, undone in order with edits; Currency/Percent/decimals in the toolbar; bottom tabs renamed in place; the Report's tiles and filter in its own toolbar. omxapp gained `cellstyle`, `swatches`, `Toggles`/`ICON_ON`, `BottomTabs`, an italic slant. M1–M4 PASS (`docs/report.md`).

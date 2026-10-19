@@ -254,3 +254,10 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - Mojo: `Int(comptime float)` in a comptime or a helper fails with "the SIMD type must be floating point" (no line in the app): use integer literals. `Dict[...]` subscripting raises: read values from `items()` or `.get()`.
 - Screens showed two older problems: headers cut to "amou…" (the min width ignored the type badge) and, once the add-tile row left the Report, the web's Grid centring a single chart at half width (`justify-items: center` beat `.fill()`); both fixed. The web's Divider in a row was a 280 px horizontal rule; it's a vertical one in a row now.
 - GTK draws popovers as their own surfaces: its screenshots don't show the swatches; the web's do.
+
+## 2026-10-18 · goal 22: MX frame 7cbcc04
+- Vendored 7cbcc04 from `git archive`; the app's only API break was word_count/text_of/code_of raising.
+- Replaced goal 20's `Pages` (row-group LRU) with `Frame(scan)`: the frame's chunk cache reads rows; every read-only gate in the app and both older checks' read-only assertions turned around (D-216).
+- The "file changed since it was opened" test caught that a cached read cleared the warning: clear only when `cache_loads()` moved (in `is_null` too: a cell's first read goes through it).
+- M2's first runs failed on the check's own steps (Add row scrolls the grid to the end; the package's undo log has no formulas). The second became a real fix: the sheet logs formula columns. Review round 2 then crashed it under a chart (fixed: refuse, naming the reader).
+- `OMX_MEMORY_BYTES` lets the checks be an 8 GB laptop: the 100M file streams by itself, sort and median refuse, distinct of a text column fits.
