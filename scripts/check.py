@@ -29,7 +29,7 @@ run, BUILD = g20.run, g20.BUILD
 OUT = BUILD / "g26"
 SHEET, REPORT, OPEN = g25.SHEET, g25.REPORT, g25.OPEN
 boxes, labels = g25.boxes, g25.labels
-ACCENT = (14, 124, 134)  # Liquid's teal: the selection ring
+ACCENT = (14, 122, 67)  # the sheet's Ledger green (D-254): the selection ring
 
 
 def live(commands, name, **kw):
@@ -312,13 +312,24 @@ def todo(what):
 
 
 def m7():
+    """Goal 25's checks (every earlier goal's inside them) with today's pixels, then its M1–M6 with the Scene on."""
+    import os
     problems = []
     for name, fn in [("25-M1", g25.m1), ("25-M2", g25.m2), ("25-M3", g25.m3), ("25-M4", g25.m4), ("25-M5", g25.m5), ("25-M6", g25.m6), ("25-M7", g25.m7)]:
         g25.OUT = BUILD / "g25"
         ok, msg = fn()
         if not ok:
             problems.append(f"{name}: {msg}")
-    return not problems, "; ".join(problems) or "goal 25's M1–M7 (goals 3–24 inside them) pass"
+    os.environ["MOJOUI_SCENE"] = "1"
+    try:
+        for name, fn in [("25-M1", g25.m1), ("25-M2", g25.m2), ("25-M3", g25.m3), ("25-M4", g25.m4), ("25-M5", g25.m5), ("25-M6", g25.m6)]:
+            g25.OUT = BUILD / "g25-scene"
+            ok, msg = fn()
+            if not ok:
+                problems.append(f"{name} with the Scene: {msg}")
+    finally:
+        os.environ.pop("MOJOUI_SCENE", None)
+    return not problems, "; ".join(problems) or "goal 25's M1–M7 (goals 3–24 inside them) pass, and its M1–M6 with MOJOUI_SCENE=1"
 
 
 MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M8", m8), ("M7", m7)]
