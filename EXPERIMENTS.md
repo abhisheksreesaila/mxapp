@@ -4,6 +4,25 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 24 (2026-10-18/19): omxplorer polished: Liquid, motion, blocks of cells (goal 24)
+- **Setup:** the owner's screenshots of the real app ("looks like an intern app"); Stitch and Claude drafts of a Liquid skin; the owner picked Stitch's.
+- **Worked:**
+  - Liquid as a framework design on GTK and the web: glass islands, one type scale, spring transitions and arrivals.
+  - The selection ring glides (`Surface.again`, about 12 frames of 5 ms on GTK).
+  - Blocks of cells: drag, Shift+click, Shift+arrows, Cells/Count/Sum/Average, Bold as one Undo step, Copy through a new `Clipboard` view.
+  - Stitch's details: menu-bar chips, yes/no pills, stat cards, tile footers.
+  - M1–M7 PASS; reviewer PASS on round 3 (`docs/report.md`).
+- **Broke and fixed:**
+  - A submenu row was a GtkMenuButton that picked up the skin's bordered button rule.
+  - Same-specificity CSS lost to later rules.
+  - The web's grid columns weren't equal.
+  - Message 41 fell inside the Recent range.
+  - A status bar whose item count changed rebuilt the screen on every move.
+  - A whole-number column before a decimal one summed in the wrong units.
+  - Earlier goals' checks counted canvases and read the report's subtitle exactly: kept compatible (D-241).
+- **Means:** what the screen looks like and how it moves now come from the framework, so the next apps (AG-UI, a video editor) start polished. GTK can't blur behind glass; the Mac's own glass waits for its host.
+- **Next:** AG-UI generative interfaces on this baseline. Goal 25 (MX frame dc1a722, SQL) belongs to the mxapp-e6 session.
+
 ## Experiment 23 (2026-10-18): the GPU for streamed files (goal 23, MX frame 1889b7f)
 - **Worked:** streamed sheets ask for AUTO; the GPU's answers over a streamed file with edits equal the CPU's; on 12 cores AUTO keeps the CPU (faster here: 100M total 0.21 s vs 0.35 s). Text order pinned (case ignored, bytes break ties). M1–M3 PASS (`docs/report.md`).
 - **Broke and fixed:** a streamed column's cached total survived a switch to the GPU (now keyed by device); a failed chart's error was overwritten; the inspector always said "the GPU".
