@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>omxplorer · logo concepts</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            teal: {
+              primary: '#0e7c86',
+              hover: '#0b6870',
+              wash: 'rgba(14,124,134,0.10)',
+              selection: 'rgba(14,124,134,0.08)',
+            },
+            ink: '#0f172a',
+            bodytext: '#334155',
+            secondary: '#64748b',
+            tertiary: '#94a3b8',
+            glass: {
+              panel: 'rgba(255,255,255,0.72)',
+              rim: 'rgba(255,255,255,0.85)',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: linear-gradient(180deg, #eef2f7 0%, #e6ebf2 100%);
+      min-height: 100vh;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+    .glass-bar {
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(24px) saturate(1.6);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .concept-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid rgba(15, 23, 42, 0.07);
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+    }
+    .concept-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(14, 124, 134, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
+      border-color: rgba(14, 124, 134, 0.25);
+    }
+    .app-tile-large {
+      width: 96px;
+      height: 96px;
+      border-radius: 22px;
+      background: #f8fafc;
+      border: 1.5px solid rgba(15, 23, 42, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 4px 14px rgba(15, 23, 42, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .app-tile-small {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wordmark {
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      letter-spacing: -0.035em;
+    }
+  </style>
+</head>
+<body class="p-8 font-sans selection:bg-[#0e7c86]/10 selection:text-[#0e7c86]">
+
+  <div class="max-w-[1400px] mx-auto space-y-6">
+
+    <!-- Top Window / Bar Header -->
+    <header class="glass-bar rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <!-- macOS traffic lights -->
+        <div class="flex items-center gap-2 pr-2 border-r border-slate-200">
+          <span class="w-3 h-3 rounded-full bg-[#ff5f56] inline-block shadow-sm"></span>
+          <span class="w-3 h-3 rounded-full bg-[#ffbd2e] inline-block shadow-sm"></span>
+          <span class="w-3 h-3 rounded-full bg-[#27c93f] inline-block shadow-sm"></span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h1 class="text-[20px] font-bold text-ink tracking-tight font-sans">omxplorer · logo concepts</h1>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#0e7c86]/10 text-[#0e7c86] border border-[#0e7c86]/20">Brand Exploration</span>
+          </div>
+          <p class="text-[12px] text-secondary mt-0.5">Desktop data app · High-performance GPU spreadsheet & reports over 10M+ rows · Liquid showcase</p>
+        </div>
+      </div>
+
+      <!-- Quick specs & chips -->
+      <div class="flex items-center gap-3 text-[12px]">
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/70 border border-slate-200/80 text-secondary shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-[#16a34a]"></span>
+          <span>GPU DuckDB/Arrow Engine</span>
+        </div>
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/70 border border-slate-200/80 text-secondary shadow-sm">
+          <span class="text-tertiary">Grid:</span>
+          <span class="font-medium text-ink">4 × 2 (8 concepts)</span>
+        </div>
+        <div class="px-3 py-1.5 rounded-lg bg-[#0e7c86] text-white text-[12px] font-medium shadow-sm hover:bg-[#0b6870] transition-colors cursor-pointer">
+          Primary Accent #0e7c86
+        </div>
+      </div>
+    </header>
+
+    <!-- 4x2 Grid of 8 Equal White Cards -->
+    <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <!-- CONCEPT 1 -->
+      <div class="concept-card p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Concept 01</span>
+            <span class="text-[11px] font-mono text-tertiary">#lens-bars</span>
+          </div>
+
+          <!-- Mark tiles: Large (96px) + Small (32px) -->
+          <div class="flex items-end gap-3 mb-6 p-4 rounded-xl bg-slate-50/70 border border-slate-100 justify-center">
+            <!-- Large Tile -->
+            <div class="app-tile-large">
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                <!-- Lens rim -->
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="3.5" />
+                <!-- Rising bar chart bars -->
+                <rect x="14" y="27" width="4" height="7" rx="1" fill="#0e7c86" />
+                <rect x="21" y="21" width="4" height="13" rx="1" fill="#0e7c86" />
+                <rect x="28" y="15" width="4" height="19" rx="1" fill="#0e7c86" />
+                <!-- Lens handle -->
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="4" stroke-linecap="round" />
+              </svg>
+            </div>
+            <!-- Small Tile (32px) -->
+            <div class="app-tile-small" title="16px-32px scale preview">
+              <svg width="20" height="20" viewBox="0 0 52 52" fill="none">
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                <rect x="14" y="27" width="4.5" height="7" rx="1" fill="#0e7c86" />
+                <rect x="21" y="21" width="4.5" height="13" rx="1" fill="#0e7c86" />
+                <rect x="28" y="15" width="4.5" height="19" rx="1" fill="#0e7c86" />
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Wordmark with mark replacing 'o' -->
+          <div class="py-2 px-1 border-b border-slate-100 flex items-center justify-center">
+            <div class="wordmark flex items-center text-[22px] font-bold text-ink">
+              <!-- Inline mark 'o' -->
+              <span class="inline-flex items-center justify-center mr-[1px] relative -top-[1px]">
+                <svg width="22" height="22" viewBox="0 0 52 52" fill="none">
+                  <circle cx="22" cy="22" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                  <rect x="13.5" y="26" width="4" height="8" rx="0.8" fill="#0e7c86" />
+                  <rect x="20" y="20" width="4" height="14" rx="0.8" fill="#0e7c86" />
+                  <rect x="26.5" y="14" width="4" height="20" rx="0.8" fill="#0e7c86" />
+                  <path d="M33 33L43 43" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+                </svg>
+              </span>
+              <span>mxpl</span>
+              <!-- Second standard geometric o or consistent treatment -->
+              <span class="text-[#0e7c86]">o</span>
+              <span>rer</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Caption -->
+        <p class="text-[12px] text-secondary mt-3 leading-snug">
+          Magnifying-glass <strong class="text-ink font-medium">o</strong> whose lens holds three rising bar-chart bars.
+        </p>
+      </div>
+
+      <!-- CONCEPT 2 -->
+      <div class="concept-card p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Concept 02</span>
+            <span class="text-[11px] font-mono text-tertiary">#lens-grid</span>
+          </div>
+
+          <!-- Mark tiles: Large + Small -->
+          <div class="flex items-end gap-3 mb-6 p-4 rounded-xl bg-slate-50/70 border border-slate-100 justify-center">
+            <!-- Large Tile -->
+            <div class="app-tile-large">
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="3.5" />
+                <!-- 3x3 spreadsheet grid inside lens -->
+                <line x1="14" y1="19" x2="32" y2="19" stroke="#94a3b8" stroke-width="1.2" />
+                <line x1="14" y1="26" x2="32" y2="26" stroke="#94a3b8" stroke-width="1.2" />
+                <line x1="19.5" y1="14" x2="19.5" y2="32" stroke="#94a3b8" stroke-width="1.2" />
+                <line x1="26.5" y1="14" x2="26.5" y2="32" stroke="#94a3b8" stroke-width="1.2" />
+                <!-- One highlighted cell (center-right or top-center) -->
+                <rect x="20.5" y="20" width="5" height="5" rx="1" fill="#0e7c86" />
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="4" stroke-linecap="round" />
+              </svg>
+            </div>
+            <!-- Small Tile -->
+            <div class="app-tile-small" title="16px-32px scale preview">
+              <svg width="20" height="20" viewBox="0 0 52 52" fill="none">
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                <line x1="14" y1="19" x2="32" y2="19" stroke="#94a3b8" stroke-width="1.8" />
+                <line x1="14" y1="26" x2="32" y2="26" stroke="#94a3b8" stroke-width="1.8" />
+                <line x1="19.5" y1="14" x2="19.5" y2="32" stroke="#94a3b8" stroke-width="1.8" />
+                <line x1="26.5" y1="14" x2="26.5" y2="32" stroke="#94a3b8" stroke-width="1.8" />
+                <rect x="20.5" y="20" width="5.5" height="5.5" rx="1" fill="#0e7c86" />
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Wordmark -->
+          <div class="py-2 px-1 border-b border-slate-100 flex items-center justify-center">
+            <div class="wordmark flex items-center text-[22px] font-bold text-ink">
+              <span class="inline-flex items-center justify-center mr-[1px] relative -top-[1px]">
+                <svg width="22" height="22" viewBox="0 0 52 52" fill="none">
+                  <circle cx="22" cy="22" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                  <line x1="13" y1="18" x2="31" y2="18" stroke="#94a3b8" stroke-width="1.8" />
+                  <line x1="13" y1="25" x2="31" y2="25" stroke="#94a3b8" stroke-width="1.8" />
+                  <line x1="18.5" y1="13" x2="18.5" y2="31" stroke="#94a3b8" stroke-width="1.8" />
+                  <line x1="25.5" y1="13" x2="25.5" y2="31" stroke="#94a3b8" stroke-width="1.8" />
+                  <rect x="19.5" y="19" width="5.5" height="5.5" rx="1" fill="#0e7c86" />
+                  <path d="M33 33L43 43" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+                </svg>
+              </span>
+              <span>mxpl</span>
+              <span class="text-[#0e7c86]">o</span>
+              <span>rer</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-[12px] text-secondary mt-3 leading-snug">
+          Magnifying-glass <strong class="text-ink font-medium">o</strong> whose lens shows a 3×3 spreadsheet grid with one highlighted cell.
+        </p>
+      </div>
+
+      <!-- CONCEPT 3 -->
+      <div class="concept-card p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Concept 03</span>
+            <span class="text-[11px] font-mono text-tertiary">#lens-spark</span>
+          </div>
+
+          <!-- Mark tiles -->
+          <div class="flex items-end gap-3 mb-6 p-4 rounded-xl bg-slate-50/70 border border-slate-100 justify-center">
+            <!-- Large Tile -->
+            <div class="app-tile-large">
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="3.5" />
+                <!-- Sparkline vector -->
+                <path d="M13 26L19 21L24 27L29 17L33 21" stroke="#0e7c86" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                <!-- Highlight apex dot -->
+                <circle cx="29" cy="17" r="2.2" fill="#0e7c86" />
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="4" stroke-linecap="round" />
+              </svg>
+            </div>
+            <!-- Small Tile -->
+            <div class="app-tile-small" title="16px-32px scale preview">
+              <svg width="20" height="20" viewBox="0 0 52 52" fill="none">
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                <path d="M13 26L19 21L24 27L29 17L33 21" stroke="#0e7c86" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Wordmark -->
+          <div class="py-2 px-1 border-b border-slate-100 flex items-center justify-center">
+            <div class="wordmark flex items-center text-[22px] font-bold text-ink">
+              <span class="inline-flex items-center justify-center mr-[1px] relative -top-[1px]">
+                <svg width="22" height="22" viewBox="0 0 52 52" fill="none">
+                  <circle cx="22" cy="22" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                  <path d="M12 25L18 20L23 26L28 16L32 20" stroke="#0e7c86" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="28" cy="16" r="2.2" fill="#0e7c86" />
+                  <path d="M33 33L43 43" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+                </svg>
+              </span>
+              <span>mxpl</span>
+              <span class="text-[#0e7c86]">o</span>
+              <span>rer</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-[12px] text-secondary mt-3 leading-snug">
+          A geometric lens containing an energetic <strong class="text-ink font-medium">sparkline</strong> curve showing analytical trend.
+        </p>
+      </div>
+
+      <!-- CONCEPT 4 -->
+      <div class="concept-card p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Concept 04</span>
+            <span class="text-[11px] font-mono text-tertiary">#lens-gpu-chip</span>
+          </div>
+
+          <!-- Mark tiles -->
+          <div class="flex items-end gap-3 mb-6 p-4 rounded-xl bg-slate-50/70 border border-slate-100 justify-center">
+            <!-- Large Tile -->
+            <div class="app-tile-large">
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                <!-- Outer GPU pin contacts around ring -->
+                <circle cx="22" cy="22" r="13.5" stroke="#0e7c86" stroke-width="3.2" />
+                <!-- Pins North -->
+                <line x1="17" y1="4.5" x2="17" y2="8" stroke="#0e7c86" stroke-width="2" stroke-linecap="round" />
+                <line x1="22" y1="4" x2="22" y2="7.5" stroke="#0e7c86" stroke-width="2" stroke-linecap="round" />
+                <line x1="27" y1="4.5" x2="27" y2="8" stroke="#0e7c86" stroke-width="2" stroke-linecap="round" />
+                <!-- Pins West -->
+                <line x1="4.5" y1="17" x2="8" y2="17" stroke="#0e7c86" stroke-width="2" stroke-linecap="round" />
+                <line x1="4" y1="22" x2="7.5" y2="22" stroke="#0e7c86" stroke-width="2" stroke-linecap="round" />
+                <line x1="4.5" y1="27" x2="8" y2="27" stroke="#0e7c86" stroke-width="2" stroke-linecap="round" />
+                <!-- Pins South / East -->
+                <line x1="17" y1="36" x2="17" y2="39.5" stroke="#0e7c86" stroke-width="2" stroke-linecap="round" />
+                <line x1="36" y1="17" x2="39.5" y2="17" stroke="#0e7c86" stroke-width="2" stroke-linecap="round" />
+                <!-- Inner die silicon square -->
+                <rect x="18" y="18" width="8" height="8" rx="1.5" fill="#0e7c86" />
+                <!-- Handle -->
+                <path d="M33 33L43 43" stroke="#0e7c86" stroke-width="4" stroke-linecap="round" />
+              </svg>
+            </div>
+            <!-- Small Tile -->
+            <div class="app-tile-small" title="16px-32px scale preview">
+              <svg width="20" height="20" viewBox="0 0 52 52" fill="none">
+                <circle cx="22" cy="22" r="13.5" stroke="#0e7c86" stroke-width="4.5" />
+                <line x1="22" y1="4" x2="22" y2="7.5" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                <line x1="4" y1="22" x2="7.5" y2="22" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                <rect x="17.5" y="17.5" width="9" height="9" rx="1.5" fill="#0e7c86" />
+                <path d="M33 33L43 43" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Wordmark -->
+          <div class="py-2 px-1 border-b border-slate-100 flex items-center justify-center">
+            <div class="wordmark flex items-center text-[22px] font-bold text-ink">
+              <span class="inline-flex items-center justify-center mr-[1px] relative -top-[1px]">
+                <svg width="22" height="22" viewBox="0 0 52 52" fill="none">
+                  <circle cx="22" cy="22" r="13" stroke="#0e7c86" stroke-width="4" />
+                  <line x1="16" y1="5" x2="16" y2="8" stroke="#0e7c86" stroke-width="2.5" stroke-linecap="round" />
+                  <line x1="22" y1="4" x2="22" y2="7.5" stroke="#0e7c86" stroke-width="2.5" stroke-linecap="round" />
+                  <line x1="28" y1="5" x2="28" y2="8" stroke="#0e7c86" stroke-width="2.5" stroke-linecap="round" />
+                  <line x1="5" y1="22" x2="8" y2="22" stroke="#0e7c86" stroke-width="2.5" stroke-linecap="round" />
+                  <rect x="18" y="18" width="8" height="8" rx="1.5" fill="#0e7c86" />
+                  <path d="M32 32L42 42" stroke="#0e7c86" stroke-width="4.5" stroke-linecap="round" />
+                </svg>
+              </span>
+              <span>mxpl</span>
+              <span class="text-[#0e7c86]">o</span>
+              <span>rer</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-[12px] text-secondary mt-3 leading-snug">
+          A lens drawn as a <strong class="text-ink font-medium">GPU chip</strong> with hardware bus pins around the silicon ring.
+        </p>
+      </div>
+
+      <!-- CONCEPT 5 -->
+      <div class="concept-card p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Concept 05</span>
+            <span class="text-[11px] font-mono text-tertiary">#lens-rows</span>
+          </div>
+
+          <!-- Mark tiles -->
+          <div class="flex items-end gap-3 mb-6 p-4 rounded-xl bg-slate-50/70 border border-slate-100 justify-center">
+            <!-- Large Tile -->
+            <div class="app-tile-large">
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                <!-- Lens outer ring -->
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="3.5" />
+                <!-- Rows of data stripes -->
+                <line x1="14" y1="16" x2="32" y2="16" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" />
+                <!-- Selected row with active teal selection ring -->
+                <rect x="12" y="20.5" width="22" height="5.5" rx="2" fill="rgba(14,124,134,0.18)" stroke="#0e7c86" stroke-width="1.6" />
+                <line x1="14" y1="30" x2="32" y2="30" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" />
+                <!-- Lens handle -->
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="4" stroke-linecap="round" />
+              </svg>
+            </div>
+            <!-- Small Tile -->
+            <div class="app-tile-small" title="16px-32px scale preview">
+              <svg width="20" height="20" viewBox="0 0 52 52" fill="none">
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                <line x1="14" y1="16" x2="32" y2="16" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" />
+                <rect x="12" y="20" width="22" height="6" rx="2" fill="#0e7c86" />
+                <line x1="14" y1="30" x2="32" y2="30" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" />
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Wordmark -->
+          <div class="py-2 px-1 border-b border-slate-100 flex items-center justify-center">
+            <div class="wordmark flex items-center text-[22px] font-bold text-ink">
+              <span class="inline-flex items-center justify-center mr-[1px] relative -top-[1px]">
+                <svg width="22" height="22" viewBox="0 0 52 52" fill="none">
+                  <circle cx="22" cy="22" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                  <line x1="13" y1="15" x2="31" y2="15" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" />
+                  <rect x="11.5" y="19" width="21" height="6" rx="1.8" fill="rgba(14,124,134,0.25)" stroke="#0e7c86" stroke-width="1.8" />
+                  <line x1="13" y1="29" x2="31" y2="29" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" />
+                  <path d="M33 33L43 43" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+                </svg>
+              </span>
+              <span>mxpl</span>
+              <span class="text-[#0e7c86]">o</span>
+              <span>rer</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-[12px] text-secondary mt-3 leading-snug">
+          A lens over million-row data tables with an active <strong class="text-ink font-medium">selection ring</strong> highlight.
+        </p>
+      </div>
+
+      <!-- CONCEPT 6 -->
+      <div class="concept-card p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Concept 06</span>
+            <span class="text-[11px] font-mono text-tertiary">#striped-o</span>
+          </div>
+
+          <!-- Mark tiles -->
+          <div class="flex items-end gap-3 mb-6 p-4 rounded-xl bg-slate-50/70 border border-slate-100 justify-center">
+            <!-- Large Tile -->
+            <div class="app-tile-large">
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                <!-- Lowercase 'o' constructed from 5 horizontal stacked column stripes -->
+                <path d="M19 12H33C37 12 40 15 40 19H12C12 15 15 12 19 12Z" fill="#0e7c86" />
+                <path d="M12 21H18V26H12V21Z" fill="#0e7c86" />
+                <path d="M34 21H40V26H34V21Z" fill="#0e7c86" />
+                <path d="M12 28H18V33H12V28Z" fill="#0e7c86" />
+                <path d="M34 28H40V33H34V28Z" fill="#0e7c86" />
+                <path d="M12 35H40C40 39 37 42 33 42H19C15 42 12 39 12 35Z" fill="#0e7c86" />
+                <!-- Subtle internal data divider guides -->
+                <line x1="20" y1="21" x2="32" y2="21" stroke="rgba(14,124,134,0.3)" stroke-width="1.5" stroke-dasharray="2 2" />
+                <line x1="20" y1="33" x2="32" y2="33" stroke="rgba(14,124,134,0.3)" stroke-width="1.5" stroke-dasharray="2 2" />
+              </svg>
+            </div>
+            <!-- Small Tile -->
+            <div class="app-tile-small" title="16px-32px scale preview">
+              <svg width="20" height="20" viewBox="0 0 52 52" fill="none">
+                <path d="M19 12H33C37 12 40 15 40 19H12C12 15 15 12 19 12Z" fill="#0e7c86" />
+                <rect x="12" y="21" width="6" height="5" fill="#0e7c86" />
+                <rect x="34" y="21" width="6" height="5" fill="#0e7c86" />
+                <rect x="12" y="28" width="6" height="5" fill="#0e7c86" />
+                <rect x="34" y="28" width="6" height="5" fill="#0e7c86" />
+                <path d="M12 35H40C40 39 37 42 33 42H19C15 42 12 39 12 35Z" fill="#0e7c86" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Wordmark -->
+          <div class="py-2 px-1 border-b border-slate-100 flex items-center justify-center">
+            <div class="wordmark flex items-center text-[22px] font-bold text-ink">
+              <span class="inline-flex items-center justify-center mr-[2px] relative -top-[0.5px]">
+                <svg width="20" height="20" viewBox="0 0 52 52" fill="none">
+                  <path d="M18 12H34C38 12 41 15 41 19H11C11 15 14 12 18 12Z" fill="#0e7c86" />
+                  <rect x="11" y="21" width="7" height="5" fill="#0e7c86" />
+                  <rect x="34" y="21" width="7" height="5" fill="#0e7c86" />
+                  <rect x="11" y="28" width="7" height="5" fill="#0e7c86" />
+                  <rect x="34" y="28" width="7" height="5" fill="#0e7c86" />
+                  <path d="M11 35H41C41 39 38 42 34 42H18C14 42 11 39 11 35Z" fill="#0e7c86" />
+                </svg>
+              </span>
+              <span>mxpl</span>
+              <span class="text-[#0e7c86]">o</span>
+              <span>rer</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-[12px] text-secondary mt-3 leading-snug">
+          A lowercase <strong class="text-ink font-medium">o</strong> built cleanly from stacked horizontal data column stripes.
+        </p>
+      </div>
+
+      <!-- CONCEPT 7 -->
+      <div class="concept-card p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Concept 07</span>
+            <span class="text-[11px] font-mono text-tertiary">#omx-monogram</span>
+          </div>
+
+          <!-- Mark tiles -->
+          <div class="flex items-end gap-3 mb-6 p-4 rounded-xl bg-slate-50/70 border border-slate-100 justify-center">
+            <!-- Large Tile -->
+            <div class="app-tile-large">
+              <svg width="58" height="52" viewBox="0 0 58 52" fill="none">
+                <!-- 'omx' unified monogram: o, m, and x crossing as a lens -->
+                <!-- x diagonal 1 -->
+                <line x1="28" y1="14" x2="48" y2="38" stroke="#0e7c86" stroke-width="3.5" stroke-linecap="round" />
+                <!-- x diagonal 2 with center lens ring -->
+                <line x1="48" y1="14" x2="42" y2="21" stroke="#0e7c86" stroke-width="3.5" stroke-linecap="round" />
+                <line x1="34" y1="31" x2="28" y2="38" stroke="#0e7c86" stroke-width="3.5" stroke-linecap="round" />
+                <!-- Crossing lens ring -->
+                <circle cx="38" cy="26" r="7" stroke="#0e7c86" stroke-width="3.2" fill="#f8fafc" />
+                <!-- Monogram o & m cues -->
+                <circle cx="15" cy="26" r="6" stroke="#0e7c86" stroke-width="3" />
+                <path d="M22 26V32" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+              </svg>
+            </div>
+            <!-- Small Tile -->
+            <div class="app-tile-small" title="16px-32px scale preview">
+              <svg width="22" height="20" viewBox="0 0 58 52" fill="none">
+                <line x1="28" y1="14" x2="48" y2="38" stroke="#0e7c86" stroke-width="4.5" stroke-linecap="round" />
+                <line x1="48" y1="14" x2="42" y2="21" stroke="#0e7c86" stroke-width="4.5" stroke-linecap="round" />
+                <line x1="34" y1="31" x2="28" y2="38" stroke="#0e7c86" stroke-width="4.5" stroke-linecap="round" />
+                <circle cx="38" cy="26" r="7" stroke="#0e7c86" stroke-width="4" fill="#f8fafc" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Wordmark -->
+          <div class="py-2 px-1 border-b border-slate-100 flex items-center justify-center">
+            <div class="wordmark flex items-center text-[22px] font-bold text-ink">
+              <span class="inline-flex items-center justify-center mr-[1px] relative -top-[1px]">
+                <svg width="22" height="22" viewBox="0 0 52 52" fill="none">
+                  <circle cx="26" cy="26" r="14" stroke="#0e7c86" stroke-width="4.5" />
+                  <line x1="16" y1="16" x2="36" y2="36" stroke="#0e7c86" stroke-width="3.5" />
+                  <line x1="36" y1="16" x2="16" y2="36" stroke="#0e7c86" stroke-width="3.5" />
+                </svg>
+              </span>
+              <span>mxpl</span>
+              <span class="text-[#0e7c86]">o</span>
+              <span>rer</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-[12px] text-secondary mt-3 leading-snug">
+          An <strong class="text-ink font-medium">&ldquo;omx&rdquo;</strong> monogram where the geometric x&rsquo;s intersection becomes the explorer&rsquo;s lens.
+        </p>
+      </div>
+
+      <!-- CONCEPT 8 -->
+      <div class="concept-card p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Concept 08</span>
+            <span class="text-[11px] font-mono text-tertiary">#compass-lens</span>
+          </div>
+
+          <!-- Mark tiles -->
+          <div class="flex items-end gap-3 mb-6 p-4 rounded-xl bg-slate-50/70 border border-slate-100 justify-center">
+            <!-- Large Tile -->
+            <div class="app-tile-large">
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                <!-- Explorer's lens ring -->
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="3.5" />
+                <!-- 4 cardinal navigation ticks -->
+                <line x1="23" y1="10" x2="23" y2="13.5" stroke="#0e7c86" stroke-width="2.5" stroke-linecap="round" />
+                <line x1="36" y1="23" x2="32.5" y2="23" stroke="#0e7c86" stroke-width="2.5" stroke-linecap="round" />
+                <line x1="23" y1="36" x2="23" y2="32.5" stroke="#0e7c86" stroke-width="2.5" stroke-linecap="round" />
+                <line x1="10" y1="23" x2="13.5" y2="23" stroke="#0e7c86" stroke-width="2.5" stroke-linecap="round" />
+                <!-- Focused high-precision data dot (center-right offset) -->
+                <circle cx="23" cy="23" r="3.8" fill="#0e7c86" />
+                <!-- Handle -->
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="4" stroke-linecap="round" />
+              </svg>
+            </div>
+            <!-- Small Tile -->
+            <div class="app-tile-small" title="16px-32px scale preview">
+              <svg width="20" height="20" viewBox="0 0 52 52" fill="none">
+                <circle cx="23" cy="23" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                <line x1="23" y1="10" x2="23" y2="13" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                <line x1="36" y1="23" x2="33" y2="23" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                <line x1="23" y1="36" x2="23" y2="33" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                <line x1="10" y1="23" x2="13" y2="23" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                <circle cx="23" cy="23" r="4.2" fill="#0e7c86" />
+                <path d="M34 34L44 44" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Wordmark -->
+          <div class="py-2 px-1 border-b border-slate-100 flex items-center justify-center">
+            <div class="wordmark flex items-center text-[22px] font-bold text-ink">
+              <span class="inline-flex items-center justify-center mr-[1px] relative -top-[1px]">
+                <svg width="22" height="22" viewBox="0 0 52 52" fill="none">
+                  <circle cx="22" cy="22" r="15" stroke="#0e7c86" stroke-width="4.5" />
+                  <line x1="22" y1="9" x2="22" y2="12" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                  <line x1="35" y1="22" x2="32" y2="22" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                  <line x1="22" y1="35" x2="22" y2="32" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                  <line x1="9" y1="22" x2="12" y2="22" stroke="#0e7c86" stroke-width="3" stroke-linecap="round" />
+                  <circle cx="22" cy="22" r="3.8" fill="#0e7c86" />
+                  <path d="M33 33L43 43" stroke="#0e7c86" stroke-width="5" stroke-linecap="round" />
+                </svg>
+              </span>
+              <span>mxpl</span>
+              <span class="text-[#0e7c86]">o</span>
+              <span>rer</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-[12px] text-secondary mt-3 leading-snug">
+          A <strong class="text-ink font-medium">compass-like explorer&rsquo;s lens</strong> with cardinal orientation ticks and a central data target dot.
+        </p>
+      </div>
+
+    </main>
+
+    <!-- Bottom Footer Bar -->
+    <footer class="glass-bar rounded-2xl px-6 py-3 flex flex-wrap items-center justify-between gap-4 text-[12px] text-secondary">
+      <div class="flex items-center gap-6">
+        <span class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-[#0e7c86]"></span>
+          <span class="text-ink font-medium">omxplorer</span> (always lowercase)
+        </span>
+        <span class="text-tertiary">|</span>
+        <span>Geometric sans · Tabular figures · 16px pixel-legible test passed</span>
+        <span class="text-tertiary">|</span>
+        <span>Zero gradients · Zero mascots · Strict flat geometry</span>
+      </div>
+
+      <div class="flex items-center gap-2 font-mono text-[11px] text-secondary">
+        <span class="px-2 py-0.5 rounded bg-white/80 border border-slate-200">#0e7c86</span>
+        <span class="px-2 py-0.5 rounded bg-white/80 border border-slate-200">#0f172a</span>
+        <span class="px-2 py-0.5 rounded bg-white/80 border border-slate-200">#ffffff</span>
+      </div>
+    </footer>
+
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1480">
+<title>omxplorer · the island (menu-bar capsule) · directions A B C</title>
+<style>
+@font-face { font-family: Inter; font-weight: 400; src: url(../../../mojoui/hosts/static/fonts/Inter-Regular.ttf); }
+@font-face { font-family: Inter; font-weight: 500; src: url(../../../mojoui/hosts/static/fonts/Inter-Medium.ttf); }
+@font-face { font-family: Inter; font-weight: 600; src: url(../../../mojoui/hosts/static/fonts/Inter-SemiBold.ttf); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url(../../../mojoui/hosts/static/fonts/JetBrainsMono-Regular.ttf); }
+
+:root {
+  --bg1: #eef2f7; --bg2: #e6ebf2; --sheet: #fff; --raised: #f6f8fb;
+  --hair: rgba(15,23,42,.07); --line: rgba(15,23,42,.14);
+  --ink: #0f172a; --body: #334155; --sec: #64748b; --ter: #94a3b8;
+  --acc: #0e7c86;
+  --acc-wash: color-mix(in srgb, var(--acc) 10%, transparent);
+  --acc-dark: color-mix(in oklab, var(--acc) 42%, white);
+  --good: #16a34a; --bad: #dc2626; --warn: #d97706;
+  --glass: rgba(255,255,255,.62);
+  --glass-shadow: 0 8px 32px rgba(15,23,42,.10), 0 1px 2px rgba(15,23,42,.06);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 150ms; --t-mid: 220ms; --t-slow: 320ms;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font: 13px/1.4 Inter, system-ui, sans-serif; color: var(--body); background: #dfe5ee; font-feature-settings: "tnum" 1, "cv11" 1; }
+button { font: inherit; color: inherit; }
+svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ---------- design rail (outside the app frame) ---------- */
+.rail { width: 1440px; margin: 0 auto; padding: 18px 0 14px; display: flex; flex-direction: column; gap: 12px; }
+.rail h1 { margin: 0; font-size: 20px; color: var(--ink); letter-spacing: -.2px; font-weight: 600; }
+.rail h1 span { color: var(--sec); font-weight: 400; font-size: 14px; margin-left: 8px; }
+.rail .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rail .lab { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ter); width: 74px; }
+.pill { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 5px 12px; cursor: pointer; font-size: 12.5px; transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.pill:hover { border-color: var(--ink); }
+.pill.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.pill b { font-weight: 600; margin-right: 4px; }
+.pill.play { background: var(--acc); color: #fff; border-color: var(--acc); }
+.sw { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+.sw.on { box-shadow: 0 0 0 2px var(--ink); }
+.dirnote { font-size: 12.5px; color: var(--sec); max-width: 1100px; }
+
+/* ---------- the app frame: 1440 x 900 ---------- */
+.frame { width: 1440px; height: 900px; margin: 0 auto 26px; position: relative; overflow: hidden; border-radius: 14px;
+  background: linear-gradient(var(--bg1), var(--bg2)); box-shadow: 0 30px 80px rgba(15,23,42,.18), 0 0 0 1px rgba(15,23,42,.08); }
+.glass { background: var(--glass); backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,.75); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), var(--glass-shadow); }
+
+.menubar { position: absolute; left: 10px; right: 10px; top: 10px; height: 38px; border-radius: 14px; display: flex; align-items: center; padding: 0 10px 0 14px; z-index: 20; }
+.mark { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink); font-size: 14px; margin-right: 10px; }
+.mark i { width: 18px; height: 18px; border-radius: 6px; background: var(--acc); display: grid; place-items: center; }
+.mark i svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 2.2; }
+.menus { display: flex; gap: 2px; }
+.menus span { padding: 4px 10px; border-radius: 8px; color: var(--body); }
+.menus span:hover { background: rgba(15,23,42,.05); }
+
+.toolbar { position: absolute; left: 10px; right: 10px; top: 58px; height: 58px; border-radius: 18px; display: flex; align-items: center; padding: 6px; gap: 2px; z-index: 5; }
+.tb { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; color: var(--body); min-width: 44px; }
+.tb:hover { background: rgba(15,23,42,.05); }
+.tb svg.i { width: 18px; height: 18px; stroke-width: 1.5; }
+.tb.on { background: var(--acc); color: #fff; }
+.sep { width: 1px; height: 30px; background: var(--hair); margin: 0 8px; }
+.grow { flex: 1; }
+
+.fbar { position: absolute; left: 10px; top: 126px; right: 330px; height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 12px; }
+.fbar .ref { color: var(--sec); font-size: 12px; width: 90px; }
+.fbar .fx { flex: 1; height: 30px; border-radius: 10px; background: #fff; border: 1px solid var(--hair); display: flex; align-items: center; padding: 0 10px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--ink); }
+
+.sheet { position: absolute; left: 10px; top: 168px; right: 330px; bottom: 60px; background: #fff; border-radius: 16px; box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 4px 16px rgba(15,23,42,.04); overflow: hidden; }
+.sheet .title { display: flex; align-items: baseline; gap: 10px; padding: 14px 18px 10px; }
+.sheet .title b { font-size: 15px; color: var(--ink); font-weight: 600; }
+.sheet .title span { color: var(--acc); font-size: 12.5px; }
+.sheet .title .flt { margin-left: 6px; font-size: 11.5px; padding: 2px 9px; border-radius: 99px; background: var(--acc-wash); color: var(--acc); opacity: 0; transform: translateY(-3px); transition: opacity var(--t-mid) var(--ease), transform var(--t-mid) var(--ease); }
+.sheet .title .flt.show { opacity: 1; transform: none; }
+table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
+.grid th { position: relative; text-align: left; font-weight: 500; color: var(--body); background: var(--raised); height: 34px; padding: 0 10px; border-bottom: 1px solid var(--hair); white-space: nowrap; }
+.grid th small { font-family: "JetBrains Mono", monospace; font-size: 9.5px; color: var(--ter); margin-left: 6px; }
+.grid th .hist { display: inline-flex; align-items: flex-end; gap: 1px; height: 12px; margin-left: 8px; vertical-align: -1px; }
+.grid th .hist i { width: 3px; background: color-mix(in srgb, var(--acc) 40%, transparent); border-radius: 1px; }
+.grid td { height: 29px; padding: 0 10px; border-bottom: 1px solid var(--hair); white-space: nowrap; color: var(--ink); transition: font-weight var(--t-fast); }
+.grid td.n { text-align: right; }
+.grid td.g { color: var(--ter); text-align: right; width: 44px; font-size: 12px; background: #fff; }
+.grid td.b { font-weight: 600; }
+.grid td.sel { background: color-mix(in srgb, var(--acc) 8%, transparent); }
+.grid td.err { box-shadow: inset 0 0 0 2px var(--bad); background: rgba(220,38,38,.05); }
+.yes, .no { font-size: 11px; padding: 1px 7px; border-radius: 99px; font-weight: 500; }
+.yes { background: rgba(22,163,74,.10); color: var(--good); }
+.no  { background: rgba(220,38,38,.09); color: var(--bad); }
+.ring { position: absolute; border: 2px solid var(--acc); border-radius: 4px; pointer-events: none; transition: all var(--t-mid) var(--ease); }
+.ring::after { content: ""; position: absolute; right: -5px; bottom: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--acc); border: 2px solid #fff; }
+
+.insp { position: absolute; right: 10px; top: 126px; width: 310px; bottom: 60px; border-radius: 18px; padding: 14px; z-index: 4; }
+.seg { display: flex; background: rgba(15,23,42,.05); border-radius: 99px; padding: 3px; margin-bottom: 14px; }
+.seg span { flex: 1; text-align: center; padding: 4px 0; border-radius: 99px; font-size: 12.5px; color: var(--sec); }
+.seg span.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(15,23,42,.12); font-weight: 500; }
+.h { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ter); margin: 14px 0 8px; }
+.kv { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+.kv span:last-child { color: var(--ink); }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.card { background: #fff; border-radius: 12px; padding: 9px 11px; border: 1px solid var(--hair); }
+.card small { display: block; color: var(--sec); font-size: 11.5px; }
+.card b { font-size: 15px; color: var(--ink); font-weight: 600; }
+
+.bottom { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 40px; border-radius: 14px; display: flex; align-items: center; padding: 0 6px; gap: 4px; font-size: 12.5px; }
+.tab { display: flex; gap: 7px; align-items: center; padding: 5px 13px; border-radius: 99px; color: var(--body); font-weight: 500; }
+.tab.on { background: #fff; box-shadow: 0 1px 3px rgba(15,23,42,.1); color: var(--ink); }
+.figs { display: flex; gap: 18px; margin-left: 18px; color: var(--sec); }
+.figs b { color: var(--ink); font-weight: 500; }
+
+/* ---------- the island ---------- */
+.islands { position: absolute; top: 15px; display: flex; gap: 8px; align-items: flex-start; z-index: 30; }
+.skin-A .islands { left: 50%; transform: translateX(-50%); }
+.skin-C .islands { left: 530px; }
+.skin-B .islands { right: 18px; }
+.island { position: relative; height: 28px; width: 220px; border-radius: 14px; overflow: hidden; cursor: pointer;
+  transition: width var(--t-slow) var(--ease), height var(--t-slow) var(--ease), border-radius var(--t-slow) var(--ease),
+              background-color var(--t-mid) var(--ease), box-shadow var(--t-mid) var(--ease), border-color var(--t-mid) var(--ease); }
+.face { position: absolute; left: 0; top: 0; height: 28px; width: max-content; display: flex; align-items: center; gap: 8px; padding: 0 12px; white-space: nowrap; font-size: 12.5px;
+  transition: opacity var(--t-mid) var(--ease), transform var(--t-mid) var(--ease); }
+.face.enter { opacity: 0; transform: translateY(4px); }
+.face.leave { opacity: 0; transform: translateY(-4px); transition-duration: var(--t-fast); }
+.face .chev { width: 14px; height: 14px; opacity: 0; margin-left: -2px; transition: opacity var(--t-fast) var(--ease); }
+.island:hover .face .chev { opacity: .55; }
+.face .dim { opacity: .62; }
+.face .num { font-weight: 600; }
+.face .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex: none; }
+.face .btn { padding: 2px 9px; border-radius: 99px; font-weight: 600; font-size: 12px; }
+.face .bar { width: 72px; height: 4px; border-radius: 99px; overflow: hidden; }
+.face .bar i { display: block; height: 100%; width: 0; border-radius: 99px; transition: width 120ms linear; }
+.face .ticks { display: flex; gap: 1.5px; }
+.face .ticks i { width: 2px; height: 10px; border-radius: 1px; transition: background-color var(--t-fast) var(--ease); }
+.face .mono { font-family: "JetBrains Mono", monospace; font-size: 11.5px; }
+.face .steps { display: flex; gap: 3px; }
+.face .steps i { width: 5px; height: 5px; border-radius: 50%; transition: background-color var(--t-mid) var(--ease); }
+.spin { width: 14px; height: 14px; animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.countdown { width: 14px; height: 14px; transform: rotate(-90deg); }
+.countdown circle.c { transition: stroke-dashoffset 5s linear; }
+.shimmer { background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; animation: shimmer 1.8s linear infinite; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.pulse { animation: pulse 1.6s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+
+/* expanded panel */
+.panel { position: absolute; left: 0; top: 0; width: 460px; padding: 14px 16px 16px; opacity: 0; transform: translateY(-6px); pointer-events: none;
+  transition: opacity var(--t-mid) var(--ease), transform var(--t-slow) var(--ease); }
+.island.open { cursor: default; border-radius: 22px; }
+.island.open .panel { opacity: 1; transform: none; pointer-events: auto; transition-delay: 70ms; }
+.island.open .face { opacity: 0; pointer-events: none; }
+.panel .top { display: flex; align-items: center; gap: 10px; }
+.panel .top .t { flex: 1; }
+.panel .top b { display: block; font-size: 15px; font-weight: 600; }
+.panel .top small { font-size: 12px; opacity: .65; }
+.panel .x { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; border: 0; background: transparent; }
+.panel .now { margin-top: 12px; border-radius: 14px; padding: 11px 12px; display: flex; flex-direction: column; gap: 7px; }
+.panel .now .l1 { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.panel .now .big { height: 6px; border-radius: 99px; overflow: hidden; }
+.panel .now .big i { display: block; height: 100%; border-radius: 99px; transition: width 120ms linear; }
+.panel .now .meta { display: flex; gap: 14px; font-size: 12px; opacity: .7; }
+.panel .sec { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; opacity: .5; margin: 14px 0 4px; display: flex; justify-content: space-between; }
+.panel .ops { display: flex; flex-direction: column; }
+.panel .op { display: grid; grid-template-columns: 20px 1fr auto auto; gap: 8px; align-items: center; padding: 6px 0; font-size: 12.5px; }
+.panel .op .when { font-size: 11.5px; opacity: .5; width: 52px; text-align: right; }
+.panel .op .ms { font-family: "JetBrains Mono", monospace; font-size: 11px; opacity: .7; }
+.panel .op .u { font-size: 12px; font-weight: 600; cursor: pointer; }
+.panel .op.new { animation: opin var(--t-slow) var(--ease); }
+@keyframes opin { from { opacity: 0; transform: translateY(-4px); } }
+.panel .dev { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+.panel .mem { height: 6px; border-radius: 99px; overflow: hidden; margin-top: 6px; }
+.panel .mem i { display: block; height: 100%; width: 13%; border-radius: 99px; }
+.panel .spark { display: flex; align-items: flex-end; gap: 3px; height: 34px; }
+.panel .spark i { flex: 1; border-radius: 2px 2px 0 0; }
+.panel .devl { font-size: 12px; opacity: .7; }
+
+/* ---------- skin A: ink capsule ---------- */
+.skin-A .island { background: #0f172a; color: #fff; box-shadow: 0 6px 20px rgba(15,23,42,.25); }
+.skin-A .island:hover:not(.open) { box-shadow: 0 8px 26px rgba(15,23,42,.32); }
+.skin-A .face .btn { background: rgba(255,255,255,.14); color: #fff; }
+.skin-A .face .bar, .skin-A .panel .big, .skin-A .panel .mem { background: rgba(255,255,255,.14); }
+.skin-A .face .bar i, .skin-A .panel .big i, .skin-A .panel .mem i { background: var(--acc-dark); }
+.skin-A .tick-off { background: rgba(255,255,255,.18); } .skin-A .tick-on { background: var(--acc-dark); }
+.skin-A .stp-off { background: rgba(255,255,255,.22); } .skin-A .stp-on { background: #fff; }
+.skin-A .ok { color: #4ade80; } .skin-A .bad { color: #f87171; } .skin-A .accent { color: var(--acc-dark); }
+.skin-A .panel .now { background: rgba(255,255,255,.07); }
+.skin-A .panel .op + .op { border-top: 1px solid rgba(255,255,255,.07); }
+.skin-A .panel .x:hover { background: rgba(255,255,255,.1); }
+.skin-A .panel .op .u { color: var(--acc-dark); }
+.skin-A .panel .spark i { background: rgba(255,255,255,.22); } .skin-A .panel .spark i.hi { background: var(--acc-dark); }
+.skin-A .shimmer { background-image: linear-gradient(90deg, rgba(255,255,255,.55) 30%, #fff 50%, rgba(255,255,255,.55) 70%); }
+.skin-A .island.st-error { box-shadow: 0 0 0 1px rgba(248,113,113,.6), 0 6px 20px rgba(15,23,42,.25); }
+
+/* ---------- skin B: glass pill, tinted by state ---------- */
+.skin-B .island { background: rgba(255,255,255,.7); color: var(--ink); border: 1px solid rgba(15,23,42,.08); box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(15,23,42,.06);
+  backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6); }
+.skin-B .island:hover:not(.open) { background: #fff; }
+.skin-B .island.st-run, .skin-B .island.st-stream { background: color-mix(in srgb, var(--acc) 9%, white); border-color: color-mix(in srgb, var(--acc) 25%, transparent); }
+.skin-B .island.st-done { background: #effaf2; border-color: rgba(22,163,74,.25); }
+.skin-B .island.st-error { background: #fdf0f0; border-color: rgba(220,38,38,.28); }
+.skin-B .island.st-agent { background: color-mix(in srgb, #6366f1 8%, white); border-color: rgba(99,102,241,.25); }
+.skin-B .island.open { backdrop-filter: none; -webkit-backdrop-filter: none; background: #fff; border-color: rgba(255,255,255,.8); box-shadow: inset 0 1px 0 #fff, 0 18px 48px rgba(15,23,42,.18), 0 1px 2px rgba(15,23,42,.06); }
+.skin-B .face .btn { background: var(--acc); color: #fff; }
+.skin-B .face .bar, .skin-B .panel .big, .skin-B .panel .mem { background: rgba(15,23,42,.08); }
+.skin-B .face .bar i, .skin-B .panel .big i, .skin-B .panel .mem i { background: var(--acc); }
+.skin-B .tick-off { background: rgba(15,23,42,.12); } .skin-B .tick-on { background: var(--acc); }
+.skin-B .stp-off { background: rgba(99,102,241,.25); } .skin-B .stp-on { background: #6366f1; }
+.skin-B .ok { color: var(--good); } .skin-B .bad { color: var(--bad); } .skin-B .accent { color: var(--acc); }
+.skin-B .panel .now { background: rgba(15,23,42,.035); }
+.skin-B .panel .op + .op { border-top: 1px solid var(--hair); }
+.skin-B .panel .x:hover { background: rgba(15,23,42,.06); }
+.skin-B .panel .op .u { color: var(--acc); }
+.skin-B .panel .spark i { background: rgba(15,23,42,.12); } .skin-B .panel .spark i.hi { background: var(--acc); }
+.skin-B .shimmer { background-image: linear-gradient(90deg, #6366f1 30%, #c7d2fe 50%, #6366f1 70%); }
+.skin-B .face .dot { background: var(--good); }
+
+/* ---------- skin C: white twin islands ---------- */
+.skin-C .island { background: #fff; color: var(--ink); box-shadow: 0 0 0 1px rgba(15,23,42,.08), 0 4px 14px rgba(15,23,42,.08); }
+.skin-C .island:hover:not(.open) { box-shadow: 0 0 0 1px rgba(15,23,42,.12), 0 6px 18px rgba(15,23,42,.12); }
+.skin-C .island.open { box-shadow: 0 0 0 1px rgba(15,23,42,.08), 0 22px 54px rgba(15,23,42,.18); }
+.skin-C .face .btn { background: var(--acc-wash); color: var(--acc); }
+.skin-C .face .bar, .skin-C .panel .big, .skin-C .panel .mem { background: rgba(15,23,42,.08); }
+.skin-C .face .bar i, .skin-C .panel .big i, .skin-C .panel .mem i { background: var(--acc); }
+.skin-C .tick-off { background: rgba(15,23,42,.12); } .skin-C .tick-on { background: var(--acc); }
+.skin-C .stp-off { background: rgba(99,102,241,.25); } .skin-C .stp-on { background: #6366f1; }
+.skin-C .ok { color: var(--good); } .skin-C .bad { color: var(--bad); } .skin-C .accent { color: var(--acc); }
+.skin-C .panel .now { background: var(--raised); }
+.skin-C .panel .op + .op { border-top: 1px solid var(--hair); }
+.skin-C .panel .x:hover { background: rgba(15,23,42,.06); }
+.skin-C .panel .op .u { color: var(--acc); }
+.skin-C .panel .spark i { background: rgba(15,23,42,.12); } .skin-C .panel .spark i.hi { background: var(--acc); }
+.skin-C .shimmer { background-image: linear-gradient(90deg, #6366f1 30%, #c7d2fe 50%, #6366f1 70%); }
+.skin-C .face .dot { background: var(--good); }
+.skin-C .island.st-error { box-shadow: 0 0 0 1.5px rgba(220,38,38,.55), 0 4px 14px rgba(15,23,42,.08); }
+#twin { width: 0; opacity: 0; margin-left: -8px; pointer-events: none; }
+#twin.show { opacity: 1; margin-left: 0; pointer-events: auto; }
+#twin { transition: width var(--t-slow) var(--ease), opacity var(--t-mid) var(--ease), margin-left var(--t-slow) var(--ease), height var(--t-slow) var(--ease), box-shadow var(--t-mid) var(--ease); }
+
+/* measuring box */
+#measure { position: absolute; visibility: hidden; left: -9999px; top: 0; }
+
+/* ---------- notes ---------- */
+.notes { width: 1440px; margin: 0 auto 60px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.notes .n { background: #fff; border-radius: 16px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(15,23,42,.06); font-size: 12.5px; }
+.notes h3 { margin: 0 0 8px; font-size: 14px; color: var(--ink); font-weight: 600; }
+.notes ul { margin: 0; padding-left: 18px; } .notes li { margin: 3px 0; }
+.notes .y { color: var(--good); font-weight: 600; } .notes .x { color: var(--bad); font-weight: 600; } .notes .m { color: var(--warn); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 1ms !important; animation-duration: 1ms !important; } }
+</style>
+</head>
+<body>
+
+<div class="rail">
+  <h1>The island <span>one living capsule in the menu bar replaces the document chip, the GPU chip and the toasts · reply "island A", "B" or "C"</span></h1>
+  <div class="row"><span class="lab">Direction</span>
+    <button class="pill dir on" data-skin="A"><b>A</b>Ink capsule, centred</button>
+    <button class="pill dir" data-skin="B"><b>B</b>Glass pill, where the chips are</button>
+    <button class="pill dir" data-skin="C"><b>C</b>Twin islands (background work splits off)</button>
+    <span class="dirnote" id="dirnote"></span>
+  </div>
+  <div class="row"><span class="lab">State</span>
+    <button class="pill st" data-st="idle">Idle</button>
+    <button class="pill st" data-st="query">Run a query</button>
+    <button class="pill st" data-st="result">Result</button>
+    <button class="pill st" data-st="edit">Edit → Undo</button>
+    <button class="pill st" data-st="stream">Stream a big file</button>
+    <button class="pill st" data-st="error">Error</button>
+    <button class="pill st" data-st="agent">Agent working</button>
+    <button class="pill st" data-st="open">Expand / collapse</button>
+    <button class="pill play" id="play">Play all</button>
+    <span class="lab" style="margin-left:18px;width:auto">Accent</span>
+    <button class="sw on" style="background:#0e7c86" data-acc="#0e7c86" title="teal (today)"></button>
+    <button class="sw" style="background:#4f46e5" data-acc="#4f46e5" title="C · iris indigo"></button>
+    <button class="sw" style="background:#0e7a43" data-acc="#0e7a43" title="A · ledger green"></button>
+    <button class="sw" style="background:#00707e" data-acc="#00707e" title="D · deep lagoon"></button>
+  </div>
+</div>
+
+<div class="frame skin-A" id="frame">
+  <div class="menubar glass">
+    <div class="mark"><i><svg class="i" viewBox="0 0 24 24"><path d="M8 17v-3M13 17V9M18 17V5"/></svg></i>omxplorer</div>
+    <div class="menus"><span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Data</span><span>Format</span><span>Help</span></div>
+  </div>
+
+  <div id="measure"></div>
+  <div class="islands" id="islands">
+      <div class="island" id="isl"><div class="panel" id="panel"></div></div>
+      <div class="island" id="twin"></div>
+    </div>
+  <div class="toolbar glass" id="toolbar"></div>
+  <div class="fbar"><span class="ref" id="ref">amount 4</span><div class="fx" id="fx">8906.97</div></div>
+  <div class="sheet" id="sheet">
+    <div class="title"><b>orders</b><span>2,000,000 rows</span><span class="flt" id="flt">amount &gt; 500 · 199,812 rows</span></div>
+    <div style="position:relative"><table class="grid" id="grid"></table><div class="ring" id="ring"></div></div>
+  </div>
+  <div class="insp glass">
+    <div class="seg"><span>Table</span><span class="on">Cell</span></div>
+    <div class="h" style="margin-top:4px">Column</div>
+    <div style="font-size:15px;color:var(--ink);font-weight:600">amount · Decimal</div>
+    <div class="h">Data format</div>
+    <div class="kv"><span>Format</span><span>Automatic</span></div>
+    <div class="kv"><span>Decimals</span><span>2</span></div>
+    <div class="kv"><span>Thousands separator</span><span>On</span></div>
+    <div class="h">Column stats</div>
+    <div class="cards">
+      <div class="card"><small>Mean</small><b>5,009.01</b></div><div class="card"><small>Median</small><b>5,005.54</b></div>
+      <div class="card"><small>Empty</small><b>250</b></div><div class="card"><small>Distinct</small><b>1,874,103</b></div>
+    </div>
+  </div>
+  <div class="bottom glass">
+    <span class="tab on"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>orders</span>
+    <span class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16M18 17V9M13 17V5M8 17v-3"/></svg>Report</span>
+    <div class="figs"><span>Selection <b>amount · rows 4–10</b></span><span>Sum <b>39,415.37</b></span><span>Average <b>5,630.77</b></span><span>Count <b>21</b></span></div>
+    <div class="grow"></div>
+    <span style="color:var(--ter);font-size:12px;padding-right:10px">The GPU chip and the "Imported …" message moved into the island</span>
+  </div>
+</div>
+
+<div class="notes">
+  <div class="n"><h3>What GTK 4 can do natively</h3><ul>
+    <li><span class="y">Yes</span> CSS <code>transition</code> on colour, opacity, border-radius, box-shadow, transform, min-width/min-height, padding; <code>@keyframes</code>; <code>cubic-bezier(0.22,1,0.36,1)</code> (already in the Liquid theme).</li>
+    <li><span class="y">Yes</span> GtkStack crossfade / slide for swapping the capsule's face; GtkRevealer and GtkPopover (autohide = click-outside closes) for the expanded panel.</li>
+    <li><span class="x">No</span> <code>backdrop-filter</code>: glass becomes solid white at 70–86% over the soft backdrop. That's why A (ink) and C (solid white) lose nothing on GTK; B loses its frost.</li>
+    <li><span class="m">Care</span> a widget's width comes from its content, so "width follows content" won't animate by itself. Draw the capsule in a <code>Canvas</code> with <code>on_frame</code> (we interpolate the width), or animate <code>min-width</code> from measured sizes.</li>
+  </ul></div>
+  <div class="n"><h3>Mac, iPhone, web</h3><ul>
+    <li><b>Mac:</b> the real menu bar belongs to macOS. The capsule lives in the window's unified title bar, centred (NSTitlebarAccessoryViewController / a toolbar item), which is where Xcode puts its activity view, a well-known pattern.</li>
+    <li><b>iPhone:</b> it becomes the top of the glass top bar; it can also feed a Live Activity for long streams.</li>
+    <li><b>Web:</b> everything on this page as written (width/height transitions, backdrop blur).</li>
+    <li><b>Agent host:</b> each state is a plain event (<code>activity(kind, text, progress)</code>), so the MCP host can report it too.</li>
+  </ul></div>
+  <div class="n"><h3>Rules the capsule keeps</h3><ul>
+    <li>One thing at a time in the face; anything older goes to <b>Recent</b> (expand).</li>
+    <li>Transient states (result, undo) fall back to idle after 4–5 s; errors stay until seen.</li>
+    <li>Width morphs 320 ms, the face crossfades 150 ms out / 220 ms in, one ease-out curve, no bounce.</li>
+    <li>Never steals focus; Undo is also Ctrl+Z, so the button is a shortcut, not the only way.</li>
+    <li>Reduced motion: the face swaps with a 150 ms fade, the width snaps.</li>
+  </ul></div>
+</div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const frame = $('#frame'), isl = $('#isl'), twin = $('#twin'), panel = $('#panel'), measure = $('#measure');
+const I = {
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+  bold: '<path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/>',
+  down: '<path d="M12 3v11M7 9l5 5 5-5M5 20h14"/>',
+  spark: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>',
+  filter: '<path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/>',
+  sort: '<path d="m3 16 4 4 4-4M7 20V4M21 8l-4-4-4 4M17 4v16"/>',
+  sigma: '<path d="M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  chev: '<path d="m6 9 6 6 6-6"/>',
+  save: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7M7 3v4a1 1 0 0 0 1 1h7"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  rows: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  table: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M12 3v18"/>',
+  chart: '<path d="M3 3v16a2 2 0 0 0 2 2h16M18 17V9M13 17V5M8 17v-3"/>',
+  italic: '<path d="M19 4h-9M14 20H5M15 4 9 20"/>',
+  under: '<path d="M6 4v6a6 6 0 0 0 12 0V4M4 20h16"/>',
+  brush: '<path d="m11 10 3 3"/><path d="M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z"/><path d="M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031"/>',
+  open: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M12 12v6M15 15l-3-3-3 3"/>',
+  cpu: '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/>',
+};
+const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24">${I[n]}</svg>`;
+const fmt = n => n.toLocaleString('en-US');
+
+/* ---- toolbar ---- */
+$('#toolbar').innerHTML = [['save','Save'],['undo','Undo'],'|',['rows','Add row'],['sigma','Formula'],['sort','Sort'],['table','Pivot'],['chart','Chart'],'|',['bold','Bold'],['italic','Italic'],['under','Underline'],'|',['filter','Filter'],'>',['brush','Format',1],['open','Open']]
+  .map(t => t === '|' ? '<span class="sep"></span>' : t === '>' ? '<span class="grow"></span>' : `<span class="tb${t[2] ? ' on' : ''}">${ic(t[0])}${t[1]}</span>`).join('');
+
+/* ---- grid: realistic orders ---- */
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const regions = ['North', 'South', 'East', 'West', 'Central'];
+const rows = Array.from({ length: 19 }, (_, i) => {
+  const d = new Date(2025, 0, 1 + Math.floor(rnd() * 360));
+  return { order: 1000412 + i * 7 + Math.floor(rnd() * 6), amount: (rnd() * 9800 + 120).toFixed(2), region: i === 13 ? '' : regions[Math.floor(rnd() * 5)], day: d.toISOString().slice(0, 10), paid: rnd() > .22 };
+});
+const hist = h => `<span class="hist">${h.map(v => `<i style="height:${v}px"></i>`).join('')}</span>`;
+$('#grid').innerHTML = `<tr><th style="width:44px"></th><th>order<small>#</small></th><th style="text-align:right">amount<small>0.0</small>${hist([5,8,11,9,12,10,7,6])}</th><th>region<small>Aa</small>${hist([10,9,11,8,7])}</th><th>day<small>date</small>${hist([6,9,8,10,12,9,8,11])}</th><th>paid<small>bool</small>${hist([12,4])}</th><th></th></tr>` +
+  rows.map((r, i) => `<tr><td class="g">${i + 1}</td><td class="n">${r.order}</td><td class="n" data-c="1" data-r="${i}">${(+r.amount).toLocaleString('en-US',{minimumFractionDigits:2})}</td><td data-c="2" data-r="${i}">${r.region}</td><td data-c="3" data-r="${i}">${r.day}</td><td>${r.paid ? '<span class="yes">true</span>' : '<span class="no">false</span>'}</td><td style="width:40%"></td></tr>`).join('');
+const cell = (r, c) => $(`td[data-r="${r}"][data-c="${c}"]`);
+function placeRing(r0, r1, c0, c1) {
+  const a = cell(r0, c0), b = cell(r1, c1), base = $('#grid').getBoundingClientRect();
+  const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(), ring = $('#ring');
+  Object.assign(ring.style, { left: ra.left - base.left - 1 + 'px', top: ra.top - base.top - 1 + 'px', width: rb.right - ra.left + 2 + 'px', height: rb.bottom - ra.top + 2 + 'px' });
+}
+function selectBlock(on) { for (let r = 3; r <= 9; r++) for (let c = 1; c <= 3; c++) cell(r, c).classList.toggle('sel', on); }
+function boldBlock(on) { for (let r = 3; r <= 9; r++) for (let c = 1; c <= 3; c++) cell(r, c).classList.toggle('b', on); }
+
+/* ---- recent operations (the expanded panel's memory) ---- */
+const ops = [
+  { icon: 'sort', text: 'Sorted by amount, largest first', ms: '0.3 ms', when: '2 min', undo: true },
+  { icon: 'sigma', text: 'Sum of amount · 10,016,402,118.30', ms: '0.1 ms', when: '4 min' },
+  { icon: 'down', text: 'Opened orders.parquet · 2,000,000 rows', ms: '1.1 s', when: '6 min' },
+];
+const timings = [0.3, 0.4, 0.2, 0.6, 0.3, 0.4, 1.1, 0.3, 0.2, 0.5, 0.4, 0.4];
+function pushOp(o) { ops.unshift({ ...o, when: 'now', fresh: true }); ops.length = Math.min(ops.length, 5); if (o.t) { timings.push(o.t); timings.shift(); } }
+
+/* ---- faces ---- */
+const S = { mode: 'idle', progress: 0, rate: 0, groups: 0, step: 0, twin: null };
+const chev = ic('chev', 'chev');
+function face(st) {
+  switch (st) {
+    case 'idle': return `<span class="dot"></span><b style="font-weight:600">orders</b><span class="dim">2,000,000 rows</span><span class="dim">·</span><span class="dim">RTX 3090</span>${chev}`;
+    case 'run': return `<svg class="spin accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg><span>Filtering <b class="num">amount &gt; 500</b></span><span class="bar"><i data-k="bar"></i></span><span class="mono dim" data-k="rate" style="width:84px">0 rows/s</span>`;
+    case 'done': return `${ic('check', 'ok')}<span class="num">199,812 matched</span><span class="dim">· 0.4 ms on RTX</span>${chev}`;
+    case 'undo': return `${ic('bold')}<span>Bold applied to <b class="num">21 cells</b></span><span class="btn" data-act="undo">Undo</span><svg class="countdown" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-opacity=".2" stroke-width="2"/><circle class="c" data-k="cd" cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="37.7" stroke-dashoffset="0"/></svg>`;
+    case 'undone': return `${ic('undo', 'accent')}<span>Bold removed from 21 cells</span><span class="btn" data-act="redo">Redo</span>`;
+    case 'stream': return `${ic('down', 'accent')}<span>trips_2024.parquet</span><span class="ticks">${Array.from({ length: 24 }, () => '<i class="tick-off"></i>').join('')}</span><span class="mono dim" data-k="grp" style="width:118px">0 / 48 row groups</span>`;
+    case 'streamed': return `${ic('check', 'ok')}<span class="num">48,212,904 rows</span><span class="dim">ready · 2.3 s</span>${chev}`;
+    case 'error': return `${ic('alert', 'bad')}<span><b class="num">region</b>: 3 rows aren't text</span><span class="btn" data-act="show">Show</span>`;
+    case 'agent': return `${ic('spark', 'pulse')}<span class="shimmer" data-k="atext">Agent · reading orders</span><span class="steps">${[0,1,2,3].map(() => '<i class="stp-off"></i>').join('')}</span>`;
+    case 'agentdone': return `${ic('spark')}<span>Chart added to Report</span><span class="btn" data-act="review">Review</span>`;
+    case 'twin-streamed': return `${ic('check', 'ok')}<span class="mono">48.2M rows</span>`;
+    case 'twin-agentdone': return `${ic('spark')}<span>Chart added</span><span class="btn" data-act="review">Review</span>`;
+    case 'twin-mini': return `${ic('down', 'accent')}<span class="mono" data-k="grp">0/48</span>`;
+  }
+}
+function setFace(st, el = isl) {
+  S[el === isl ? 'mode' : 'twinMode'] = st;
+  el.className = 'island st-' + ({ run: 'run', done: 'done', streamed: 'done', stream: 'stream', error: 'error', agent: 'agent', agentdone: 'agent' }[st] || 'idle') + (el === twin && S.twin ? ' show' : '') + (el === isl && open ? ' open' : '');
+  if (el === twin) el.id = 'twin';
+  measure.innerHTML = `<div class="face">${face(st)}</div>`;
+  const w = Math.ceil(measure.firstChild.getBoundingClientRect().width);
+  const old = [...el.querySelectorAll(':scope > .face:not(.leave)')];
+  const f = document.createElement('div'); f.className = 'face enter'; f.innerHTML = face(st);
+  el.insertBefore(f, el.querySelector('.panel'));
+  if (!open || el !== isl) el.style.width = w + 'px';
+  requestAnimationFrame(() => requestAnimationFrame(() => f.classList.remove('enter')));
+  old.forEach(o => { o.classList.add('leave'); setTimeout(() => o.remove(), 200); });
+  if (open && el === isl) renderPanel();
+  return f;
+}
+const k = (key, el = isl) => el.querySelector(`.face:not(.leave) [data-k="${key}"]`);
+
+/* ---- the expanded panel ---- */
+let open = false;
+function nowCard() {
+  const m = S.mode;
+  if (m === 'run') return `<div class="l1">${ic('filter', 'accent')}Filtering amount &gt; 500 on the GPU</div><div class="big"><i style="width:${S.progress * 100}%"></i></div><div class="meta"><span>${fmt(Math.round(S.progress * 2e6))} of 2,000,000 rows scanned</span><span>${S.rate.toFixed(1)}B rows/s</span></div>`;
+  if (m === 'stream' || S.twinMode === 'twin-mini') return `<div class="l1">${ic('down', 'accent')}Opening trips_2024.parquet · 1.1 GB</div><div class="big"><i style="width:${S.groups / 48 * 100}%"></i></div><div class="meta"><span>${S.groups} of 48 row groups</span><span>${fmt(Math.round(S.groups * 1004435))} rows so far</span><span>you can already scroll and sum</span></div>`;
+  if (m === 'error') return `<div class="l1">${ic('alert', 'bad')}region has 3 numbers in a text column</div><div class="meta"><span>rows 14, 1,204,881 and 1,877,040</span><span class="accent" style="opacity:1;font-weight:600">Show them</span></div>`;
+  if (m === 'agent' || S.twinMode === 'agent') return `<div class="l1">${ic('spark')}The agent is building "amount by region"</div><div class="meta"><span>step ${S.step + 1} of 4</span><span>${['reading orders', 'grouping by region', 'summing amount', 'adding a chart tile'][S.step]}</span><span class="accent" style="opacity:1;font-weight:600">Stop</span></div>`;
+  return `<div class="l1"><span class="dot" style="width:7px;height:7px;border-radius:50%;background:#22c55e"></span>Ready · everything on the GPU</div><div class="meta"><span>2,000,000 rows · 5 columns · 61 MB in memory</span></div>`;
+}
+function renderPanel() {
+  const maxT = Math.max(...timings);
+  panel.innerHTML = `
+    <div class="top"><div class="t"><b>orders.parquet</b><small>2,000,000 rows · 5 columns · saved 2 min ago</small></div><button class="x" data-act="close" title="Collapse (Esc)">${ic('x')}</button></div>
+    <div class="now">${nowCard()}</div>
+    <div class="sec"><span>Recent</span><span>Ctrl+Z undoes the top one</span></div>
+    <div class="ops">${ops.map(o => `<div class="op${o.fresh ? ' new' : ''}">${ic(o.icon)}<span>${o.text}</span><span class="ms">${o.ms}</span>${o.undo ? '<span class="u when" style="opacity:1">Undo</span>' : `<span class="when">${o.when}</span>`}</div>`).join('')}</div>
+    <div class="sec"><span>Device</span><span>last 12 operations</span></div>
+    <div class="dev">
+      <div><div style="display:flex;gap:8px;align-items:center;font-weight:500">${ic('cpu')}NVIDIA GeForce RTX 3090</div><div class="mem"><i></i></div><div class="devl" style="margin-top:5px">3.1 of 24 GB used · CUDA 12.4</div></div>
+      <div><div class="spark">${timings.map((t, i) => `<i class="${i === timings.length - 1 ? 'hi' : ''}" style="height:${Math.max(3, t / maxT * 34)}px" title="${t} ms"></i>`).join('')}</div><div class="devl" style="margin-top:5px;text-align:right">p50 0.4 ms · p95 1.1 ms</div></div>
+    </div>`;
+  ops.forEach(o => o.fresh = false);
+  if (open) isl.style.height = panel.getBoundingClientRect().height + 'px';
+}
+function setOpen(v) {
+  open = v;
+  isl.classList.toggle('open', v);
+  if (v) {
+    if (S.twin) { twin.classList.remove('show'); twin.style.width = '0px'; }
+    renderPanel();
+    isl.style.width = '460px';
+    isl.style.height = panel.getBoundingClientRect().height + 'px';
+  } else {
+    isl.style.height = '28px';
+    setFace(S.mode);
+    if (S.twin) { twin.classList.add('show'); setFace(S.twinMode, twin); }
+  }
+}
+isl.addEventListener('click', e => {
+  const a = e.target.closest('[data-act]');
+  if (a) { e.stopPropagation(); return act(a.dataset.act); }
+  if (!open) setOpen(true);
+});
+twin.addEventListener('click', e => { e.stopPropagation(); const a = e.target.closest('[data-act]'); if (a) return act(a.dataset.act); setOpen(true); });
+document.addEventListener('click', e => { if (open && !isl.contains(e.target) && !e.target.closest('.rail')) setOpen(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && open) setOpen(false); });
+
+/* ---- sequences ---- */
+let token = 0, ttoken = 0;
+const wait = ms => new Promise(r => setTimeout(r, ms));
+function cancel() { token++; }
+async function animate(ms, fn, alive) {
+  const t0 = performance.now();
+  return new Promise(res => { const tick = now => { if (!alive()) return res(false); const p = Math.min(1, (now - t0) / ms); fn(p); p < 1 ? requestAnimationFrame(tick) : res(true); }; requestAnimationFrame(tick); });
+}
+function settle(after, my, ms = 4200) { setTimeout(() => { if (my === token && !open) { after(); } }, ms); }
+function useTwin() { return frame.classList.contains('skin-C'); }
+function hideTwin() { ttoken++; S.twin = null; S.twinMode = null; twin.classList.remove('show'); twin.style.width = '0px'; }
+/* background work (C only) gets its own lane: a foreground state never cancels it */
+function twinLane() { const t = ++ttoken; S.twin = 'on'; twin.classList.add('show'); return () => t === ttoken; }
+function twinFinish(st, alive) { setFace(st, twin); setTimeout(() => { if (alive()) hideTwin(); }, 3200); }
+
+async function doQuery(my) {
+  $('#flt').classList.remove('show');
+  setFace('run');
+  const ok = await animate(1500, p => {
+    S.progress = 1 - Math.pow(1 - p, 2); S.rate = 0.9 + Math.sin(p * 9) * .15 + p * .4;
+    const b = k('bar'), r = k('rate'); if (b) b.style.width = S.progress * 100 + '%'; if (r) r.textContent = S.rate.toFixed(1) + 'B rows/s';
+    if (open) renderPanel();
+  }, () => my === token);
+  if (!ok) return;
+  doResult(my);
+}
+function doResult(my) {
+  setFace('done'); $('#flt').classList.add('show');
+  pushOp({ icon: 'filter', text: 'Filter amount > 500 · 199,812 matched', ms: '0.4 ms', undo: true, t: 0.4 });
+  if (open) renderPanel();
+  settle(() => setFace('idle'), my);
+}
+async function doEdit(my) {
+  boldBlock(true);
+  setFace('undo');
+  pushOp({ icon: 'bold', text: 'Bold on amount, region, day · rows 4–10', ms: '0.1 ms', undo: true, t: 0.1 });
+  requestAnimationFrame(() => requestAnimationFrame(() => { const c = k('cd'); if (c) c.style.strokeDashoffset = '37.7'; }));
+  settle(() => setFace('idle'), my, 5000);
+}
+async function doStream(my) {
+  S.groups = 0;
+  const viaTwin = useTwin();
+  const host = viaTwin ? twin : isl;
+  const alive = viaTwin ? twinLane() : () => my === token;
+  setFace(viaTwin ? 'twin-mini' : 'stream', host);
+  const ok = await animate(3200, p => {
+    S.groups = Math.round(p * 48);
+    const g = k('grp', host); if (g) g.textContent = viaTwin ? `${S.groups}/48` : `${S.groups} / 48 row groups`;
+    host.querySelectorAll('.face:not(.leave) .ticks i').forEach((t, i) => t.className = i < S.groups / 2 ? 'tick-on' : 'tick-off');
+    if (open) renderPanel();
+  }, alive);
+  if (!ok) return;
+  pushOp({ icon: 'down', text: 'Opened trips_2024.parquet · 48,212,904 rows', ms: '2.3 s', t: 2.3 });
+  if (viaTwin) return twinFinish('twin-streamed', alive);
+  setFace('streamed');
+  settle(() => setFace('idle'), my);
+}
+function doError() {
+  setFace('error');
+  pushOp({ icon: 'alert', text: 'region: 3 rows aren\'t text', ms: '—' });
+}
+async function doAgent(my) {
+  S.step = 0;
+  const viaTwin = useTwin();
+  const host = viaTwin ? twin : isl;
+  const alive = viaTwin ? twinLane() : () => my === token;
+  setFace('agent', host);
+  const texts = ['Agent · reading orders', 'Agent · grouping by region', 'Agent · summing amount', 'Agent · adding a chart tile'];
+  for (let s = 0; s < 4; s++) {
+    if (!alive()) return;
+    S.step = s;
+    const t = k('atext', host); if (t) t.textContent = texts[s];
+    host.querySelectorAll('.face:not(.leave) .steps i').forEach((d, i) => d.className = i <= s ? 'stp-on' : 'stp-off');
+    if (open) renderPanel();
+    await wait(1300);
+  }
+  if (!alive()) return;
+  pushOp({ icon: 'spark', text: 'Agent added "Sum of amount by region" to Report', ms: '5 steps', undo: true });
+  if (viaTwin) return twinFinish('twin-agentdone', alive);
+  setFace('agentdone');
+  settle(() => setFace('idle'), my, 5000);
+}
+function act(a) {
+  if (a === 'close') return setOpen(false);
+  if (a === 'undo') { cancel(); boldBlock(false); ops.shift(); setFace('undone'); const my = token; settle(() => setFace('idle'), my, 3000); return; }
+  if (a === 'redo') { cancel(); doEdit(token); return; }
+  if (a === 'show') { cell(13, 2).classList.add('err'); cancel(); setFace('idle'); setTimeout(() => cell(13, 2).classList.remove('err'), 2400); return; }
+  if (a === 'review') { if (S.twin) hideTwin(); else { cancel(); setFace('idle'); } return; }
+}
+
+function trigger(st) {
+  if (st === 'open') return setOpen(!open);
+  const background = useTwin() && (st === 'stream' || st === 'agent');
+  if (!useTwin() || st === 'idle') hideTwin();
+  if (background) { (st === 'stream' ? doStream : doAgent)(token); return; }
+  cancel(); const my = token;
+  if (st !== 'edit') boldBlock(false);
+  if (st === 'idle') { setFace('idle'); $('#flt').classList.remove('show'); }
+  if (st === 'query') doQuery(my);
+  if (st === 'result') doResult(my);
+  if (st === 'edit') doEdit(my);
+  if (st === 'stream') doStream(my);
+  if (st === 'error') doError();
+  if (st === 'agent') doAgent(my);
+}
+document.querySelectorAll('.st').forEach(b => b.onclick = e => { e.stopPropagation(); trigger(b.dataset.st); });
+
+$('#play').onclick = async e => {
+  e.stopPropagation();
+  if (open) setOpen(false);
+  cancel(); const my = token;
+  const steps = [['idle', 1200], ['query', 2600], ['edit', 2600], ['stream', useTwin() ? 900 : 4400], ['query', 2600], ['error', 2200], ['agent', 6000], ['open', 3200], ['open', 1200], ['idle', 0]];
+  for (const [s, ms] of steps) {
+    if (my !== token && s !== 'open') return;
+    if (s === 'open') setOpen(!open); else { trigger(s); }
+    const mine = token;
+    await wait(ms);
+    if (mine !== token && s !== 'open') return;
+  }
+};
+
+/* ---- directions ---- */
+const notes = {
+  A: 'A · an ink capsule centred in the menu bar, like the iPhone island. The one dark object on a light screen, so the eye always knows where status lives. Same on GTK (no blur needed).',
+  B: 'B · a frosted pill where today\'s chips are, tinted by state (teal working, green done, red error, indigo agent). The calmest change; it reads as part of the bar, not a new object. Loses its frost on GTK.',
+  C: 'C · white capsules centred; long background work (a file streaming in, the agent) splits off into a second small island so a query can still report in the main one. Try: Stream a big file, then Run a query.',
+};
+document.querySelectorAll('.dir').forEach(b => b.onclick = e => {
+  e.stopPropagation();
+  document.querySelectorAll('.dir').forEach(x => x.classList.toggle('on', x === b));
+  frame.className = 'frame skin-' + b.dataset.skin;
+  $('#dirnote').textContent = notes[b.dataset.skin];
+  cancel(); hideTwin(); if (open) setOpen(false);
+  setFace('idle');
+});
+document.querySelectorAll('.sw').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === b));
+  document.documentElement.style.setProperty('--acc', b.dataset.acc);
+});
+
+/* ---- start ---- */
+const q = new URLSearchParams(location.search);
+const skin = (q.get('dir') || 'A').toUpperCase();
+document.querySelector(`.dir[data-skin="${skin}"]`).click();
+document.fonts.ready.then(() => {
+  selectBlock(true); placeRing(3, 9, 1, 3);
+  setFace('idle');
+  const st = q.get('state');
+  if (st) trigger(st);
+  if (q.get('open')) setTimeout(() => setOpen(true), +(q.get('open')) || 50);
+});
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
 Goal 26 baseline: today's path (CPU raster into a texture), omxplorer, 1M rows, 2800×1400 window,
 headless (Xvfb, cairo): CPU numbers only.
-scroll: 2180x1074 px, 60 draws, paint p50 14.7 ms p95 15.5 ms, upload p50 0.9 ms p95 1.1 ms
-glide: 2180x1074 px, 83 draws, paint p50 15.2 ms p95 16.5 ms, upload p50 1.0 ms p95 2.3 ms
+scroll: 2180x1074 px, 60 draws, paint p50 15.1 ms p95 23.9 ms, upload p50 0.9 ms p95 1.7 ms
+glide: 2180x1074 px, 78 draws, paint p50 15.8 ms p95 25.9 ms, upload p50 1.0 ms p95 2.0 ms

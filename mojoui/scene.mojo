@@ -137,6 +137,21 @@ struct Scene(Painter, Movable, Copyable):
         self.layer_keys = List[String]()
         self.layer_starts = List[Int]()
 
+    def reset(mut self, width: Int, height: Int, scale: Float64):
+        """Empty again for the next frame, keeping the memory (a host recycles last frame's list)."""
+        self.w = width
+        self.h = height
+        self.k = scale
+        self.is_still = False
+        self.again = False
+        self.kinds.clear()
+        self.nums.clear()
+        self.colors.clear()
+        self.text_of.clear()
+        self.texts.clear()
+        self.layer_keys.clear()
+        self.layer_starts.clear()
+
     def width(self) -> Int:
         return self.w
 

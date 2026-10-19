@@ -398,6 +398,7 @@ struct GtkCanvas(Copyable, Movable):
     var moved: Bool  # the current press became a drag (so it's not a tap)
     var armed: Bool  # a tick callback is running (only while frames, a redraw or a resize may be due)
     var quiet: Int  # idle ticks in a row (layout can change after ticks, so wait before stopping)
+    var spare: Scene  # the list before that, recycled for the next frame (its memory, not its content)
     var prev: Scene  # the display list last drawn (MOJOUI_SCENE): a layer that comes again unchanged keeps its nodes
     var layer_nodes: List[Int]  # the GskRenderNode built for each of prev's layers
 
@@ -434,6 +435,7 @@ struct GtkCanvas(Copyable, Movable):
         self.armed = False
         self.quiet = 0
         self.prev = Scene(0, 0, 1)
+        self.spare = Scene(0, 0, 1)
         self.layer_nodes = List[Int]()
 
 
@@ -498,6 +500,11 @@ struct GtkHost[A: App](Movable):
     var layout_ptrs: List[Int]
     var layout_w: List[Float64]  # each layout's width and baseline (pixels), measured once
     var layout_base: List[Float64]
+    var key_suffix: String  # the last text's face, size and colour as a key suffix (and what it was made from)
+    var key_weight: Int
+    var key_size: Float64
+    var key_color: UInt32
+    var key_slant: Float64
     var layout_nodes: List[Int]  # each one's text as a render node, built once (its colour is part of the key)
     var pango: Int  # the PangoContext text is laid out in
     var scratch: List[Float32]  # GdkRGBA, graphene rects and points, GskRoundedRect handed to GTK by address
@@ -535,6 +542,11 @@ struct GtkHost[A: App](Movable):
         self.layout_w = List[Float64]()
         self.layout_base = List[Float64]()
         self.layout_nodes = List[Int]()
+        self.key_suffix = ""
+        self.key_weight = -1
+        self.key_size = -1
+        self.key_color = 0
+        self.key_slant = 0
         self.pango = 0
         self.scratch = List[Float32](length=32, fill=0)
         self.nodes_built = 0
@@ -2043,7 +2055,9 @@ struct GtkHost[A: App](Movable):
         var t1 = t0
         var drew_scene = False
         if self.scene_mode:  # the display list, drawn by GTK's own renderer (render nodes; GPU on a real display)
-            var sc = Scene(wpx, hpx, scale)
+            var sc = Scene(0, 0, 1)
+            swap(sc, self.canvases[ci].spare)
+            sc.reset(wpx, hpx, scale)
             sc.is_still = not animations_enabled()
             var r = self.rt.draw_scene(node, sc)
             if r[0]:
@@ -2115,7 +2129,13 @@ struct GtkHost[A: App](Movable):
     def layout_of(mut self, text: String, size: Float64, weight: Int, slant: Float64, color: UInt32) -> Int:
         """The text laid out in the app's own fonts (Inter, JetBrains Mono) and turned into a render node once; kept
         for the next frames (a scroll brings a few new rows; everything else is placed again as it was)."""
-        var key = text + "\x1f" + String(weight) + "\x1f" + String(Int(size * 100)) + "\x1f" + String(color) + ("\x1fi" if slant != 0 else "")
+        if weight != self.key_weight or size != self.key_size or color != self.key_color or slant != self.key_slant:  # (most cells share these)
+            self.key_weight = weight
+            self.key_size = size
+            self.key_color = color
+            self.key_slant = slant
+            self.key_suffix = "\x1f" + String(weight) + "\x1f" + String(Int(size * 100)) + "\x1f" + String(color) + ("\x1fi" if slant != 0 else "")
+        var key = text + self.key_suffix
         var hit = self.layouts.get(key)
         if hit:
             return hit.value()
@@ -2169,10 +2189,11 @@ struct GtkHost[A: App](Movable):
         var left = x - (tw if align == 2 else (tw / 2 if align == 1 else 0))
         self.scratch[20] = Float32(left)
         self.scratch[21] = Float32(baseline - base)
-        external_call["gtk_snapshot_save", NoneType](snap)
-        external_call["gtk_snapshot_translate", NoneType](snap, self.at(20))
+        self.scratch[22] = -self.scratch[20]
+        self.scratch[23] = -self.scratch[21]
+        external_call["gtk_snapshot_translate", NoneType](snap, self.at(20))  # (there and back: cheaper than save/restore)
         external_call["gtk_snapshot_append_node", NoneType](snap, node)
-        external_call["gtk_snapshot_restore", NoneType](snap)
+        external_call["gtk_snapshot_translate", NoneType](snap, self.at(22))
 
     def build_layer(mut self, sc: Scene, i: Int) -> Int:
         """Layer i of the scene as one render node (0 when it draws nothing)."""
@@ -2232,6 +2253,7 @@ struct GtkHost[A: App](Movable):
             if n != 0:
                 external_call["gsk_render_node_unref", NoneType](n)
         self.canvases[ci].layer_nodes = nodes^
+        swap(self.canvases[ci].spare, self.canvases[ci].prev)  # (the old list's memory becomes next frame's)
         if self.rt.trace:
             print("TRACE: replay " + String(sc.ops()) + " ops, " + String(self.new_layouts) + " new layouts in " + ms(self.new_layout_ns) + " ms, all "
                   + ms(Int(perf_counter_ns()) - Int(t_replay)) + " ms")
