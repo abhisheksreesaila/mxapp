@@ -7,14 +7,14 @@
 #
 # Format 1 (the pyarrow shim's files) is refused with a message that says so.
 
-from mxframe import write_parquet, read_parquet, scan_parquet, Table, UNCOMPRESSED
+from mxframe import write_parquet, read_parquet, scan_parquet, ParquetScan, Table, UNCOMPRESSED
 from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT
 from mojoui.csvio import streams
 from mojoui.json import Json, json_string
 from mojoui.numformat import ColumnFormat
 from mojoui.cellstyle import ALL_PARTS
 from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT
-from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_CHART, TILE_DISTINCT, TILE_LAST
+from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_COUNT, TILE_CHART, TILE_DISTINCT, TILE_LAST
 
 comptime FORMAT = 2
 
@@ -126,17 +126,21 @@ def read_document(path: String, mut j: Json, use_gpu: Bool) raises -> Sheet:
     """The table with its formulas and formats; `j` is the file's metadata (the objects and the Report are in it).
     A document too big for memory (as for a Parquet file, D-184) opens streamed (D-214)."""
     var sheet = placeholder_sheet()
-    var streamed = False
+    var big = Optional[ParquetScan](None)
     try:
         var scan = scan_parquet(path)  # (the footer only: how big it is)
         if scan.columns() > 0 and streams(scan.rows(), scan.columns()):
-            j = parse_meta(scan.metadata())
-            sheet = Sheet(scan)
-            streamed = True
-    except e:
-        if "omxplorer" in String(e) or "format 1" in String(e):
+            big = scan^
+    except:
+        pass  # (not Parquet, or unreadable: the whole read below says why, as it always has)
+    var streamed = Bool(big)
+    if streamed:  # (decided first: a big document's metadata problems are reported, never "fixed" by reading it whole)
+        try:
+            j = parse_meta(big.value().metadata())
+        except e:
             raise Error("can't open " + path + ": " + String(e))
-    if not streamed:
+        sheet = Sheet(big.value())
+    else:
         var table = Table()
         try:
             j = read_meta(path, table)
@@ -217,7 +221,7 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         var kind = j.number(j.get(t, "kind"), -1)
         var col = j.number(j.get(t, "col"), -1)
         var group = j.number(j.get(t, "group"), -1)
-        var column_ok = (0 <= col < sheet.columns()) if kind == TILE_DISTINCT else is_number(sheet, col)  # (distinct: text too)
+        var column_ok = (0 <= col < sheet.columns()) if (kind == TILE_DISTINCT or kind == TILE_COUNT) else is_number(sheet, col)  # (distinct and count: any column)
         if not (TILE_SUM <= kind <= TILE_LAST) or not column_ok or (kind == TILE_CHART and not is_text(sheet, group)):
             continue
         tiles.append(new_tile(kind, col, group))

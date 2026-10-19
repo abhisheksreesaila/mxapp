@@ -143,10 +143,27 @@ def m2():
         for region, amount in want_regions.items():
             if got.get(region if region is not None else "(blank)") != g20.money(amount):
                 problems.append(f"the streamed chart's {region} is {got.get(region)}, not {g20.money(amount)} with the edits")
-        c.call("undo")  # (the added row goes: the last edit the table logged; a formula column isn't an edit to it)
+        c.call("undo")  # (the formula column goes: the sheet logs formulas)
+        if "double" in (g20.grid_rows(c, 0, 1)[0] or []) or not any("Undid the formula column double" in s for s in status(c)):
+            problems.append(f"Undo on the streamed sheet didn't take the formula column back: {status(c)}")
+        c.call("undo")  # (then the added row)
         c.call("grid", gesture="tap", x=g21.COLUMN_X, y=12)
         if not any(s == "Rows 100,000,000" for s in status(c)) or not any(s == "Sum " + g20.money(want_total) for s in status(c)):
             problems.append(f"Undo on the streamed sheet didn't take the added row back: {status(c)}")
+        c.call("formula")  # (the formula again, and a format, for the saved document)
+        c.call("a-new-column-its-name-then-its-formula", text="double = amount * 2", submit=True)
+        c.call("grid", gesture="tap", x=g21.COLUMN_X, y=12)
+        c.call("currency")
+        c.call("bold")
+        c.call("tab-1")  # (the Report: on an 8 GB machine a median of 100M rows doesn't fit, a distinct count of a text column does)
+        c.call("median-tile")
+        if not any("the median of amount" in s and "GB" in s for s in status(c)):
+            problems.append(f"a Median of 100M streamed rows on an 8 GB machine wasn't refused with the reason: {status(c)}")
+        c.call("tiles-of", option="region")
+        c.call("distinct-tile")
+        if '"Different region"' not in g21.screen(c) or f'"{len([r for r in by_region if r is not None])}"' not in g21.screen(c):
+            problems.append(f"the Distinct tile of region over 100M streamed rows isn't {len([r for r in by_region if r is not None])}")
+        c.call("tab-0")
         c.call("sort")
         if not any("sorting" in s and "GB" in s for s in status(c)):
             problems.append(f"sorting 100M streamed rows on an 8 GB machine wasn't refused with the reason: {status(c)}")
@@ -170,23 +187,46 @@ def m2():
         top = sf.read_row_group(0).slice(0, 3).to_pylist()
         last = sf.read_row_group(sf.num_row_groups - 1).to_pylist()[-1]
         want_last = pf.read_row_group(pf.num_row_groups - 1).to_pylist()[-1]
-        if rows != g20.BIG_ROWS or top[0]["amount"] != new0 or top[2]["amount"] is not None or last != want_last:
+        if rows != g20.BIG_ROWS or top[0]["amount"] != new0 or top[2]["amount"] is not None or last != want_last or "double" in sf.schema_arrow.names:
             problems.append(f"the saved file isn't the edited table: {rows:,} rows, row 1 {top[0]['amount']}, row 3 {top[2]['amount']}, last {last} vs {want_last}")
         c = Client(BUILD / "omxplorer" / "web", env("reopen", OMX_MEMORY_BYTES=LAPTOP, OMX_OPEN=doc))
         try:
             s = g21.screen(c)
             head, body = g20.grid_rows(c, 0, 2)
-            if "streamed" not in s.lower() or not body or body[0][1] != "1000000.00" or (head or [""])[-1] != "double":
-                problems.append(f"the saved document doesn't reopen streamed with its edit and formula: {head} {(body or [])[:1]}")
+            if "streamed" not in s.lower() or not body or body[0][1] != "$1,000,000.00" or (head or [""])[-1] != "double":
+                problems.append(f"the saved document doesn't reopen streamed with its edit, format and formula: {head} {(body or [])[:1]}")
+            if not g21.pressed(s, "Bold") or not g21.pressed(s, "Currency"):
+                problems.append("the reopened streamed document's amount isn't bold currency")
         finally:
             c.close()
+    # where memory allows (this machine), sorting 100M streamed rows works: the largest first, in order far down
+    sorted_s = None
+    c = Client(BUILD / "omxplorer" / "web", env("sort", OMX_STREAM_ROWS=10_000_000))
+    try:
+        c.call(g20.opener(c), path=str(big))
+        c.call("create-table")
+        c.call("grid", gesture="tap", x=g21.COLUMN_X, y=12)
+        t0 = time.time()
+        c.call("data-sort-largest-first")
+        sorted_s = time.time() - t0
+        _, top = g20.grid_rows(c, 0, 3)
+        _, far = g20.grid_rows(c, 50_000_000, 20)
+        biggest = pc.max(pq.read_table(big, columns=["amount"]).column("amount")).as_py()
+        amounts = [D(r[1]) for r in far or [] if r[1] != ""]
+        if not top or top[0][1] != str(biggest) or len(amounts) < 10 or amounts != sorted(amounts, reverse=True):
+            problems.append(f"sorting 100M streamed rows (allowed here) isn't largest first ({biggest}) and in order far down: {(top or [])[:1]} {amounts[:3]}")
+    finally:
+        log = c.close()
+    if "Traceback" in log:
+        problems.append("the agent host logged a traceback (sort): " + log[-400:])
     err = g20.mojo_test("tests/test_streamed.mojo", "STREAMED TESTS PASSED", "test_streamed")
     if err:
         problems.append(err)
     return not problems, "; ".join(problems) or (
-        f"100M streamed rows: a typed value, an emptied cell, a new row and a formula show, total and chart with the edits; Undo takes the row back; "
-        f"sorting refused on an 8 GB machine with the reason; saved (streamed, {saved_s:.0f} s) to a file pyarrow reads with the edits, "
-        f"which reopens streamed; peak {peak / 1e9:.2f} GB")
+        f"100M streamed rows: a typed value, an emptied cell, a new row and a formula show, total and chart with the edits; Undo takes the "
+        f"formula, then the row back; on an 8 GB machine sorting and a median are refused with the reason, a distinct count of region "
+        f"works; saved (streamed, {saved_s:.0f} s) to a file pyarrow reads with the edits, which reopens streamed, bold currency; peak "
+        f"{peak / 1e9:.2f} GB; here, a sort of all 100M rows takes {sorted_s:.0f} s and reads in order far down")
 
 
 def oracle_stats(path, west=False):
@@ -250,8 +290,9 @@ def m3():
     try:
         og, ow = g21.gtk(steps, "stats"), g21.web(steps, "stats")
         for host, out in (("GTK", og), ("web", ow)):
+            lines = set(out.splitlines())
             for want in (every["median"], f'{every["amounts"]:,}', str(every["regions"])):
-                if f"LABEL: {want}" not in out:
+                if f"LABEL: {want}" not in lines:  # (whole lines: "5" mustn't match "5,005.54")
                     problems.append(f"{host}: the tiles don't show {want}")
     except RuntimeError as e:
         problems.append(str(e))

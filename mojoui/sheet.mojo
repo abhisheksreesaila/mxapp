@@ -34,8 +34,9 @@ comptime STYLE_COLS = 1 << 16  # a cell override's key: row * STYLE_COLS + colum
 
 @fieldwise_init
 struct StyleStep(Copyable, Movable):
-    """One part of a format change, as it was before (Undo puts it back): a column's style (row -1), a cell's override
-    (`had`: there was one), or a column's number format."""
+    """One part of a change the sheet logs itself, as it was before (Undo puts it back): a column's style (row -1), a
+    cell's override (`had`: there was one), a column's number format (row -2), or the formula columns (row -3: the
+    change's `texts` are the formulas there were)."""
 
     var col: Int
     var row: Int
@@ -51,6 +52,7 @@ struct StyleChange(Copyable, Movable):
 
     var steps: List[StyleStep]
     var edits: Int
+    var texts: List[String]  # (a formula step) the formula columns' texts before it, in order
 
 
 @fieldwise_init
@@ -65,6 +67,8 @@ struct Sums(Copyable, Movable):
 
 
 comptime SORT_BYTES_PER_ROW = 50  # a streamed sort's order (the package's permutation: keys and row numbers)
+comptime MEDIAN_BYTES = 27  # an exact median over a scan: every non-empty value, grouped (the package's measure)
+comptime DISTINCT_BYTES = 35  # count distinct over a scan: per different value (the package's measure)
 
 
 struct Notes(Movable):
@@ -124,7 +128,8 @@ struct Sheet(Movable, GridSource):
     var notes: ArcPointer[Notes]
     var styles: List[Int]  # per column: its CellStyle's bits (mojoui.cellstyle); missing = plain
     var cell_styles: Dict[Int, Int]  # row * STYLE_COLS + column → the cell's own style, over its column's (sparse)
-    var style_log: List[StyleChange]  # format changes Undo can take back, newest last
+    var style_log: List[StyleChange]  # format changes and new formula columns Undo can take back, newest last (the package logs the rest)
+    var last_undone: String  # what the last undo took back ("a format change", "the formula column x", "an edit")
 
     def __init__(out self, table: SharedTable, use_gpu: Bool = True):
         self.frame = MxFrame(table)
@@ -132,6 +137,7 @@ struct Sheet(Movable, GridSource):
         self.styles = List[Int]()
         self.cell_styles = Dict[Int, Int]()
         self.style_log = List[StyleChange]()
+        self.last_undone = ""
         self.device = None
         self.device_name = "CPU"
         self.mode = MX_AUTO
@@ -152,6 +158,7 @@ struct Sheet(Movable, GridSource):
         self.styles = List[Int]()
         self.cell_styles = Dict[Int, Int]()
         self.style_log = List[StyleChange]()
+        self.last_undone = ""
         self.device = None
         self.device_name = "CPU"
         self.mode = MX_CPU  # (the package streams on the CPU)
@@ -215,22 +222,28 @@ struct Sheet(Movable, GridSource):
         try:
             return self.frame.word_count(c)
         except e:
-            self.notes[].problem = String(e)
+            self.note_problem(e)
             return 0
 
     def text_of(self, c: Int, code: Int64) -> String:
         try:
             return self.frame.text_of(c, code)
         except e:
-            self.notes[].problem = String(e)
+            self.note_problem(e)
             return ""
 
     def code_of(self, c: Int, word: String) -> Int:
         try:
             return self.frame.code_of(c, word)
         except e:
-            self.notes[].problem = String(e)
+            self.note_problem(e)
             return -1
+
+    def note_problem(self, e: Error):
+        """A failed read of a streamed file is shown (the status bar) until a read from the file works again; a sheet
+        in memory has no file to fail (its lookups answer empty)."""
+        if self.scan:
+            self.notes[].problem = String(e)
 
     # ---------- values ----------
 
@@ -242,7 +255,7 @@ struct Sheet(Movable, GridSource):
                 self.notes[].problem = ""  # (a read from the file worked again; one from the cache proves nothing)
             return v
         except e:
-            self.notes[].problem = String(e)
+            self.note_problem(e)
             return 0
 
     def is_null(self, c: Int, row: Int) -> Bool:
@@ -253,7 +266,7 @@ struct Sheet(Movable, GridSource):
                 self.notes[].problem = ""  # (a read from the file worked again)
             return empty
         except e:
-            self.notes[].problem = String(e)
+            self.note_problem(e)
             return False
 
     def edited(self, c: Int, row: Int) -> Bool:
@@ -358,10 +371,19 @@ struct Sheet(Movable, GridSource):
         var edits = len(self.frame.log)
         if len(self.style_log) > 0 and self.style_log[len(self.style_log) - 1].edits >= edits:
             var change = self.style_log.pop()
+            self.last_undone = "a format change"
             var k = len(change.steps) - 1
             while k >= 0:
                 ref s = change.steps[k]
-                if s.row == -2:
+                if s.row == -3:  # the formula columns as they were (the new one goes; a replaced one comes back)
+                    self.last_undone = "the formula column " + self.name(s.col)
+                    self.frame.formulas.clear()
+                    for t in change.texts:
+                        try:
+                            _ = self.frame.formula(t)
+                        except:
+                            pass  # (it was accepted before: it reads the same columns)
+                elif s.row == -2:
                     self.set_format(s.col, s.number)
                 elif s.row < 0:
                     self.set_column_style(s.col, s.bits)
@@ -371,6 +393,7 @@ struct Sheet(Movable, GridSource):
                     _ = self.cell_styles.pop(s.row * STYLE_COLS + s.col, 0)
                 k -= 1
             return True
+        self.last_undone = "an edit"
         return self.frame.undo()
 
     # ---------- cell styles (mojoui.cellstyle: a column's, and sparse cell overrides) ----------
@@ -439,7 +462,7 @@ struct Sheet(Movable, GridSource):
                     _ = self.cell_styles.pop(key, 0)
                 else:
                     self.cell_styles[key] = bits
-        self.style_log.append(StyleChange(steps^, len(self.frame.log)))
+        self.style_log.append(StyleChange(steps^, len(self.frame.log), List[String]()))
 
     def clear_style(mut self, c: Int, row: Int):
         """Clear formatting: the cell (or with row -1 the column and every cell in it) back to plain, its number
@@ -457,10 +480,24 @@ struct Sheet(Movable, GridSource):
         var steps = List[StyleStep]()
         steps.append(StyleStep(c, -2, 0, False, self.format_of(c)))
         self.set_format(c, f)
-        self.style_log.append(StyleChange(steps^, len(self.frame.log)))
+        self.style_log.append(StyleChange(steps^, len(self.frame.log), List[String]()))
 
     def formula(mut self, text: String) raises -> Int:
-        return self.frame.formula(text)
+        """A new (or replaced) formula column; Undo takes it back (the package doesn't log formulas: the sheet does)."""
+        var texts = List[String]()
+        for m in range(self.stored(), self.columns()):
+            texts.append(self.frame.formula_text(m))
+        var c = self.frame.formula(text)
+        var steps = List[StyleStep]()
+        steps.append(StyleStep(c, -3, 0, False, ColumnFormat.auto()))
+        self.style_log.append(StyleChange(steps^, len(self.frame.log), texts^))
+        return c
+
+    def fits(self, bytes: Int, what: String) raises:
+        """Refuses work on a streamed file that would hold more than a quarter of memory, saying how much."""
+        if bytes > memory_bytes() // 4:
+            raise Error(what + " over " + String(self.rows()) + " streamed rows needs about " + String(max(bytes >> 30, 1))
+                        + " GB, more than a quarter of this computer's memory")
 
     def sort_bytes(self) -> Int:
         """What sorting holds while it runs (streamed: the package's keys and row numbers, about 50 bytes a row)."""
@@ -468,9 +505,8 @@ struct Sheet(Movable, GridSource):
 
     def permutation(self, c: Int, descending: Bool = False) raises -> List[Int]:
         """The rows in the order of column c. Streamed, refused when its order wouldn't fit a quarter of memory."""
-        if self.scan and self.sort_bytes() > memory_bytes() // 4:
-            raise Error("sorting " + String(self.rows()) + " streamed rows needs about " + String(self.sort_bytes() >> 30)
-                        + " GB, more than a quarter of this computer's memory: filter or chart it instead")
+        if self.scan:
+            self.fits(self.sort_bytes(), "sorting")
         return self.frame.permutation(c, descending)
 
     # ---------- aggregates ----------
@@ -513,6 +549,9 @@ struct Sheet(Movable, GridSource):
     def distinct(self, c: Int, filter: Optional[Expr] = None) raises -> Int:
         """How many different values column c holds over the rows `filter` keeps (empty cells don't count; text: different
         words, a merged spelling once). The engine's count_distinct, on the CPU; streamed too."""
+        if self.scan:  # (the engine keeps ~35 bytes per different value while it counts: at most a text column's words, else every row)
+            var bound = (self.word_count(c) if c < self.stored() and self.kind(c) == TEXT else self.rows()) * DISTINCT_BYTES
+            self.fits(bound, "counting the different values of " + self.name(c))
         var q = self.query()
         if filter:
             q = q^.where(filter.value().copy())
@@ -523,6 +562,8 @@ struct Sheet(Movable, GridSource):
         """The middle value of number column c over the rows `filter` keeps (two middle values: their mean, as
         DuckDB, Excel and pandas), at the column's scale plus one place (the engine's median, exact); False when there
         are no values."""
+        if self.scan:  # (an exact median keeps every value: ~27 bytes a row)
+            self.fits(self.rows() * MEDIAN_BYTES, "the median of " + self.name(c))
         var q = self.query()
         if filter:
             q = q^.where(filter.value().copy())

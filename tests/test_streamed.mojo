@@ -111,13 +111,20 @@ def main() raises:
     for row in [0, 17, 4000, back.rows() - 1]:
         for c in range(back.columns()):
             assert_equal(back.display(c, row), whole.display(c, row), "saved " + back.name(c) + " row " + String(row))
+    # Undo takes the formula column back first (the sheet logs formulas: the package doesn't), then the edits
+    assert_equal(s.columns(), 6)
+    assert_true(s.undo())
+    assert_equal(s.columns(), 5)
+    assert_true(s.last_undone.startswith("the formula column double"), s.last_undone)
+    assert_true(whole.undo())
+    assert_equal(s.rows(), whole.rows())  # (the added row is still there: it came before the formula)
     # undone, both back where they were
     var undone = 0
     while s.undo():
         undone += 1
     while whole.undo():
         pass
-    assert_true(undone >= 6, "undid " + String(undone))
+    assert_true(undone >= 5, "undid " + String(undone))
     assert_equal(s.rows(), 5000)
     assert_equal(s.display(1, 0), whole.display(1, 0))
     assert_equal(s.totals(1).sums[0], whole.totals(1).sums[0])

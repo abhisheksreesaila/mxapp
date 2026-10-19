@@ -362,7 +362,7 @@ struct Main(App):
         self.picking = 0
         var nums = self.numbers()
         var money = self.first_number()  # (the first decimal column: revenue rather than an order number)
-        self.report_col = money if self.frame.kind(money) == DECIMAL else (nums[0] if len(nums) > 0 else -1)
+        self.report_col = money if self.frame.kind(money) == DECIMAL else (nums[0] if len(nums) > 0 else 0)  # (no number column: the first, for Distinct and Count)
         self.table_x = 0
         self.table_y = 0
         self.table_w = 0
@@ -957,12 +957,15 @@ struct Main(App):
             self.message = "Kept the name"
             self.version += 1
         elif m == UNDO:
-            var formats = len(self.frame.style_log)
             if self.frame.undo():
+                self.grid.min_widths = List[Float64]()  # (a formula column may have gone)
+                self.grid.prepare(self.frame, self.font, self.pal)
+                if self.grid.cur_col >= self.frame.columns():
+                    self.grid.select(self.grid.cur_row, self.frame.columns() - 1)
                 self.grid.redraw()
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
                 self.refresh()
-                self.message = "Undid a format change on " + self.sheet_name if len(self.frame.style_log) < formats else "Undid an edit to " + self.sheet_name
+                self.message = "Undid " + self.frame.last_undone + " (" + self.sheet_name + ")"
             else:
                 self.message = "Nothing to undo"
             self.version += 1
