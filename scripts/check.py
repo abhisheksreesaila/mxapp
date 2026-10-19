@@ -29,6 +29,7 @@ run, BUILD = g20.run, g20.BUILD
 OUT = BUILD / "g26"
 SHEET, REPORT, OPEN = g25.SHEET, g25.REPORT, g25.OPEN
 boxes, labels = g25.boxes, g25.labels
+GUTTER = 64  # the grid's gutter (row numbers), points: datagrid.GRID_GUTTER
 ACCENT = (14, 122, 67)  # the sheet's Ledger green (D-254): the selection ring
 
 
@@ -142,7 +143,7 @@ def m0():
 
 
 BENCH_RE = re.compile(r"^BENCH: (\w+) (\d+) at (\d+)x(\d+) px draws (\d+) paint p50 ([\d.]+) p95 ([\d.]+) upload p50 ([\d.]+) p95 ([\d.]+) "
-                      r"frame-paint p50 [\d.]+ p95 [\d.]+ interval p50 ([\d.]+) p99 ([\d.]+) within-8.3ms ([\d.]+)% cells built (\d+) uploads (\d+)", re.M)
+                      r"frame-paint p50 [\d.]+ p95 [\d.]+ interval p50 ([\d.]+) p99 ([\d.]+) within-9.5ms ([\d.]+)% cells built (\d+) uploads (\d+)", re.M)
 ORDERS_1M = ROOT / "build/data/orders_1m.csv"
 
 
@@ -211,8 +212,19 @@ def m4():
         # Text is drawn by another engine (its glyph edges differ); everything else (fills, lines, pills, ring) must
         # match: compare the pixels that are text-coloured in neither picture, and a little around them.
         from PIL import ImageFilter
-        ink = lambda im: im.convert("L").point(lambda v: 255 if v < 170 else 0).filter(ImageFilter.MaxFilter(5))
+
+        def ink(im):  # text-coloured pixels: dark or grey, not the accent (the ring and its handle are compared below)
+            m = Image.new("L", im.size, 0)
+            m.putdata([255 if (sum(px) / 3 < 170 and not near(px, ACCENT, 40)) else 0 for px in im.get_flattened_data()])
+            return m.filter(ImageFilter.MaxFilter(5))
         text = ImageChops.lighter(ink(a), ink(b))
+
+        def ring_box(im):
+            pts = [(xx, yy) for yy in range(0, im.size[1], 1) for xx in range(GUTTER + 1, im.size[0], 1) if near(im.getpixel((xx, yy)), ACCENT, 24)]  # (right of the gutter: its accent row numbers are text)
+            return (min(p_[0] for p_ in pts), min(p_[1] for p_ in pts), max(p_[0] for p_ in pts), max(p_[1] for p_ in pts)) if pts else None
+        ra, rb = ring_box(a), ring_box(b)
+        if ra is None or rb is None or any(abs(u - v) > 1 for u, v in zip(ra, rb)):
+            problems.append(f"the ring isn't where the pixel path draws it ({rb} vs {ra})")
         rest = [d for d, t in zip(diff.get_flattened_data(), text.get_flattened_data()) if not t]
         off = sum(1 for d in rest if d) / max(1, len(rest))
         if off > 0.01:
@@ -275,13 +287,17 @@ def m6():
         return False, "blocked: waits for the owner to run scripts/scene-bench.sh on their display"
     text = run_file.read_text()
     scene = text.split("== scene", 1)[1] if "== scene" in text else ""
-    m = re.search(r"interval p50 ([\d.]+) p99 ([\d.]+) within-8.3ms ([\d.]+)%", scene)
-    if not m:
-        return False, "the owner's run has no Scene intervals"
-    p50, p99, share = float(m.group(1)), float(m.group(2)), float(m.group(3))
-    ok = share >= 99  # (the bar: 120 fps, D-252: at least 99% of frames within 9.5 ms)
-    note = "" if ok else (f" (the display ran at {1000 / p50:.0f} Hz: 120 fps can't be shown on it)" if p50 > 12 else "")
-    return ok, f"owner's display: {share}% of frames within 9.5 ms, interval p50 {p50} ms, p99 {p99} ms{note}"
+    found = re.findall(r"^BENCH: (\w+) .* interval p50 ([\d.]+) p99 ([\d.]+) within-9.5ms ([\d.]+)%", scene, re.M)
+    kinds = {k for k, *_ in found}
+    if kinds != {"scroll", "glide"}:
+        return False, f"the owner's run lacks a scroll or a glide with the Scene ({sorted(kinds)})"
+    parts, ok = [], True
+    for k, p50, p99, share in found:
+        p50, p99, share = float(p50), float(p99), float(share)
+        ok = ok and share >= 99  # (the bar: 120 fps, D-252: at least 99% of frames within 9.5 ms)
+        hz = f", the display at {1000 / p50:.0f} Hz" if p50 > 12 else ""
+        parts.append(f"{k}: {share}% of frames within 9.5 ms (interval p50 {p50} ms, p99 {p99}{hz})")
+    return ok, "owner's display: " + "; ".join(parts) + ("" if ok else " (120 fps not shown)")
 
 
 def contrast(a, b):

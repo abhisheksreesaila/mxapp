@@ -503,7 +503,6 @@ struct GtkHost[A: App](Movable):
     var partial_ok: Bool
     var scene_mode: Bool  # MOJOUI_SCENE=1: canvases that record a display list are drawn by GTK's renderer (goal 26)
     var layouts: Dict[String, Int]  # PangoLayouts by text, face and size (an index into the lists below), kept across frames
-    var layout_ptrs: List[Int]
     var layout_w: List[Float64]  # each layout's width and baseline (pixels), measured once
     var layout_base: List[Float64]
     var key_suffix: String  # the last text's face, size and colour as a key suffix (and what it was made from)
@@ -548,7 +547,6 @@ struct GtkHost[A: App](Movable):
         self.partial_ok = getenv("MOJOUI_NO_PARTIAL") == ""
         self.scene_mode = getenv("MOJOUI_SCENE") != ""
         self.layouts = Dict[String, Int]()
-        self.layout_ptrs = List[Int]()
         self.layout_w = List[Float64]()
         self.layout_base = List[Float64]()
         self.layout_nodes = List[Int]()
@@ -2169,12 +2167,11 @@ struct GtkHost[A: App](Movable):
             return hit.value()
         self.new_layouts += 1
         var t_new = perf_counter_ns()
-        if len(self.layout_ptrs) > 30000:  # (scrolled through a lot: start over rather than grow without end)
+        if len(self.layout_nodes) > 30000:  # (scrolled through a lot: start over rather than grow without end)
             for ln in self.layout_nodes:
                 if ln != 0:
                     external_call["gsk_render_node_unref", NoneType](ln)
             self.layouts = Dict[String, Int]()
-            self.layout_ptrs = List[Int]()
             self.layout_nodes = List[Int]()
             self.layout_w = List[Float64]()
             self.layout_base = List[Float64]()
@@ -2200,11 +2197,10 @@ struct GtkHost[A: App](Movable):
         self.layout_nodes.append(external_call["gtk_snapshot_free_to_node", Int](ts))
         self.layout_w.append(Float64(Int(wh[0])))
         self.layout_base.append(Float64(Int(external_call["pango_layout_get_baseline", c_int](layout))) / 1024)
-        self.layout_ptrs.append(0)  # (the layout itself isn't needed again: its node and measures are kept)
-        external_call["g_object_unref", NoneType](layout)
-        self.layouts[key] = len(self.layout_ptrs) - 1
+        external_call["g_object_unref", NoneType](layout)  # (the layout itself isn't needed again: its node and measures are kept)
+        self.layouts[key] = len(self.layout_nodes) - 1
         self.new_layout_ns += Int(perf_counter_ns()) - Int(t_new)
-        return len(self.layout_ptrs) - 1
+        return len(self.layout_nodes) - 1
 
     def snap_text(mut self, snap: Int, text: String, x: Float64, baseline: Float64, size: Float64, c: UInt32, weight: Int, align: Int, slant: Float64):
         var li = self.layout_of(text, size, weight, slant, c)
@@ -3360,7 +3356,7 @@ def run_step[A: App](host_addr: Int, step: String):
               + " upload p50 " + one_decimal(Float32(pct(uploads, 0.5))) + " p95 " + one_decimal(Float32(pct(uploads, 0.95)))
               + " frame-paint p50 " + one_decimal(Float32(pct(host[].frame_paints, 0.5))) + " p95 " + one_decimal(Float32(pct(host[].frame_paints, 0.95)))
               + " interval p50 " + one_decimal(Float32(pct(intervals(host[].frame_times), 0.5))) + " p99 " + one_decimal(Float32(pct(intervals(host[].frame_times), 0.99)))
-              + " within-8.3ms " + one_decimal(Float32(share_within(intervals(host[].frame_times), 9.5))) + "%"
+              + " within-9.5ms " + one_decimal(Float32(share_within(intervals(host[].frame_times), 9.5))) + "%"
               + " cells built " + String(host[].cells_built) + " uploads " + String(host[].uploads)
               + " layers built " + String(host[].nodes_built) + " reused " + String(host[].nodes_reused) + " seconds " + one_decimal(Float32(secs)))
     elif verb == "pause":  # pause:3000: keep the main loop running that long (a screen grab of the display can catch popovers)
@@ -4026,7 +4022,7 @@ def liquid_css(p: Palette) -> String:
         # a tile's or an object's ✕ shows on hover (or keyboard focus) only: a report reads as a report (goal 26 M0)
         + w + ".mui-tag-tile button, " + w + ".mui-tag-chart-tile button.image-button, " + w + ".mui-board .mui-card button.image-button { opacity: 0; transition: opacity 150ms " + spring + "; }\n"
         + w + ".mui-tag-tile:hover button, " + w + ".mui-tag-chart-tile:hover button.image-button, " + w + ".mui-board .mui-card:hover button.image-button, "
-        + w + ".mui-tag-tile button:focus-visible, " + w + ".mui-tag-chart-tile button:focus-visible, " + w + ".mui-board .mui-card button:focus-visible { opacity: 1; }\n"
+        + w + ".mui-tag-tile:focus-within button, " + w + ".mui-tag-chart-tile:focus-within button.image-button, " + w + ".mui-tag-tile button:focus-visible, " + w + ".mui-tag-chart-tile button:focus-visible, " + w + ".mui-board .mui-card button:focus-visible { opacity: 1; }\n"
         + w + ".mui-tag-tile label.title-1 { font-size: 34px; font-weight: 600; letter-spacing: -0.8px; }\n"
         + w + "label.title-1.mui-tone-accent, " + w + "label.title-4.mui-tone-accent { color: " + accent + "; }\n"
         # the inspector: a glass panel

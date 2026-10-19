@@ -994,7 +994,8 @@ struct DataGrid(Copyable, Movable):
                     align = ALIGN_RIGHT if src.grid_numeric(c) else ALIGN_LEFT  # (numbers right, text left)
                 var slant = ITALIC_SLANT if st.italic() else 0.0
                 var tx = x + 8 * k  # where the text starts
-                var tw = font.measure(text, 13 * k, weight)
+                var needs_width = st.underline() or st.strike() or align != ALIGN_LEFT
+                var tw = font.measure(text, 13 * k, weight) if needs_width else 0.0
                 if align == ALIGN_CENTRE:
                     tx = x + (cw - tw) / 2
                 elif align != ALIGN_LEFT:
@@ -1018,7 +1019,7 @@ struct DataGrid(Copyable, Movable):
                 elif align != ALIGN_LEFT:
                     ax = x + cw - 8 * k - (3 * k if st.italic() else 0)
                     al = RIGHT
-                var tight = tw > room - 3 * k or text != full  # (another text engine's widths could spill a pixel or two: cut it to the cell)
+                var tight = text != full or (needs_width and tw > room - 3 * k)  # (another text engine's widths could spill a pixel or two: cut it to the cell)
                 if tight:
                     s.push_clip(x + 1, y, cw - 2, GRID_ROW_H * k)
                 s.text(font, text, ax, base, 13 * k, color, weight, al, slant)

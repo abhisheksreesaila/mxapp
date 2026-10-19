@@ -251,7 +251,10 @@ struct Scene(Painter, Movable, Copyable):
     def image(mut self, pixels: List[UInt32], pw: Int, ph: Int, x: Float64, y: Float64, w: Float64, h: Float64):
         if pw <= 0 or ph <= 0 or len(pixels) < pw * ph:
             return
-        self.images.append(pixels.copy())
+        var exact = List[UInt32](capacity=pw * ph)  # (exactly pw × ph: a replay reads the height back as len / pw)
+        for k in range(pw * ph):
+            exact.append(pixels[k])
+        self.images.append(exact^)
         self._op(OP_IMAGE, x, y, w, h, Float64(len(self.images) - 1), Float64(pw), 0, -1)
 
     def note(mut self, meaning: String):

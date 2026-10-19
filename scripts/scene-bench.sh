@@ -19,7 +19,7 @@ CFG="$(mktemp -d)"
     [[ $mode == scene ]] && extra=(MOJOUI_SCENE=1)
     echo "== $mode"
     env "${extra[@]}" MOJOUI_TRACE=1 OMX_CONFIG="$CFG" OMX_DOCUMENTS="$CFG" MOJOUI_SHOT="$CFG/shot-$mode.png" \
-      MOJOUI_TEST="pick:Choose a file=$PWD/$DATA;tap:Create table;bench:scroll=60;bench:glide=10" \
+      MOJOUI_TEST="pick:Choose a file=$PWD/$DATA;tap:Create table;bench:glide=10;bench:scroll=60" \
       build/omxplorer/linux/omxplorer 2>/dev/null | grep '^BENCH' || echo "(no BENCH lines)"
   done
 } | tee "$OUT"
