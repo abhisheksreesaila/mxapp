@@ -29,6 +29,7 @@ run, BUILD = g20.run, g20.BUILD
 OUT = BUILD / "g26"
 SHEET, REPORT, OPEN = g25.SHEET, g25.REPORT, g25.OPEN
 boxes, labels = g25.boxes, g25.labels
+HEADER = 60  # below the grid's header (a sorted or picked column's accent lives there): datagrid.header_h
 GUTTER = 64  # the grid's gutter (row numbers), points: datagrid.GRID_GUTTER
 ACCENT = (14, 122, 67)  # the sheet's Ledger green (D-254): the selection ring
 
@@ -220,7 +221,7 @@ def m4():
         text = ImageChops.lighter(ink(a), ink(b))
 
         def ring_box(im):
-            pts = [(xx, yy) for yy in range(0, im.size[1], 1) for xx in range(GUTTER + 1, im.size[0], 1) if near(im.getpixel((xx, yy)), ACCENT, 24)]  # (right of the gutter: its accent row numbers are text)
+            pts = [(xx, yy) for yy in range(HEADER, im.size[1], 1) for xx in range(GUTTER + 1, im.size[0], 1) if near(im.getpixel((xx, yy)), ACCENT, 24)]  # (right of the gutter: its accent row numbers are text)
             return (min(p_[0] for p_ in pts), min(p_[1] for p_ in pts), max(p_[0] for p_ in pts), max(p_[1] for p_ in pts)) if pts else None
         ra, rb = ring_box(a), ring_box(b)
         if ra is None or rb is None or any(abs(u - v) > 1 for u, v in zip(ra, rb)):
