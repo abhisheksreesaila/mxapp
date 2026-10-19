@@ -255,6 +255,8 @@ def step(page, s):
         return f"STYLE: {sel} {prop} {value}"
     elif verb == "wait":  # until a button with this title appears (e.g. after frames change the screen)
         page.locator("[data-kind=button]").filter(has_text=exact(rest)).first.wait_for(timeout=15000)
+    elif verb == "pause":  # pause:1000: let animations run that long (as the GTK step does)
+        page.wait_for_timeout(int(rest))
     elif verb == "slide":
         k, _, value = rest.partition("=")
         page.locator("input[data-kind=slider]").nth(int(k)).fill(value)

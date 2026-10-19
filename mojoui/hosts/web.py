@@ -39,7 +39,7 @@ from PIL import Image
  DIALOG, TOAST, POPOVER, CLIPBOARD) = range(1, 34)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
-PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, ICON_ON = 0, 1, 2, 3, 4, 5, 6, 7
+PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, ICON_ON, TOOL_INLINE, TOOL_INLINE_ON = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 START, CENTER, END = 1, 2, 3
 SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
 KEY = 7  # a canvas gesture: a key pressed while it had focus (text = the key, dx = modifiers)
@@ -267,6 +267,17 @@ MENU_JS = r"""
   document.addEventListener('htmx:oobAfterSwap', () => setTimeout(copyAsked, 0));
   document.addEventListener('htmx:oobAfterSwap', () => setTimeout(menus.place, 0));
   addEventListener('load', menus.place); addEventListener('resize', menus.place);
+  // The app lays out to the window (App.resize): its size on load, then whenever it settles after a change.
+  let sizeTimer = 0, sizeSent = '';
+  const tellSize = () => {
+    const root = document.getElementById('mojoui-root');
+    const w = Math.round(innerWidth), h = Math.round(innerHeight);
+    if (!root || !root.dataset.sid || sizeSent === w + 'x' + h) return;
+    sizeSent = w + 'x' + h;
+    htmx.ajax('POST', `/resize/${root.dataset.sid}`, { values: { w, h }, swap: 'none', source: document.body });
+  };
+  addEventListener('load', tellSize);
+  addEventListener('resize', () => { clearTimeout(sizeTimer); sizeTimer = setTimeout(tellSize, 120); });
 })();
 """
 
@@ -624,6 +635,9 @@ body.omarchy label.picker:not(.tool):not(.subtle) { border: 1px solid var(--o-st
 body.omarchy label.picker.prominent { background: var(--o-accent); color: var(--o-on-accent); border-color: transparent; font-weight: 700; }
 button.tool { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 58px; min-height: 48px; padding: 4px 6px; }
 button.tool span { font-size: 11px; line-height: 13px; }
+button.tool.inline, label.picker.tool.inline { flex-direction: row; gap: 6px; min-width: 0; min-height: 34px; padding: 0 10px; }
+button.tool.inline span, label.picker.tool.inline span { font-size: 12px; }
+[data-tag=toolbar] button.icon-only { min-width: 34px; min-height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 body.omarchy button.tool { border-radius: 6px; } body.omarchy button.tool.on, body.omarchy button.icon-only.on { background: var(--o-raised); color: var(--o-accent); }
 body.omarchy select, body.omarchy input[type=text], body.omarchy input[type=date], body.omarchy textarea { border-radius: 3px; min-height: 28px;
   border: 1px solid var(--o-strong); background: var(--o-page); color: var(--o-ink); font: inherit; }
@@ -685,6 +699,7 @@ body.skin label.picker.prominent { background: var(--o-accent); color: var(--o-o
 body.skin button.tool, body.skin label.picker.tool { min-width: 64px; min-height: 58px; border-radius: 6px; font-size: 11px; color: var(--o-chrome-ink); }
 body.skin button.tool:hover, body.skin label.picker.tool:hover { background: color-mix(in srgb, var(--o-chrome-ink) 8%, var(--o-chrome)); }
 body.skin button.tool.on, body.skin button.icon-only.on { background: var(--o-wash); color: var(--o-accent); }
+body.skin button.tool.inline, body.skin label.picker.tool.inline { min-width: 0; min-height: 34px; padding: 0 10px; font-size: 12px; }
 body.skin select, body.skin input[type=text], body.skin input[type=date], body.skin textarea { border-radius: 4px; min-height: 30px;
   border: 1px solid var(--o-strong); background: var(--o-card); color: var(--o-ink); font: inherit; padding: 3px 8px; }
 body.skin input[type=text]:focus, body.skin textarea:focus, body.skin select:focus { outline: none; border-color: var(--o-accent);
@@ -765,6 +780,8 @@ body.liquid button.tool, body.liquid label.picker.tool { min-width: 62px; min-he
 body.liquid button.tool:hover, body.liquid label.picker.tool:hover { background: rgba(15,23,42,.06); }
 body.liquid button.tool:active, body.liquid button:active { transform: scale(.96); }
 body.liquid button.tool.on, body.liquid button.icon-only.on { background: rgba(14,124,134,.10); color: var(--o-accent); }
+body.liquid button.tool.inline, body.liquid label.picker.tool.inline { min-width: 0; min-height: 34px; padding: 0 10px; border-radius: 10px; font-size: 12px; }
+body.liquid [data-tag=toolbar] button.icon-only { border-radius: 10px; }
 body.liquid button { border-radius: 999px; transition: background 430ms var(--sp-snappy), box-shadow 430ms var(--sp-snappy), transform 430ms var(--sp-snappy); }
 body.liquid button.icon-only { border-radius: 10px; }
 body.liquid button.prominent { box-shadow: 0 1px 2px rgba(14,124,134,.3), inset 0 1px rgba(255,255,255,.18); }
@@ -851,6 +868,20 @@ def place_mark(s, i):
     return I(hidden=True, id=f"n{i}-place", data_kind="place", data_x=str(n["x"]), data_y=str(n["y"]))
 
 
+def parent_kind(s, i):
+    """The kind of node i's parent (-1 for the root), from a map kept per screen."""
+    cached = getattr(s, "_parents", None)
+    if cached is None or cached[0] is not s.nodes:
+        parents = [-1] * len(s.nodes)
+        for k, node in enumerate(s.nodes):
+            for c in node["children"]:
+                parents[c] = k
+        cached = (s.nodes, parents)
+        s._parents = cached
+    p = cached[1][i] if 0 <= i < len(cached[1]) else -1
+    return s.nodes[p]["kind"] if p >= 0 else -1
+
+
 def render(s, i, sid):
     """One mojoui node → FastHTML components, plus its layout settings as CSS flexbox
     (a direct mapping: the browser's own layout does the work)."""
@@ -867,7 +898,8 @@ def render(s, i, sid):
         css.append(f"min-width:{n['min_w']}px")
     if n["max_w"]:
         css.append(f"max-width:{n['max_w']}px")
-    if n["grows"]:
+    if n["grows"] and not (n["w"] and parent_kind(s, i) == HSTACK) and not (n["h"] and parent_kind(s, i) == VSTACK):
+        # (a view with a fixed size along its stack never takes spare room there, as on GTK)
         css.append("flex:1 1 0;min-width:0")  # grow from zero, so a growing field never pushes its row onto two lines
     if n["fills"]:
         css.append("align-self:stretch")
@@ -904,7 +936,8 @@ def render_node(s, i, sid):
         return tag(n["text"], cls=cls, id=nid, data_kind="label")
     if kind == BUTTON:
         cls = {PROMINENT: "prominent", DESTRUCTIVE: "destructive", SUBTLE: "subtle", ICON_ONLY: "subtle icon-only",
-               ICON_ON: "subtle icon-only on", TOOL: "subtle tool", TOOL_ON: "subtle tool on"}.get(n["style"], "")
+               ICON_ON: "subtle icon-only on", TOOL: "subtle tool", TOOL_ON: "subtle tool on",
+               TOOL_INLINE: "subtle tool inline", TOOL_INLINE_ON: "subtle tool inline on"}.get(n["style"], "")
         if n["msg2"]:  # a FilePicker: a file input styled as the button; the file uploads, then on_pick gets its path
             svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"')) if n["hint"] else ""
             accept = n["options"][0] if n["options"] else ""
@@ -912,8 +945,8 @@ def render_node(s, i, sid):
                            hx_post=f"/upload/{sid}", hx_encoding="multipart/form-data", hx_trigger="change", hx_swap="none",
                            hx_vals=json.dumps({"n": i}), hx_include="#mojoui-v")
             kids = [svg, Span(n["text"]), picker] if svg else [Span(n["text"]), picker]
-            return Label(*kids, id=nid, cls=f"button picker {cls}" + (" with-icon" if svg and n["style"] not in (TOOL, TOOL_ON) else ""), data_kind="button", tabindex="0")
-        if n["style"] in (TOOL, TOOL_ON):  # the icon above a small title
+            return Label(*kids, id=nid, cls=f"button picker {cls}" + (" with-icon" if svg and n["style"] not in (TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON) else ""), data_kind="button", tabindex="0")
+        if n["style"] in (TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON):  # the icon above (or beside) a small title
             svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"'))
             return Button(svg, Span(n["text"]), id=nid, cls=cls, data_kind="button", **common)
         if not n["hint"]:
@@ -1140,7 +1173,7 @@ def make_app(module_dir):
         # While an alert is up the page behind is inert (no clicks, no keyboard focus);
         # the alert lives in an overlay beside it.
         full = s.nodes[0]["grows"] or s.nodes[0]["fills"]  # the screen fills the window
-        page = Main(version, render(s, 0, sid), id="mojoui-root", cls="full" if full else None, inert=bool(alerts))
+        page = Main(version, render(s, 0, sid), id="mojoui-root", cls="full" if full else None, inert=bool(alerts), data_sid=sid)
         layer = Div(*[render_alert(s, i, sid) for i in alerts], id="mojoui-overlay")
         if oob:
             page.attrs["hx-swap-oob"] = "true"
@@ -1318,6 +1351,18 @@ def make_app(module_dir):
                 s.design = design
                 out = (out if isinstance(out, tuple) else ((out,) if out != "" else ())) + skin(design, oob=True)
             return out
+
+    @app.post("/resize/{sid}")
+    def resize(sid: str, w: int = 0, h: int = 0):
+        s = sessions.get(sid)
+        if s is None or w <= 0 or h <= 0 or not hasattr(mod, "resize"):
+            return ""
+        with s.lock:
+            if s.closed:
+                return ""
+            d = json.loads(mod.resize(s.handle, w, h))
+            s.nodes = json.loads(mod.view(s.handle))
+            return changes(s, sid, d)
 
     @app.post("/upload/{sid}")
     async def upload(sid: str, n: int, file: UploadFile, v: int = -1):

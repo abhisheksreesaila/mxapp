@@ -3,7 +3,7 @@
 # as Excel has them, renamed in place), a formula bar and a status bar. Built from native controls, so every host that
 # has them draws it.
 
-from mojoui.view import (View, Text, Button, TextField, Tabs, HStack, VStack, Spacer, Divider, CAPTION, TOOL, TOOL_ON, ICON_ONLY,
+from mojoui.view import (View, Text, Button, TextField, Tabs, HStack, VStack, Spacer, Divider, CAPTION, TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON, ICON_ONLY,
                          ICON_ON, SUBTLE, PLAIN, CENTER, NO_MSG)
 
 
@@ -18,10 +18,11 @@ struct Tool(Copyable, Movable):
     var tip: String  # the tooltip ("Save the document (Ctrl+S)"); "" for none
 
 
-def tool_views(tools: List[Tool]) -> List[View]:
+def tool_views(tools: List[Tool], inline: Bool = False, compact: Bool = False) -> List[View]:
     var out = List[View]()
     for t in tools:
-        var b = Button(t.title, t.message, TOOL_ON if t.on else TOOL, icon=t.icon)
+        var style = (ICON_ON if t.on else ICON_ONLY) if compact else ((TOOL_INLINE_ON if t.on else TOOL_INLINE) if inline else (TOOL_ON if t.on else TOOL))
+        var b = Button(t.title, t.message, style, icon=t.icon)
         out.append(b^.tooltip(t.tip) if t.tip != "" else b^)
     return out^
 
@@ -37,16 +38,18 @@ def Toggles(tools: List[Tool]) -> List[View]:
 
 
 def Toolbar(left: List[Tool], middle: List[Tool], right: List[Tool], extra: List[View] = [], toggles: List[List[Tool]] = [],
-            before: List[View] = [], after: List[View] = []) -> View:
+            before: List[View] = [], after: List[View] = [], inline: Bool = False, compact: Bool = False) -> View:
     """Three groups, as in Numbers: view controls on the left, insert tools in the middle, organise and
     format on the right. `toggles`: groups of small format toggles after the middle tools, a divider before each
     (as Excel's Home tab has them). `before` and `after` (a dropdown with its caption, say) sit either side of the
-    middle tools; `extra` (a status chip) at the far right."""
-    var items = tool_views(left)
+    middle tools; `extra` (a status chip) at the far right. `inline`: each tool's title beside its icon, so every
+    tool and toggle sits on one line, one height (TOOL_INLINE). `compact`: only the icons (a narrow window), the titles
+    in the tooltips."""
+    var items = tool_views(left, inline, compact)
     items.append(Spacer())
     for v in before:
         items.append(v.copy())
-    for v in tool_views(middle):
+    for v in tool_views(middle, inline, compact):
         items.append(v.copy())
     if len(after) > 0:
         items.append(Divider().height(28))
@@ -57,7 +60,7 @@ def Toolbar(left: List[Tool], middle: List[Tool], right: List[Tool], extra: List
         for v in Toggles(group):
             items.append(v.copy())
     items.append(Spacer())
-    for v in tool_views(right):
+    for v in tool_views(right, inline, compact):
         items.append(v.copy())
     for v in extra:
         items.append(v.copy())

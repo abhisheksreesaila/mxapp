@@ -3,6 +3,8 @@
 from mojoui.view import View, CANVAS, BOARD, FIELD, PAN, ZOOM, KEY
 from mojoui.diff import Diff, diff
 from mojoui.canvas import Surface
+from std.time import perf_counter_ns
+from std.os import getenv
 
 
 struct Event(Copyable, Movable):
@@ -80,9 +82,22 @@ trait App(Movable, Deinitable):
         """The window's starting size in points, on desktops."""
         return (480, 560)
 
+    def resize(mut self, width: Int, height: Int):
+        """The window's content area is now width × height points: hosts say so when it opens and whenever it
+        changes (a person resizing it, a tiling desktop, a phone turning). Apps that lay out to the window keep
+        it; size changes reach the screen as patches, not rebuilds. The default ignores it."""
+        pass
+
     def design(self) -> Int:
         """The design language hosts style native controls with: NATIVE (default), FLUENT or OMARCHY."""
         return 0
+
+
+def ms(ns: Int) -> String:
+    """Nanoseconds as milliseconds with two decimals (for TRACE lines)."""
+    var hundredths = Int(ns) // 10_000
+    var frac = hundredths % 100
+    return String(hundredths // 100) + "." + ("0" if frac < 10 else "") + String(frac)
 
 
 struct Runtime[A: App](Movable):
@@ -90,16 +105,25 @@ struct Runtime[A: App](Movable):
 
     var app: Self.A
     var shown: View
+    var trace: Bool  # MOJOUI_TRACE=1: each event's update, view and diff times on stdout (TRACE: lines)
 
     def __init__(out self, var app: Self.A):
         self.shown = app.view()
         self.app = app^
+        self.trace = getenv("MOJOUI_TRACE") != ""
 
     def dispatch(mut self, event: Event) -> Diff:
+        var t0 = perf_counter_ns()
         self.app.update(event)
+        var t1 = perf_counter_ns()
         var next = self.app.view()
+        var t2 = perf_counter_ns()
         var d = diff(self.shown, next)
+        var t3 = perf_counter_ns()
         self.shown = next^
+        if self.trace:
+            print("TRACE: event " + String(event.message) + " update " + ms(t1 - t0) + " view " + ms(t2 - t1) + " diff " + ms(t3 - t2)
+                  + " nodes " + String(len(self.shown.nodes)) + (" REBUILD" if d.rebuild else " patches " + String(len(d.patches))))
         return d^
 
     def dispatch(mut self, message: Int) -> Diff:
@@ -108,9 +132,21 @@ struct Runtime[A: App](Movable):
 
     def refresh(mut self) -> Diff:
         """The screen again after state changed outside update() (e.g. in draw())."""
+        var t0 = perf_counter_ns()
         var next = self.app.view()
         var d = diff(self.shown, next)
         self.shown = next^
+        if self.trace:
+            print("TRACE: refresh " + ms(perf_counter_ns() - t0) + (" REBUILD" if d.rebuild else " patches " + String(len(d.patches))))
+        return d^
+
+    def resize(mut self, width: Int, height: Int) -> Diff:
+        """The window's content area changed size: the app hears it, then the screen catches up."""
+        var t0 = perf_counter_ns()
+        self.app.resize(width, height)
+        var d = self.refresh()
+        if self.trace:
+            print("TRACE: resize " + String(width) + "x" + String(height) + " " + ms(perf_counter_ns() - t0))
         return d^
 
     def draw(mut self, node: Int, mut surface: Surface) -> Diff:

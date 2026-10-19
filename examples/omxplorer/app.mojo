@@ -8,7 +8,7 @@
 
 from mojoui.view import (View, Text, Button, FilePicker, TextField, Canvas, Board, VStack, HStack, Card, Spacer, Divider,
                          Dropdown, Segmented, Toggle, Tabs, Grid, Scroll, Icon, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
-                         BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, CARD_GOOD, TONE_ACCENT, TONE_GOOD, TONE_WARN, TONE_STRONG, NO_MSG, TOOL, ICON_ONLY)
+                         BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, CARD_GOOD, TONE_ACCENT, TONE_GOOD, TONE_WARN, TONE_STRONG, NO_MSG, TOOL, TOOL_INLINE, ICON_ONLY)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface
 from mojoui.text import Font
@@ -140,7 +140,9 @@ comptime TABLE_H = 400  # the table's height once objects share the sheet
 comptime APP = "omxapp"  # (settings live in ~/.config/omxapp)
 comptime W = 1440  # the window (Stitch's artboards; the web check's viewport)
 comptime INSPECTOR_W = 300
-comptime GRID_H = 642
+comptime CHROME_H = 252  # the menu bar, toolbar, formula bar, bottom tabs, status bar and the gaps between them (goal 25: measured)
+comptime COMPACT_W = 1440  # narrower windows: the toolbar's tools show only their icons (their titles are tooltips)
+comptime FX_H = 42  # the formula bar and its gap (the report has none: its page is that much taller)
 comptime SYMBOLS: List[String] = ["$", "€", "£", "₹"]
 comptime NEGATIVE_STYLES: List[String] = ["−1,234", "(1,234)"]
 
@@ -157,6 +159,8 @@ struct Main(App):
     var preview: DataGrid  # Import: the first rows, read-only
     var font: Font
     var pal: Palette
+    var win_w: Int  # the window's content area in points (App.resize; W × 900 until the host says)
+    var win_h: Int
     var skin: Int  # the design (LIQUID by default, D-225; Settings → Appearance writes settings.txt, D-156)
     var import_col: Int
     var insp_tab: Int  # 0 Table, 1 Cell
@@ -214,6 +218,8 @@ struct Main(App):
         self.preview = DataGrid()
         self.font = Font()
         self.skin = skin_of(read_setting(APP, "skin", "liquid"))
+        self.win_w = W
+        self.win_h = 900
         self.pal = skin_palette(self.skin)
         self.import_col = 0
         self.insp_tab = 1
@@ -271,6 +277,15 @@ struct Main(App):
 
     def window_size(self) -> Tuple[Int, Int]:
         return (W, 900)
+
+    def resize(mut self, width: Int, height: Int):
+        """The window's content area: the sheet, the report and the inspector fill it (goal 25 M2)."""
+        self.win_w = max(width, 640)
+        self.win_h = max(height, 480)
+
+    def grid_h(self) -> Int:
+        """The sheet's height: the window less the menu bar, toolbar, formula bar, tabs and status bar."""
+        return max(240, self.win_h - CHROME_H)
 
     def design(self) -> Int:
         return self.skin  # omxplorer's own skin on every platform (D-149), never the desktop's theme
@@ -459,7 +474,7 @@ struct Main(App):
     def table_h(self) -> Int:
         if self.table_h_set > 0:
             return self.table_h_set
-        return TABLE_H if len(self.objects) > 0 else GRID_H
+        return TABLE_H if len(self.objects) > 0 else self.grid_h() - 30  # (the Board keeps 30 pt under it)
 
     def first_number(self) -> Int:
         for c in range(self.frame.columns()):
@@ -1429,16 +1444,16 @@ struct Main(App):
         var extra = List[View]()
         if streamed:
             extra.append(Text("Streamed from disk", CAPTION).tone(TONE_ACCENT).tooltip("This file is bigger than memory: its rows are read from disk as they're shown, and your edits are kept beside it until you save").tag("streamed"))
-        extra.append(FilePicker("Open", PICK, style=TOOL, icon="import", accept=".csv,.tsv,.txt,.parquet,.omx").tooltip("Open a CSV, Parquet or .omx file"))
+        extra.append(FilePicker("Open", PICK, style=TOOL_INLINE, icon="import", accept=".csv,.tsv,.txt,.parquet,.omx").tooltip("Open a CSV, Parquet or .omx file"))
         if self.sheet_tab == 1:
-            return Toolbar(left, self.report_tools(), right, extra, before=self.report_controls(), after=self.filter_controls())
+            return Toolbar(left, self.report_tools(), right, extra, before=self.report_controls(), after=self.filter_controls(), inline=True)  # (its tile tools share one icon: their titles stay)
         var middle = List[Tool]()
         middle.append(Tool("Add row", "row-plus", ADD_ROW, False, "A new row at the end (Ctrl+Shift+R)"))
         middle.append(Tool("Formula", "formula", NEW_FORMULA, self.formula_open, "A new column computed from others"))
         middle.append(Tool("Sort", "sort", SORT, self.grid.sort_col >= 0, "Sort by the selected column; again to flip"))
         middle.append(Tool("Pivot", "pivot", INSERT_PIVOT, False, "A pivot table of the selected column (Ctrl+Shift+P)"))
         middle.append(Tool("Chart", "chart-bar", INSERT_CHART, False, "A chart of the selected column (Ctrl+Shift+C)"))
-        return Toolbar(left, middle, right, extra, toggles=self.format_tools())
+        return Toolbar(left, middle, right, extra, toggles=self.format_tools(), inline=True, compact=self.win_w < COMPACT_W)
 
     def format_tools(self) -> List[List[Tool]]:
         """Excel's Home tab, in small toggles: font, colours, alignment, number. Each shows the selection's state."""
@@ -1615,7 +1630,7 @@ struct Main(App):
         return StatusBar(items, (fixed(self.milliseconds, 1) + " ms on " + (self.frame.device_name if self.ran_gpu else "CPU")) if self.show_timings else "")
 
     def sheet_width(self) -> Int:
-        return W - 40 - (INSPECTOR_W + 16 if self.inspector_open else 0)
+        return self.win_w - 40 - (INSPECTOR_W + 16 if self.inspector_open else 0)
 
     def report_view(self) -> View:
         """The Report tab (Stitch 06): KPI and chart tiles over the filtered rows, and the row that adds them."""
@@ -1643,12 +1658,12 @@ struct Main(App):
         var ran = " · " + fixed(self.milliseconds, 1) + " ms on " + ("the GPU" if self.ran_gpu else "the CPU") if self.show_timings else String("")
         var facts = String(matched + ran)
         if facts.startswith(" · "):
-            var cut = String(facts[byte=5:])  # (" · " is 5 bytes: the dot is two)
+            var cut = String(facts[byte=len(String(" · ").as_bytes()):])  # (the dot is two bytes: " · " is four)
             facts = cut
         var page = ReportPage(self.report_name, self.sheet_name + " · " + self.filter.words(self.frame), kpis, charts, facts)
         if len(self.tiles) == 0:  # (an empty report says where tiles come from)
             page = VStack(page^, Card(Text("An empty report: add a tile from the toolbar above (Sum, Average, Count or Chart of the column you pick there). Every tile reads the table, so edits show here at once.", CAPTION), spacing=8).fill(), spacing=16).fill().align(START)
-        return Scroll(page^.width(self.sheet_width() - 8).padding(4, 4), height=GRID_H + 30).width(self.sheet_width())  # (full width: the charts span it)
+        return Scroll(page^.width(self.sheet_width() - 8).padding(4, 4), height=self.grid_h() + FX_H).fill().grow()  # (full width: the charts span it)
 
     def sheet_screen(self) -> View:
         var width = self.sheet_width()
@@ -1671,16 +1686,17 @@ struct Main(App):
         if ed[2] > 0:
             items.append(self.grid.editor(self.edit_text, CELL_COMMIT, CELL_CANCEL).at(self.table_x + ed[0], self.table_y + HEADER_H + ed[1]).width(ed[2]).height(30))
         var area = (Board(items^, width, bottom + 24, on_move=MOVE, on_resize=RESIZE, reveal=self.reveal, reveal_count=self.reveal_count)
-                    .width(width).height(GRID_H + 30)) if self.sheet_tab == 0 else self.report_view()
-        var main = VStack(fx, area^, spacing=6).width(width) if self.sheet_tab == 0 else VStack(area^, spacing=6).width(width)
-        var row = HStack(main, self.inspector(), spacing=16).align(START) if self.inspector_open else HStack(main, spacing=0)
+                    .fill().grow()) if self.sheet_tab == 0 else self.report_view()
+        # The sheet's column takes the room the inspector leaves, the row takes the height the bars leave: sizes
+        # come from the window (App.resize), never asked of it, so the window never grows to fit them (goal 25 M2).
+        var main = (VStack(fx, area^, spacing=6) if self.sheet_tab == 0 else VStack(area^, spacing=6)).grow().align(STRETCH)
+        var row = (HStack(main, self.inspector(), spacing=16) if self.inspector_open else HStack(main, spacing=0)).align(STRETCH)
         var tabs: List[Tab] = [Tab(self.sheet_name, "sheet"), Tab(self.report_name, "chart-bar")]
         var chip: List[View] = [Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD)]
         var parts = List[View]()
         parts.append(self.menu_bar())
-        parts.append(self.toolbar().height(64))
-        parts.append(row^.padding(0, 20))
-        parts.append(Spacer())
+        parts.append(self.toolbar())
+        parts.append(row^.padding(0, 20).fill().grow())
         parts.append(BottomTabs(tabs, self.sheet_tab, TAB, self.renaming, RENAME_SUBMIT, RENAME_CANCEL, chip).height(30))  # (Excel's place for them)
         parts.append(self.status().height(30))
         if self.ctx_col >= 0 and self.sheet_tab == 0:

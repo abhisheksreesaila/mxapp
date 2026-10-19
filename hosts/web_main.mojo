@@ -7,7 +7,7 @@ from std.python.bindings import PythonModuleBuilder
 from app import Main
 from mojoui.shared import shared_loads
 from mojoui.theme import Palette, hex_of, skin_palette
-from mojoui.hosts.web import web_init_shared, web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design, web_key, web_cancel, web_describe
+from mojoui.hosts.web import web_init_shared, web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design, web_key, web_cancel, web_describe, web_resize
 
 
 @export
@@ -29,6 +29,7 @@ def PyInit_mojoui_app() abi("C") -> PythonObject:
         m.def_function[key]("key", docstring="A key on a focused canvas (node, name, modifiers); returns what changed as JSON.")
         m.def_function[cancel]("cancel", docstring="Escape in a field (node, text); returns what changed as JSON.")
         m.def_function[describe]("describe", docstring="A canvas's content as text for an agent (node, first, count); '' when it offers none.")
+        m.def_function[resize]("resize", docstring="The page's viewport (width, height in CSS pixels); returns what changed as JSON.")
         m.def_function[frame]("frame", docstring="A display frame for a canvas (node, microseconds); returns what changed as JSON.")
         return m.finalize()
     except e:
@@ -71,6 +72,10 @@ def close(handle: PythonObject) raises -> PythonObject:
 
 def draw(handle: PythonObject, node: PythonObject, width: PythonObject, height: PythonObject, scale: PythonObject, still: PythonObject) raises -> PythonObject:
     return PythonObject(web_draw[Main](Int(py=handle), Int(py=node), Int(py=width), Int(py=height), Float64(py=scale), Int(py=still) != 0))
+
+
+def resize(handle: PythonObject, width: PythonObject, height: PythonObject) raises -> PythonObject:
+    return PythonObject(web_resize[Main](Int(py=handle), Int(py=width), Int(py=height)))
 
 
 def gesture(handle: PythonObject, node: PythonObject, kind: PythonObject, x: PythonObject, y: PythonObject, dx: PythonObject, dy: PythonObject, zoom: PythonObject) raises -> PythonObject:

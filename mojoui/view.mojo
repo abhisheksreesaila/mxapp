@@ -103,6 +103,13 @@ comptime ICON_ONLY = 4  # quiet and only its icon shows; the title is its toolti
 comptime TOOL = 5  # a toolbar button: the icon above a small title (Numbers, Keynote)
 comptime TOOL_ON = 6  # the same, shown as the active tool
 comptime ICON_ON = 7  # ICON_ONLY shown pressed (a toggle that is on: Bold, Align left)
+comptime TOOL_INLINE = 8  # a toolbar button: its icon beside a small title, on one line with icon-only toggles
+comptime TOOL_INLINE_ON = 9  # the same, shown as the active tool
+
+
+def as_tool(style: Int) -> Int:
+    """TOOL_INLINE as TOOL (and its ON), for hosts that draw only the icon-above-title tool."""
+    return TOOL if style == TOOL_INLINE else (TOOL_ON if style == TOOL_INLINE_ON else style)
 
 comptime NO_MSG = 0
 

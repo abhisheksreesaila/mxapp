@@ -15,10 +15,10 @@ from mojoui.view import (
     LIQUID, CLIPBOARD, View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, SECONDARY, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, KEY, SHIFT, CTRL, ALT,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON, KEY, SHIFT, CTRL, ALT,
 )
-from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
-from mojoui.app import App, Event, Runtime
+from mojoui.diff import Diff, Patch, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE, SET_SIZE
+from mojoui.app import App, Event, Runtime, ms
 from mojoui.canvas import Surface, rgba
 from mojoui.icons_data import LUCIDE_NAMES, lucide_svg
 from mojoui.theme import Palette, hex_of, mix, skin_palette, skin_name
@@ -108,14 +108,33 @@ def add_class(widget: Int, name: String):
     external_call["gtk_widget_add_css_class", NoneType](widget, n.as_c_string_span())
 
 
+def app_data(name: String) -> Int:
+    var key = name
+    return external_call["g_object_get_data", Int](external_call["g_application_get_default", Int](), key.as_c_string_span())
+
+
+def set_app_data(name: String, value: Int):
+    var key = name
+    external_call["g_object_set_data", NoneType](external_call["g_application_get_default", Int](), key.as_c_string_span(), value)
+
+
 def set_node(widget: Int, node: Int):
+    """Ties a widget to node `node` through the node's id, which stays the same while a partial rebuild renumbers
+    the nodes around it (so the widgets that stay need no new data)."""
     var key = String(NODE_KEY)
-    external_call["g_object_set_data", NoneType](widget, key.as_c_string_span(), node + 1)  # +1: never NULL
+    var id = -1
+    if node >= 0 and node < app_data("mojoui-ids-n"):
+        id = Pointer[Int, MutUntrackedOrigin](unsafe_from_address=app_data("mojoui-ids")).unsafe_offset(node)[]
+    external_call["g_object_set_data", NoneType](widget, key.as_c_string_span(), id + 1)  # +1: never NULL
 
 
 def get_node(widget: Int) -> Int:
+    """The node a widget stands for now (-1: none, or gone)."""
     var key = String(NODE_KEY)
-    return external_call["g_object_get_data", Int](widget, key.as_c_string_span()) - 1
+    var id = external_call["g_object_get_data", Int](widget, key.as_c_string_span()) - 1
+    if id < 0 or id >= app_data("mojoui-id-node-n"):
+        return -1
+    return Pointer[Int, MutUntrackedOrigin](unsafe_from_address=app_data("mojoui-id-node")).unsafe_offset(id)[]
 
 
 def set_busy(on: Bool):
@@ -353,6 +372,8 @@ struct GtkCanvas(Copyable, Movable):
     var click: Int  # GtkGestureClick
     var secondary: Int  # GtkGestureClick for the right button (SECONDARY: a context menu)
     var keys: Int  # GtkEventControllerKey (the canvas takes focus when pressed)
+    var motion_ctl: Int  # GtkEventControllerMotion
+    var pinch_ctl: Int  # GtkGestureZoom
     var pixels: List[UInt32]
     var wpx: Int
     var hpx: Int
@@ -382,6 +403,8 @@ struct GtkCanvas(Copyable, Movable):
         self.click = 0
         self.secondary = 0
         self.keys = 0
+        self.motion_ctl = 0
+        self.pinch_ctl = 0
         self.pixels = List[UInt32]()
         self.wpx = 0
         self.hpx = 0
@@ -442,6 +465,14 @@ struct GtkHost[A: App](Movable):
     var reveal_pending: Int  # a Board node waiting for its layout to scroll a child into view, or -1
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
+    var outers: List[Int]  # what each node's widget sits in its parent as (the widget, or a clamp around it)
+    var kinds: List[Int]  # each shown node's kind (a partial rebuild closes what went: dialogs, popovers)
+    var ids: List[Int]  # each shown node's id (set_node stores ids: they survive renumbering)
+    var id_node: List[Int]  # id → the node it is now (-1: gone)
+    var content_w: Int  # the content area's size last told to the app (App.resize)
+    var content_h: Int
+    var pending: Diff  # a partial rebuild waiting for the next idle turn
+    var has_pending: Bool
     var dialog: Int  # the open alert dialog, if any
     var popovers: List[Int]  # context-menu popovers parented to anchors (unparented at the next rebuild)
     var popups: List[Int]  # popovers to pop up once the new screen is in the window
@@ -477,6 +508,14 @@ struct GtkHost[A: App](Movable):
         self.clip_text = ""
         self.window = 0
         self.widgets = List[Int]()
+        self.outers = List[Int]()
+        self.kinds = List[Int]()
+        self.ids = List[Int]()
+        self.id_node = List[Int]()
+        self.content_w = 0
+        self.content_h = 0
+        self.pending = Diff(False, List[Patch]())
+        self.has_pending = False
         self.dialog = 0
         self.popovers = List[Int]()
         self.popups = List[Int]()
@@ -538,6 +577,31 @@ struct GtkHost[A: App](Movable):
             return clamp
         return w
 
+    def resize_widget(self, i: Int):
+        """A SET_SIZE patch: node i's sizes onto the widget apply_layout() sized (inside its clamp, if it has one)."""
+        ref node = self.rt.shown.nodes[i]
+        var outer = self.outers[i]
+        if outer == 0:
+            return
+        var target = outer
+        var cap = node.max_w if node.max_w != 0 else node.w
+        if cap != 0 and Int(external_call["g_type_check_instance_is_a", c_int](outer, external_call["adw_clamp_get_type", Int]())) != 0:
+            external_call["adw_clamp_set_maximum_size", NoneType](outer, c_int(cap))
+            external_call["adw_clamp_set_tightening_threshold", NoneType](outer, c_int(cap))
+            target = external_call["adw_clamp_get_child", Int](outer)
+        var want_w = max(node.w, node.min_w)
+        external_call["gtk_widget_set_size_request", NoneType](target, c_int(want_w if want_w != 0 else -1), c_int(node.h if node.h != 0 else -1))
+
+    def build_child(mut self, parent: Int, c: Int, self_addr: Int) -> Int:
+        """Builds child c of stack `parent` and aligns it in the stack."""
+        var child = self.build(c, self_addr)
+        var node = self.rt.shown.nodes[parent].copy()
+        self.place_child(node, self.rt.shown.nodes[c], child)
+        if node.kind == VSTACK and self.rt.shown.nodes[c].kind == TEXT and node.align_items == START:
+            external_call["gtk_label_set_justify", NoneType](self.widgets[c], c_int(0))  # left-aligned lines too
+            external_call["gtk_label_set_xalign", NoneType](self.widgets[c], Float32(0))
+        return child
+
     def place_child(self, parent: Node, child_node: Node, child: Int):
         """Aligns a stack's child: the stack's align, then the child's own fill/grow."""
         var vertical = parent.kind == VSTACK
@@ -548,14 +612,20 @@ struct GtkHost[A: App](Movable):
             cross = 2  # GTK_ALIGN_END
         if parent.align_items == STRETCH or child_node.fills or child_node.kind == SPACER:
             cross = 0  # GTK_ALIGN_FILL
+        # A spacer takes room only along its stack (else a Spacer in a toolbar makes the whole bar tall); a view
+        # with a fixed size along the stack never takes spare room there (as on the other hosts).
         if vertical:
             external_call["gtk_widget_set_halign", NoneType](child, c_int(cross))
-            if child_node.grows:
+            if child_node.kind == SPACER:
+                external_call["gtk_widget_set_hexpand", NoneType](child, c_int(0))
+            if child_node.grows and child_node.h == 0:
                 external_call["gtk_widget_set_vexpand", NoneType](child, c_int(1))
                 external_call["gtk_widget_set_valign", NoneType](child, c_int(0))
         else:
             external_call["gtk_widget_set_valign", NoneType](child, c_int(cross))
-            if child_node.grows:
+            if child_node.kind == SPACER:
+                external_call["gtk_widget_set_vexpand", NoneType](child, c_int(0))
+            if child_node.grows and child_node.w == 0:
                 external_call["gtk_widget_set_hexpand", NoneType](child, c_int(1))
                 external_call["gtk_widget_set_halign", NoneType](child, c_int(0))
 
@@ -590,9 +660,10 @@ struct GtkHost[A: App](Movable):
                 external_call["gtk_widget_set_tooltip_text", NoneType](w, t.as_c_string_span())
                 if node.style == ICON_ON:
                     add_class(w, "mui-tool-on")
-            elif node.style == TOOL or node.style == TOOL_ON:  # the icon above a small title
+            elif node.style == TOOL or node.style == TOOL_ON or node.style == TOOL_INLINE or node.style == TOOL_INLINE_ON:  # the icon above (or beside) a small title
+                var inline = node.style == TOOL_INLINE or node.style == TOOL_INLINE_ON
                 w = external_call["gtk_button_new", Int]()
-                var box = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(2))
+                var box = external_call["gtk_box_new", Int](c_int(HORIZONTAL if inline else VERTICAL), c_int(6 if inline else 2))
                 if node.hint != "":
                     var icon = gtk_icon(node.hint)
                     _ = external_call["gtk_box_append", NoneType](box, external_call["gtk_image_new_from_icon_name", Int](icon.as_c_string_span()))
@@ -601,7 +672,9 @@ struct GtkHost[A: App](Movable):
                 external_call["gtk_box_append", NoneType](box, label)
                 external_call["gtk_button_set_child", NoneType](w, box)
                 add_class(w, "mui-tool")
-                if node.style == TOOL_ON:
+                if inline:
+                    add_class(w, "mui-tool-inline")
+                if node.style == TOOL_ON or node.style == TOOL_INLINE_ON:
                     add_class(w, "mui-tool-on")
             elif node.hint != "":  # icon + title
                 w = external_call["gtk_button_new", Int]()
@@ -618,7 +691,7 @@ struct GtkHost[A: App](Movable):
                     add_class(w, "pill")
             elif node.style == DESTRUCTIVE:
                 add_class(w, "destructive-action")
-            elif node.style == SUBTLE or node.style == ICON_ONLY or node.style == ICON_ON or node.style == TOOL or node.style == TOOL_ON:
+            elif node.style == SUBTLE or node.style == ICON_ONLY or node.style == ICON_ON or node.style == TOOL or node.style == TOOL_ON or node.style == TOOL_INLINE or node.style == TOOL_INLINE_ON:
                 add_class(w, "flat")
             connect(w, "clicked", on_clicked[Self.A], self_addr)
         elif node.kind == FIELD:
@@ -725,6 +798,8 @@ struct GtkHost[A: App](Movable):
             c.click = click
             c.secondary = secondary
             c.keys = keys
+            c.motion_ctl = motion
+            c.pinch_ctl = pinch
             self.canvases.append(c^)
             self.arm(ci, self_addr)
             # A picture asks for its texture's size in pixels, which would grow the canvas each
@@ -856,7 +931,9 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_scrolled_window_set_propagate_natural_height", NoneType](w, c_int(1))
             external_call["gtk_scrolled_window_set_propagate_natural_width", NoneType](w, c_int(1))
             for c in node.children:
-                external_call["gtk_scrolled_window_set_child", NoneType](w, self.build(c, self_addr))
+                var content = self.build(c, self_addr)
+                external_call["gtk_widget_set_valign", NoneType](content, c_int(1))  # its own height: a taller scroll doesn't stretch it
+                external_call["gtk_scrolled_window_set_child", NoneType](w, content)
         elif node.kind == DIALOG:
             var dlg = external_call["adw_dialog_new", Int]()
             var title = node.text
@@ -1136,21 +1213,20 @@ struct GtkHost[A: App](Movable):
                 var c = node.children[k]
                 if j == BETWEEN and k > 0:
                     external_call["gtk_box_append", NoneType](w, spacer(orientation))
-                var child = self.build(c, self_addr)
-                self.place_child(node, self.rt.shown.nodes[c], child)
-                if orientation == VERTICAL and self.rt.shown.nodes[c].kind == TEXT and node.align_items == START:
-                    external_call["gtk_label_set_justify", NoneType](self.widgets[c], c_int(0))  # left-aligned lines too
-                    external_call["gtk_label_set_xalign", NoneType](self.widgets[c], Float32(0))
+                var child = self.build_child(i, c, self_addr)
                 external_call["gtk_box_append", NoneType](w, child)
             if j == CENTER:
                 external_call["gtk_box_append", NoneType](w, spacer(orientation))
         set_node(w, i)
         if self.widgets[i] == 0:  # (some branches already stored an inner control)
             self.widgets[i] = w
-        return self.apply_layout(i, w)
+        var outer = self.apply_layout(i, w)
+        self.outers[i] = outer
+        return outer
 
     def show(mut self, self_addr: Int):
         """(Re)builds the window's content from rt.shown."""
+        var t_show = perf_counter_ns()
         set_busy(True)
         if self.dialog != 0:  # the previous screen's alert (or dialog) goes with it
             set_node(self.dialog, -1)  # (closing now isn't on_close: the screen is being replaced)
@@ -1163,7 +1239,17 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_widget_unparent", NoneType](pop)
         self.popovers = List[Int]()
         self.popups = List[Int]()
+        self.has_pending = False  # (a full rebuild covers any partial one waiting)
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)
+        self.outers = List[Int](length=len(self.rt.shown.nodes), fill=0)
+        self.kinds = List[Int](capacity=len(self.rt.shown.nodes))
+        self.ids = List[Int](capacity=len(self.rt.shown.nodes))
+        self.id_node = List[Int](capacity=len(self.rt.shown.nodes))
+        for k in range(len(self.rt.shown.nodes)):
+            self.kinds.append(self.rt.shown.nodes[k].kind)
+            self.ids.append(k)
+            self.id_node.append(k)
+        self.publish_ids()
         self.canvases = List[GtkCanvas]()
         self.boards = List[BoardChild]()
         self.board_scrollers = List[Tuple[Int, Int]]()
@@ -1195,6 +1281,13 @@ struct GtkHost[A: App](Movable):
         for pop in self.popups:  # a context menu opens once its anchor is in the window
             external_call["gtk_popover_popup", NoneType](pop)
         self.popups = List[Int]()
+        self.focus_after_build()
+        set_busy(False)
+        if self.rt.trace:
+            print("TRACE: rebuild " + ms(perf_counter_ns() - t_show) + " widgets " + String(len(self.rt.shown.nodes)))
+
+    def focus_after_build(mut self):
+        """After new widgets went up: an in-place editor takes the keyboard, or it goes back to the canvas that had it."""
         var editor = False
         for k in range(len(self.rt.shown.nodes)):  # an in-place editor (.focused()) takes the keyboard, its text selected
             if self.rt.shown.nodes[k].kind == FIELD and self.rt.shown.nodes[k].value >= 1 and self.widgets[k] != 0:
@@ -1229,7 +1322,170 @@ struct GtkHost[A: App](Movable):
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
         self.focus = -1
-        set_busy(False)
+
+    def publish_ids(self):
+        """Hands set_node()/get_node() the id tables (kept on the GApplication: they're free functions)."""
+        set_app_data("mojoui-ids", Int(self.ids.unsafe_ptr()))
+        set_app_data("mojoui-ids-n", len(self.ids))
+        set_app_data("mojoui-id-node", Int(self.id_node.unsafe_ptr()))
+        set_app_data("mojoui-id-node-n", len(self.id_node))
+
+    def update_part(mut self, self_addr: Int):
+        """A partial rebuild (Diff.partial): the widgets the diff kept stay as they are (with their hover, scroll,
+        focus, animations and a drag in progress); only the new parts are built, and only the stacks whose children
+        changed lay them out again."""
+        var t0 = perf_counter_ns()
+        set_busy(True)
+        self.has_pending = False
+        var kept = self.pending.kept.copy()
+        var resync = self.pending.resync.copy()
+        var patches = self.pending.patches.copy()
+        ref nodes = self.rt.shown.nodes
+        var n = len(nodes)
+        var old_n = len(self.widgets)
+        var new_of_old = List[Int](length=old_n, fill=-1)
+        for j in range(n):
+            if kept[j] >= 0:
+                new_of_old[kept[j]] = j
+        # What went: its dialog closes, its popovers go (the rest goes with the widgets that held it).
+        for o in range(old_n):
+            if new_of_old[o] >= 0 or self.widgets[o] == 0:
+                continue
+            var kind = self.kinds[o]
+            if kind == DIALOG and self.widgets[o] == self.dialog:
+                set_node(self.dialog, -1)  # (closing now isn't on_close: the app took it away)
+                _ = external_call["adw_dialog_force_close", c_int](self.dialog)
+                external_call["g_object_unref", NoneType](self.dialog)
+                self.dialog = 0
+            elif kind == POPOVER or kind == MENU:
+                var rest = List[Int]()
+                for pop in self.popovers:
+                    if pop == self.widgets[o]:
+                        set_node(pop, -1)
+                        external_call["gtk_popover_popdown", NoneType](pop)
+                        external_call["gtk_widget_unparent", NoneType](pop)
+                    else:
+                        rest.append(pop)
+                self.popovers = rest^
+        # Ids: the kept nodes keep theirs (their widgets' data stays right); the rest are new.
+        for o in range(old_n):
+            if new_of_old[o] < 0 and o < len(self.ids) and 0 <= self.ids[o] < len(self.id_node):
+                self.id_node[self.ids[o]] = -1
+        var ids = List[Int](length=n, fill=-1)
+        for j in range(n):
+            if kept[j] >= 0:
+                ids[j] = self.ids[kept[j]]
+                self.id_node[ids[j]] = j
+            else:
+                ids[j] = len(self.id_node)
+                self.id_node.append(j)
+        self.ids = ids^
+        self.publish_ids()
+        var widgets = List[Int](length=n, fill=0)
+        var outers = List[Int](length=n, fill=0)
+        var kinds = List[Int](capacity=n)
+        for j in range(n):
+            kinds.append(nodes[j].kind)
+            if kept[j] >= 0:
+                widgets[j] = self.widgets[kept[j]]
+                outers[j] = self.outers[kept[j]]
+        self.widgets = widgets^
+        self.outers = outers^
+        self.kinds = kinds^
+        # Canvases and boards that stay are renumbered (and their controllers told their new place in the list).
+        var canvases = List[GtkCanvas]()
+        for ref c in self.canvases:
+            if c.node >= 0 and c.node < old_n and new_of_old[c.node] >= 0:
+                var moved = c.copy()
+                moved.node = new_of_old[c.node]
+                var ci = len(canvases)
+                for ctl in [moved.widget, moved.drag, moved.scroll, moved.click, moved.secondary, moved.keys, moved.motion_ctl, moved.pinch_ctl]:
+                    if ctl != 0:
+                        set_index(ctl, ci)
+                canvases.append(moved^)
+        self.canvases = canvases^
+        var boards = List[BoardChild]()
+        var last_drag = 0
+        for ref b in self.boards:
+            if b.board >= 0 and b.board < old_n and new_of_old[b.board] >= 0 and new_of_old[b.node] >= 0:
+                var moved = b.copy()
+                moved.board = new_of_old[b.board]
+                moved.node = new_of_old[b.node]
+                if moved.drag != last_drag:  # (a board's drag knows its first child's place in the list)
+                    set_index(moved.drag, len(boards))
+                    last_drag = moved.drag
+                boards.append(moved^)
+        self.boards = boards^
+        var scrollers = List[Tuple[Int, Int]]()
+        for bs in self.board_scrollers:
+            if 0 <= bs[0] < old_n and new_of_old[bs[0]] >= 0:
+                scrollers.append((new_of_old[bs[0]], bs[1]))
+        self.board_scrollers = scrollers^
+        self.focus = new_of_old[self.focus] if 0 <= self.focus < old_n else -1
+        self.key_node = new_of_old[self.key_node] if 0 <= self.key_node < old_n else -1
+        self.editor_node = new_of_old[self.editor_node] if 0 <= self.editor_node < old_n else -1
+        self.picker_node = new_of_old[self.picker_node] if 0 <= self.picker_node < old_n else -1
+        self.reveal_pending = new_of_old[self.reveal_pending] if 0 <= self.reveal_pending < old_n else -1
+        # The stacks whose children changed: build the new children, drop the old, put them in order.
+        var dialog_before = self.dialog
+        var built = 0
+        self.toast_claimed = False
+        for j in resync:
+            var box = self.widgets[j]
+            var want = List[Int]()
+            for c in self.rt.shown.nodes[j].children.copy():
+                if kept[c] >= 0:
+                    want.append(self.outers[c])
+                else:
+                    want.append(self.build_child(j, c, self_addr))
+                    built += 1
+            var cur = external_call["gtk_widget_get_first_child", Int](box)
+            while cur != 0:
+                var next = external_call["gtk_widget_get_next_sibling", Int](cur)
+                if cur not in want:
+                    external_call["gtk_box_remove", NoneType](box, cur)
+                cur = next
+            var prev = 0
+            for child in want:
+                if external_call["gtk_widget_get_parent", Int](child) == box:
+                    external_call["gtk_box_reorder_child_after", NoneType](box, child, prev)
+                else:
+                    external_call["gtk_box_insert_child_after", NoneType](box, child, prev)
+                prev = child
+        var toast_shown = False
+        for j in range(n):
+            if self.kinds[j] == TOAST and self.widgets[j] == self.toast and self.toast != 0:
+                toast_shown = True
+        if self.toast != 0 and not toast_shown:  # its node went: the toast goes
+            set_node(self.toast, -1)
+            external_call["adw_toast_dismiss", NoneType](self.toast)
+            external_call["g_object_unref", NoneType](self.toast)
+            self.toast = 0
+            self.toast_text = ""
+        self.toast_claimed = False
+        if self.dialog != 0 and self.dialog != dialog_before and (getenv("MOJOUI_TEST") == "" or getenv("MOJOUI_SHOT") != ""):
+            external_call["adw_dialog_present", NoneType](self.dialog, self.window)
+        for pop in self.popups:  # a new context menu opens once its anchor is in the window
+            external_call["gtk_popover_popup", NoneType](pop)
+        self.popups = List[Int]()
+        if self.reveal_pending >= 0:
+            _ = external_call["gtk_widget_add_tick_callback", c_uint](self.window, on_reveal_tick[Self.A], self_addr, 0)
+        self.focus_after_build()
+        self.apply_patches(patches, self_addr)
+        if self.rt.trace:
+            print("TRACE: partial " + ms(perf_counter_ns() - t0) + " built " + String(built) + " of " + String(n) + " in " + String(len(resync)) + " stacks")
+
+    def tell_size(mut self, self_addr: Int):
+        """The content area's size, if it changed, goes to the app (App.resize); the screen follows as patches."""
+        var area = self.toast_overlay if self.toast_overlay != 0 else self.window
+        var w = Int(external_call["gtk_widget_get_width", c_int](area))
+        var h = Int(external_call["gtk_widget_get_height", c_int](area))
+        if w <= 0 or h <= 0 or (w == self.content_w and h == self.content_h):
+            return
+        self.content_w = w
+        self.content_h = h
+        var d = self.rt.resize(w, h)
+        self.apply(d, self_addr)
 
     def scroller_of(self, board: Int) -> Int:
         for bs in self.board_scrollers:
@@ -1355,14 +1611,30 @@ struct GtkHost[A: App](Movable):
     def apply(mut self, d: Diff, self_addr: Int):
         self.apply_design()
         self.copy_if_asked()
+        if d.rebuild and d.partial and not self.has_pending and len(self.widgets) > 0 and not busy():
+            # Only the parts that changed, on the next idle turn (never inside a signal handler: a widget that goes
+            # may be the one that sent the signal). Events wait until then.
+            self.pending = d.copy()
+            self.has_pending = True
+            set_busy(True)
+            _ = external_call["g_idle_add", c_uint](on_idle_partial[Self.A], self_addr)
+            return
         if d.rebuild:
             # Rebuild on the next idle turn, never inside a signal handler: the widget
             # that sent the signal would be destroyed while GTK is still using it.
+            self.has_pending = False  # (the full rebuild covers it)
             set_busy(True)  # ignore events until the new widgets are up
             _ = external_call["g_idle_add", c_uint](on_idle_rebuild[Self.A], self_addr)
             return
+        if self.has_pending:  # the widgets are still the old screen's: these patches wait for the partial rebuild
+            for p in d.patches:
+                self.pending.patches.append(p.copy())
+            return
+        self.apply_patches(d.patches, self_addr)
+
+    def apply_patches(mut self, patches: List[Patch], self_addr: Int):
         set_busy(True)
-        for p in d.patches:
+        for p in patches:
             var w = self.widgets[p.node]
             var kind = self.rt.shown.nodes[p.node].kind
             if p.op == SET_TEXT:
@@ -1370,7 +1642,7 @@ struct GtkHost[A: App](Movable):
                 if kind == TEXT:
                     external_call["gtk_label_set_text", NoneType](w, t.as_c_string_span())
                 elif kind == BUTTON and self.rt.shown.nodes[p.node].hint != "":
-                    if self.rt.shown.nodes[p.node].style == TOOL or self.rt.shown.nodes[p.node].style == TOOL_ON:
+                    if self.rt.shown.nodes[p.node].style == TOOL or self.rt.shown.nodes[p.node].style == TOOL_ON or self.rt.shown.nodes[p.node].style == TOOL_INLINE or self.rt.shown.nodes[p.node].style == TOOL_INLINE_ON:
                         external_call["gtk_label_set_text", NoneType](external_call["gtk_widget_get_last_child", Int](external_call["gtk_button_get_child", Int](w)), t.as_c_string_span())
                     elif self.rt.shown.nodes[p.node].style == ICON_ONLY or self.rt.shown.nodes[p.node].style == ICON_ON:
                         if self.rt.shown.nodes[p.node].tip == "":  # (a tooltip of its own stays)
@@ -1426,6 +1698,8 @@ struct GtkHost[A: App](Movable):
                 var tex = texture(img.pixels, img.spacing, img.size)
                 external_call["gtk_picture_set_paintable", NoneType](w, tex)
                 external_call["g_object_unref", NoneType](tex)
+            elif p.op == SET_SIZE:
+                self.resize_widget(p.node)
             elif p.op == SET_PLACE and not self.board_list:  # (a list ignores positions)
                 ref n = self.rt.shown.nodes[p.node]
                 if kind == BOARD:
@@ -1549,6 +1823,8 @@ struct GtkHost[A: App](Movable):
         self.canvases[ci].scale = scale
         self.canvases[ci].drawn = version if not surface.again else -1  # mid-animation: draw again next frame
         self.canvases[ci].draws += 1
+        if self.rt.trace:
+            print("TRACE: draw canvas " + String(self.rt.shown.nodes[node].style) + " " + String(wpx) + "x" + String(hpx) + " " + String(self.canvases[ci].draw_ms) + " ms")
         self.apply(d, self_addr)
 
     def copy_if_asked(mut self):
@@ -1587,6 +1863,13 @@ def host_at[A: App](addr: Int) -> Pointer[GtkHost[A], MutUntrackedOrigin]:
 
 # ---------- signal handlers (GTK calls these) ----------
 
+def on_idle_partial[A: App](host_addr: Int) abi("C") -> c_int:
+    var host = host_at[A](host_addr)
+    if host[].has_pending:  # (a full rebuild may have come first)
+        host[].update_part(host_addr)  # update_part() clears the busy flag (apply_patches)
+    return 0
+
+
 def on_idle_rebuild[A: App](host_addr: Int) abi("C") -> c_int:
     host_at[A](host_addr)[].show(host_addr)  # show() clears the busy flag
     return 0  # G_SOURCE_REMOVE: run once
@@ -1611,10 +1894,27 @@ def on_tick[A: App](widget: Int, clock: Int, host_addr: Int) abi("C") -> c_int:
 # (These two only set flags and add tick callbacks, so they're safe even while the host is busy.)
 def on_window_resized[A: App](window: Int, pspec: Int, host_addr: Int) abi("C"):
     host_at[A](host_addr)[].arm_all(host_addr)  # canvases redraw at their new size
+    queue_resize[A](host_addr)
 
 
 def on_surface_layout[A: App](surface: Int, width: c_int, height: c_int, host_addr: Int) abi("C"):
     host_at[A](host_addr)[].arm_all(host_addr)  # the compositor resized the window (e.g. tiling)
+    queue_resize[A](host_addr)
+
+
+def queue_resize[A: App](host_addr: Int):
+    """Tells the app the window's new size on the next idle turn (once, however many signals came)."""
+    if app_data("mojoui-resize-queued") == 0:
+        set_app_data("mojoui-resize-queued", 1)
+        _ = external_call["g_idle_add", c_uint](on_idle_resize[A], host_addr)
+
+
+def on_idle_resize[A: App](host_addr: Int) abi("C") -> c_int:
+    if busy():
+        return 1  # G_SOURCE_CONTINUE: after the widgets are up
+    set_app_data("mojoui-resize-queued", 0)
+    host_at[A](host_addr)[].tell_size(host_addr)
+    return 0
 
 
 def on_window_realize[A: App](window: Int, host_addr: Int) abi("C"):
@@ -2824,7 +3124,7 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
             if tone != "":
                 print("TONE: " + c_str(external_call["gtk_label_get_text", Int](w)) + " = " + tone)
         elif n.kind == BUTTON:
-            if n.style == TOOL or n.style == TOOL_ON:
+            if n.style == TOOL or n.style == TOOL_ON or n.style == TOOL_INLINE or n.style == TOOL_INLINE_ON:
                 print("BUTTON: " + c_str(external_call["gtk_label_get_text", Int](external_call["gtk_widget_get_last_child", Int](external_call["gtk_button_get_child", Int](w)))))
             elif n.hint != "" and (n.style == ICON_ONLY or n.style == ICON_ON):
                 print("BUTTON: " + n.text)  # (only its icon shows; its own tooltip, when it has one, replaces the title there)
@@ -3082,6 +3382,10 @@ def liquid_css(p: Palette) -> String:
         + w + "button.mui-tool:hover { background: " + hover + "; } " + w + "button.mui-tool:active { transform: scale(0.96); }\n"
         + w + "button.mui-tool-on, " + w + "button.mui-tool-on:hover { background: rgba(14,124,134,0.10); color: " + accent + "; }\n"
         + w + "label.mui-tool-label { font-size: 11px; }\n"
+        # inline tools (TOOL_INLINE): the title beside the icon, one height with the icon-only toggles, one line
+        + w + "button.mui-tool.mui-tool-inline { min-width: 0; min-height: 34px; padding: 0 10px; border-radius: 10px; }\n"
+        + w + "button.mui-tool-inline label.mui-tool-label { font-size: 12px; }\n"
+        + w + ".mui-tag-toolbar button.image-button { min-width: 34px; min-height: 34px; padding: 0; border-radius: 10px; }\n"
         + w + ".mui-tag-toolbar separator { margin: 10px 8px; background: " + strong + "; min-width: 1px; }\n"
         # every button: pills, springy hover and press
         + w + "button { border-radius: 999px; font-size: 13px; transition: background 300ms " + spring + ", box-shadow 300ms " + spring + ", transform 300ms " + spring + "; }\n"
@@ -3240,6 +3544,9 @@ def skin_css(p: Palette, cls: String) -> String:
         + w + "button.mui-tool-on { background: " + wash + "; color: " + accent + "; }\n"
         + w + "button.mui-tool-on label, " + w + "button.mui-tool-on image { color: " + accent + "; }\n"
         + w + "label.mui-tool-label { font-size: 11px; }\n"
+        + w + "button.mui-tool.mui-tool-inline { min-width: 0; min-height: 34px; padding: 0 10px; }\n"
+        + w + "button.mui-tool-inline label.mui-tool-label { font-size: 12px; }\n"
+        + w + ".mui-tag-toolbar button.image-button { min-width: 34px; min-height: 34px; padding: 0; }\n"
         # fields and choices: hairline, accent ring on focus
         + w + "entry, " + w + "textview, " + w + "dropdown > button { border-radius: 4px; background: " + card + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; min-height: 30px; }\n"
         + w + "entry:focus-within { box-shadow: inset 0 0 0 1px " + accent + ", 0 0 0 3px " + hex_of(mix(p.card, p.accent, 0.18)) + "; outline: none; }\n"
@@ -3305,6 +3612,8 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
         size = (to_int(wh[0]), to_int(wh[1]))
     external_call["gtk_window_set_default_size", NoneType](host[].window, c_int(size[0]), c_int(size[1]))
     host[].window_w = size[0]
+    host[].rt.app.resize(size[0], size[1])  # (its real size follows once the window is laid out: App.resize again)
+    host[].rt.shown = host[].rt.app.view()
     for prop in ["notify::default-width", "notify::default-height", "notify::maximized", "notify::fullscreened"]:
         connect3(host[].window, prop, on_window_resized[A], host_addr)
     connect(host[].window, "realize", on_window_realize[A], host_addr)

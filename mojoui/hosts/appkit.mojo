@@ -15,7 +15,7 @@ from mojoui.view import (
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY,
     MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, CLIPBOARD, PAN, ZOOM, TAP, PRESS, RELEASE, DOUBLE, SECONDARY, KEY,
     START, CENTER, END, STRETCH, BETWEEN, Node,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, as_tool,
     TONE_WARN, TONE_GOOD, TONE_STRONG, TONE_ACCENT, CARD, CARD_WARN, CARD_GOOD,
 )
 from mojoui.menus import CHECKED, DISABLED, DANGER
@@ -353,6 +353,7 @@ struct AppKitHost[A: App](Movable):
 
     def build(mut self, i: Int, self_addr: Int) -> Int:
         var node = self.rt.shown.nodes[i].copy()  # copy: building children mutates self
+        node.style = as_tool(node.style) if node.kind == BUTTON else node.style  # (inline tools: drawn as tools here)
         var sized = node.sized_width()  # the app's layout decides this view's width
         var w: Int
         if node.kind == TEXT:

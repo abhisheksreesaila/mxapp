@@ -176,7 +176,7 @@ def m3():
         prev, cols = boxes(out, "import-preview"), boxes(out, "import-columns")
         if not prev or not cols or abs(prev[0][0] - cols[0][0]) > 2 or cols[0][2] < prev[0][2] - 4:
             problems.append(f"{host}: the import column table doesn't line up with the preview ({prev}, {cols})")
-        out = fn(REPORT, f"tiles-{host}")
+        out = fn(REPORT + ";pause:1000", f"tiles-{host}")  # (settled: a tile that just arrived is still rising)
         tiles, xs = boxes(out, "tile"), boxes(out, "tile/Remove")
         if len(tiles) < 4:
             problems.append(f"{host}: {len(tiles)} report tiles")

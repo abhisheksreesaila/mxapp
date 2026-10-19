@@ -152,6 +152,13 @@ def web_cancel[A: App](handle: Int, node: Int, text: String) -> String:
     return diff_to_json(d, rt[].shown)
 
 
+def web_resize[A: App](handle: Int, width: Int, height: Int) -> String:
+    """The page's viewport is width × height CSS pixels (on load, and when the window changes): App.resize."""
+    var rt = session_at[A](handle)
+    var d = rt[].resize(width, height)
+    return diff_to_json(d, rt[].shown)
+
+
 def web_frame[A: App](handle: Int, node: Int, microseconds: Int) -> String:
     var rt = session_at[A](handle)
     var d = rt[].frame(node, microseconds)
