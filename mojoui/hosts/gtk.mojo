@@ -3040,6 +3040,16 @@ def liquid_css(p: Palette) -> String:
         + w + ".mui-board { background-color: transparent; }\n"
         # the menu bar: one glass strip, one type
         + w + ".mui-tag-menubar { margin: 8px 10px 0; border-radius: 12px; min-height: 34px; " + glass + " }\n"
+        + w + ".mui-tag-menubar .mui-menubar { background: transparent; }\n"
+        + w + ".mui-tag-app-mark { font-size: 15px; font-weight: 700; color: " + ink + "; letter-spacing: -0.3px; margin-right: 4px; }\n"
+        + w + ".mui-tag-doc-chip { font-size: 12px; color: " + body + "; background: rgba(15,23,42,0.05); border-radius: 999px; padding: 2px 10px; }\n"
+        + w + ".mui-tag-gpu-chip { font-size: 12px; font-weight: 500; color: " + hex_of(p.good) + "; background: rgba(22,163,74,0.10); border-radius: 999px; padding: 2px 10px; box-shadow: inset 0 0 0 1px rgba(22,163,74,0.25); }\n"
+        + w + ".mui-tag-kpi-note { font-size: 12px; color: " + body + "; background: " + hex_of(p.raised) + "; border-radius: 999px; padding: 2px 10px; box-shadow: inset 0 0 0 1px " + line + "; }\n"
+        + w + ".mui-tag-kpi-fact { font-size: 12px; color: " + ink2 + "; }\n"
+        + w + ".mui-card.mui-tag-add-tile { background: transparent; border: 2px dashed " + strong + "; box-shadow: none; border-radius: 16px; min-height: 120px; }\n"
+        + w + ".mui-tag-add-tile label, " + w + ".mui-tag-add-tile image { color: " + ink2 + "; }\n"
+        + w + ".mui-tag-stat-card { background: #ffffff; border-radius: 12px; box-shadow: 0 0 0 1px rgba(15,23,42,0.07); }\n"
+        + w + ".mui-tag-stat-value { font-size: 15px; font-weight: 600; color: " + ink + "; }\n"
         + w + "menubutton.mui-menu > button { font-size: 13px; padding: 3px 10px; border-radius: 8px; color: " + body + "; transition: background 300ms " + spring + "; }\n"
         + w + "menubutton.mui-menu > button:hover, " + w + "menubutton.mui-menu > button:checked { background: " + hover + "; color: " + ink + "; }\n"
         # the toolbar: one floating glass island; tools icon over label, a soft fill on hover, press scales

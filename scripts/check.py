@@ -266,6 +266,40 @@ def m5():
     return not problems, "; ".join(problems) or "Shift+arrows, a drag and the agent select a block; its Sum, Average and Count are pyarrow's; Bold and Copy (TSV) reach every cell; GTK and the web"
 
 
+def colour_count(png, hexcol, tol=6):
+    """How many pixels of a screenshot are within `tol` of a colour (ImageMagick)."""
+    r = subprocess.run(["magick", str(png), "-fuzz", f"{tol * 100 // 255}%", "-fill", "black", "+opaque", hexcol, "-fill", "white", "-opaque", hexcol,
+                        "-format", "%[fx:int(mean*w*h)]", "info:"], capture_output=True, text=True)
+    return int(r.stdout.strip() or 0)
+
+
+def m7():
+    """Stitch's details on both hosts: the menu bar's name and GPU chip, yes/no pills, stat cards, tile footers; the page."""
+    problems = []
+    for host, fn in (("GTK", gtk), ("web", web)):
+        out = fn(SHEET, f"stitch-sheet-{host}")
+        png = OUT / f"stitch-sheet-{host}-{'gtk' if host == 'GTK' else 'web'}.png"
+        bar = boxes(out, "menubar")
+        for tag in ("app-mark", "gpu-chip"):
+            b = boxes(out, tag)
+            if not b or not bar or not (bar[0][1] <= b[0][1] <= bar[0][1] + bar[0][3]):
+                problems.append(f"{host}: no {tag} in the menu bar")
+        greens, reds = colour_count(png, "#e3f4e9"), colour_count(png, "#fbe5e5")
+        if greens < 300 or reds < 100:
+            problems.append(f"{host}: yes/no cells aren't green and red pills ({greens} green, {reds} red pixels)")
+        if len(boxes(out, "stat-card")) < 4:
+            problems.append(f"{host}: the inspector shows {len(boxes(out, 'stat-card'))} stat cards, not 4")
+        out = fn(REPORT, f"stitch-report-{host}")
+        for fact in (" matched", "p50 exact", "of ", "% of rows"):
+            if not re.search(rf"^LABEL: .*{re.escape(fact)}", out, re.M) and f"{fact}" not in out:
+                problems.append(f"{host}: no report tile says {fact.strip()!r}")
+    rows = "".join(f'<h2>{s}</h2><div class=r><img src="../../docs/design/liquid/img/stitch-{s}.png"><img src="{s}-GTK-gtk.png"><img src="{s}-web-web.png"></div>'
+                   for s in ("start", "import", "sheet", "report"))
+    (OUT / "compare.html").write_text("<!doctype html><meta charset=utf-8><title>goal 24: Stitch vs GTK vs web</title><style>body{background:#111;color:#ddd;font:14px Inter,sans-serif;padding:20px}"
+                                      ".r{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}img{width:100%;border-radius:8px}</style><p>Stitch · GTK · web</p>" + rows)
+    return not problems, "; ".join(problems) or "the menu bar's name and GPU chip, yes/no pills, 4 stat cards, tile footers (matched, p50 exact, of N values, % of rows) on GTK and the web; build/g24/compare.html"
+
+
 def m6():
     """Nothing regressed: goal 23's milestones (every earlier goal's inside them)."""
     problems = []
@@ -295,7 +329,7 @@ def main():
                 if a.returncode != 0:
                     print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M7", m7), ("M6", m6)]:
         if only and name not in only:
             continue
         t0 = time.time()

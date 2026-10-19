@@ -744,6 +744,16 @@ body.liquid .board { background: transparent; }
 body.liquid .menubar, body.liquid [data-tag=toolbar], body.liquid [data-tag=inspector], body.liquid [data-tag=sheet-tabs], body.liquid [data-tag=status-bar] {
   background: var(--glass-bg); -webkit-backdrop-filter: var(--glass-fx); backdrop-filter: var(--glass-fx); box-shadow: var(--glass-shadow); border: 0; }
 body.liquid .menubar { margin: 8px 10px 0; border-radius: 12px; min-height: 34px; }
+body.liquid [data-tag=menubar] { margin: 8px 10px 0; border-radius: 12px; min-height: 34px; background: var(--glass-bg); -webkit-backdrop-filter: var(--glass-fx); backdrop-filter: var(--glass-fx); box-shadow: var(--glass-shadow); }
+body.liquid [data-tag=menubar] .menubar { margin: 0; background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.liquid [data-tag=app-mark] { font-size: 15px; font-weight: 700; color: var(--o-ink); letter-spacing: -.3px; }
+body.liquid [data-tag=doc-chip] { font-size: 12px; color: var(--o-ink2); background: rgba(15,23,42,.05); border-radius: 999px; padding: 2px 10px; }
+body.liquid [data-tag=gpu-chip] { font-size: 12px; font-weight: 500; color: var(--o-good); background: rgba(22,163,74,.10); border-radius: 999px; padding: 2px 10px; box-shadow: inset 0 0 0 1px rgba(22,163,74,.25); }
+body.liquid [data-tag=kpi-note] { font-size: 12px; color: var(--o-ink2); background: var(--o-raised); border-radius: 999px; padding: 2px 10px; box-shadow: inset 0 0 0 1px var(--o-line); }
+body.liquid [data-tag=kpi-fact] { font-size: 12px; color: var(--o-ink3); }
+body.liquid [data-tag=add-tile] { background: transparent; border: 2px dashed var(--o-strong); box-shadow: none; border-radius: 16px; min-height: 120px; color: var(--o-ink3); }
+body.liquid [data-tag=stat-card] { background: #fff; border-radius: 12px; box-shadow: 0 0 0 1px rgba(15,23,42,.07); box-sizing: border-box; }
+body.liquid [data-tag=stat-value] { font-size: 15px; font-weight: 600; color: var(--o-ink); }
 body.liquid .menu-title { font-size: 13px; padding: 4px 10px; border-radius: 8px; color: var(--o-ink2); transition: background 430ms var(--sp-snappy); }
 body.liquid .menu.open > .menu-title, body.liquid .menu-title:hover { background: rgba(15,23,42,.06); color: var(--o-ink); }
 body.liquid [data-tag=toolbar] { margin: 0 10px; border-radius: 18px; padding: 6px; }

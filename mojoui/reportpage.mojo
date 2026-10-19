@@ -8,7 +8,7 @@ from mxframe import Expr
 from mojoui.sheet import Sheet, TEXT, DECIMAL, INT
 from mojoui.kpi import KpiView
 from mojoui.sheetpage import SheetObject, compute, chart_view, readout, groups_of
-from mojoui.charts import grouped
+from mojoui.charts import grouped, fixed
 
 comptime TILE_SUM = 0
 comptime TILE_AVERAGE = 1
@@ -91,6 +91,22 @@ def tile_label(t: ReportTile, sheet: Sheet) -> String:
     if t.kind == TILE_DISTINCT:
         return "Different " + sheet.name(t.col)
     return materialize[TILE_NAMES]()[t.kind] + " of " + sheet.name(t.col)
+
+
+def tile_fact(t: ReportTile, sheet: Sheet) -> String:
+    """The fact in a tile's footer (Stitch's report): how many rows it read, or how exact it is."""
+    if t.kind == TILE_SUM:
+        return grouped(t.count) + " matched"
+    if t.kind == TILE_AVERAGE:
+        return "of " + grouped(t.present) + " values"
+    if t.kind == TILE_COUNT:
+        var all = sheet.rows()
+        return (fixed(100.0 * Float64(t.count) / Float64(all), 1) if all > 0 else String("0")) + "% of rows"
+    if t.kind == TILE_MEDIAN:
+        return "p50 exact"
+    if t.kind == TILE_DISTINCT:
+        return "exact count"
+    return ""
 
 
 def kpi_of(t: ReportTile, sheet: Sheet, filter: ReportFilter, accent: Bool) -> KpiView:

@@ -19,7 +19,7 @@ from mojoui.cellstyle import CellStyle, swatch, fill_over, AUTO_ALIGN, ALIGN_LEF
 from mojoui.draw import rect, hline, line, circle, with_alpha
 from std.time import perf_counter_ns
 from std.math import exp
-from mojoui.theme import Palette
+from mojoui.theme import Palette, mix
 from mojoui.maths import log2
 from mojoui.charts import grouped
 
@@ -896,6 +896,9 @@ struct DataGrid(Copyable, Movable):
                 line(s, x + cw - 1, 0, x + cw - 1, h, 2, p.accent)  # the edge being dragged
         rect(s, 0, 0, gut, head, p.raised)  # (the gutter stays put when the grid scrolls sideways)
         hline(s, 0, w, head, p.line_strong)
+        var yes_no = List[Bool](capacity=ncols)  # columns of true/false: drawn as small green and red pills
+        for c in range(ncols):
+            yes_no.append(src.grid_badge(c) == "bool")
         # rows
         var blk = self.block(src)  # the selected block (display indices, columns), or one cell
         var multi = self.has_block()
@@ -955,6 +958,17 @@ struct DataGrid(Copyable, Movable):
                     tx = x + (cw - tw) / 2
                 elif align != ALIGN_LEFT:
                     tx = x + cw - 8 * k - tw - (3 * k if st.italic() else 0)
+                if yes_no[c] and (text == "true" or text == "false") and st.ink() == 0:  # a yes/no pill
+                    var good = text == "true"
+                    var tone = p.good if good else p.bad
+                    var pw = font.measure(text, 11.5 * k, p.medium) + 14 * k
+                    var px = x + 8 * k if align == ALIGN_LEFT else (tx - 7 * k)
+                    rect(s, px, y + 5 * k, pw, GRID_ROW_H * k - 10 * k, mix(p.card, tone, 0.12), (GRID_ROW_H * k - 10 * k) / 2)
+                    font.draw(s, text, px + 7 * k, base - 0.5 * k, 11.5 * k, tone, p.medium)
+                    continue
+                if text == "" and src.grid_numeric(c) and not active:  # an empty number: a faint dash where the figure would be
+                    font.draw(s, "–", x + cw - 16 * k, base, 13 * k, p.line_strong, p.regular)
+                    continue
                 font.draw(s, text, tx, base, 13 * k, color, weight, slant=slant)
                 if st.bold():  # (Inter's medium is only a little heavier than regular: draw it again, a touch to the right)
                     font.draw(s, text, tx + 0.6 * k, base, 13 * k, color, weight, slant=slant)

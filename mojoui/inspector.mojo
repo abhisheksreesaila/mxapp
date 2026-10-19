@@ -7,8 +7,16 @@
 #                               Row("Thousands", Toggle("", on, ON_THOUSANDS))]),
 #   ])
 
-from mojoui.view import (View, Text, Button, Segmented, HStack, VStack, Spacer, Divider, Card, Scroll, CAPTION, HEADLINE, SUBTLE,
+from mojoui.view import (View, Text, Button, Segmented, HStack, VStack, Spacer, Divider, Card, Scroll, Grid, CAPTION, HEADLINE, SUBTLE,
                          ICON_ONLY, CENTER, STRETCH, START)
+
+
+def StatCards(stats: List[Tuple[String, String]]) -> View:
+    """Small cards of a selection's figures, two across (a label over its value): Stitch's column stats."""
+    var cards = List[View]()
+    for st in stats:
+        cards.append(VStack(Text(st[0], CAPTION), Text(st[1]).tag("stat-value"), spacing=2).align(START).fill().padding(8, 10).tag("stat-card"))
+    return Grid(cards^, 2, spacing=8).fill()
 
 
 def Section(title: String, items: List[View]) -> View:

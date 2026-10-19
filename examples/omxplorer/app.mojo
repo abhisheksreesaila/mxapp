@@ -28,14 +28,14 @@ from mojoui.csvio import read_table, empty_import, CsvImport, CsvColumn, kind_na
 from mojoui.omxfile import save_omx, open_document
 from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
                               NUMBER_STYLES, DATE_STYLES)
-from mojoui.inspector import Inspector, Section, Row, Stepper
+from mojoui.inspector import Inspector, Section, Row, Stepper, StatCards
 from mojoui.sheetchrome import Tool, Toolbar, FormulaBar, StatusBar, Tab, BottomTabs
 from mojoui.cellstyle import (CellStyle, BOLD, ITALIC, UNDERLINE, STRIKE, INK_MASK, FILL_MASK, ALIGN_MASK, ink_bits, fill_bits, align_bits,
                               AUTO_ALIGN, ALIGN_LEFT, ALIGN_CENTRE, ALIGN_RIGHT, SWATCH_NAMES, swatch_name)
 from mojoui.swatches import SwatchPicker, draw_swatches, swatch_at
 from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_text, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
                               CHART_BAR, CHART_LINE, HEADER_H)
-from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
+from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, tile_fact, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
                                TILE_CHART, TILE_DISTINCT, TILE_MEDIAN, TILE_LAST, TILE_NAMES)
 from mojoui.chartview import ChartView
 from mojoui.view import TAP
@@ -157,6 +157,8 @@ struct Main(App):
     var formula_open: Bool  # the formula bar adds a column instead of editing a cell
     var edit_text: String
     var message: String
+    var stats: List[Tuple[String, String]]  # the selected column's figures for the inspector's cards, and what they're for
+    var stats_key: String
     var clip_text: String  # what Copy put on the clipboard last, and its version (the Clipboard view)
     var clip_version: Int
     var sum: Int  # the selected column's total and count (GPU, with the session's edits)
@@ -214,6 +216,8 @@ struct Main(App):
         self.sum = 0
         self.count = 0
         self.clip_text = ""
+        self.stats = List[Tuple[String, String]]()
+        self.stats_key = ""
         self.clip_version = 0
         self.milliseconds = 0
         self.recent = read_recent(APP)
@@ -467,6 +471,7 @@ struct Main(App):
         if col < 0 or not self.has_table or self.frame.kind(col) == TEXT:
             self.sum = 0
             self.count = self.frame.rows()
+            self.column_stats()
             return
         try:
             var r = self.frame.totals(col)
@@ -478,6 +483,42 @@ struct Main(App):
             self.sum = 0
             self.count = 0
             self.message = "Couldn't total " + self.frame.name(col) + ": " + String(e)
+        self.column_stats()
+
+    def column_stats(mut self):
+        """The inspector's cards for the selected number column: Mean, Median, Empty, Distinct (the engine's, recomputed
+        only when the column or its numbers change)."""
+        var col = self.grid.cur_col
+        if col < 0 or not self.has_table or self.frame.kind(col) == TEXT or self.frame.kind(col) == DATE:
+            self.stats = List[Tuple[String, String]]()
+            self.stats_key = ""
+            return
+        var key = String(col) + "/" + String(self.frame.rows()) + "/" + String(self.sum) + "/" + String(self.count)
+        if key == self.stats_key:
+            return
+        self.stats_key = key
+        var out = List[Tuple[String, String]]()
+        out.append(("Mean", self.frame.format_average(col, self.sum, self.count)))
+        var median = String("—")  # (a streamed file: median and distinct read every row group, so they wait for a tile)
+        try:
+            if self.frame.scan:
+                raise Error("streamed")
+            var m = self.frame.median(col)
+            if m[1]:
+                median = self.frame.format_median(col, m[0])
+        except:
+            pass
+        out.append(("Median", median))
+        out.append(("Empty", grouped(self.frame.rows() - self.count)))
+        var distinct = String("—")
+        try:
+            if self.frame.scan:
+                raise Error("streamed")
+            distinct = grouped(self.frame.distinct(col))
+        except:
+            pass
+        out.append(("Distinct", distinct))
+        self.stats = out^
 
     def column_format(self) -> ColumnFormat:
         return self.frame.format_of(self.grid.cur_col) if self.grid.cur_col >= 0 else ColumnFormat.auto()
@@ -1255,7 +1296,7 @@ struct Main(App):
         for k in range(9):
             inks.append(Item(swatch_name(k), SET_INK + k, checked=st.ink() == k, disabled=not cells))
             fills.append(Item("None" if k == 0 else swatch_name(k), SET_FILL + k, checked=st.fill() == k, disabled=not cells))
-        return MenuBar([
+        var bar = MenuBar([
             Menu("File", [Item("New blank sheet", BLANK, icon="grid", shortcut="Ctrl+N"), Item("Open…", BACK, icon="open", shortcut="Ctrl+O", disabled=not on_sheet),
                           Separator(), Item("Save", SAVE, icon="save", shortcut="Ctrl+S", disabled=not edits), Separator(),
                           Item("Settings…", SETTINGS, icon="gear", shortcut="Ctrl+,")]),
@@ -1284,7 +1325,10 @@ struct Main(App):
                             Separator(), format_as.copy(), Item("Clear formatting", CLEAR_FORMAT, icon="clear-format", disabled=not cells), Separator(),
                             Item("Format inspector", TOGGLE_INSPECTOR, icon="format", checked=self.inspector_open, disabled=not on_sheet)]),
             Menu("Help", [Item("About omxplorer", ABOUT, icon="file")]),
-        ]).fill().padding(2, 8).tag("menubar")
+        ])
+        var doc = (self.sheet_name + " · " + grouped(self.frame.rows()) + " rows") if on_sheet else String("")
+        return HStack(Text("omxplorer", HEADLINE).tag("app-mark"), bar^, Spacer(), Text(doc, CAPTION).tag("doc-chip"),
+                      Text(self.gpu_chip(), CAPTION).tag("gpu-chip"), spacing=10).fill().align(CENTER).height(38).padding(2, 10).tag("menubar")
 
     def context_menu(self) -> View:
         """The column's menu, open over the grid where the right click was."""
@@ -1497,6 +1541,8 @@ struct Main(App):
                             at_symbol = k
                     fmt.append(Row("Currency", Segmented(symbols, at_symbol, SYMBOL)))
             sections.append(Section("Data format", fmt))
+            if len(self.stats) > 0:
+                sections.append(Section("Column stats", [StatCards(self.stats)]))
         return Inspector(tabs, min(self.insp_tab, 1), INSP_TAB, sections, INSPECTOR_W)
 
     def status(self) -> View:
@@ -1541,9 +1587,18 @@ struct Main(App):
                                    Canvas(60 + k, self.version, on_gesture=TILE_TAP + k).fill().height(240),
                                    Text(readout(t.chart, self.frame), CAPTION), spacing=6).fill())
             else:
-                kpis.append(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version, TILE_CLOSE + k).fill().tag("tile"))
+                kpis.append(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version, TILE_CLOSE + k, tile_fact(t, self.frame)).fill().tag("tile"))
                 first_kpi = False
-        var page = ReportPage(self.report_name, self.sheet_name + " · " + self.filter.words(self.frame), kpis, charts)
+        if len(kpis) > 0:  # (Stitch's report: a dashed card where the next tile goes)
+            kpis.append(Card(Spacer(), HStack(Spacer(), Icon("plus", 16), Text("Add a tile from the toolbar", CAPTION), Spacer(), spacing=8).fill().align(CENTER), Spacer(),
+                             spacing=0).fill().tag("add-tile"))
+        var matched = String("")
+        for t in self.tiles:
+            if t.kind == TILE_SUM or t.kind == TILE_AVERAGE or t.kind == TILE_COUNT:
+                matched = " · " + grouped(t.count) + " of " + grouped(self.frame.rows()) + " rows"
+                break
+        var ran = " · " + fixed(self.milliseconds, 1) + " ms on " + ("the GPU" if self.ran_gpu else "the CPU") if self.show_timings else String("")
+        var page = ReportPage(self.report_name, self.sheet_name + " · " + self.filter.words(self.frame) + matched + ran, kpis, charts)
         if len(self.tiles) == 0:  # (an empty report says where tiles come from)
             page = VStack(page^, Card(Text("An empty report: add a tile from the toolbar above (Sum, Average, Count or Chart of the column you pick there). Every tile reads the table, so edits show here at once.", CAPTION), spacing=8).fill(), spacing=16).fill().align(START)
         return Scroll(page^.width(self.sheet_width() - 8).padding(4, 4), height=GRID_H + 30).width(self.sheet_width())  # (full width: the charts span it)
