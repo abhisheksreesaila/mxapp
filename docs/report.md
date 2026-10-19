@@ -4,7 +4,13 @@
 
 ## Result
 
-RESULT_PLACEHOLDER
+M1–M3 PASS. Reviewer: PASS, and its should-fixes are done (D-224).
+
+```
+PASS  M1  vendored from 1889b7f; streamed sheets ask for AUTO; the GPU's totals, chart and pivot over a streamed file with edits equal the CPU's (test_streamed); 100M rows: total: CPU 217 ms, GPU 351 ms, AUTO 206 ms on the CPU; group-by: CPU 328 ms, GPU 433 ms, AUTO 346 ms on the CPU
+PASS  M2  a text column sorts Apple, apple, Banana, banana, cherry, Zebra (and back), in memory and streamed, in the app and the engine
+PASS  M3  goal 22's M1–M4 (goals 3–21 inside them) pass; needs-mxframe.md is current  (2221 s)
+```
 
 ## What changed
 

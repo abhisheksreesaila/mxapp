@@ -4,6 +4,13 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 23 (2026-10-18): the GPU for streamed files (goal 23, MX frame 1889b7f)
+- **Worked:** streamed sheets ask for AUTO; the GPU's answers over a streamed file with edits equal the CPU's; on 12 cores AUTO keeps the CPU (faster here: 100M total 0.21 s vs 0.35 s). Text order pinned (case ignored, bytes break ties). M1–M3 PASS (`docs/report.md`).
+- **Broke and fixed:** a streamed column's cached total survived a switch to the GPU (now keyed by device); a failed chart's error was overwritten; the inspector always said "the GPU".
+- **Next:** a usability and smoothness goal for omxplorer (asked the owner), then MX frame's SQL and joins when vendorable.
+
+---
+
 ## Experiment 22 (2026-10-18): files bigger than memory become editable; Distinct and Median tiles (goal 22, MX frame 7cbcc04)
 - **Setup:** MX frame 7cbcc04 (F-147 editing over a scan, F-148 count distinct / median / percentile / top-k, F-145/F-149 faster streaming), vendored from `git archive`.
 - **Worked:** a streamed sheet is the package's `Frame(scan)` (goal 20's own row-group cache deleted): typing, emptying, rows, formulas, Undo, totals and charts with the edits, a streamed Save (100M rows in 6 s, 0.27 GB peak), big documents reopen streamed; sort, median and distinct guarded by memory; Report tiles for Distinct and Median from the engine. 100M streamed: open 0.2 s, total 0.21 s, group-by 0.55 s. M1–M4 PASS (`docs/report.md`).
