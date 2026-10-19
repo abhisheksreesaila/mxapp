@@ -20,6 +20,8 @@ from mojoui.view import (
 from mojoui.diff import Diff, Patch, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE, SET_SIZE
 from mojoui.app import App, Event, Runtime, ms
 from mojoui.canvas import Surface, rgba
+from mojoui.scene import Scene, OP_RECT, OP_CIRCLE, OP_LINE, OP_TEXT, OP_FILL
+from std.collections import Dict
 from mojoui.icons_data import LUCIDE_NAMES, lucide_svg
 from mojoui.theme import Palette, hex_of, mix, skin_palette, skin_name
 from std.math import log2
@@ -396,6 +398,8 @@ struct GtkCanvas(Copyable, Movable):
     var moved: Bool  # the current press became a drag (so it's not a tap)
     var armed: Bool  # a tick callback is running (only while frames, a redraw or a resize may be due)
     var quiet: Int  # idle ticks in a row (layout can change after ticks, so wait before stopping)
+    var prev: Scene  # the display list last drawn (MOJOUI_SCENE): a layer that comes again unchanged keeps its nodes
+    var layer_nodes: List[Int]  # the GskRenderNode built for each of prev's layers
 
     def __init__(out self, node: Int, widget: Int):
         self.node = node
@@ -429,6 +433,8 @@ struct GtkCanvas(Copyable, Movable):
         self.moved = False
         self.armed = False
         self.quiet = 0
+        self.prev = Scene(0, 0, 1)
+        self.layer_nodes = List[Int]()
 
 
 struct BoardChild(Copyable, Movable):
@@ -466,6 +472,7 @@ struct GtkHost[A: App](Movable):
     var clip_version: Int  # the Clipboard view's version last copied
     var paint_t0: Int  # the frame clock's before-paint time (ns), and every frame's paint phase since bench started (ms)
     var frame_paints: List[Float64]
+    var frame_times: List[Int]  # when each frame was painted (ns): the intervals between them say whether frames were on time
     var key_draws: Int  # draws of canvases that take keys (the grid), across rebuilds: GLIDE counts them
     var key_draw_ms: Float64
     var clip_text: String  # (tests print it: the clipboard itself is asynchronous)
@@ -486,6 +493,18 @@ struct GtkHost[A: App](Movable):
     var pending: Diff  # a partial rebuild waiting for the next idle turn
     var has_pending: Bool
     var partial_ok: Bool
+    var scene_mode: Bool  # MOJOUI_SCENE=1: canvases that record a display list are drawn by GTK's renderer (goal 26)
+    var layouts: Dict[String, Int]  # PangoLayouts by text, face and size (an index into the lists below), kept across frames
+    var layout_ptrs: List[Int]
+    var layout_w: List[Float64]  # each layout's width and baseline (pixels), measured once
+    var layout_base: List[Float64]
+    var layout_nodes: List[Int]  # each one's text as a render node, built once (its colour is part of the key)
+    var pango: Int  # the PangoContext text is laid out in
+    var scratch: List[Float32]  # GdkRGBA, graphene rects and points, GskRoundedRect handed to GTK by address
+    var nodes_built: Int  # layers built into render nodes, and layers reused untouched (bench reports them)
+    var nodes_reused: Int
+    var new_layouts: Int  # text laid out for the first time, and how long that took (ns): the replay's own trace
+    var new_layout_ns: Int
     var dialog: Int  # the open alert dialog, if any
     var popovers: List[Int]  # context-menu popovers parented to anchors (unparented at the next rebuild)
     var popups: List[Int]  # popovers to pop up once the new screen is in the window
@@ -509,7 +528,19 @@ struct GtkHost[A: App](Movable):
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
         self.rt.trace = getenv("MOJOUI_TRACE") != ""
-        self.partial_ok = getenv("MOJOUI_NO_PARTIAL") == ""  # (MOJOUI_NO_PARTIAL=1: every shape change rebuilds the window, to compare)
+        self.partial_ok = getenv("MOJOUI_NO_PARTIAL") == ""
+        self.scene_mode = getenv("MOJOUI_SCENE") != ""
+        self.layouts = Dict[String, Int]()
+        self.layout_ptrs = List[Int]()
+        self.layout_w = List[Float64]()
+        self.layout_base = List[Float64]()
+        self.layout_nodes = List[Int]()
+        self.pango = 0
+        self.scratch = List[Float32](length=32, fill=0)
+        self.nodes_built = 0
+        self.nodes_reused = 0
+        self.new_layouts = 0
+        self.new_layout_ns = 0  # (MOJOUI_NO_PARTIAL=1: every shape change rebuilds the window, to compare)
         self.canvases = List[GtkCanvas]()
         self.boards = List[BoardChild]()
         self.window_w = 0
@@ -522,6 +553,7 @@ struct GtkHost[A: App](Movable):
         self.key_draws = 0
         self.paint_t0 = 0
         self.frame_paints = List[Float64]()
+        self.frame_times = List[Int]()
         self.key_draw_ms = 0
         self.clip_text = ""
         self.window = 0
@@ -2005,17 +2037,33 @@ struct GtkHost[A: App](Movable):
         var version = self.rt.shown.nodes[node].value
         if wpx == self.canvases[ci].wpx and hpx == self.canvases[ci].hpx and version == self.canvases[ci].drawn:
             return
-        if len(self.canvases[ci].pixels) != wpx * hpx:
-            self.canvases[ci].pixels = List[UInt32](length=wpx * hpx, fill=0)
         var t0 = perf_counter_ns()
-        var surface = Surface(Int(self.canvases[ci].pixels.unsafe_ptr()), wpx, hpx, scale)
-        surface.still = not animations_enabled()  # (GNOME's "reduce animation": animations jump to their end)
-        var d = self.rt.draw(node, surface)
-        var t1 = perf_counter_ns()
+        var again = False
+        var d = Diff(False, List[Patch]())
+        var t1 = t0
+        var drew_scene = False
+        if self.scene_mode:  # the display list, drawn by GTK's own renderer (render nodes; GPU on a real display)
+            var sc = Scene(wpx, hpx, scale)
+            sc.is_still = not animations_enabled()
+            var r = self.rt.draw_scene(node, sc)
+            if r[0]:
+                drew_scene = True
+                d = r[1].copy()
+                again = sc.again
+                t1 = perf_counter_ns()
+                self.replay(ci, sc^, wpx, hpx)
+        if not drew_scene:
+            if len(self.canvases[ci].pixels) != wpx * hpx:
+                self.canvases[ci].pixels = List[UInt32](length=wpx * hpx, fill=0)
+            var surface = Surface(Int(self.canvases[ci].pixels.unsafe_ptr()), wpx, hpx, scale)
+            surface.still = not animations_enabled()  # (GNOME's "reduce animation": animations jump to their end)
+            d = self.rt.draw(node, surface)
+            again = surface.again
+            t1 = perf_counter_ns()
+            var tex = texture(self.canvases[ci].pixels, wpx, hpx)
+            external_call["gtk_picture_set_paintable", NoneType](widget, tex)
+            external_call["g_object_unref", NoneType](tex)
         self.trace_diff("refresh after draw", t0, d)
-        var tex = texture(self.canvases[ci].pixels, wpx, hpx)
-        external_call["gtk_picture_set_paintable", NoneType](widget, tex)
-        external_call["g_object_unref", NoneType](tex)
         var t2 = perf_counter_ns()
         self.canvases[ci].paint_ms = Float64(Int(t1 - t0)) / 1e6
         self.canvases[ci].upload_ms = Float64(Int(t2 - t1)) / 1e6
@@ -2026,12 +2074,168 @@ struct GtkHost[A: App](Movable):
         self.canvases[ci].wpx = wpx
         self.canvases[ci].hpx = hpx
         self.canvases[ci].scale = scale
-        self.canvases[ci].drawn = version if not surface.again else -1  # mid-animation: draw again next frame
+        self.canvases[ci].drawn = version if not again else -1  # mid-animation: draw again next frame
         self.canvases[ci].draws += 1
         if self.rt.trace:
             print("TRACE: draw canvas " + String(self.rt.shown.nodes[node].style) + " " + String(wpx) + "x" + String(hpx) + " " + String(self.canvases[ci].draw_ms) + " ms (paint "
                   + String(self.canvases[ci].paint_ms) + ", upload " + String(self.canvases[ci].upload_ms) + ")")
         self.apply(d, self_addr)
+
+    # ---------- the display list (goal 26): render nodes, drawn by GTK's renderer ----------
+
+    def at(self, k: Int) -> Int:
+        """The address of scratch float k (structs handed to GTK by pointer)."""
+        return Int(self.scratch.unsafe_ptr()) + k * 4
+
+    def put_rgba(mut self, c: UInt32):
+        self.scratch[0] = Float32(Int(c & 255)) / 255
+        self.scratch[1] = Float32(Int((c >> 8) & 255)) / 255
+        self.scratch[2] = Float32(Int((c >> 16) & 255)) / 255
+        self.scratch[3] = Float32(Int((c >> 24) & 255)) / 255
+
+    def put_rect(mut self, x: Float64, y: Float64, w: Float64, h: Float64):
+        self.scratch[4] = Float32(x)
+        self.scratch[5] = Float32(y)
+        self.scratch[6] = Float32(w)
+        self.scratch[7] = Float32(h)
+
+    def snap_rect(mut self, snap: Int, x: Float64, y: Float64, w: Float64, h: Float64, c: UInt32, radius: Float64):
+        if w <= 0 or h <= 0:
+            return
+        self.put_rgba(c)
+        self.put_rect(x, y, w, h)
+        if radius <= 0:
+            external_call["gtk_snapshot_append_color", NoneType](snap, self.at(0), self.at(4))
+            return
+        _ = external_call["gsk_rounded_rect_init_from_rect", Int](self.at(8), self.at(4), Float32(radius))  # (12 floats at 8)
+        external_call["gtk_snapshot_push_rounded_clip", NoneType](snap, self.at(8))
+        external_call["gtk_snapshot_append_color", NoneType](snap, self.at(0), self.at(4))
+        external_call["gtk_snapshot_pop", NoneType](snap)
+
+    def layout_of(mut self, text: String, size: Float64, weight: Int, slant: Float64, color: UInt32) -> Int:
+        """The text laid out in the app's own fonts (Inter, JetBrains Mono) and turned into a render node once; kept
+        for the next frames (a scroll brings a few new rows; everything else is placed again as it was)."""
+        var key = text + "\x1f" + String(weight) + "\x1f" + String(Int(size * 100)) + "\x1f" + String(color) + ("\x1fi" if slant != 0 else "")
+        var hit = self.layouts.get(key)
+        if hit:
+            return hit.value()
+        self.new_layouts += 1
+        var t_new = perf_counter_ns()
+        if len(self.layout_ptrs) > 30000:  # (scrolled through a lot: start over rather than grow without end)
+            for lp in self.layout_ptrs:
+                external_call["g_object_unref", NoneType](lp)
+            for ln in self.layout_nodes:
+                if ln != 0:
+                    external_call["gsk_render_node_unref", NoneType](ln)
+            self.layouts = Dict[String, Int]()
+            self.layout_ptrs = List[Int]()
+            self.layout_nodes = List[Int]()
+            self.layout_w = List[Float64]()
+            self.layout_base = List[Float64]()
+        if self.pango == 0:
+            self.pango = external_call["gtk_widget_create_pango_context", Int](self.window)
+        var layout = external_call["pango_layout_new", Int](self.pango)
+        var desc = external_call["pango_font_description_new", Int]()
+        var family = String("JetBrains Mono") if weight >= 2 else String("Inter")
+        external_call["pango_font_description_set_family", NoneType](desc, family.as_c_string_span())
+        external_call["pango_font_description_set_weight", NoneType](desc, c_int(500 if weight == 1 else (700 if weight == 3 else 400)))
+        external_call["pango_font_description_set_absolute_size", NoneType](desc, Float64(size * 1024))
+        if slant != 0:
+            external_call["pango_font_description_set_style", NoneType](desc, c_int(2))  # PANGO_STYLE_ITALIC
+        external_call["pango_layout_set_font_description", NoneType](layout, desc)
+        external_call["pango_font_description_free", NoneType](desc)
+        var t = text
+        external_call["pango_layout_set_text", NoneType](layout, t.as_c_string_span(), c_int(t.byte_length()))
+        var wh = List[Int32](length=2, fill=0)
+        external_call["pango_layout_get_pixel_size", NoneType](layout, Int(wh.unsafe_ptr()), Int(wh.unsafe_ptr()) + 4)
+        self.layout_ptrs.append(layout)
+        self.put_rgba(color)
+        var ts = external_call["gtk_snapshot_new", Int]()
+        external_call["gtk_snapshot_append_layout", NoneType](ts, layout, self.at(0))
+        self.layout_nodes.append(external_call["gtk_snapshot_free_to_node", Int](ts))
+        self.layout_w.append(Float64(Int(wh[0])))
+        self.layout_base.append(Float64(Int(external_call["pango_layout_get_baseline", c_int](layout))) / 1024)
+        self.layouts[key] = len(self.layout_ptrs) - 1
+        self.new_layout_ns += Int(perf_counter_ns()) - Int(t_new)
+        return len(self.layout_ptrs) - 1
+
+    def snap_text(mut self, snap: Int, text: String, x: Float64, baseline: Float64, size: Float64, c: UInt32, weight: Int, align: Int, slant: Float64):
+        var li = self.layout_of(text, size, weight, slant, c)
+        var node = self.layout_nodes[li]
+        if node == 0:
+            return
+        var tw = self.layout_w[li]
+        var base = self.layout_base[li]
+        var left = x - (tw if align == 2 else (tw / 2 if align == 1 else 0))
+        self.scratch[20] = Float32(left)
+        self.scratch[21] = Float32(baseline - base)
+        external_call["gtk_snapshot_save", NoneType](snap)
+        external_call["gtk_snapshot_translate", NoneType](snap, self.at(20))
+        external_call["gtk_snapshot_append_node", NoneType](snap, node)
+        external_call["gtk_snapshot_restore", NoneType](snap)
+
+    def build_layer(mut self, sc: Scene, i: Int) -> Int:
+        """Layer i of the scene as one render node (0 when it draws nothing)."""
+        var snap = external_call["gtk_snapshot_new", Int]()
+        var r = sc.layer_range(i)
+        for op in range(r[0], r[1]):
+            var kind = Int(sc.kinds[op])
+            var c = sc.colors[op]
+            if kind == OP_FILL or kind == OP_RECT:
+                self.snap_rect(snap, sc.num(op, 0), sc.num(op, 1), sc.num(op, 2), sc.num(op, 3), c, sc.num(op, 4) if kind == OP_RECT else 0)
+            elif kind == OP_CIRCLE:
+                var rr = sc.num(op, 2)
+                self.snap_rect(snap, sc.num(op, 0) - rr, sc.num(op, 1) - rr, 2 * rr, 2 * rr, c, rr)
+            elif kind == OP_LINE:  # (the grid's lines are straight across or down: thin rects)
+                var x0 = sc.num(op, 0)
+                var y0 = sc.num(op, 1)
+                var x1 = sc.num(op, 2)
+                var y1 = sc.num(op, 3)
+                var lw = max(sc.num(op, 4), 1.0)
+                if x0 == x1:
+                    self.snap_rect(snap, x0 - lw / 2, min(y0, y1), lw, abs(y1 - y0), c, 0)
+                elif y0 == y1:
+                    self.snap_rect(snap, min(x0, x1), y0 - lw / 2, abs(x1 - x0), lw, c, 0)
+            elif kind == OP_TEXT:
+                self.snap_text(snap, sc.text_at(op), sc.num(op, 0), sc.num(op, 1), sc.num(op, 2), c, Int(sc.num(op, 4)), Int(sc.num(op, 5)), sc.num(op, 3))
+        return external_call["gtk_snapshot_free_to_node", Int](snap)
+
+    def replay(mut self, ci: Int, var sc: Scene, wpx: Int, hpx: Int):
+        """The display list onto canvas ci's picture: each layer becomes a render node, and a layer that came again
+        unchanged keeps last frame's node (no new nodes, and GTK's renderer sees the same node: nothing to redraw)."""
+        var t_replay = perf_counter_ns()
+        self.new_layouts = 0
+        self.new_layout_ns = 0
+        var nodes = List[Int]()
+        for i in range(sc.layers()):
+            var node = 0
+            if i < len(self.canvases[ci].layer_nodes) and i < self.canvases[ci].prev.layers() and sc.same_layer(i, self.canvases[ci].prev, i):
+                node = self.canvases[ci].layer_nodes[i]
+                if node != 0:
+                    _ = external_call["gsk_render_node_ref", Int](node)
+                self.nodes_reused += 1
+            else:
+                node = self.build_layer(sc, i)
+                self.nodes_built += 1
+            nodes.append(node)
+        var snap = external_call["gtk_snapshot_new", Int]()
+        for n in nodes:
+            if n != 0:
+                external_call["gtk_snapshot_append_node", NoneType](snap, n)
+        self.scratch[24] = Float32(wpx)
+        self.scratch[25] = Float32(hpx)
+        var paintable = external_call["gtk_snapshot_free_to_paintable", Int](snap, self.at(24))
+        if paintable != 0:
+            external_call["gtk_picture_set_paintable", NoneType](self.canvases[ci].widget, paintable)
+            external_call["g_object_unref", NoneType](paintable)
+        for n in self.canvases[ci].layer_nodes:
+            if n != 0:
+                external_call["gsk_render_node_unref", NoneType](n)
+        self.canvases[ci].layer_nodes = nodes^
+        if self.rt.trace:
+            print("TRACE: replay " + String(sc.ops()) + " ops, " + String(self.new_layouts) + " new layouts in " + ms(self.new_layout_ns) + " ms, all "
+                  + ms(Int(perf_counter_ns()) - Int(t_replay)) + " ms")
+        self.canvases[ci].prev = sc^
 
     def copy_if_asked(mut self):
         """A Clipboard view whose version moved on: its text goes on the system clipboard."""
@@ -2099,6 +2303,16 @@ def on_idle_rebuild[A: App](host_addr: Int) abi("C") -> c_int:
     return 0  # G_SOURCE_REMOVE: run once
 
 
+def intervals(times: List[Int]) -> List[Float64]:
+    """The gaps between consecutive frames (ms); a pause over 100 ms (the bench waiting) isn't a frame interval."""
+    var out = List[Float64]()
+    for k in range(1, len(times)):
+        var g = Float64(times[k] - times[k - 1]) / 1e6
+        if g > 0 and g < 100:
+            out.append(g)
+    return out^
+
+
 def pct(xs: List[Float64], q: Float64) -> Float64:
     """The q-th quantile of xs (0 when empty)."""
     if len(xs) == 0:
@@ -2158,6 +2372,7 @@ def on_after_paint[A: App](clock: Int, host_addr: Int) abi("C"):
     var host = host_at[A](host_addr)
     if host[].paint_t0 > 0:
         host[].frame_paints.append(Float64(Int(perf_counter_ns()) - host[].paint_t0) / 1e6)
+        host[].frame_times.append(Int(external_call["gdk_frame_clock_get_frame_time", Int64](clock)) * 1000)
         if len(host[].frame_paints) > 4096:
             host[].frame_paints = List[Float64]()
 
@@ -3019,7 +3234,10 @@ def run_step[A: App](host_addr: Int, step: String):
         var paints = List[Float64]()
         var uploads = List[Float64]()
         host[].frame_paints = List[Float64]()
+        host[].frame_times = List[Int]()
         var draws0 = host[].canvases[gi].draws
+        host[].nodes_built = 0
+        host[].nodes_reused = 0
         var t_start = perf_counter_ns()
         for _ in range(count):
             var before = host[].canvases[gi].draws
@@ -3043,7 +3261,8 @@ def run_step[A: App](host_addr: Int, step: String):
               + " paint p50 " + one_decimal(Float32(pct(paints, 0.5))) + " p95 " + one_decimal(Float32(pct(paints, 0.95)))
               + " upload p50 " + one_decimal(Float32(pct(uploads, 0.5))) + " p95 " + one_decimal(Float32(pct(uploads, 0.95)))
               + " frame-paint p50 " + one_decimal(Float32(pct(host[].frame_paints, 0.5))) + " p95 " + one_decimal(Float32(pct(host[].frame_paints, 0.95)))
-              + " seconds " + one_decimal(Float32(secs)))
+              + " interval p50 " + one_decimal(Float32(pct(intervals(host[].frame_times), 0.5))) + " p99 " + one_decimal(Float32(pct(intervals(host[].frame_times), 0.99)))
+              + " layers built " + String(host[].nodes_built) + " reused " + String(host[].nodes_reused) + " seconds " + one_decimal(Float32(secs)))
     elif verb == "pause":  # pause:3000: keep the main loop running that long (a screen grab of the display can catch popovers)
         var until = perf_counter_ns() + to_int(rest) * 1_000_000
         while perf_counter_ns() < until:

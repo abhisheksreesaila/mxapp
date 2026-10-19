@@ -3,6 +3,7 @@
 from mojoui.view import View, CANVAS, BOARD, FIELD, PAN, ZOOM, KEY
 from mojoui.diff import Diff, diff
 from mojoui.canvas import Surface
+from mojoui.scene import Scene
 
 
 struct Event(Copyable, Movable):
@@ -76,6 +77,11 @@ trait App(Movable, Deinitable):
         shown elsewhere on screen (e.g. how long drawing took); hosts refresh it afterwards."""
         surface.fill(0)
 
+    def draw_scene(mut self, canvas: Int, mut scene: Scene) -> Bool:
+        """Canvas `canvas` as a display list (goal 26): hosts with a GPU path draw it (GTK: render nodes) instead of
+        pixels. Returns False (the default) when the canvas only paints pixels (draw())."""
+        return False
+
     def window_size(self) -> Tuple[Int, Int]:
         """The window's starting size in points, on desktops."""
         return (480, 560)
@@ -132,6 +138,14 @@ struct Runtime[A: App](Movable):
         """The window's content area changed size: the app hears it, then the screen catches up."""
         self.app.resize(width, height)
         return self.refresh()
+
+    def draw_scene(mut self, node: Int, mut scene: Scene) -> Tuple[Bool, Diff]:
+        """Canvas node `node` as a display list, if the app records one; then what else changed on screen."""
+        if node < 0 or node >= len(self.shown.nodes) or self.shown.nodes[node].kind != CANVAS:
+            return (False, Diff(False, []))
+        if not self.app.draw_scene(self.shown.nodes[node].style, scene):
+            return (False, Diff(False, []))
+        return (True, self.refresh())
 
     def draw(mut self, node: Int, mut surface: Surface) -> Diff:
         """Paints canvas node `node`, then returns what else changed on screen."""

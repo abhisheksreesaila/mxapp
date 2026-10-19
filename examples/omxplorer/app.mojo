@@ -10,6 +10,7 @@ from mojoui.view import (View, Text, Button, FilePicker, TextField, Canvas, Boar
                          Dropdown, Segmented, Toggle, Tabs, Grid, Scroll, Icon, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
                          BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, CARD_GOOD, TONE_ACCENT, TONE_GOOD, TONE_WARN, TONE_STRONG, NO_MSG, TOOL, TOOL_INLINE, ICON_ONLY)
 from mojoui.app import App, Event
+from mojoui.scene import Scene
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette, skin_palette, skin_name, skin_of
@@ -1227,6 +1228,13 @@ struct Main(App):
                 out += ("\t" if c > 0 else "") + self.frame.grid_text(c, r)
             got += 1
         return out
+
+    def draw_scene(mut self, canvas: Int, mut scene: Scene) -> Bool:
+        """The grid as a display list (goal 26; hosts that can draw one: GTK with MOJOUI_SCENE=1)."""
+        if canvas != 0:
+            return False
+        self.grid.draw_scene(scene, self.frame, self.font, self.pal)
+        return True
 
     def draw(mut self, canvas: Int, mut surface: Surface):
         if 0 <= canvas < len(self.chart_sizes):
