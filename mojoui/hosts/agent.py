@@ -31,7 +31,7 @@ from PIL import Image
 CHECKED, DISABLED = 1, 2  # menu item flags (mojoui/menus.mojo)
 GESTURES = {"pan": 1, "zoom": 2, "tap": 3, "press": 4, "release": 5, "double": 6, "key": 7, "secondary": 8}
 MODIFIERS = {"shift": 1, "ctrl": 2, "alt": 4}
-DESIGNS = {0: "Native", 1: "Fluent", 2: "Omarchy", 3: "Ledger", 4: "Graphite", 5: "Blueprint"}
+DESIGNS = {0: "Native", 1: "Fluent", 2: "Omarchy", 3: "Ledger", 4: "Graphite", 5: "Blueprint", 6: "Liquid"}
 PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18")
 CORE = ("screen", "act", "read", "render")
 NO_ARGS = {"type": "object", "properties": {}}

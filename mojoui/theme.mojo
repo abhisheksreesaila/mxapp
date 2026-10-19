@@ -10,7 +10,7 @@
 from mojoui.canvas import rgba
 from mojoui.text import REGULAR, MEDIUM, MONO, MONO_BOLD
 from mojoui.shared import environment
-from mojoui.view import FLUENT, OMARCHY, LEDGER, GRAPHITE, BLUEPRINT
+from mojoui.view import FLUENT, OMARCHY, LEDGER, GRAPHITE, BLUEPRINT, LIQUID
 from std.sys import CompilationTarget
 
 comptime OMARCHY_COLORS = "/.local/state/omarchy/current/theme/colors.toml"
@@ -138,7 +138,7 @@ struct Palette(Copyable, Movable):
     var warn: UInt32  # findings that ask for attention
     var regular: Int  # canvas text weights (Inter or JetBrains Mono)
     var medium: Int
-    var skin: Int  # the design this palette is for (LEDGER, GRAPHITE, BLUEPRINT), else 0
+    var skin: Int  # the design this palette is for (LEDGER, GRAPHITE, BLUEPRINT, LIQUID), else 0
     var chrome: UInt32  # the window's band: title bar, toolbar, bottom bar (the page colour unless a skin says otherwise)
     var chrome_ink: UInt32
     var chrome_line: UInt32
@@ -165,6 +165,14 @@ struct Palette(Copyable, Movable):
         return Palette(False, hx("#eef0f3"), hx("#ffffff"), hx("#f0f2f5"), hx("#1b1f24"), hx("#3d434c"), hx("#6b7380"),
                        hx("#e1e4e8"), hx("#c9ced6"), hx("#0e7c86"), hx("#ffffff"), mix(hx("#ffffff"), hx("#0e7c86"), 0.45), hx("#e3f2f3"),
                        hx("#6a4fd6"), hx("#1f8a4c"), hx("#c8364c"), hx("#b7791f"), REGULAR, MEDIUM, LEDGER, hx("#f5f6f8"), hx("#1b1f24"), hx("#e1e4e8"))
+
+    @staticmethod
+    def liquid() -> Palette:
+        """Liquid, light (docs/design/liquid.md): a white sheet, glass islands over a soft cool backdrop, teal (the default).
+        The chrome is the glass as it looks over the backdrop (GTK can't blur what's behind a widget)."""
+        return Palette(False, hx("#e9eef4"), hx("#ffffff"), hx("#f6f8fb"), hx("#0f172a"), hx("#334155"), hx("#64748b"),
+                       hx("#edf0f4"), hx("#d9dee6"), hx("#0e7c86"), hx("#ffffff"), mix(hx("#ffffff"), hx("#0e7c86"), 0.40), hx("#e6f2f3"),
+                       hx("#6a4fd6"), hx("#16a34a"), hx("#dc2626"), hx("#d97706"), REGULAR, MEDIUM, LIQUID, hx("#f7f9fc"), hx("#334155"), hx("#ffffff"))
 
     @staticmethod
     def graphite() -> Palette:
@@ -214,6 +222,9 @@ struct Palette(Copyable, Movable):
         if self.skin == LEDGER:
             var s: List[UInt32] = [hx("#0e7c86"), hx("#e8833a"), hx("#5b5fc7"), hx("#d6455d"), hx("#2e9e5b"), hx("#b8892d"), hx("#7a8594"), hx("#c45cb5")]
             return s[i % 8]
+        if self.skin == LIQUID:
+            var s: List[UInt32] = [hx("#0e7c86"), hx("#f59e0b"), hx("#6366f1"), hx("#ec4899"), hx("#22c55e"), hx("#a16207"), hx("#64748b"), hx("#c026d3")]
+            return s[i % 8]
         if self.skin == GRAPHITE:
             var s: List[UInt32] = [hx("#4cc2ff"), hx("#f5a524"), hx("#b48cff"), hx("#3ddc97"), hx("#ff6b6b"), hx("#e8833a"), hx("#9aa3b2"), hx("#d86fc9")]
             return s[i % 8]
@@ -231,6 +242,8 @@ struct Palette(Copyable, Movable):
 
 def skin_palette(design: Int) -> Palette:
     """The palette a design draws with: the skins, Omarchy's file, else Fluent."""
+    if design == LIQUID:
+        return Palette.liquid()
     if design == LEDGER:
         return Palette.ledger()
     if design == GRAPHITE:
@@ -244,6 +257,8 @@ def skin_palette(design: Int) -> Palette:
 
 def skin_name(design: Int) -> String:
     """The skin's name for CSS classes and settings ("ledger"), "" for the other designs."""
+    if design == LIQUID:
+        return "liquid"
     if design == LEDGER:
         return "ledger"
     if design == GRAPHITE:
@@ -254,9 +269,11 @@ def skin_name(design: Int) -> String:
 
 
 def skin_of(name: String) -> Int:
-    """A settings.txt skin name back to its design (LEDGER when unknown: the default)."""
+    """A settings.txt skin name back to its design (LIQUID when unknown: the default, D-225)."""
+    if name == "ledger":
+        return LEDGER
     if name == "graphite":
         return GRAPHITE
     if name == "blueprint":
         return BLUEPRINT
-    return LEDGER
+    return LIQUID

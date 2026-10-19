@@ -85,7 +85,9 @@ def web(steps, name, **more):
 
 
 def boxes(out, tag):
-    return [tuple(float(v) for v in m.groups()) for m in re.finditer(rf"^BOX: {re.escape(tag)} ([\d.-]+) ([\d.-]+) ([\d.-]+) ([\d.-]+)$", out, re.M)]
+    """Bounds of the views tagged `tag`; "toolbar/*": of every button inside the tagged container (BOX: toolbar/Save …)."""
+    name = re.escape(tag).replace(r"\*", "[^\n]+")
+    return [tuple(float(v) for v in m.groups()) for m in re.finditer(rf"^BOX: {name} ([\d.-]+) ([\d.-]+) ([\d.-]+) ([\d.-]+)$", out, re.M)]
 
 
 def pixel(png, x, y):
@@ -142,10 +144,10 @@ def m2():
         out = fn("", f"start-{host}")
         if "DESIGN: liquid" not in out:
             problems.append(f"{host}: a fresh install isn't Liquid ({[l for l in out.splitlines() if l.startswith('DESIGN')]})")
-        out = fn("tap:Settings…", f"settings-{host}")
-        for skin in ("Liquid", "Ledger", "Graphite", "Blueprint"):
-            if skin not in out:
-                problems.append(f"{host}: Settings doesn't offer {skin}")
+        for skin in ("Ledger", "Graphite", "Blueprint", "Liquid"):  # (a radio reports only its choice: pick each one)
+            out = fn(f"tap:Settings…;radio:0={skin}", f"settings-{skin}-{host}")
+            if f"DESIGN: {skin.lower()}" not in out:
+                problems.append(f"{host}: Settings doesn't switch to {skin}")
         for name, steps in (("sheet", SHEET), ("report", REPORT)):
             out = fn(steps, f"{name}-{host}")
             problems += islands(out, OUT / f"{name}-{host}-{'gtk' if host == 'GTK' else 'web'}.png", host)
@@ -175,7 +177,7 @@ def m3():
         if not prev or not cols or abs(prev[0][0] - cols[0][0]) > 2 or cols[0][2] < prev[0][2] - 4:
             problems.append(f"{host}: the import column table doesn't line up with the preview ({prev}, {cols})")
         out = fn(REPORT, f"tiles-{host}")
-        tiles, xs = boxes(out, "tile"), boxes(out, "tile-remove")
+        tiles, xs = boxes(out, "tile"), boxes(out, "tile/Remove")
         if len(tiles) < 4:
             problems.append(f"{host}: {len(tiles)} report tiles")
         else:
@@ -188,7 +190,7 @@ def m3():
                 break
         if len(xs) < len(tiles):
             problems.append(f"{host}: {len(tiles)} tiles but {len(xs)} remove buttons")
-        tools = boxes(out, "tool")
+        tools = [b for b in boxes(out, "toolbar/*") if b[3] >= 40]  # (icon-over-label tools; not the small toggles or fields)
         if not tools or len({round(t[3]) for t in tools}) > 1:
             problems.append(f"{host}: toolbar tools differ in height: {sorted({round(t[3]) for t in tools})}")
     src = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
@@ -212,11 +214,11 @@ def m4():
     glides = [(int(n), float(ms)) for n, ms in re.findall(r"^GLIDE: frames (\d+) max_ms ([\d.]+)$", out, re.M)]
     if len(glides) != 2 or any(n < 6 or ms >= 20 for n, ms in glides):
         problems.append(f"the selection ring doesn't glide (≥6 frames, each <20 ms): {glides}")
-    out = web(SHEET + ";style:.mui-tool=transition-duration;style:.mui-menu-popover=animation-name;style:dialog=animation-name", "motion-web")
+    out = web(SHEET + ";style:button.tool=transition-duration;style:.menu-items=animation-name;style:.dialog=animation-name", "motion-web")
     styles = dict(re.findall(r"^STYLE: (\S+) \S+ (.+)$", out, re.M))
-    if not styles.get(".mui-tool") or styles[".mui-tool"] in ("0s", ""):
-        problems.append(f"web: toolbar tools have no transition ({styles.get('.mui-tool')})")
-    for sel in (".mui-menu-popover", "dialog"):
+    if not styles.get("button.tool") or styles["button.tool"] in ("0s", ""):
+        problems.append(f"web: toolbar tools have no transition ({styles.get('button.tool')})")
+    for sel in (".menu-items", ".dialog"):
         if not styles.get(sel) or styles[sel] == "none":
             problems.append(f"web: {sel} has no arrival animation ({styles.get(sel)})")
     return not problems, "; ".join(problems) or f"transitions and arrival animations on GTK and the web; the ring glides: {glides}"

@@ -77,7 +77,10 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
 }).filter(Boolean).concat([...document.querySelectorAll('[data-tag]')].map(e => {
   const r = e.getBoundingClientRect();
   return 'BOX: ' + e.dataset.tag + ' ' + [r.x, r.y, r.width, r.height].map(v => v.toFixed(1)).join(' ');
-})).concat([...document.body.classList].filter(c => c !== 'skin').map(c => 'DESIGN: ' + c)).concat(
+})).concat([...document.querySelectorAll('[data-kind=button], label.picker')].map(b => {
+  const t = b.parentElement && b.parentElement.closest('[data-tag]'), r = b.getBoundingClientRect();
+  return t && r.width > 0 ? 'BOX: ' + t.dataset.tag + '/' + (b.title || b.textContent.trim()) + ' ' + [r.x, r.y, r.width, r.height].map(v => v.toFixed(1)).join(' ') : '';
+}).filter(Boolean)).concat([...document.body.classList].filter(c => c !== 'skin').map(c => 'DESIGN: ' + c)).concat(
   document.body.classList.contains('skin') && document.fonts.check('13px Inter') && document.fonts.check('13px "JetBrains Mono"') ? ["FONT: Inter, JetBrains Mono (the app's own)"] : []
 ).concat(['PAGE: ' + document.documentElement.scrollWidth + 'x' + document.documentElement.scrollHeight
   + ' in ' + innerWidth + 'x' + innerHeight]).join(String.fromCharCode(10))"""
@@ -242,6 +245,10 @@ def step(page, s):
         page.mouse.move(sx + dx / 2, sy + dy / 2)
         page.mouse.move(sx + dx, sy + dy)
         page.mouse.up()
+    elif verb == "style":  # style:selector=property: the first match's computed value (STYLE: selector property value)
+        sel, prop = rest.split("=", 1)
+        value = page.evaluate("([s, p]) => { const e = document.querySelector(s); return e ? getComputedStyle(e).getPropertyValue(p) : 'none'; }", [sel, prop])
+        return f"STYLE: {sel} {prop} {value}"
     elif verb == "wait":  # until a button with this title appears (e.g. after frames change the screen)
         page.locator("[data-kind=button]").filter(has_text=exact(rest)).first.wait_for(timeout=15000)
     elif verb == "slide":

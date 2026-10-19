@@ -98,12 +98,15 @@ def kpi_of(t: ReportTile, sheet: Sheet, filter: ReportFilter, accent: Bool) -> K
 
 
 def ReportPage(title: String, subtitle: String, kpis: List[View], charts: List[View]) -> View:
-    """The page: title, the KPI row (four across), the charts (two across, one alone across the page). Tiles are
-    added from the app's toolbar."""
+    """The page: title, the KPI tiles in a grid of equal widths (three across), the charts (two across, one alone across
+    the page). Tiles are added from the app's toolbar."""
     var parts = List[View]()
     parts.append(HStack(Text(title, TITLE), Text(subtitle, CAPTION), spacing=14).align(CENTER))
     if len(kpis) > 0:
-        parts.append(Grid(kpis, max(1, min(4, len(kpis))), spacing=14).fill())  # (packed: as many across as there are, up to four)
+        var cells = kpis.copy()
+        while len(cells) % 3 != 0:  # (empty cells keep a lone tile a third wide)
+            cells.append(Spacer())
+        parts.append(Grid(cells^, 3, spacing=14).fill())
     if len(charts) > 0:
         parts.append(Grid(charts, min(2, len(charts)), spacing=14).fill())  # (one chart: the full width)
     return VStack(parts^, spacing=16).fill().align(START)

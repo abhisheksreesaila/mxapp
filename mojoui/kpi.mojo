@@ -5,7 +5,7 @@
 #   k.view(canvas_id, version)          # in view()
 #   k.draw(surface, palette)            # in draw(), for that canvas: the sparkline
 
-from mojoui.view import View, Text, Card, HStack, VStack, Canvas, CAPTION, TITLE, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, START
+from mojoui.view import View, Text, Card, HStack, VStack, Canvas, Button, Spacer, CAPTION, TITLE, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, START, CENTER, ICON_ONLY
 from mojoui.canvas import Surface
 from mojoui.theme import Palette
 from mojoui.draw import line, area, with_alpha
@@ -20,11 +20,14 @@ struct KpiView(Copyable, Movable):
     var accent: Bool  # the focal number (its value in the accent colour)
     var tone: Int  # the note's tone: TONE_GOOD, TONE_WARN or 0 (the app says whether a change is good: a rising cost isn't)
 
-    def view(self, canvas: Int, version: Int) -> View:
+    def view(self, canvas: Int, version: Int, on_close: Int = NO_MSG) -> View:
+        """The card; with on_close, a small Remove (✕) button inside its top-right corner (it shows fully on hover)."""
         var bottom = HStack(Text(self.note, style=CAPTION).tone(self.tone).tag("kpi-note"),
                             Canvas(canvas, version, on_gesture=NO_MSG).width(110).height(34), spacing=8).fill()
+        var head = HStack(Text(self.label, style=CAPTION).tag("kpi-label"), Spacer(), Button("Remove", on_close, ICON_ONLY, icon="close"), spacing=8).fill().align(CENTER) \
+            if on_close != NO_MSG else Text(self.label, style=CAPTION).tag("kpi-label")
         return Card(
-            Text(self.label, style=CAPTION).tag("kpi-label"),
+            head^,
             Text(self.value, style=TITLE).tone(TONE_ACCENT if self.accent else 0).tag("kpi-value"),
             bottom^,
             spacing=4,

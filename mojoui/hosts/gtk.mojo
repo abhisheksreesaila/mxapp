@@ -12,7 +12,7 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.menus import items_text, CHECKED, DISABLED, DANGER
 from mojoui.view import (
-    View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
+    LIQUID, View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, SECONDARY, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, KEY, SHIFT, CTRL, ALT,
@@ -561,6 +561,9 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_label_set_wrap", NoneType](w, c_int(1))
             external_call["gtk_label_set_natural_wrap_mode", NoneType](w, c_int(1))  # prefer one line; wrap only when squeezed
             external_call["gtk_label_set_justify", NoneType](w, c_int(2))  # centre
+            if node.w > 0:  # a text given a width is a column of a row (a table's cell): it reads from the leading edge, as on the web
+                external_call["gtk_label_set_justify", NoneType](w, c_int(0))
+                external_call["gtk_label_set_xalign", NoneType](w, Float32(0))
             if node.style == TITLE:
                 add_class(w, "title-1")
             elif node.style == HEADLINE:
@@ -1307,7 +1310,7 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_style_context_remove_provider_for_display", NoneType](display, self.skin_provider)
             external_call["g_object_unref", NoneType](self.skin_provider)
             self.skin_provider = 0
-        for old in ["fluent", "omarchy", "ledger", "graphite", "blueprint"]:
+        for old in ["fluent", "omarchy", "ledger", "graphite", "blueprint", "liquid"]:
             var name = String(old)
             external_call["gtk_widget_remove_css_class", NoneType](self.window, name.as_c_string_span())
         self.skin_design = design
@@ -1327,6 +1330,8 @@ struct GtkHost[A: App](Movable):
             var pal = skin_palette(design)
             external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if pal.dark else 1))
             rules = skin_css(pal, skin_name(design))
+            if design == LIQUID:  # the showcase skin: Liquid's islands, type scale and motion over the shared skin rules
+                rules += liquid_css(pal)
             cls = skin_name(design)
         if rules != "":
             self.skin_provider = external_call["gtk_css_provider_new", Int]()
@@ -2149,6 +2154,50 @@ def find(host: GtkHost, kind: Int, label: String, nth: Int, by_hint: Bool = Fals
     return -1
 
 
+def first_label(w: Int) -> Int:
+    """The first GtkLabel at or under widget w (depth first), 0 if none."""
+    if w == 0:
+        return 0
+    if external_call["g_type_check_instance_is_a", c_int](w, external_call["gtk_label_get_type", Int]()) != 0:
+        return w
+    var c = external_call["gtk_widget_get_first_child", Int](w)
+    while c != 0:
+        var found = first_label(c)
+        if found != 0:
+            return found
+        c = external_call["gtk_widget_get_next_sibling", Int](c)
+    return 0
+
+
+def report_menu_rows(host: GtkHost, menu: Int):
+    """MENUROW: title height font-size for each item of an open menu (submenus included): rows must share one height and type."""
+    for c in host.rt.shown.nodes[menu].children:
+        ref n = host.rt.shown.nodes[c]
+        if n.kind != ITEM or n.style != 0 or c >= len(host.widgets) or host.widgets[c] == 0:
+            continue
+        var w = host.widgets[c]
+        if external_call["gtk_widget_get_mapped", c_int](w) != 0:
+            var label = first_label(w)
+            var size = Int(external_call["gtk_widget_get_height", c_int](label)) if label != 0 else 0  # (a label's height: its type's size and line)
+            print("MENUROW: " + n.text + " " + String(Int(external_call["gtk_widget_get_height", c_int](w))) + " " + String(size))
+        if len(n.children) > 0:
+            report_menu_rows(host, c)
+
+
+def report_buttons(host: GtkHost, node: Int, tag: String):
+    """BOX: tag/Title for each button inside tagged container `node` (not inside a tagged container within it): the
+    checks measure tools and remove buttons without tagging them (a tag renames a button's agent tool, D-228)."""
+    for c in host.rt.shown.nodes[node].children:
+        ref n = host.rt.shown.nodes[c]
+        if n.kind == BUTTON and c < len(host.widgets) and host.widgets[c] != 0:
+            var rect = List[Float32](length=4, fill=0)
+            if external_call["gtk_widget_compute_bounds", c_int](host.widgets[c], host.window, Int(rect.unsafe_ptr())) != 0 and rect[2] > 0:
+                print("BOX: " + tag + "/" + n.text + " " + one_decimal(rect[0]) + " " + one_decimal(rect[1]) + " " + one_decimal(rect[2]) + " " + one_decimal(rect[3]))
+            _ = len(rect)
+        elif n.name == "":
+            report_buttons(host, c, tag)
+
+
 def find_item(host: GtkHost, menu: Int, title: String) -> Int:
     """The ITEM node titled `title` inside menu node `menu` (submenus included)."""
     for c in host.rt.shown.nodes[menu].children:
@@ -2661,6 +2710,7 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
                         print("BOX: " + host[].rt.shown.nodes[i].name + " " + one_decimal(rect[0]) + " " + one_decimal(rect[1])
                               + " " + one_decimal(rect[2]) + " " + one_decimal(rect[3]))
                     _ = len(rect)
+                    report_buttons(host[], i, host[].rt.shown.nodes[i].name)
     for i in range(len(host[].rt.shown.nodes)):
         if host[].rt.shown.nodes[i].kind == BOARD and not alerts:
             print("LAYOUT: " + ("list" if host[].board_list else "board"))
@@ -2740,6 +2790,7 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
                 print("POPOVERSHOWN: " + ("yes" if external_call["gtk_widget_get_mapped", c_int](w) != 0 else "no"))
         elif n.kind == MENU:
             print("MENU: " + ("context" if n.style == 1 else n.text) + ": " + items_text(host[].rt.shown, i))
+            report_menu_rows(host[], i)
             if n.style == 1 and getenv("MOJOUI_SHOT") != "":  # (a popover is its own surface: not in the window's screenshot)
                 print("MENUSHOWN: " + ("yes" if external_call["gtk_widget_get_mapped", c_int](w) != 0 else "no"))
         elif n.kind == NAVBAR:
@@ -2890,6 +2941,94 @@ window.fluent dropdown > button:hover { background: #FAFAFA; }
 window.fluent scrollbar slider { min-width: 8px; min-height: 8px; background-color: rgba(0,0,0,.28); }
 """
 
+
+
+def liquid_css(p: Palette) -> String:
+    """omxplorer's Liquid skin for GTK (docs/design/liquid.md, D-225, D-227), on top of skin_css: the controls float on
+    glass islands over a soft backdrop, the content is solid white, one type scale (11 12 13 15 17 22 34 px), springs.
+    GTK can't blur what is behind a widget: glass is translucent white with a rim, a top highlight and a soft shadow.
+    GTK CSS has no linear() easing: arrivals are keyframes with an overshoot, hover and press a springy cubic-bezier."""
+    var ink = hex_of(p.ink)
+    var body = hex_of(p.ink2)
+    var ink2 = hex_of(p.ink3)
+    var accent = hex_of(p.accent)
+    var line = hex_of(p.line)
+    var strong = hex_of(p.line_strong)
+    var w = String("window.liquid ")
+    var glass = String("background-color: rgba(255,255,255,0.62); box-shadow: inset 0 1px rgba(255,255,255,0.9), 0 0 0 1px rgba(255,255,255,0.75), 0 8px 32px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.06);")
+    var solid = String("background-color: #ffffff; box-shadow: 0 0 0 1px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.05);")
+    var hover = String("rgba(15,23,42,0.06)")
+    var spring = String("cubic-bezier(0.2, 0.9, 0.3, 1.15)")  # snappy spring: a touch of overshoot, settles in ~430 ms
+    return (
+        "@keyframes liquid-arrive { 0% { opacity: 0; transform: scale(0.94) translateY(-6px); } 62% { opacity: 1; transform: scale(1.012); } 100% { opacity: 1; transform: none; } }\n"
+        + "@keyframes liquid-rise { 0% { opacity: 0; transform: translateY(16px) scale(0.97); } 60% { opacity: 1; transform: translateY(-2px) scale(1.005); } 100% { opacity: 1; transform: none; } }\n"
+        + "@keyframes liquid-land { 0% { opacity: 0; transform: translateY(10px) scale(0.98); } 65% { opacity: 1; transform: translateY(-1px); } 100% { opacity: 1; transform: none; } }\n"
+        # the backdrop, and type: Inter, one scale
+        + w + "{ background-color: #e9eef4; background-image: linear-gradient(180deg, #eef2f7, #e4e9f1); color: " + body + "; font-size: 13px; }\n"
+        + w + "label.title-1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; color: " + ink + "; }\n"
+        + w + "label.title-4 { font-size: 15px; font-weight: 600; color: " + ink + "; }\n"
+        + w + "label.caption { font-size: 12px; color: " + ink2 + "; }\n"
+        + w + ".mui-board { background-color: transparent; }\n"
+        # the menu bar: one glass strip, one type
+        + w + ".mui-tag-menubar { margin: 8px 10px 0; border-radius: 12px; min-height: 34px; " + glass + " }\n"
+        + w + "menubutton.mui-menu > button { font-size: 13px; padding: 3px 10px; border-radius: 8px; color: " + body + "; transition: background 300ms " + spring + "; }\n"
+        + w + "menubutton.mui-menu > button:hover, " + w + "menubutton.mui-menu > button:checked { background: " + hover + "; color: " + ink + "; }\n"
+        # the toolbar: one floating glass island; tools icon over label, a soft fill on hover, press scales
+        + w + ".mui-tag-toolbar { margin: 0 10px; border-radius: 18px; border-bottom: none; padding: 6px; " + glass + " }\n"
+        + w + "button.mui-tool { min-width: 62px; min-height: 52px; border-radius: 12px; font-size: 11px; font-weight: 500; color: " + body + "; background: transparent; box-shadow: none;"
+        + " transition: background 300ms " + spring + ", transform 300ms " + spring + "; }\n"
+        + w + "button.mui-tool:hover { background: " + hover + "; } " + w + "button.mui-tool:active { transform: scale(0.96); }\n"
+        + w + "button.mui-tool-on, " + w + "button.mui-tool-on:hover { background: rgba(14,124,134,0.10); color: " + accent + "; }\n"
+        + w + "label.mui-tool-label { font-size: 11px; }\n"
+        + w + ".mui-tag-toolbar separator { margin: 10px 8px; background: " + strong + "; min-width: 1px; }\n"
+        # every button: pills, springy hover and press
+        + w + "button { border-radius: 999px; font-size: 13px; transition: background 300ms " + spring + ", box-shadow 300ms " + spring + ", transform 300ms " + spring + "; }\n"
+        + w + "button:active { transform: scale(0.96); }\n"
+        + w + "button.image-button, " + w + "button.flat.image-button { border-radius: 10px; }\n"
+        + w + "button.suggested-action { box-shadow: 0 1px 2px rgba(14,124,134,0.30), inset 0 1px rgba(255,255,255,0.18); }\n"
+        # the formula bar: a field on the backdrop
+        + w + ".mui-tag-formula-bar { background: transparent; border-bottom: none; margin: 0 10px; }\n"
+        + w + ".mui-tag-formula-bar entry { font-size: 13px; }\n"
+        + w + "entry, " + w + "dropdown > button { border-radius: 10px; font-size: 13px; }\n"
+        # content: solid white cards (the table, charts, pivots, report tiles), 16 px corners
+        + w + ".mui-card, " + w + ".mui-tag-table, " + w + ".mui-tag-tile { border-radius: 16px; " + solid + " }\n"
+        + w + ".mui-tag-table { padding: 10px 12px 12px; }\n"
+        + w + ".mui-tag-tile { padding: 16px 18px; animation: liquid-land 600ms ease-out; transition: box-shadow 300ms " + spring + "; }\n"
+        + w + ".mui-tag-tile:hover { box-shadow: 0 0 0 1px rgba(15,23,42,0.07), 0 10px 30px rgba(15,23,42,0.10); }\n"
+        + w + ".mui-tag-tile button { opacity: 0.35; transition: opacity 300ms " + spring + "; } " + w + ".mui-tag-tile:hover button { opacity: 1; }\n"
+        + w + ".mui-tag-tile label.title-1 { font-size: 34px; font-weight: 600; letter-spacing: -0.8px; }\n"
+        + w + "label.title-1.mui-tone-accent, " + w + "label.title-4.mui-tone-accent { color: " + accent + "; }\n"
+        # the inspector: a glass panel
+        + w + ".mui-tag-inspector { border-radius: 18px; padding: 10px; " + glass + " }\n"
+        # the bottom strip: tabs as pills, live figures
+        + w + ".mui-tag-sheet-tabs { margin: 0 10px; border-radius: 14px 14px 0 0; background: rgba(255,255,255,0.62); }\n"
+        + w + ".mui-tag-status-bar { margin: 0 10px 10px; border-radius: 0 0 14px 14px; border-top: 1px solid rgba(255,255,255,0.75); background: rgba(255,255,255,0.62); box-shadow: 0 8px 20px rgba(15,23,42,0.06); }\n"
+        + w + ".mui-tag-status-bar label { font-family: 'Inter', sans-serif; font-size: 12px; color: " + ink2 + "; }\n"
+        + w + ".mui-tag-sheet-tabs button { border-radius: 999px; padding: 2px 14px; font-weight: 500; }\n"
+        + w + ".mui-tag-sheet-tabs button:not(.flat) { background: #ffffff; color: " + ink + "; box-shadow: 0 1px 3px rgba(15,23,42,0.12); }\n"
+        # segmented controls: a soft track and a white thumb
+        + w + "toggle-group { background: rgba(15,23,42,0.06); border-radius: 999px; padding: 3px; }\n"
+        + w + "toggle-group > toggle { border-radius: 999px; min-height: 24px; padding: 0 12px; font-size: 12px; font-weight: 500; color: " + ink2 + "; transition: background 300ms " + spring + "; }\n"
+        + w + "toggle-group > toggle:checked { background: #ffffff; color: " + ink + "; font-weight: 500; box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 0 0 1px rgba(15,23,42,0.04); }\n"
+        # menus and popovers: one glass panel arriving on a spring; rows one height and one type; a submenu solid
+        + "popover.mui-menu-popover > contents, popover.mui-popover-surface > contents { border-radius: 14px; padding: 6px; background-color: rgba(255,255,255,0.94);"
+        + " box-shadow: inset 0 1px rgba(255,255,255,0.9), 0 0 0 1px rgba(15,23,42,0.08), 0 12px 40px rgba(15,23,42,0.16); }\n"
+        + "window.liquid popover.mui-menu-popover > contents, window.liquid popover.mui-popover-surface > contents { animation: liquid-arrive 420ms ease-out; }\n"
+        + "window.liquid popover.mui-menu-popover button.mui-menu-item, window.liquid popover.mui-menu-popover menubutton > button { min-height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 400; color: " + ink + "; }\n"
+        + "window.liquid popover.mui-menu-popover button.mui-menu-item:hover, window.liquid popover.mui-menu-popover menubutton > button:hover, window.liquid popover.mui-menu-popover menubutton > button:checked { background: " + accent + "; color: #ffffff; }\n"
+        + "window.liquid popover.mui-menu-popover button.mui-menu-item:hover image, window.liquid popover.mui-menu-popover button.mui-menu-item:hover label,"
+        + " window.liquid popover.mui-menu-popover menubutton > button:hover image, window.liquid popover.mui-menu-popover menubutton > button:hover label { color: #ffffff; }\n"
+        + "window.liquid popover.mui-menu-popover label.mui-menu-key { font-family: 'Inter', sans-serif; font-size: 12px; color: " + hex_of(mix(p.ink3, rgba(255, 255, 255), 0.3)) + "; }\n"
+        + "window.liquid popover.mui-menu-popover label.mui-menu-label { font-size: 11px; }\n"
+        + "window.liquid popover.mui-menu-popover separator.mui-menu-sep { margin: 5px 8px; background: " + line + "; }\n"
+        # dialogs: a white sheet rising on a spring over a dimmed window
+        + "window.liquid dialog > sheet, window.liquid dialog.mui-dialog-surface, .mui-dialog { border-radius: 20px; }\n"
+        + "window.liquid dialog > sheet { animation: liquid-rise 520ms ease-out; box-shadow: 0 40px 100px rgba(15,23,42,0.30), 0 0 0 1px rgba(15,23,42,0.07); }\n"
+        + "window.liquid .mui-dialog-head label { font-size: 17px; font-weight: 600; color: " + ink + "; }\n"
+        + "window.liquid dimming { background-color: rgba(15,23,42,0.18); }\n"
+        # toasts: a dark pill
+        + "window.liquid toast { border-radius: 999px; animation: liquid-rise 520ms ease-out; }\n"
+    )
 
 def omarchy_css(p: Palette) -> String:
     """The Omarchy skin for GTK, from the person's theme colours: flat, hairline borders, JetBrains Mono."""

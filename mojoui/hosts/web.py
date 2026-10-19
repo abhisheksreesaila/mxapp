@@ -715,6 +715,68 @@ body.skin .menu-label { color: var(--o-ink3); opacity: 1; } body.skin .menu-sep 
 """
 
 
+# omxplorer's Liquid skin (design 6, docs/design/liquid.md, D-225): on top of SKIN_CSS. The same rules as liquid_css in
+# gtk.mojo, plus what only a browser can do: a real backdrop blur on the glass and true spring curves (linear()).
+LIQUID_CSS = """
+body.liquid { --sp-snappy: linear(0, 0.02, 0.071, 0.142, 0.226, 0.316, 0.407, 0.494, 0.577, 0.653, 0.72, 0.78, 0.831, 0.875, 0.911, 0.94, 0.964, 0.983, 0.997, 1.007, 1.014, 1.019, 1.021, 1.023, 1.023, 1.022, 1.02, 1.018, 1.017, 1.014, 1.012, 1.01, 1.009, 1.007, 1.006, 1.004, 1.003, 1.002, 1.002, 1.001, 1);
+  --sp-bouncy: linear(0, 0.045, 0.161, 0.317, 0.49, 0.66, 0.814, 0.941, 1.04, 1.108, 1.148, 1.165, 1.163, 1.147, 1.123, 1.095, 1.066, 1.04, 1.017, 0.999, 0.986, 0.977, 0.973, 0.973, 0.974, 0.978, 0.982, 0.987, 0.992, 0.996, 0.999, 1.002, 1.003, 1.004, 1.005, 1.004, 1.004, 1.003, 1.002, 1.002, 1);
+  --glass-bg: rgba(255,255,255,.62); --glass-fx: blur(24px) saturate(1.6);
+  --glass-shadow: inset 0 1px rgba(255,255,255,.9), 0 0 0 1px rgba(255,255,255,.75), 0 8px 32px rgba(15,23,42,.10), 0 1px 2px rgba(15,23,42,.06);
+  --solid-shadow: 0 0 0 1px rgba(15,23,42,.07), 0 1px 3px rgba(15,23,42,.05);
+  background: linear-gradient(180deg, #eef2f7, #e4e9f1) fixed; font: 13px/18px Inter, sans-serif; font-feature-settings: "tnum" 1; }
+body.liquid .text.title { font-size: 22px; line-height: 28px; letter-spacing: -.3px; } body.liquid .text.caption { font-size: 12px; }
+body.liquid .board { background: transparent; }
+@keyframes liquid-arrive { from { opacity: 0; transform: scale(.94) translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes liquid-rise { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes liquid-land { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+body.liquid .menubar, body.liquid [data-tag=toolbar], body.liquid [data-tag=inspector], body.liquid [data-tag=sheet-tabs], body.liquid [data-tag=status-bar] {
+  background: var(--glass-bg); -webkit-backdrop-filter: var(--glass-fx); backdrop-filter: var(--glass-fx); box-shadow: var(--glass-shadow); border: 0; }
+body.liquid .menubar { margin: 8px 10px 0; border-radius: 12px; min-height: 34px; }
+body.liquid .menu-title { font-size: 13px; padding: 4px 10px; border-radius: 8px; color: var(--o-ink2); transition: background 430ms var(--sp-snappy); }
+body.liquid .menu.open > .menu-title, body.liquid .menu-title:hover { background: rgba(15,23,42,.06); color: var(--o-ink); }
+body.liquid [data-tag=toolbar] { margin: 0 10px; border-radius: 18px; padding: 6px; }
+body.liquid button.tool, body.liquid label.picker.tool { min-width: 62px; min-height: 52px; border-radius: 12px; font-size: 11px; font-weight: 500; color: var(--o-ink2);
+  transition: background 430ms var(--sp-snappy), transform 430ms var(--sp-snappy); }
+body.liquid button.tool:hover, body.liquid label.picker.tool:hover { background: rgba(15,23,42,.06); }
+body.liquid button.tool:active, body.liquid button:active { transform: scale(.96); }
+body.liquid button.tool.on, body.liquid button.icon-only.on { background: rgba(14,124,134,.10); color: var(--o-accent); }
+body.liquid button { border-radius: 999px; transition: background 430ms var(--sp-snappy), box-shadow 430ms var(--sp-snappy), transform 430ms var(--sp-snappy); }
+body.liquid button.icon-only { border-radius: 10px; }
+body.liquid button.prominent { box-shadow: 0 1px 2px rgba(14,124,134,.3), inset 0 1px rgba(255,255,255,.18); }
+body.liquid [data-tag=formula-bar] { background: transparent; border: 0; margin: 0 10px; }
+body.liquid [data-tag=formula-bar] input[type=text] { font-size: 13px; }
+body.liquid select, body.liquid input[type=text], body.liquid input[type=date], body.liquid textarea { border-radius: 10px; }
+body.liquid .vstack.card, body.liquid [data-tag=table], body.liquid [data-tag=tile] { background: #fff; border-radius: 16px; box-shadow: var(--solid-shadow); }
+body.liquid [data-tag=table] { padding: 10px 12px 12px; box-sizing: border-box; }
+body.liquid [data-tag=tile] { padding: 16px 18px; box-sizing: border-box; animation: liquid-land 790ms var(--sp-bouncy) both;
+  transition: box-shadow 430ms var(--sp-snappy), transform 430ms var(--sp-snappy); }
+body.liquid [data-tag=tile]:hover { box-shadow: 0 0 0 1px rgba(15,23,42,.07), 0 10px 30px rgba(15,23,42,.10); transform: translateY(-2px); }
+body.liquid [data-tag=tile] button { opacity: .35; transition: opacity 430ms var(--sp-snappy); } body.liquid [data-tag=tile]:hover button { opacity: 1; }
+body.liquid [data-tag=tile] .text.title { font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -.8px; }
+body.liquid [data-tag=inspector] { border-radius: 18px; padding: 10px; box-sizing: border-box; }
+body.liquid [data-tag=sheet-tabs] { margin: 0 10px; border-radius: 14px 14px 0 0; }
+body.liquid [data-tag=status-bar] { margin: 0 10px 10px; border-radius: 0 0 14px 14px; box-shadow: 0 8px 20px rgba(15,23,42,.06); }
+body.liquid [data-tag=status-bar] .text { font-family: Inter, sans-serif; font-size: 12px; }
+body.liquid [data-tag=sheet-tabs] button { border-radius: 999px; padding: 2px 14px; }
+body.liquid .segmented, body.liquid .tabs { background: rgba(15,23,42,.06); border: 0; border-radius: 999px; padding: 3px; overflow: visible; }
+body.liquid .segmented span, body.liquid .tabs span { border-radius: 999px; min-height: 24px; padding: 0 12px; font-weight: 500; transition: background 430ms var(--sp-snappy); }
+body.liquid .segmented input:checked + span, body.liquid .tabs input:checked + span { background: #fff; color: var(--o-ink); font-weight: 500;
+  box-shadow: 0 1px 3px rgba(15,23,42,.12), 0 0 0 1px rgba(15,23,42,.04); }
+body.liquid .menu > .menu-items, body.liquid .popover { border-radius: 14px; padding: 6px; background: rgba(255,255,255,.84);
+  -webkit-backdrop-filter: var(--glass-fx); backdrop-filter: var(--glass-fx); box-shadow: inset 0 1px rgba(255,255,255,.9), 0 0 0 1px rgba(15,23,42,.08), 0 12px 40px rgba(15,23,42,.16);
+  transform-origin: top left; animation: liquid-arrive 790ms var(--sp-bouncy) both; }
+body.liquid .menu.sub > .menu-items { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.liquid .mi { height: 30px; border-radius: 8px; font-size: 13px; color: var(--o-ink); transition: background 300ms var(--sp-snappy); }
+body.liquid .mi:hover:not([disabled]) { background: var(--o-accent); color: #fff; } body.liquid .mi:hover:not([disabled]) svg, body.liquid .mi:hover:not([disabled]) .mi-key { color: #fff; }
+body.liquid .mi .mi-key { font-family: Inter, sans-serif; font-size: 12px; }
+body.liquid .dialog { border-radius: 20px; box-shadow: 0 40px 100px rgba(15,23,42,.30), 0 0 0 1px rgba(15,23,42,.07); animation: liquid-rise 790ms var(--sp-bouncy) both; }
+body.liquid .dialog-layer .scrim { background: rgba(15,23,42,.18); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+body.liquid .dialog-head h3 { font-size: 17px; }
+body.liquid .toast { border-radius: 999px; animation: liquid-rise 790ms var(--sp-bouncy) both; }
+@media (prefers-reduced-motion: reduce) { body.liquid *, body.liquid *::before, body.liquid *::after { animation-duration: 150ms !important; transition-duration: 150ms !important; } }
+"""
+
+
 def png(rgba, w, h):
     """Encodes RGBA bytes as a PNG (no dependencies: zlib + the PNG chunk format)."""
     def chunk(kind, data):
@@ -895,7 +957,7 @@ def render_node(s, i, sid):
     if kind == GRID:
         kids = [render(s, c, sid) for c in n["children"]]
         return Div(*kids, cls="grid", id=nid, data_kind="grid", data_columns=str(n["value"]),
-                   style=f"grid-template-columns:repeat({n['value']}, auto);gap:{n['spacing']}px")
+                   style=f"grid-template-columns:repeat({n['value']}, minmax(0, 1fr));gap:{n['spacing']}px")  # (equal columns, as GTK's homogeneous grid)
     if kind == LAZYLIST:
         row_h = n["spacing"] or 48
         # Scroll events ask for the rows around the new position: throttled while scrolling, plus a
@@ -1041,7 +1103,7 @@ def make_app(module_dir):
         # inherited their list's hx-target and silently sent nothing). Note: hx-vals is still
         # merged from ancestors even so, so elements set every key they rely on themselves.
         Meta(name="htmx-config", content='{"disableInheritance": true}'),
-        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS), Style(FLUENT_CSS), Style(OMARCHY_CSS), Style(SKIN_CSS)))
+        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS), Style(FLUENT_CSS), Style(OMARCHY_CSS), Style(SKIN_CSS), Style(LIQUID_CSS)))
     sessions = OrderedDict()  # sid → Session, oldest first
     sessions_lock = threading.Lock()
 
@@ -1096,8 +1158,8 @@ def make_app(module_dir):
         Mojo module). oob: after a change (Settings → Appearance), swapped into the open page (D-156)."""
         if design == 1:
             parts = (Style("", id="mojoui-skin"), Script("document.body.className = ''; document.body.classList.add('fluent')", id="mojoui-skin-js"))
-        elif design in (2, 3, 4, 5):  # Omarchy, or one of omxplorer's skins
-            name = {2: "omarchy", 3: "skin ledger", 4: "skin graphite", 5: "skin blueprint"}[design]
+        elif design in (2, 3, 4, 5, 6):  # Omarchy, or one of omxplorer's skins
+            name = {2: "omarchy", 3: "skin ledger", 4: "skin graphite", 5: "skin blueprint", 6: "skin liquid"}[design]
             pal = dict(kv.split("=", 1) for kv in mod.palette(design).split(";"))
             shadow = "0 6px 20px rgba(0,0,0,.55), 0 0 0 1px #34363b" if pal.get("dark") == "1" else "0 4px 16px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08)"
             css_vars = "body {" + "".join(f"--o-{k}: {v};" for k, v in pal.items() if k != "dark") + f"--o-shadow: {shadow};" + \

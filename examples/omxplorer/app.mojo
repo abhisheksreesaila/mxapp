@@ -8,14 +8,14 @@
 
 from mojoui.view import (View, Text, Button, FilePicker, TextField, Canvas, Board, VStack, HStack, Card, Spacer, Divider,
                          Dropdown, Segmented, Toggle, Tabs, Grid, Scroll, Icon, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
-                         BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, CARD_GOOD, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, TOOL, ICON_ONLY)
+                         BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, CARD_GOOD, TONE_ACCENT, TONE_GOOD, TONE_WARN, TONE_STRONG, NO_MSG, TOOL, ICON_ONLY)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette, skin_palette, skin_name, skin_of
 from mojoui.menus import MenuBar, Menu, Item, Separator, Submenu, ContextMenu
 from mojoui.overlays import Dialog, Toast, Popover, Checkbox
-from mojoui.view import Radio, LEDGER, GRAPHITE, BLUEPRINT
+from mojoui.view import Radio, LEDGER, GRAPHITE, BLUEPRINT, LIQUID
 from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
@@ -124,7 +124,7 @@ comptime RENAME_CANCEL = 97
 comptime SET_INK = 600  # + 0 (automatic) … 8: the Format menu's text colours
 comptime SET_FILL = 610  # + 0 (none) … 8
 comptime SWATCH_CANVAS = 5  # the swatches' canvas id
-comptime SKINS: List[String] = ["Ledger", "Graphite", "Blueprint"]
+comptime SKINS: List[String] = ["Liquid", "Ledger", "Graphite", "Blueprint"]
 comptime MAX_OBJECTS = 40  # per sheet, and tiles per report (canvas ids 10…49, 60…99, 120…159)
 comptime TABLE_H = 400  # the table's height once objects share the sheet
 
@@ -148,7 +148,7 @@ struct Main(App):
     var preview: DataGrid  # Import: the first rows, read-only
     var font: Font
     var pal: Palette
-    var skin: Int  # the design (LEDGER by default; Settings → Appearance writes settings.txt, D-156)
+    var skin: Int  # the design (LIQUID by default, D-225; Settings → Appearance writes settings.txt, D-156)
     var import_col: Int
     var insp_tab: Int  # 0 Table, 1 Cell
     var inspector_open: Bool
@@ -199,7 +199,7 @@ struct Main(App):
         self.grid = DataGrid()
         self.preview = DataGrid()
         self.font = Font()
-        self.skin = skin_of(read_setting(APP, "skin", "ledger"))
+        self.skin = skin_of(read_setting(APP, "skin", "liquid"))
         self.pal = skin_palette(self.skin)
         self.import_col = 0
         self.insp_tab = 1
@@ -595,8 +595,9 @@ struct Main(App):
             self.help_open = m == FX_HELP and not self.help_open
             self.version += 1
         elif m == SKIN:
-            if 0 <= event.number < 3:
-                self.skin = LEDGER if event.number == 0 else (GRAPHITE if event.number == 1 else BLUEPRINT)
+            if 0 <= event.number < 4:
+                var all: List[Int] = [LIQUID, LEDGER, GRAPHITE, BLUEPRINT]
+                self.skin = all[event.number]
                 self.pal = skin_palette(self.skin)
                 write_setting(APP, "skin", skin_name(self.skin))
                 self.grid.redraw()
@@ -1117,38 +1118,42 @@ struct Main(App):
         return VStack(parts^, spacing=0).fill().grow()
 
     def import_screen(self) -> View:
-        var cols = List[View]()
-        var heads: List[String] = ["COLUMN", "TYPE", "EMPTY", "VALUES", "FIRST ROWS"]
-        for h in heads:
-            cols.append(Text(h, CAPTION))
+        """Import, step 2 (docs/design/liquid.md): a centred sheet: the file's facts and the steps, a preview of the first
+        rows, then one left-aligned row per column (name, type, empty, distinct, first values), then Back and Create table."""
+        var rows = List[View]()
+        rows.append(self.import_row(Text("COLUMN", CAPTION), Text("TYPE", CAPTION), Text("EMPTY", CAPTION), Text("DISTINCT", CAPTION), Text("FIRST VALUES", CAPTION)))
         for k in range(len(self.imp.columns)):
             ref c = self.imp.columns[k]
             var first = String("")
             for s in range(min(3, len(c.sample))):
                 first += ("  ·  " if s > 0 else "") + c.sample[s]
-            cols.append(Text(c.name))
-            cols.append(Text(kind_name(c.kind), CAPTION).tone(TONE_ACCENT))
-            cols.append(Text(grouped(c.empty) if c.empty >= 0 else "—", CAPTION).tone(TONE_WARN if c.empty > 0 else 0))
-            cols.append(Text(grouped(c.distinct) if c.kind == TEXT else "—", CAPTION))
-            cols.append(Text(first, CAPTION))
-        var skipped = String("")
+            rows.append(self.import_row(Text(c.name).tone(TONE_STRONG), Text(kind_name(c.kind)).tone(TONE_ACCENT),
+                                        Text(grouped(c.empty) if c.empty >= 0 else "—").tone(TONE_WARN if c.empty > 0 else 0),
+                                        Text(grouped(c.distinct) if c.kind == TEXT else "—"), Text(first, CAPTION)))
+        var note = String("Empty cells stay empty; a column's type can change later from its menu.")
         if len(self.imp.skipped) > 0:
-            skipped = String(len(self.imp.skipped)) + " more columns aren't read (4,096 is the limit)"
+            note = String(len(self.imp.skipped)) + " more columns aren't read (4,096 is the limit)"
         if self.imp.streamed():
-            skipped = "Too big for memory: streamed from disk, a row group at a time. You can edit, chart and save it as usual; its empty cells aren't counted up front."
+            note = "Too big for memory: streamed from disk, a row group at a time. You can edit, chart and save it as usual; its empty cells aren't counted up front."
         var dialog = Card(
             HStack(VStack(Text("Import " + file_name(self.imp.path), HEADLINE),
                           Text(grouped(self.imp.rows) + " rows · " + String(len(self.imp.columns)) + " columns · "
                                + ("streamed, opened in " if self.imp.streamed() else "read in ") + fixed(self.imp.seconds, 2) + " s", CAPTION).tone(TONE_GOOD), spacing=2).align(START),
-                   Spacer(), Text("1 File  ›  2 Columns  ›  3 Table", CAPTION), spacing=12).fill().align(CENTER),
-            Canvas(1, self.version + self.preview.version, on_gesture=NO_MSG).fill().height(300),
-            Scroll(Grid(cols^, 5, spacing=6).align(START), height=280).fill(),
-            Text(skipped, CAPTION).tone(TONE_WARN) if skipped != "" else Spacer(),
-            HStack(Button("Back", BACK), Spacer(), Button("Create table", CREATE, style=PROMINENT, icon="table"),
-                   spacing=10).fill(),
-            spacing=12,
-        ).fill()
-        return VStack(dialog, spacing=0).padding(24, 48).fill().grow()
+                   Spacer(), Text("✓ File   ›   2  Columns   ›   3  Table", CAPTION), spacing=12).fill().align(CENTER),
+            Canvas(1, self.version + self.preview.version, on_gesture=NO_MSG).fill().height(300).tag("import-preview"),
+            Text("Columns", HEADLINE),
+            Scroll(VStack(rows^, spacing=0).fill(), height=250).fill().tag("import-columns"),
+            Spacer(),
+            HStack(Button("Back", BACK), Text(note, CAPTION).tone(TONE_WARN if self.imp.streamed() or len(self.imp.skipped) > 0 else 0), Spacer(),
+                   Button("Create table", CREATE, style=PROMINENT, icon="table"), spacing=14).fill().align(CENTER),
+            spacing=14,
+        ).width(1120).fill().grow()
+        return VStack(dialog, spacing=0).padding(28, 40).fill().grow().align(CENTER)
+
+    def import_row(self, name: View, kind: View, empty: View, distinct: View, first: View) -> View:
+        """One row of the import's column table: fixed columns, left-aligned, a hairline under it."""
+        return VStack(HStack(name.copy().width(180), kind.copy().width(140), empty.copy().width(110), distinct.copy().width(110), first.copy(), Spacer(), spacing=12)
+                      .fill().align(CENTER).height(34), Divider().fill(), spacing=0).fill()
 
     def menu_bar(self) -> View:
         """The menus every screen carries (on a Mac, the system menu bar): the same actions as the toolbar, with shortcuts."""
@@ -1212,7 +1217,7 @@ struct Main(App):
         """What floats over the screen right now: a dialog, the toast, ƒx's popover (each is in the view only while open)."""
         var out = List[View]()
         if self.settings_open:
-            var at = 0 if self.skin == LEDGER else (1 if self.skin == GRAPHITE else 2)
+            var at = 0 if self.skin == LIQUID else (1 if self.skin == LEDGER else (2 if self.skin == GRAPHITE else 3))
             out.append(Dialog("Settings", VStack(
                 Text("Appearance", HEADLINE), Text("The same on every computer, whatever the system theme.", CAPTION),
                 Radio(materialize[SKINS](), at, SKIN),
@@ -1443,8 +1448,7 @@ struct Main(App):
                                    Canvas(60 + k, self.version, on_gesture=TILE_TAP + k).fill().height(240),
                                    Text(readout(t.chart, self.frame), CAPTION), spacing=6).fill())
             else:
-                kpis.append(HStack(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version).fill(),
-                                   Button("Remove", TILE_CLOSE + k, ICON_ONLY, icon="close"), spacing=2).fill().align(START))
+                kpis.append(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version, TILE_CLOSE + k).fill().tag("tile"))
                 first_kpi = False
         var page = ReportPage(self.report_name, self.sheet_name + " · " + self.filter.words(self.frame), kpis, charts)
         if len(self.tiles) == 0:  # (an empty report says where tiles come from)

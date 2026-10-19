@@ -22,4 +22,5 @@ New features beyond range selection (no SQL, no AI, no new tile kinds); changing
 - D-225: Liquid **light** (frosted white glass over a soft cool backdrop) with omxplorer's teal, not Liquid's navy: long sessions with numbers, the owner's earlier pick of a light sheet, and a Mac-like feel. Ledger, Graphite and Blueprint stay as switchable skins.
 - GTK can't blur what is behind a widget (no backdrop-filter): on Linux, glass is translucent white with a rim, a highlight and a soft shadow over the backdrop; the web gets the real blur; the Mac's own glass waits for its host.
 - GTK's CSS has no `linear()` easing: springs are keyframe animations with an overshoot and cubic-bezier steps; canvas motion (the selection ring) runs on the frame clock.
+- D-230: Liquid lives in the framework (any app's `design()` can pick it), because AG-UI generative interfaces, a video editor and graphics simulations come next on this baseline (owner, 2026-10-18).
 - Budget: about 80 turns.
