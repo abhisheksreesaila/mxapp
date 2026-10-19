@@ -6,7 +6,8 @@
 #
 # A sheet can also be *streamed* (D-185, D-213): a Parquet file too big for memory, opened with the package's
 # `scan_parquet` as a `Frame(scan)`. Its rows are read through the frame's cache of decoded column chunks as the grid
-# shows them, every aggregate is a `Query(frame)` that streams the file with the session's edits applied (on the CPU),
+# shows them, every aggregate is a `Query(frame)` that streams the file with the session's edits applied (AUTO: the
+# package runs it on the GPU where that's faster, F-146),
 # and it edits, undoes and saves (`Frame.save`, streamed) like a sheet in memory. Sorting holds ~50 bytes a row
 # (the package's permutation), so it's refused when that wouldn't fit a quarter of memory (D-215).
 #
@@ -161,7 +162,14 @@ struct Sheet(Movable, GridSource):
         self.last_undone = ""
         self.device = None
         self.device_name = "CPU"
-        self.mode = MX_CPU  # (the package streams on the CPU)
+        self.mode = MX_AUTO  # (the package picks per machine and plan: F-146; the CPU on many cores, the GPU on few)
+        if gpu_available():  # (the GPU's name, for "… ms on <GPU>": a one-row device table, given back at once)
+            try:
+                var probe = DeviceTable(empty_table().share())
+                self.device_name = probe.context().name()
+                probe.release()
+            except:
+                pass
         self.scan = scan.copy()
         self.notes = ArcPointer(Notes())
 
@@ -535,7 +543,7 @@ struct Sheet(Movable, GridSource):
         (0 … groups-1; none: one group), over the rows `filter` keeps. The session's edits are included.
         A streamed sheet keeps each column's plain totals (no key, no filter) until the next edit or undo."""
         var plain = not key and not filter and Bool(self.scan)
-        var now = self.frame.edits * 1_000_003 + len(self.frame.log)  # (moves with every edit and every undo)
+        var now = (self.frame.edits * 1_000_003 + len(self.frame.log)) * 4 + self.mode  # (moves with every edit and undo, and the device asked for)
         if plain:
             if self.notes[].plain_edits != now:
                 self.notes[].plain = Dict[Int, Sums]()
@@ -566,7 +574,7 @@ struct Sheet(Movable, GridSource):
         var q = self.query()
         if filter:
             q = q^.where(filter.value().copy())
-        var r = q^.agg(count_distinct(col(self.name(c)))).compute(MX_CPU if self.scan else self.mode)
+        var r = q^.agg(count_distinct(col(self.name(c)))).compute(MX_CPU)  # (CPU only in the package)
         return Int(r.values(0)[0])
 
     def median(self, c: Int, filter: Optional[Expr] = None) raises -> Tuple[Int64, Bool]:
@@ -578,7 +586,7 @@ struct Sheet(Movable, GridSource):
         var q = self.query()
         if filter:
             q = q^.where(filter.value().copy())
-        var r = q^.agg(median(col(self.name(c)))).compute(MX_CPU if self.scan else self.mode)
+        var r = q^.agg(median(col(self.name(c)))).compute(MX_CPU)  # (CPU only in the package)
         return (Int64(r.values(0)[0]), r.present(0, 0))
 
     def format_median(self, c: Int, m: Int64) -> String:

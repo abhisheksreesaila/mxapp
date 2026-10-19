@@ -7,7 +7,7 @@
 from std.testing import assert_equal, assert_true, assert_false
 from std.os import remove
 from std.python import Python
-from mxframe import read_parquet, write_parquet, scan_parquet, UNCOMPRESSED
+from mxframe import read_parquet, write_parquet, scan_parquet, UNCOMPRESSED, gpu_available, GPU as MX_GPU, AUTO as MX_AUTO
 from mojoui.sheet import Sheet, TEXT
 from mojoui.omxfile import save_omx, open_omx
 from mojoui.sheetpage import SheetObject, compute
@@ -99,6 +99,25 @@ def main() raises:
     compute(by_region_whole, whole)
     assert_equal(by_region.labels, by_region_whole.labels)
     assert_equal(by_region.sums, by_region_whole.sums)
+    # the GPU (F-146): the same totals, chart and pivot over the streamed file with its edits as the CPU's
+    if gpu_available():
+        s.mode = MX_GPU
+        for c in [1, 5]:
+            var g = s.totals(c)
+            assert_true(g.on_gpu, "the GPU ran the streamed total")
+            assert_equal(g.sums[0], whole.totals(c).sums[0], "GPU total after edits: " + s.name(c))
+            assert_equal(g.present[0], whole.totals(c).present[0])
+        var on_gpu = SheetObject.chart(1, 2, 0, 0)
+        compute(on_gpu, s)
+        assert_equal(on_gpu.sums, by_region_whole.sums)
+        var pivot_gpu = SheetObject.pivot(1, 2, 2, 0, 0)
+        var pivot_cpu = pivot_gpu.copy()
+        compute(pivot_gpu, s)
+        compute(pivot_cpu, whole)
+        assert_equal(pivot_gpu.sums, pivot_cpu.sums)
+        assert_true(s.last_device() != "CPU", "the device's name: " + s.last_device())
+        s.mode = MX_AUTO
+        print("STREAMED GPU: totals, chart and pivot with edits equal the CPU's on " + s.last_device())
     var order = s.permutation(1, True)
     var order_whole = whole.permutation(1, True)
     for k in range(50):

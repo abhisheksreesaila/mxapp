@@ -1,23 +1,20 @@
-# GOAL 22: omxplorer on MX frame 7cbcc04: files bigger than memory become editable; count distinct and median in the Report
+# GOAL 23: the GPU for streamed files (MX frame 1889b7f, F-146)
 
-**End goal (owner, 2026-10-18):** "please continue with tickets that depends on mxframe - and proceed on autopilot." MX frame 7cbcc04 (stable, its session's word) brings editing over a Parquet scan (F-147: `Frame(scan)`, `save`), count distinct / median / percentile / top-k as engine aggregates (F-148), and faster streaming (F-145, F-149). Goal 20 made a file bigger than memory open read-only; this goal makes it a sheet like any other, and puts the new aggregates where a user sees them.
+**End goal (owner, 2026-10-18):** "please continue with tickets that depends on mxframe - and proceed on autopilot." MX frame 1889b7f (reviewed, its session's word) runs `Query(scan)` and `Query(Frame(scan))` on the GPU: each row group decodes on the CPU while the previous one uploads and aggregates on the device; AUTO picks the device per machine and plan and says why. The owner also settled text order: case ignored everywhere ("apple" before "Zebra"), bytes breaking ties.
 
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M1 | The package at 7cbcc04 | `vendor/mxframe.mojoc` rebuilt from a clean `git archive` of 7cbcc04 (MXFRAME_COMMIT says so); the app follows its API (text lookups raise; a failure is shown, not hidden); the 100M-row streamed file still opens, scrolls, totals, charts and pivots equal pyarrow's, with the open, total and group-by times measured and logged |
-| M2 | A streamed file is editable | over 100M streamed rows: typing into a cell, emptying one, adding a row, a formula column and Undo work as on a table in memory, and the totals and a chart include them; Save writes the edited file (`Frame.save`, streamed, its rows equal pyarrow's reading of it, the edits in it) and the saved document reopens streamed with its formats and edits; memory stays under a quarter of the table's size; sorting works when its order fits the memory budget and says why when it doesn't; a Mojo test proves a streamed sheet's edits, undo, totals and save equal the same sheet read whole |
-| M3 | Count distinct and median in the Report | the Report's toolbar adds Distinct and Median tiles: count distinct of any column (text too) and the median of a number column, from the engine (`count_distinct`, `median`), through the Report's filter, equal to pyarrow's (median as DuckDB/pandas: the mean of the two middle values), on a table in memory and on a streamed file; they save and reopen; GTK and the web agree |
-| M4 | Nothing regressed | goal 21's checks (M1–M4: goal 20's and every earlier goal's inside them) pass, with only steps pointing at changed behaviour updated (logged); `docs/plans/needs-mxframe.md` and the components matrix are current |
+| M1 | Streamed aggregates may run on the GPU | the package is vendored from a clean `git archive` of 1889b7f; a streamed sheet asks for AUTO (it asked for the CPU) and names the device that ran in the status bar and a chart's message; a Mojo test shows the GPU's totals, chart and pivot over a streamed file, edits included, equal the CPU's; over the 100M-row file the CPU's, the GPU's and AUTO's times for a total and a group-by are measured and logged, with AUTO's choice; goal 22's streamed checks still pass |
+| M2 | Text order as the owner settled it | a sort of a text column (in memory and streamed) puts words in alphabetical order ignoring case, bytes breaking ties ("Apple", "apple", "banana", "Zebra"), largest first the reverse; (charts and pivots list groups in the file's word order and sort nothing by name) |
+| M3 | Nothing regressed | goal 22's checks (M1–M4: every earlier goal's inside them) pass; `docs/plans/needs-mxframe.md` is current |
 
 ## Done means
-`scripts/check` prints PASS for M1–M4; push to `origin` after (owner's standing permission). `docs/report.md` is short.
+`scripts/check` prints PASS for M1–M3; push to `origin` after (owner's standing permission). `docs/report.md` is short.
 
 ## Out of bounds
-The GPU for a streamed file (F-146 isn't vendorable yet); SQL, joins, a second table, versions; percentile and top-k tiles beyond the two above; moving MX Studio's own engine (`mojoui/frame.mojo`) onto the package; changing the MX frame repo (ask for things with a GitHub issue labelled `omxplorer`); no deploying, no paid services, no secrets, nothing outside this repo; `../mojo-ui-apple-test` stays untouched.
+SQL and joins (F-150 onwards); count distinct, percentiles and top-k on the GPU (the package runs them on the CPU); changing the MX frame repo; no deploying, no paid services, no secrets, nothing outside this repo; `../mojo-ui-apple-test` stays untouched.
 
 ## Assumptions
-- D-213: a streamed sheet is the package's `Frame(scan)`; goal 20's own row-group cache (`Pages`) goes: the frame's chunk cache (128 MiB by default) reads rows, and its overlay holds the edits.
-- D-214: Save of a streamed sheet streams with `Frame.save` into the document (`name.omx` in the documents folder), one row group at a time; a saved document too big for memory reopens streamed, as a Parquet file does.
-- D-215: sorting a streamed sheet holds about 50 bytes a row (the package's permutation): allowed when that fits a quarter of memory, else refused with the reason.
-- Budget: about 80 turns.
+- D-221: a streamed sheet's device is AUTO, as a sheet in memory's is; the package decides (on this 12-core machine it is expected to keep the CPU, per its measurements); the GPU's name comes from a one-row device table made when the sheet opens.
+- Budget: about 30 turns.

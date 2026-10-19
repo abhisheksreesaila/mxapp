@@ -15,7 +15,7 @@ covers MX Studio's Sheet and Report. These need MX frame and are skipped or stub
 | Reading real files (E2): CSV, Parquet, Arrow, XLSX | readers with type inference and bad-row reports | CSV and Parquet: done (the package's readers, omxplorer and the Workbook); Arrow and XLSX wait |
 | A second table (Sheet's Insert → Table) | multiple tables and joins in one workbook | Insert Table explains it comes with Explore (D-116) |
 | Versions, branches, diff, the time machine (C1, X) | versioned column chunks shared between versions | one undo log per session (edits and merges) |
-| Data bigger than GPU or host memory (E8) | chunked, streamed execution (`docs/mxframe-mojo-api.md` §7a) | Parquet: done, streamed and editable (goals 20 and 22, `Frame(scan)`); CSV still loads whole; no GPU when streamed (F-146 not vendorable yet) |
+| Data bigger than GPU or host memory (E8) | chunked, streamed execution (`docs/mxframe-mojo-api.md` §7a) | Parquet: done, streamed and editable (goals 20 and 22, `Frame(scan)`), on the GPU where AUTO finds it faster (goal 23, F-146); CSV still loads whole |
 | The DuckDB test oracle and TPC-H (P3–P5, E5) | the engine those tests are for | the stand-in is checked against its own CPU path (GPU = CPU exactly) |
 | Count distinct, percentiles, top-k, binning as engine operations (E5, C5) | aggregate operators | omxplorer: the Report's Distinct and Median tiles are the engine's `count_distinct` and `median` (goal 22); MX Studio's own histograms and top customers still use its stand-in engine; binning waits |
 | CSV, Parquet, Excel and JSON readers (omxplorer's import, `mojoui/csvio.mojo`) | streaming typed readers | CSV and Parquet: the package's readers (F-138, goal 20); Excel and JSON wait |
@@ -40,15 +40,19 @@ covers MX Studio's Sheet and Report. These need MX frame and are skipped or stub
 - **Count distinct and median** (goal 22, F-148): the Report's Distinct tile (any column, text too) and Median tile are
   the engine's `count_distinct` and `median` (the mean of the two middle values), through the Report's filter, in
   memory and streamed. Percentile and top-k tiles aren't built yet.
+- **The GPU for a streamed file** (goal 23, MX frame 1889b7f, F-146): a streamed sheet asks for AUTO, and the GPU's
+  totals, charts and pivots over a streamed file with edits equal the CPU's. On this 12-core machine AUTO keeps the
+  CPU, which is faster here (100M rows: a total 0.21 s on the CPU, 0.39 s on the GPU; a group-by 0.34 s and 0.44 s).
+  On 2–4 cores the package picks the GPU. Text sorts ignore case, bytes breaking ties (the owner's rule, MX frame's
+  order everywhere).
 
 ## Still waiting (the package has none of these yet)
 
 Query mode (SQL, joins, HAVING), Explore mode (multi-table plans), a second table, versions and the time machine,
-Excel and JSON import, the DuckDB oracle, the GPU for a streamed file (F-146: merged in MX frame but not yet called
-safe to vendor), a formula column in the undo log (Undo skips it: the package doesn't log formulas). The table above
-says what the app does meanwhile. MX frame's order (its session, 2026-10-18): F-146 (the GPU for a streamed file),
-then SQL and joins (M8), CSV streaming, versions. Ask it for things with a GitHub issue on abhisheksreesaila/mxframe
-labelled `omxplorer`.
+Excel and JSON import, the DuckDB oracle. The package doesn't log formula columns in its undo history: the sheet does
+(goal 22). The table above says what the app does meanwhile. MX frame's order (its session, 2026-10-18): M8, SQL and
+joins (F-150 onwards: SQL over one table, the `mx` CLI, joins, a planner, FLOAT64, CTEs), then CSV streaming, versions. Ask it for things with a GitHub issue on
+abhisheksreesaila/mxframe labelled `omxplorer`.
 
 When MX frame's Mojo API is ready, the switch is one layer: `GridSource`, the ops modules
 (`mojoui/orders_ops.mojo`, `orders_report.mojo`) and the Workbook's compute() call the engine; the components
