@@ -261,3 +261,8 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - The "file changed since it was opened" test caught that a cached read cleared the warning: clear only when `cache_loads()` moved (in `is_null` too: a cell's first read goes through it).
 - M2's first runs failed on the check's own steps (Add row scrolls the grid to the end; the package's undo log has no formulas). The second became a real fix: the sheet logs formula columns. Review round 2 then crashed it under a chart (fixed: refuse, naming the reader).
 - `OMX_MEMORY_BYTES` lets the checks be an 8 GB laptop: the 100M file streams by itself, sort and median refuse, distinct of a text column fits.
+
+## Goal 24: polish (2026-10-18)
+- Owner's feedback on the real app: menu rows mixed fonts (submenu rows were GtkMenuButtons getting the skin's bordered `button` rule: fixed in dd4f15e), the import dialog odd, report tiles spread with the ✕ outside, no range selection, "looks like an intern app". Checks only ever proved state; nothing compared screens with the design (lesson added).
+- Design round: `docs/design/liquid/` (liquid.md uploaded to a new Stitch project; 5 screens each from Stitch and Claude; compare.html). Stitch ~2 min for 5 screens in parallel.
+- Test steps added for screenshots of menus: `open:Format`, `open:Format>Text colour`, `pause:ms` (a display grab catches popovers; without a window manager they sit at 0,0).

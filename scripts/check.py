@@ -1,11 +1,15 @@
-"""Milestone checker for GOAL.md (goal 23: the GPU for streamed files, MX frame 1889b7f; text order as the owner
-settled it; goal 22's checks run as M3, every earlier goal's inside them). Rebuilds from scratch, prints PASS/FAIL per
-milestone. pyarrow writes the files and is the oracle; omxplorer is driven through the agent host.
+"""Milestone checker for GOAL.md (goal 24: omxplorer polished: the Liquid skin, the screens the owner flagged, motion,
+range selection; goal 23's checks run as M6, every earlier goal's inside them). Rebuilds from scratch, prints PASS/FAIL
+per milestone. omxplorer runs on GTK (MOJOUI_TEST steps, on the headless display) and in Chromium (scripts/drive.py), and
+through the agent host; pyarrow writes the file (build/g20/small.parquet: order, amount, region, day, paid) and is the oracle.
 
 Run: scripts/check   (a subset without rebuilding: scripts/check M1 M2; earlier goals: through docs/goals/NN-check.py)
 """
 
 import importlib.util
+import os
+import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -21,99 +25,253 @@ def load(name, path):
     return mod
 
 
-g22 = load("goal22", "docs/goals/22-check.py")
+g23 = load("goal23", "docs/goals/23-check.py")
+g22 = g23.g22
 g21, g20 = g22.g21, g22.g20
 run, BUILD = g20.run, g20.BUILD
 from agent_client import Client  # noqa: E402
+import drive  # noqa: E402
 
-OUT = BUILD / "g23"
-MIXED = ["banana", "Zebra", "apple", "Apple", "cherry", "Banana"]
-ORDER = ["Apple", "apple", "Banana", "banana", "cherry", "Zebra"]
+OUT = BUILD / "g24"
+DESIGN = ROOT / "docs/design/liquid"
+SCREENS = ["start", "import", "sheet", "report", "phone"]
+TYPE_SCALE = {11, 12, 13, 15, 17, 22, 34}
+OPEN = "pick:Choose a file={f}"
+SHEET = OPEN + ";tap:Create table"
+REPORT = SHEET + ";tap:Report;tap:Sum tile;tap:Median tile;tap:Average tile;tap:Count tile"
+
+
+def small():
+    return g20.fixture("small", "small.parquet")
+
+
+def env(tag, **more):
+    """Test-only places for documents, settings and uploads (a fresh install each time: no settings.txt)."""
+    home = OUT / tag
+    for d in ("docs", "config", "uploads"):
+        (home / d).mkdir(parents=True, exist_ok=True)
+    for f in (home / "config").glob("*"):
+        f.unlink()
+    return dict(g20.g19.env(), OMX_DOCUMENTS=str(home / "docs"), OMX_CONFIG=str(home / "config"), OMXAPP_UPLOADS=str(home / "uploads"),
+                **{k: str(v) for k, v in more.items()})
+
+
+def gtk(steps, name, **more):
+    exe = BUILD / "omxplorer" / "linux" / "omxplorer"
+    OUT.mkdir(parents=True, exist_ok=True)
+    r = run([str(exe)], env=dict(env(name, **more), MOJOUI_TEST=steps.format(f=small()), MOJOUI_WINDOW="1440x900",
+                                 MOJOUI_SHOT=str(OUT / f"{name}-gtk.png")), timeout=900)
+    out = r.stdout + r.stderr
+    if r.returncode != 0 or "CRITICAL" in out or "TEST: " in out:
+        raise RuntimeError(f"GTK run {name} failed (exit {r.returncode}): {out[-600:]}")
+    return out
+
+
+def web(steps, name, **more):
+    e = env(name, **more)
+    saved = {k: os.environ.get(k) for k in e}
+    os.environ.update(e)
+    try:
+        r, out = drive.web_run(BUILD / "omxplorer" / "web", steps.format(f=small()), shot=str(OUT / f"{name}-web.png"), viewport=(1440, 900))
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    if r.returncode != 0:
+        raise RuntimeError(f"web run {name} failed: {out[-600:]}")
+    return out
+
+
+def boxes(out, tag):
+    return [tuple(float(v) for v in m.groups()) for m in re.finditer(rf"^BOX: {re.escape(tag)} ([\d.-]+) ([\d.-]+) ([\d.-]+) ([\d.-]+)$", out, re.M)]
+
+
+def pixel(png, x, y):
+    """(r, g, b) of one pixel of a screenshot (ImageMagick)."""
+    r = subprocess.run(["magick", str(png), "-format", f"%[fx:int(255*p{{{int(x)},{int(y)}}}.r)],%[fx:int(255*p{{{int(x)},{int(y)}}}.g)],%[fx:int(255*p{{{int(x)},{int(y)}}}.b)]", "info:"],
+                       capture_output=True, text=True)
+    return tuple(int(v) for v in r.stdout.strip().split(","))
+
+
+def near(c, hexcol, tol=10):
+    want = tuple(int(hexcol[i:i + 2], 16) for i in (1, 3, 5))
+    return all(abs(a - b) <= tol for a, b in zip(c, want))
 
 
 def m1():
-    """1889b7f vendored; a streamed sheet asks for AUTO; the GPU's answers equal the CPU's; times measured."""
+    """The Liquid design: both engines' screens side by side, the handoff, the decision."""
     problems = []
-    commit = (ROOT / "vendor/MXFRAME_COMMIT").read_text().splitlines()[0]
-    if "1889b7f" not in commit:
-        problems.append(f"vendor/MXFRAME_COMMIT isn't 1889b7f: {commit[:100]}")
-    fresh = BUILD / "mxframe-src" / "build" / "mxframe.mojoc"
-    if not fresh.exists() or fresh.read_bytes() != (ROOT / "vendor/mxframe.mojoc").read_bytes():
-        problems.append("vendor/mxframe.mojoc isn't the package built from the archive in build/mxframe-src")
-    src = (ROOT / "mojoui/sheet.mojo").read_text()
-    if "self.mode = MX_AUTO if use_gpu else MX_CPU  # (the package picks per machine and plan" not in src:
-        problems.append("a streamed sheet doesn't ask for AUTO")
-    err = g20.mojo_test("tests/test_streamed.mojo", "STREAMED GPU: totals, chart and pivot with edits equal the CPU's", "test_streamed")
-    if err:
-        problems.append(err)
-    big = g20.fixture("big", "big.parquet", g20.BIG_ROWS)
-    b = run(["scripts/mxbuild.sh", "tests/bench_stream_device.mojo", "-o", str(BUILD / "bench_stream_device")], timeout=1800)
-    r = run([str(BUILD / "bench_stream_device"), str(big)], timeout=1800) if b.returncode == 0 else b
-    times = [l for l in r.stdout.splitlines() if l.startswith(("total:", "group-by:"))]
-    if r.returncode != 0 or "BENCH DONE" not in r.stdout or len(times) != 2 or ", GPU " not in times[0]:
-        problems.append("the 100M-row device benchmark failed (or ran no GPU): " + (r.stdout + r.stderr)[-500:])
-    else:
-        OUT.mkdir(parents=True, exist_ok=True)
-        (OUT / "times.txt").write_text("\n".join(times) + "\n")
-    c = Client(BUILD / "omxplorer" / "web", g22.env("device", OMX_STREAM_ROWS=10_000_000))
-    try:
-        c.call(g20.opener(c), path=str(big))
-        c.call("create-table")
-        c.call("insert-chart")
-        chart = [s for s in g20.status_of(c) if s.startswith("Chart: ")]
-        if not chart or " ms on " not in chart[0] or "streamed from disk" not in chart[0]:
-            problems.append(f"the streamed chart's message doesn't say where it ran: {chart}")
-    finally:
-        c.close()
-    short = "; ".join(t.split(" (")[0] for t in times)
-    return not problems, "; ".join(problems) or (
-        f"vendored from 1889b7f; streamed sheets ask for AUTO; the GPU's totals, chart and pivot over a streamed file with edits equal "
-        f"the CPU's (test_streamed); 100M rows: {short}")
+    for s in SCREENS:
+        for who in ("stitch", "claude"):
+            if not (DESIGN / "img" / f"{who}-{s}.png").exists():
+                problems.append(f"no {who} draft of {s}")
+    page = (DESIGN / "compare.html").read_text() if (DESIGN / "compare.html").exists() else ""
+    if any(f"img/stitch-{s}.png" not in page or f"img/claude-{s}.png" not in page for s in SCREENS):
+        problems.append("compare.html doesn't show every screen from both engines")
+    hand = ROOT / "docs/design/liquid.md"
+    text = hand.read_text() if hand.exists() else ""
+    for needle in ("Chosen", "Tokens", "Motion", "| Gesture |", "Phone"):
+        if needle not in text:
+            problems.append(f"docs/design/liquid.md has no {needle!r} section")
+    if "Liquid" not in (ROOT / "docs/decisions.md").read_text().split("## Goal 24")[-1]:
+        problems.append("docs/decisions.md doesn't record the Liquid choice under goal 24")
+    return not problems, "; ".join(problems) or "Stitch and Claude drafts of 5 screens side by side; the handoff names the choice, tokens, motion and gestures"
+
+
+def islands(out, png, host):
+    """The toolbar floats inset on the backdrop; the sheet inside is white. Problems, if any."""
+    problems = []
+    tb = boxes(out, "toolbar")
+    if not tb:
+        return [f"{host}: no toolbar box"]
+    x, y, w, h = tb[0]
+    if x < 6 or x > 16:
+        problems.append(f"{host}: the toolbar isn't inset from the window ({x:.0f} pt)")
+    beside = pixel(png, max(1, x / 2), y + h / 2)
+    if not near(beside, "#eef2f7", 14) and not near(beside, "#e8edf4", 14):
+        problems.append(f"{host}: beside the toolbar is {beside}, not the Liquid backdrop")
+    return problems
 
 
 def m2():
-    """Text order: case ignored, bytes breaking ties; in memory and streamed, through the app and the engine."""
-    import pyarrow as pa
-    import pyarrow.parquet as pq
+    """Liquid is the default on both hosts, the other skins stay; the four screens are captured and compared."""
     problems = []
-    OUT.mkdir(parents=True, exist_ok=True)
-    path = OUT / "names.parquet"
-    pq.write_table(pa.table({"name": [MIXED[k % 6] for k in range(48)], "n": list(range(48))}), path, row_group_size=8)
-    for kind, more in (("memory", {}), ("streamed", {"OMX_STREAM_ROWS": 10})):
-        c = Client(BUILD / "omxplorer" / "web", g22.env("order-" + kind, **more))
-        try:
-            c.call(g20.opener(c), path=str(path))
-            c.call("create-table")
-            c.call("grid", gesture="tap", x=100, y=12)  # (the name column's header)
-            for tool, want in (("data-sort-smallest-first", ORDER), ("data-sort-largest-first", ORDER[::-1])):
-                c.call(tool)
-                _, body = g20.grid_rows(c, 0, 48)
-                seen = []
-                for r in body or []:
-                    if not seen or seen[-1] != r[0]:
-                        seen.append(r[0])
-                if seen != want:
-                    problems.append(f"{kind}: {tool} gives {seen}, not {want}")
-        finally:
-            c.close()
-    err = g20.mojo_test("tests/test_text_order.mojo", "TEXT ORDER TESTS PASSED", "test_text_order")
-    if err:
-        problems.append(err)
-    return not problems, "; ".join(problems) or "a text column sorts Apple, apple, Banana, banana, cherry, Zebra (and back), in memory and streamed, in the app and the engine"
+    for host, fn in (("GTK", gtk), ("web", web)):
+        out = fn("", f"start-{host}")
+        if "DESIGN: liquid" not in out:
+            problems.append(f"{host}: a fresh install isn't Liquid ({[l for l in out.splitlines() if l.startswith('DESIGN')]})")
+        out = fn("tap:Settings…", f"settings-{host}")
+        for skin in ("Liquid", "Ledger", "Graphite", "Blueprint"):
+            if skin not in out:
+                problems.append(f"{host}: Settings doesn't offer {skin}")
+        for name, steps in (("sheet", SHEET), ("report", REPORT)):
+            out = fn(steps, f"{name}-{host}")
+            problems += islands(out, OUT / f"{name}-{host}-{'gtk' if host == 'GTK' else 'web'}.png", host)
+        fn(OPEN, f"import-{host}")
+    rows = "".join(f'<h2>{s}</h2><div class=r><img src="../../docs/design/liquid/img/claude-{s}.png"><img src="{s}-GTK-gtk.png"><img src="{s}-web-web.png"></div>'
+                   for s in ("start", "import", "sheet", "report"))
+    (OUT / "compare.html").write_text("<!doctype html><meta charset=utf-8><title>goal 24: design vs GTK vs web</title><style>body{background:#111;color:#ddd;font:14px Inter,sans-serif;padding:20px}"
+                                      ".r{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}img{width:100%;border-radius:8px}</style><p>design · GTK · web</p>" + rows)
+    missing = [s for s in ("start", "import", "sheet", "report") for h in ("GTK-gtk", "web-web") if not (OUT / f"{s}-{h}.png").exists()]
+    if missing:
+        problems.append(f"screenshots missing: {missing}")
+    return not problems, "; ".join(problems) or "a fresh install is Liquid on GTK and the web, the other skins stay in Settings; floating islands on the backdrop; build/g24/compare.html"
 
 
 def m3():
-    """Nothing regressed: goal 22's milestones (every earlier goal's inside them); the plan."""
+    """Menus, the import dialog, report tiles, the toolbar and the type scale."""
     problems = []
-    for name, fn in [("22-M1", g22.m1), ("22-M2", g22.m2), ("22-M3", g22.m3), ("22-M4", g22.m4)]:
+    out = gtk(SHEET + ";open:Format;open:Format>Text colour", "menu-GTK")
+    rows = re.findall(r"^MENUROW: (.+) ([\d.]+) ([\d.]+)$", out, re.M)
+    if len(rows) < 15:
+        problems.append(f"the open Format menu and its submenu report {len(rows)} rows (MENUROW)")
+    if len({h for _, h, _ in rows}) > 1 or len({f for _, _, f in rows}) > 1:
+        problems.append("menu rows differ: " + ", ".join(sorted({f"{h} pt/{f} px" for _, h, f in rows})))
+    for host, fn in (("GTK", gtk), ("web", web)):
+        out = fn(OPEN, f"import-m3-{host}")
+        prev, cols = boxes(out, "import-preview"), boxes(out, "import-columns")
+        if not prev or not cols or abs(prev[0][0] - cols[0][0]) > 2 or cols[0][2] < prev[0][2] - 4:
+            problems.append(f"{host}: the import column table doesn't line up with the preview ({prev}, {cols})")
+        out = fn(REPORT, f"tiles-{host}")
+        tiles, xs = boxes(out, "tile"), boxes(out, "tile-remove")
+        if len(tiles) < 4:
+            problems.append(f"{host}: {len(tiles)} report tiles")
+        else:
+            per_row = max(sum(1 for u in tiles if abs(u[1] - t[1]) < 1) for t in tiles)
+            if max(t[2] for t in tiles) - min(t[2] for t in tiles) > 1 or per_row > 3:
+                problems.append(f"{host}: report tiles aren't a grid of equal widths, at most 3 a row: {tiles}")
+        for x in xs:
+            if not any(t[0] <= x[0] and x[0] + x[2] <= t[0] + t[2] and t[1] <= x[1] and x[1] + x[3] <= t[1] + t[3] for t in tiles):
+                problems.append(f"{host}: a tile's remove button sits outside its tile: {x}")
+                break
+        if len(xs) < len(tiles):
+            problems.append(f"{host}: {len(tiles)} tiles but {len(xs)} remove buttons")
+        tools = boxes(out, "tool")
+        if not tools or len({round(t[3]) for t in tools}) > 1:
+            problems.append(f"{host}: toolbar tools differ in height: {sorted({round(t[3]) for t in tools})}")
+    src = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
+    m = re.search(r"def liquid_css\(.*?\n(?=def |comptime )", src, re.S)
+    sizes = {float(v) for v in re.findall(r"font-size: ([\d.]+)px", m.group(0))} if m else set()
+    if not m or not sizes or not sizes <= TYPE_SCALE:
+        problems.append(f"the Liquid GTK skin's type sizes {sorted(sizes)} aren't the scale {sorted(TYPE_SCALE)}")
+    return not problems, "; ".join(problems) or "menu rows one height and type; import table under its preview; tiles an equal-width grid with ✕ inside; tools one height; one type scale"
+
+
+def m4():
+    """Hover/press transitions and arrival animations on both hosts; the selection ring glides (GTK, measured)."""
+    problems = []
+    src = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
+    m = re.search(r"def liquid_css\(.*?\n(?=def |comptime )", src, re.S)
+    css = m.group(0) if m else ""
+    for needle, what in (("transition:", "hover and press transitions"), ("@keyframes", "an arrival animation"), ("popover", "menus and popovers"), ("dialog", "dialogs")):
+        if needle not in css:
+            problems.append(f"GTK Liquid skin: no {what}")
+    out = gtk(SHEET + ";glide:Down;glide:Right", "glide-GTK")
+    glides = [(int(n), float(ms)) for n, ms in re.findall(r"^GLIDE: frames (\d+) max_ms ([\d.]+)$", out, re.M)]
+    if len(glides) != 2 or any(n < 6 or ms >= 20 for n, ms in glides):
+        problems.append(f"the selection ring doesn't glide (≥6 frames, each <20 ms): {glides}")
+    out = web(SHEET + ";style:.mui-tool=transition-duration;style:.mui-menu-popover=animation-name;style:dialog=animation-name", "motion-web")
+    styles = dict(re.findall(r"^STYLE: (\S+) \S+ (.+)$", out, re.M))
+    if not styles.get(".mui-tool") or styles[".mui-tool"] in ("0s", ""):
+        problems.append(f"web: toolbar tools have no transition ({styles.get('.mui-tool')})")
+    for sel in (".mui-menu-popover", "dialog"):
+        if not styles.get(sel) or styles[sel] == "none":
+            problems.append(f"web: {sel} has no arrival animation ({styles.get(sel)})")
+    return not problems, "; ".join(problems) or f"transitions and arrival animations on GTK and the web; the ring glides: {glides}"
+
+
+def m5():
+    """A block of cells: Sum, Average, Count (pyarrow's), Bold on every cell, Copy as TSV; GTK, web and the agent host."""
+    import pyarrow.parquet as pq
+    problems = []
+    t = pq.read_table(small()).to_pydict()
+    c = Client(BUILD / "omxplorer" / "web", env("range-agent"))
+    try:
+        c.call(g20.opener(c), path=str(small()))
+        c.call("create-table")
+        c.call("grid", gesture="tap", x=g21.COLUMN_X, y=g21.HEADER_Y + 60)  # a cell of amount, a few rows down
+        texts, _, _ = c.call("read")
+        ref = re.search(r"^formula-bar-ref: ([A-Z]+)(\d+)$", texts, re.M)
+        if not ref:
+            raise RuntimeError("no cell reference after a tap: " + texts[:300])
+        row0 = int(ref.group(2)) - 1
+        for _ in range(5):
+            c.call("grid", gesture="key", key="Down", modifiers=["shift"])
+        c.call("grid", gesture="key", key="Right", modifiers=["shift"])
+        block = [v for v in t["amount"][row0:row0 + 6] if v is not None]
+        status = " ".join(g20.status_of(c))
+        want_sum = f"{sum(block):,.2f}"
+        if want_sum not in status or f"Count {len(block) + 6}" not in status.replace(",", ""):
+            problems.append(f"agent: the status bar doesn't sum the block (want Sum {want_sum}, count of {len(block) + 6} cells): {status}")
+        c.call("bold")
+        texts, _, _ = c.call("read", name="grid", first=row0, count=6)
+        if texts.count("bold") < 12:
+            problems.append(f"agent: Bold reached {texts.count('bold')} of the block's 12 cells")
+    finally:
+        c.close()
+    for host, fn in (("GTK", gtk), ("web", web)):
+        out = fn(SHEET + ";tapat:1=180,200;key:1=shift+Down;key:1=shift+Down;key:1=shift+Right;shortcut:Ctrl+C", f"range-{host}")
+        if not re.search(r"^LABEL: Count 6$", out, re.M):
+            problems.append(f"{host}: Shift+arrows don't select a 3×2 block (status: {[l for l in out.splitlines() if 'Count' in l][:3]})")
+        clip = re.search(r"^CLIPBOARD: (.*)$", out, re.M)
+        if not clip or clip.group(1).count("\\t") != 3 or clip.group(1).count("\\n") < 2:
+            problems.append(f"{host}: Copy didn't put a tab-separated 3×2 block on the clipboard ({clip.group(1)[:80] if clip else None})")
+        out = fn(SHEET + ";dragat:1=180,200,150,90", f"drag-{host}")
+        if not re.search(r"^LABEL: Count ([2-9]|\d\d+)$", out, re.M):
+            problems.append(f"{host}: a drag over cells doesn't select a block")
+    return not problems, "; ".join(problems) or "Shift+arrows, a drag and the agent select a block; its Sum, Average and Count are pyarrow's; Bold and Copy (TSV) reach every cell; GTK and the web"
+
+
+def m6():
+    """Nothing regressed: goal 23's milestones (every earlier goal's inside them)."""
+    problems = []
+    for name, fn in [("23-M1", g23.m1), ("23-M2", g23.m2), ("23-M3", g23.m3)]:
         ok, msg = fn()
         if not ok:
             problems.append(f"{name}: {msg}")
-    plan = (ROOT / "docs/plans/needs-mxframe.md").read_text()
-    for needle in ("1889b7f", "GPU for a streamed file"):
-        if needle not in plan:
-            problems.append(f"docs/plans/needs-mxframe.md doesn't mention {needle!r}")
-    return not problems, "; ".join(problems) or "goal 22's M1–M4 (goals 3–21 inside them) pass; needs-mxframe.md is current"
+    return not problems, "; ".join(problems) or "goal 23's M1–M3 (goals 3–22 inside them) pass"
 
 
 def main():
@@ -135,7 +293,7 @@ def main():
                 if a.returncode != 0:
                     print(f"android build {ex} failed:\n" + (a.stdout + a.stderr)[-1500:])
     results = []
-    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3)]:
+    for name, fn in [("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6)]:
         if only and name not in only:
             continue
         t0 = time.time()

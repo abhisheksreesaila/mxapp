@@ -1,0 +1,96 @@
+{
+  "success": true,
+  "data": {
+    "resource": "screen",
+    "id": "c70e30a1016b4195b3f09dc02f5d9525",
+    "project": "15162298038433052241",
+    "title": "omxplorer · Report Tab (1440x900)",
+    "device": "DESKTOP",
+    "screenType": "DESIGN",
+    "canvasUrl": "https://stitch.google.com/projects/15162298038433052241?node-id=c70e30a1016b4195b3f09dc02f5d9525",
+    "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XbU_zFT3ixNRosbtsehkDNTsd63s_YsD3WLXJ99b_13XNUZ-MF9fJXSZyc7NRKa1Rmbyo0h5YMRfGkZoMULF0bYXl7VRrc2vm-lOW2KweN1cQQqBYAkb8QB0TL6NzE2N0RGFRuy9VKqPV6EBBhdL_IrBfvke73rv4Jw4V_8gcxRlNISIeCWWR4g2PohQpMz-VNFigh9YU32FwVdkdnOOuJsuhVWuPivIunBrEJNJ5V8TPTxep2mYnm-CzQ",
+    "htmlCode": {
+      "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sX2M2MjAyNzEwZmE1NTQyMDE4Mjc2ZjBjMThiNGE0ZTFkEgsSBxDOpomh_Q8YAZIBJAoKcHJvamVjdF9pZBIWQhQxNTE2MjI5ODAzODQzMzA1MjI0MQ&filename=&opi=96797242",
+      "mimeType": "text/html",
+      "name": "projects/15162298038433052241/files/f1701480b09a4ca5946dced18fb0d2d1"
+    },
+    "rawScreen": {
+      "outputComponents": [
+        {
+          "design": {
+            "screens": [
+              {
+                "deviceType": "DESKTOP",
+                "generatedBy": "create_datastore_entry",
+                "height": "2048",
+                "htmlCode": {
+                  "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sX2M2MjAyNzEwZmE1NTQyMDE4Mjc2ZjBjMThiNGE0ZTFkEgsSBxDOpomh_Q8YAZIBJAoKcHJvamVjdF9pZBIWQhQxNTE2MjI5ODAzODQzMzA1MjI0MQ&filename=&opi=96797242",
+                  "mimeType": "text/html",
+                  "name": "projects/15162298038433052241/files/f1701480b09a4ca5946dced18fb0d2d1"
+                },
+                "id": "c70e30a1016b4195b3f09dc02f5d9525",
+                "name": "projects/15162298038433052241/screens/c70e30a1016b4195b3f09dc02f5d9525",
+                "screenMetadata": {
+                  "agentType": "PRO_AGENT",
+                  "status": "COMPLETE"
+                },
+                "screenType": "DESIGN",
+                "screenshot": {
+                  "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XbU_zFT3ixNRosbtsehkDNTsd63s_YsD3WLXJ99b_13XNUZ-MF9fJXSZyc7NRKa1Rmbyo0h5YMRfGkZoMULF0bYXl7VRrc2vm-lOW2KweN1cQQqBYAkb8QB0TL6NzE2N0RGFRuy9VKqPV6EBBhdL_IrBfvke73rv4Jw4V_8gcxRlNISIeCWWR4g2PohQpMz-VNFigh9YU32FwVdkdnOOuJsuhVWuPivIunBrEJNJ5V8TPTxep2mYnm-CzQ",
+                  "name": "projects/15162298038433052241/files/7da5ae0214374b3eb5a07b46c22a6e01"
+                },
+                "theme": {},
+                "title": "omxplorer · Report Tab (1440x900)",
+                "width": "2880"
+              }
+            ],
+            "theme": {}
+          }
+        },
+        {
+          "text": "Here is the **omxplorer** desktop screen (1440×900) on its **Report tab** over `sales-1m` (1,000,000 rows), built in fidelity with the **Liquid (light)** design specification:\n\n### Key Design Highlights:\n1. **Control Layer (Glass)**:\n   - **Top Menu Bar**: Slim glass bar with macOS window controls, menu items (`File`, `Edit`, `View`, `Insert`, `Report`, `Data`, `Window`, `Help`), file pill indicator (`sales-1m.omx · Edited`), and GPU cache indicator.\n   - **Floating Toolbar Island**: Concentric 18px rounded glass panel floating with 10px margins, containing `Tiles of` with the `# amount` column selector, dedicated metric buttons (`Sum tile`, `Average tile`, `Median tile`, `Distinct tile`, `Count tile`, `Chart tile`), `Filter · every tile` dropdown showing `region = South`, plus `Format` and `Open` actions on the right.\n   - **Bottom Glass Strip**: Segmented sheet tabs (`Sheet`, `Report` with active solid white elevation, and `+`), selection filter readout (`Filtered: 199,812 of 1,000,000 rows`), and the hardware acceleration chip (`RTX 4090 · 0.004s` with glowing green status).\n\n2. **Content Layer (Solid Sheet)**:\n   - **Report Page**: Solid crisp white canvas with subheader title and exact caption: `sales-1m · region = South · 1,000,000 rows · 4 ms on the GPU`.\n   - **Metric Tile Grid (3 per row)**:\n     - `Sum of amount`: **920,404,385.00**\n     - `Median of amount`: **5,008.11** (demonstrating the hover state with the top-right corner `✕` close button)\n     - `Average of amount`: **5,004.92**\n     - `Distinct of region`: **5**\n     - `Count of order`: **199,812**\n     - Each tile features the exact `region = South` filter pill and tabular numeric typography.\n   - **Wide Chart Tile**: Horizontal breakdown (`amount by region`) highlighting the `South` active filter in deep teal `#0e7c86` alongside the defined palette sequence."
+        },
+        {
+          "suggestion": "Add the floating Inspector glass panel on the right side"
+        },
+        {
+          "suggestion": "Show the column dropdown menu open on 'Tiles of'"
+        },
+        {
+          "suggestion": "Switch to the Sheet view grid for sales-1m"
+        }
+      ],
+      "projectId": "15162298038433052241",
+      "sessionId": "8692376966393987502",
+      "deviceType": "DESKTOP",
+      "generatedBy": "create_datastore_entry",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sX2M2MjAyNzEwZmE1NTQyMDE4Mjc2ZjBjMThiNGE0ZTFkEgsSBxDOpomh_Q8YAZIBJAoKcHJvamVjdF9pZBIWQhQxNTE2MjI5ODAzODQzMzA1MjI0MQ&filename=&opi=96797242",
+        "mimeType": "text/html",
+        "name": "projects/15162298038433052241/files/f1701480b09a4ca5946dced18fb0d2d1"
+      },
+      "id": "c70e30a1016b4195b3f09dc02f5d9525",
+      "name": "projects/15162298038433052241/screens/c70e30a1016b4195b3f09dc02f5d9525",
+      "screenMetadata": {
+        "agentType": "PRO_AGENT",
+        "status": "COMPLETE"
+      },
+      "screenType": "DESIGN",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XbU_zFT3ixNRosbtsehkDNTsd63s_YsD3WLXJ99b_13XNUZ-MF9fJXSZyc7NRKa1Rmbyo0h5YMRfGkZoMULF0bYXl7VRrc2vm-lOW2KweN1cQQqBYAkb8QB0TL6NzE2N0RGFRuy9VKqPV6EBBhdL_IrBfvke73rv4Jw4V_8gcxRlNISIeCWWR4g2PohQpMz-VNFigh9YU32FwVdkdnOOuJsuhVWuPivIunBrEJNJ5V8TPTxep2mYnm-CzQ",
+        "name": "projects/15162298038433052241/files/7da5ae0214374b3eb5a07b46c22a6e01"
+      },
+      "theme": {},
+      "title": "omxplorer · Report Tab (1440x900)",
+      "width": "2880",
+      "agentText": "Here is the **omxplorer** desktop screen (1440×900) on its **Report tab** over `sales-1m` (1,000,000 rows), built in fidelity with the **Liquid (light)** design specification:\n\n### Key Design Highlights:\n1. **Control Layer (Glass)**:\n   - **Top Menu Bar**: Slim glass bar with macOS window controls, menu items (`File`, `Edit`, `View`, `Insert`, `Report`, `Data`, `Window`, `Help`), file pill indicator (`sales-1m.omx · Edited`), and GPU cache indicator.\n   - **Floating Toolbar Island**: Concentric 18px rounded glass panel floating with 10px margins, containing `Tiles of` with the `# amount` column selector, dedicated metric buttons (`Sum tile`, `Average tile`, `Median tile`, `Distinct tile`, `Count tile`, `Chart tile`), `Filter · every tile` dropdown showing `region = South`, plus `Format` and `Open` actions on the right.\n   - **Bottom Glass Strip**: Segmented sheet tabs (`Sheet`, `Report` with active solid white elevation, and `+`), selection filter readout (`Filtered: 199,812 of 1,000,000 rows`), and the hardware acceleration chip (`RTX 4090 · 0.004s` with glowing green status).\n\n2. **Content Layer (Solid Sheet)**:\n   - **Report Page**: Solid crisp white canvas with subheader title and exact caption: `sales-1m · region = South · 1,000,000 rows · 4 ms on the GPU`.\n   - **Metric Tile Grid (3 per row)**:\n     - `Sum of amount`: **920,404,385.00**\n     - `Median of amount`: **5,008.11** (demonstrating the hover state with the top-right corner `✕` close button)\n     - `Average of amount`: **5,004.92**\n     - `Distinct of region`: **5**\n     - `Count of order`: **199,812**\n     - Each tile features the exact `region = South` filter pill and tabular numeric typography.\n   - **Wide Chart Tile**: Horizontal breakdown (`amount by region`) highlighting the `South` active filter in deep teal `#0e7c86` alongside the defined palette sequence.",
+      "suggestions": [
+        "Add the floating Inspector glass panel on the right side",
+        "Show the column dropdown menu open on 'Tiles of'",
+        "Switch to the Sheet view grid for sales-1m"
+      ],
+      "imageUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XbU_zFT3ixNRosbtsehkDNTsd63s_YsD3WLXJ99b_13XNUZ-MF9fJXSZyc7NRKa1Rmbyo0h5YMRfGkZoMULF0bYXl7VRrc2vm-lOW2KweN1cQQqBYAkb8QB0TL6NzE2N0RGFRuy9VKqPV6EBBhdL_IrBfvke73rv4Jw4V_8gcxRlNISIeCWWR4g2PohQpMz-VNFigh9YU32FwVdkdnOOuJsuhVWuPivIunBrEJNJ5V8TPTxep2mYnm-CzQ"
+    }
+  }
+}

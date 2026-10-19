@@ -1,0 +1,12 @@
+project 15162298038433052241
+{
+  "success": true,
+  "data": {
+    "path": "liquid.md",
+    "project": "15162298038433052241",
+    "id": "5381684918598414302",
+    "status": "uploaded",
+    "appliedScreenIds": [],
+    "applyCommand": "stitch edit screen <screen-id> --project 15162298038433052241 --design-system 5381684918598414302"
+  }
+}

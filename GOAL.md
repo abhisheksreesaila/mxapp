@@ -1,20 +1,25 @@
-# GOAL 23: the GPU for streamed files (MX frame 1889b7f, F-146)
+# GOAL 24: omxplorer, polished: Liquid, smooth, a showcase
 
-**End goal (owner, 2026-10-18):** "please continue with tickets that depends on mxframe - and proceed on autopilot." MX frame 1889b7f (reviewed, its session's word) runs `Query(scan)` and `Query(Frame(scan))` on the GPU: each row group decodes on the CPU while the previous one uploads and aggregates on the device; AUTO picks the device per machine and plan and says why. The owner also settled text order: case ignored everywhere ("apple" before "Zebra"), bytes breaking ties.
+**End goal (owner, 2026-10-18):** "now it's about helping the user get there quickly with all the styling necessary… take the components we have built in this framework, style it the way you want, and show them an app so liquid, so smooth, so fast that they are like wow… the focus now is not to get the features right, but the polish, the current features right." The vision stays: one language, one set of components, every platform. omxplorer is the showcase of how far a skin on those components can go (Linux GTK and the web now; the Mac's own Liquid Glass later).
 
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M1 | Streamed aggregates may run on the GPU | the package is vendored from a clean `git archive` of 1889b7f; a streamed sheet asks for AUTO (it asked for the CPU) and names the device that ran in the status bar and a chart's message; a Mojo test shows the GPU's totals, chart and pivot over a streamed file, edits included, equal the CPU's; over the 100M-row file the CPU's, the GPU's and AUTO's times for a total and a group-by are measured and logged, with AUTO's choice; goal 22's streamed checks still pass |
-| M2 | Text order as the owner settled it | a sort of a text column (in memory and streamed) puts words in alphabetical order ignoring case, bytes breaking ties ("Apple", "apple", "banana", "Zebra"), largest first the reverse; (charts and pivots list groups in the file's word order and sort nothing by name) |
-| M3 | Nothing regressed | goal 22's checks (M1–M4: every earlier goal's inside them) pass; `docs/plans/needs-mxframe.md` is current |
+| M1 | The Liquid design, chosen and handed off | `docs/design/liquid/`: Stitch's and Claude's start, import, sheet, report and phone side by side (`compare.html`); `docs/design/liquid.md` names the chosen option, tokens, motion and a gestures table; the choice is in `docs/decisions.md` |
+| M2 | Liquid is omxplorer's skin, on GTK and the web | a fresh install opens in Liquid (`DESIGN: liquid`) on both hosts; Settings still offers Ledger, Graphite and Blueprint; screenshots of start, import, sheet and report show the backdrop around floating islands (toolbar inset from the window, backdrop colour beside it, a white sheet inside), saved to `build/g24/` with a side-by-side page against the design |
+| M3 | The screens the owner flagged look right | every row of an open menu (submenus included) has the same height and type; the import dialog's column table lines up with its preview and its empty area holds no stray drawing; report tiles sit in a grid of equal widths (at most 3 a row) with their remove button inside the tile; the toolbar's tools share one height; the Liquid skin uses one type scale (11, 12, 13, 15, 17, 22, 34 px) |
+| M4 | Liquid motion | the Liquid skin animates hover and press (transitions) and menus, popovers and dialogs arriving (a spring-shaped animation) on both hosts; moving the selection glides the ring over at least 6 frames, each drawn in under 20 ms (GTK, measured) |
+| M5 | Select a range of cells | a drag, Shift+click or Shift+arrows select a block; the status bar's Sum, Average and Count are the block's (pyarrow's answer); Bold applies to every cell of the block; Copy puts the block on the clipboard as tab-separated text; the same on GTK and the web |
+| M6 | Nothing regressed | goal 23's checks (M1–M3; every earlier goal's inside them) pass |
 
 ## Done means
-`scripts/check` prints PASS for M1–M3; push to `origin` after (owner's standing permission). `docs/report.md` is short.
+`scripts/check` prints PASS for M1–M6; `docs/report.md` is short, with before/after screenshots. Push to `origin` after (owner's standing permission).
 
 ## Out of bounds
-SQL and joins (F-150 onwards); count distinct, percentiles and top-k on the GPU (the package runs them on the CPU); changing the MX frame repo; no deploying, no paid services, no secrets, nothing outside this repo; `../mojo-ui-apple-test` stays untouched.
+New features beyond range selection (no SQL, no AI, no new tile kinds); changing MX frame; deploying, paid services, secrets, anything outside this repo; `../mojo-ui-apple-test` stays untouched; the phone design is a reference only (no phone build this goal).
 
 ## Assumptions
-- D-221: a streamed sheet's device is AUTO, as a sheet in memory's is; the package decides (on this 12-core machine it is expected to keep the CPU, per its measurements); the GPU's name comes from a one-row device table made when the sheet opens.
-- Budget: about 30 turns.
+- D-225: Liquid **light** (frosted white glass over a soft cool backdrop) with omxplorer's teal, not Liquid's navy: long sessions with numbers, the owner's earlier pick of a light sheet, and a Mac-like feel. Ledger, Graphite and Blueprint stay as switchable skins.
+- GTK can't blur what is behind a widget (no backdrop-filter): on Linux, glass is translucent white with a rim, a highlight and a soft shadow over the backdrop; the web gets the real blur; the Mac's own glass waits for its host.
+- GTK's CSS has no `linear()` easing: springs are keyframe animations with an overshoot and cubic-bezier steps; canvas motion (the selection ring) runs on the frame clock.
+- Budget: about 80 turns.

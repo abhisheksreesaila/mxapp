@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>omxplorer — Import sales-1m.parquet</title>
+<!-- Inter & JetBrains Mono Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary": "#ffffff",
+            "surface-container": "#ebeeef",
+            "on-background": "#181c1d",
+            "primary-fixed": "#98f0fb",
+            "on-tertiary-container": "#fff3ee",
+            "on-secondary": "#ffffff",
+            "glass-highlight": "rgba(255,255,255,0.9)",
+            "on-tertiary-fixed": "#311300",
+            "surface-bright": "#f7fafa",
+            "selection-fill": "rgba(14,124,134,0.08)",
+            "hairline": "rgba(15,23,42,0.07)",
+            "error": "#ba1a1a",
+            "body-text": "#334155",
+            "warning": "#d97706",
+            "surface-container-highest": "#dfe3e3",
+            "glass-panel": "rgba(255,255,255,0.62)",
+            "secondary": "#505f76",
+            "success": "#16a34a",
+            "background": "#f7fafa",
+            "surface": "#f7fafa",
+            "secondary-container": "#d0e1fb",
+            "on-error-container": "#93000a",
+            "on-primary": "#ffffff",
+            "primary-container": "#0e7c86",
+            "tertiary": "#94a3b8",
+            "on-primary-fixed": "#001f23",
+            "surface-variant": "#dfe3e3",
+            "raised-surface": "#f6f8fb",
+            "surface-dim": "#d7dbdb",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary-container": "#54647a",
+            "error-container": "#ffdad6",
+            "primary-fixed-dim": "#7cd4df",
+            "secondary-fixed-dim": "#b7c8e1",
+            "inverse-surface": "#2d3132",
+            "on-surface-variant": "#3e494a",
+            "inverse-primary": "#7cd4df",
+            "primary-wash": "rgba(14,124,134,0.10)",
+            "window-backdrop-top": "#eef2f7",
+            "content-bg": "#ffffff",
+            "tertiary-container": "#a26031",
+            "surface-container-low": "#f1f4f4",
+            "tertiary-fixed-dim": "#ffb688",
+            "tertiary-fixed": "#ffdbc7",
+            "on-tertiary-fixed-variant": "#6f380b",
+            "on-secondary-fixed": "#0b1c30",
+            "window-backdrop-bottom": "#e6ebf2",
+            "formula": "#6a4fd6",
+            "glass-rim": "rgba(255,255,255,0.75)",
+            "surface-container-high": "#e5e9e9",
+            "outline-variant": "#bdc9ca",
+            "surface-tint": "#006972",
+            "outline": "#6e797a",
+            "inverse-on-surface": "#eef1f2",
+            "danger": "#dc2626",
+            "strong-line": "rgba(15,23,42,0.14)",
+            "primary-hover": "#0b6870",
+            "secondary-fixed": "#d3e4fe",
+            "on-secondary-fixed-variant": "#38485d",
+            "ink": "#0f172a",
+            "on-error": "#ffffff",
+            "on-surface": "#181c1d",
+            "on-primary-container": "#ddfbff",
+            "on-primary-fixed-variant": "#004f56",
+            "primary": "#00626a"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-xl": "24px",
+            "gutter": "12px",
+            "margin": "10px",
+            "space-md": "12px",
+            "space-lg": "16px",
+            "space-sm": "8px",
+            "space-xs": "4px"
+          },
+          "fontFamily": {
+            "caption": ["Inter"],
+            "formula-bar": ["JetBrains Mono"],
+            "body": ["Inter"],
+            "display-lg": ["Inter"],
+            "toolbar": ["Inter"],
+            "headline-sm": ["Inter"],
+            "headline-md": ["Inter"],
+            "body-medium": ["Inter"],
+            "headline-lg": ["Inter"]
+          },
+          "fontSize": {
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "formula-bar": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "body": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "display-lg": ["34px", { "lineHeight": "40px", "fontWeight": "650" }],
+            "toolbar": ["11px", { "lineHeight": "14px", "fontWeight": "500" }],
+            "headline-sm": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "headline-md": ["17px", { "lineHeight": "22px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+            "headline-lg": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.3px", "fontWeight": "700" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="h-full bg-gradient-to-b from-window-backdrop-top to-window-backdrop-bottom text-ink font-body antialiased select-none overflow-hidden flex flex-col justify-between">
+<!-- ========================================== -->
+<!-- BACKGROUND APP WORKSPACE (FROSTED BEHIND MODAL) -->
+<!-- ========================================== -->
+<div class="relative w-full h-full flex flex-col pointer-events-none">
+<!-- Top Glass MenuBar (Shared Component Anchor) -->
+<header class="fixed top-[10px] left-[10px] right-[10px] rounded-xl z-50 bg-glass-panel backdrop-blur-md shadow-md border border-glass-rim shadow-[0_8px_32px_rgba(15,23,42,0.10)]">
+<div class="flex items-center justify-between h-[36px] px-3 w-[calc(100%-20px)] mx-auto">
+<!-- macOS Window Traffic Lights & Brand -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 mr-1">
+<span class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] inline-block shadow-xs"></span>
+<span class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] inline-block shadow-xs"></span>
+<span class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] inline-block shadow-xs"></span>
+</div>
+<span class="text-headline-sm font-headline-sm font-bold text-ink dark:text-on-background tracking-tight">omxplorer</span>
+<!-- Menu Bar Items -->
+<nav class="flex items-center gap-0.5 ml-3">
+<button class="text-body-text dark:text-secondary-fixed-dim font-toolbar text-toolbar px-2.5 py-1 hover:bg-glass-highlight hover:text-ink transition-colors duration-150">File</button>
+<button class="text-body-text dark:text-secondary-fixed-dim font-toolbar text-toolbar px-2.5 py-1 hover:bg-glass-highlight hover:text-ink transition-colors duration-150">Edit</button>
+<button class="text-body-text dark:text-secondary-fixed-dim font-toolbar text-toolbar px-2.5 py-1 hover:bg-glass-highlight hover:text-ink transition-colors duration-150">View</button>
+<button class="text-body-text dark:text-secondary-fixed-dim font-toolbar text-toolbar px-2.5 py-1 hover:bg-glass-highlight hover:text-ink transition-colors duration-150">Insert</button>
+<button class="text-body-text dark:text-secondary-fixed-dim font-toolbar text-toolbar px-2.5 py-1 hover:bg-glass-highlight hover:text-ink transition-colors duration-150">Format</button>
+<button class="text-primary dark:text-primary-fixed-dim font-toolbar text-toolbar font-semibold bg-primary-wash rounded-lg px-2.5 py-1">Data</button>
+<button class="text-body-text dark:text-secondary-fixed-dim font-toolbar text-toolbar px-2.5 py-1 hover:bg-glass-highlight hover:text-ink transition-colors duration-150">Window</button>
+<button class="text-body-text dark:text-secondary-fixed-dim font-toolbar text-toolbar px-2.5 py-1 hover:bg-glass-highlight hover:text-ink transition-colors duration-150">Help</button>
+</nav>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-1">
+<button aria-label="Share" class="w-7 h-7 flex items-center justify-center rounded-lg text-body-text hover:bg-glass-highlight transition-all duration-150 active:scale-95">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+<button aria-label="Settings" class="w-7 h-7 flex items-center justify-center rounded-lg text-body-text hover:bg-glass-highlight transition-all duration-150 active:scale-95">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Floating Glass Toolbar -->
+<div class="fixed top-[56px] left-[10px] right-[10px] h-[52px] bg-glass-panel backdrop-blur-md rounded-xl border border-glass-rim shadow-sm px-3 flex items-center justify-between z-40">
+<div class="flex items-center gap-2">
+<button class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-body-text hover:bg-glass-highlight">
+<span class="material-symbols-outlined !text-[17px]">save</span>
+<span class="text-[10px] font-toolbar mt-0.5">Save</span>
+</button>
+<button class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-body-text hover:bg-glass-highlight">
+<span class="material-symbols-outlined !text-[17px]">undo</span>
+<span class="text-[10px] font-toolbar mt-0.5">Undo</span>
+</button>
+<div class="w-px h-6 bg-strong-line mx-1"></div>
+<button class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-primary bg-primary-wash">
+<span class="material-symbols-outlined !text-[17px]">filter_list</span>
+<span class="text-[10px] font-toolbar mt-0.5">Filter</span>
+</button>
+<button class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-body-text hover:bg-glass-highlight">
+<span class="material-symbols-outlined !text-[17px]">swap_vert</span>
+<span class="text-[10px] font-toolbar mt-0.5">Sort</span>
+</button>
+<button class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-body-text hover:bg-glass-highlight">
+<span class="material-symbols-outlined !text-[17px]">pivot_table_chart</span>
+<span class="text-[10px] font-toolbar mt-0.5">Pivot</span>
+</button>
+<button class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-body-text hover:bg-glass-highlight">
+<span class="material-symbols-outlined !text-[17px]">insert_chart</span>
+<span class="text-[10px] font-toolbar mt-0.5">Chart</span>
+</button>
+<div class="w-px h-6 bg-strong-line mx-1"></div>
+<button class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-body-text hover:bg-glass-highlight">
+<span class="material-symbols-outlined !text-[17px]">text_format</span>
+<span class="text-[10px] font-toolbar mt-0.5">Format</span>
+</button>
+</div>
+<!-- Formula Bar Faint Outline in background -->
+<div class="flex items-center gap-2 bg-content-bg/70 px-3 py-1 rounded-lg border border-hairline w-80">
+<span class="text-caption font-formula-bar text-formula font-semibold">fx</span>
+<span class="text-caption font-formula-bar text-tertiary">SUM(B2:B1000)</span>
+</div>
+</div>
+<!-- Solid White Grid Canvas (Dimmed Underneath) -->
+<div class="mt-[118px] mx-[10px] mb-[48px] bg-content-bg rounded-xl border border-hairline shadow-sm flex-1 overflow-hidden opacity-50">
+<div class="grid grid-cols-6 border-b border-hairline bg-raised-surface text-caption font-toolbar text-secondary font-medium">
+<div class="p-2 border-r border-hairline w-12 text-center text-tertiary">#</div>
+<div class="p-2 border-r border-hairline">A</div>
+<div class="p-2 border-r border-hairline">B</div>
+<div class="p-2 border-r border-hairline">C</div>
+<div class="p-2 border-r border-hairline">D</div>
+<div class="p-2">E</div>
+</div>
+<!-- Dummy rows -->
+<div class="divide-y divide-hairline text-caption font-body text-secondary">
+<div class="grid grid-cols-6 py-1.5"><div class="text-center text-tertiary">1</div><div class="px-2">ORD-8942</div><div class="px-2">$120.00</div><div class="px-2">Active</div><div class="px-2">Online</div><div class="px-2">East</div></div>
+<div class="grid grid-cols-6 py-1.5"><div class="text-center text-tertiary">2</div><div class="px-2">ORD-8943</div><div class="px-2">$845.50</div><div class="px-2">Pending</div><div class="px-2">Retail</div><div class="px-2">West</div></div>
+<div class="grid grid-cols-6 py-1.5"><div class="text-center text-tertiary">3</div><div class="px-2">ORD-8944</div><div class="px-2">$43.10</div><div class="px-2">Active</div><div class="px-2">Online</div><div class="px-2">Central</div></div>
+<div class="grid grid-cols-6 py-1.5"><div class="text-center text-tertiary">4</div><div class="px-2">ORD-8945</div><div class="px-2">$3,200.00</div><div class="px-2">Settled</div><div class="px-2">Wholesale</div><div class="px-2">East</div></div>
+</div>
+</div>
+<!-- Combined Status Bar & Sheet Tabs Strip -->
+<div class="fixed bottom-[10px] left-[10px] right-[10px] h-[36px] bg-glass-panel backdrop-blur-md rounded-xl border border-glass-rim shadow-sm px-3 flex items-center justify-between z-40 text-caption opacity-80">
+<div class="flex items-center gap-1.5">
+<span class="bg-content-bg shadow-xs text-primary font-semibold px-3 py-1 rounded-full text-caption">Sheet 1</span>
+<span class="text-secondary hover:text-ink px-3 py-1 rounded-full cursor-pointer">Sheet 2</span>
+<button class="w-5 h-5 flex items-center justify-center rounded hover:bg-glass-highlight text-secondary">
+<span class="material-symbols-outlined !text-[15px]">add</span>
+</button>
+</div>
+<div class="flex items-center gap-4 text-secondary tabular-nums">
+<span>Sum: <strong class="text-ink">$4,208.60</strong></span>
+<span>Average: <strong class="text-ink">$1,052.15</strong></span>
+<span>Count: <strong class="text-ink">4</strong></span>
+<div class="w-px h-3.5 bg-strong-line"></div>
+<div class="flex items-center gap-1.5 bg-white/60 px-2 py-0.5 rounded-full border border-hairline">
+<span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
+<span class="text-[11px] font-medium text-body-text">GPU Accelerated</span>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- MODAL BACKDROP OVERLAY                     -->
+<!-- ========================================== -->
+<div class="fixed inset-0 z-50 bg-slate-900/25 backdrop-blur-md flex items-center justify-center p-4">
+<!-- ========================================== -->
+<!-- IMPORT MODAL DIALOG (1100px x 760px)       -->
+<!-- ========================================== -->
+<main class="w-[1100px] h-[760px] bg-content-bg rounded-[20px] border border-slate-900/10 shadow-[0_24px_64px_-12px_rgba(15,23,42,0.22),0_2px_8px_rgba(15,23,42,0.06)] flex flex-col p-7 overflow-hidden text-ink">
+<!-- Modal Header -->
+<div class="flex items-start justify-between pb-3 border-b border-hairline flex-shrink-0">
+<div>
+<h1 class="text-headline-lg font-headline-lg text-ink font-bold tracking-tight">Import sales-1m.parquet</h1>
+<p class="mt-0.5 text-caption font-body flex items-center gap-1.5 text-secondary tabular-nums">
+<span>1,000,000 rows</span>
+<span class="text-tertiary">·</span>
+<span>5 columns</span>
+<span class="text-tertiary">·</span>
+<span class="inline-flex items-center gap-1 text-success font-medium">
+<span class="material-symbols-outlined !text-[14px]" data-icon="bolt">bolt</span>
+              read in 0.02 s
+            </span>
+</p>
+</div>
+<!-- Concentric 3-step progress control -->
+<nav aria-label="Progress" class="flex items-center gap-2 bg-slate-100/80 px-2 py-1 rounded-full border border-slate-200/70 shadow-2xs">
+<!-- Step 1: File (completed) -->
+<div class="flex items-center gap-1 text-secondary text-caption font-medium px-2 py-0.5">
+<span class="material-symbols-outlined !text-[14px] text-success" data-icon="check_circle">check_circle</span>
+<span>File</span>
+</div>
+<span class="text-tertiary text-xs">›</span>
+<!-- Step 2: Columns (current active step) -->
+<div class="bg-primary-container text-on-primary font-semibold text-xs px-3 py-1 rounded-full shadow-xs flex items-center gap-1.5">
+<span>Columns</span>
+</div>
+<span class="text-tertiary text-xs">›</span>
+<!-- Step 3: Table (upcoming step) -->
+<div class="text-tertiary text-caption font-medium px-2 py-0.5">
+<span>Table</span>
+</div>
+</nav>
+</div>
+<!-- Scrollable Modal Body -->
+<div class="flex-1 flex flex-col justify-between overflow-y-auto py-3 gap-3">
+<!-- SECTION 1: DATA PREVIEW GRID (First 9 rows) -->
+<section class="flex flex-col">
+<div class="flex items-center justify-between mb-1.5">
+<h2 class="text-[11px] uppercase font-semibold tracking-wider text-slate-500">Preview (First 9 rows)</h2>
+<span class="text-[11px] font-caption text-tertiary tabular-nums">Showing sample slice 1–9 of 1,000,000</span>
+</div>
+<div class="bg-content-bg border border-slate-200/80 rounded-xl overflow-hidden shadow-xs">
+<div class="overflow-x-auto">
+<table class="w-full border-collapse text-left text-body font-body tabular-nums">
+<thead>
+<tr class="bg-slate-50 border-b border-hairline text-ink">
+<!-- Row number gutter -->
+<th class="w-10 px-2 py-2 text-center text-caption font-medium text-tertiary border-r border-hairline bg-slate-100/50" scope="col">#</th>
+<!-- Header 1: order -->
+<th class="px-3 py-1.5 border-r border-hairline" scope="col">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="font-semibold text-ink text-body">order</span>
+<span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200/60 text-slate-700 font-semibold" title="Integer">#</span>
+</div>
+<!-- Mini Distribution Histogram -->
+<div class="flex items-end gap-0.5 h-3 w-8" title="Uniform distribution">
+<span class="w-1 h-2 bg-primary/40 rounded-t-xs"></span>
+<span class="w-1 h-2.5 bg-primary/50 rounded-t-xs"></span>
+<span class="w-1 h-3 bg-primary/60 rounded-t-xs"></span>
+<span class="w-1 h-2.5 bg-primary/50 rounded-t-xs"></span>
+<span class="w-1 h-3 bg-primary/70 rounded-t-xs"></span>
+<span class="w-1 h-2 bg-primary/40 rounded-t-xs"></span>
+</div>
+</div>
+</th>
+<!-- Header 2: amount -->
+<th class="px-3 py-1.5 border-r border-hairline" scope="col">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="font-semibold text-ink text-body">amount</span>
+<span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-teal-50 text-primary-container border border-teal-200/60 font-semibold" title="Decimal">0.0</span>
+</div>
+<!-- Mini Distribution Histogram -->
+<div class="flex items-end gap-0.5 h-3 w-8" title="Skewed distribution with nulls">
+<span class="w-1 h-3 bg-primary rounded-t-xs"></span>
+<span class="w-1 h-2.5 bg-primary/80 rounded-t-xs"></span>
+<span class="w-1 h-2 bg-primary/60 rounded-t-xs"></span>
+<span class="w-1 h-1.5 bg-primary/40 rounded-t-xs"></span>
+<span class="w-1 h-1 bg-primary/30 rounded-t-xs"></span>
+<span class="w-1 h-0.5 bg-warning rounded-t-xs" title="Missing values"></span>
+</div>
+</div>
+</th>
+<!-- Header 3: region -->
+<th class="px-3 py-1.5 border-r border-hairline" scope="col">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="font-semibold text-ink text-body">region</span>
+<span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200/60 text-slate-700 font-semibold" title="Text">Aa</span>
+</div>
+<!-- Mini Distribution Histogram (Categorical) -->
+<div class="flex items-end gap-0.5 h-3 w-8" title="Categorical distribution">
+<span class="w-1.5 h-2.5 bg-secondary rounded-t-xs"></span>
+<span class="w-1.5 h-3 bg-secondary rounded-t-xs"></span>
+<span class="w-1.5 h-2 bg-secondary/80 rounded-t-xs"></span>
+<span class="w-1.5 h-1.5 bg-secondary/60 rounded-t-xs"></span>
+</div>
+</div>
+</th>
+<!-- Header 4: day -->
+<th class="px-3 py-1.5 border-r border-hairline" scope="col">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="font-semibold text-ink text-body">day</span>
+<span class="text-[10px] font-medium px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200/60" title="Date">date</span>
+</div>
+<!-- Mini Distribution Histogram (Timeseries) -->
+<div class="flex items-end gap-0.5 h-3 w-8" title="Timeseries distribution">
+<span class="w-1 h-1 bg-primary/40 rounded-t-xs"></span>
+<span class="w-1 h-1.5 bg-primary/50 rounded-t-xs"></span>
+<span class="w-1 h-2 bg-primary/60 rounded-t-xs"></span>
+<span class="w-1 h-2.5 bg-primary/80 rounded-t-xs"></span>
+<span class="w-1 h-3 bg-primary rounded-t-xs"></span>
+<span class="w-1 h-2 bg-primary/60 rounded-t-xs"></span>
+</div>
+</div>
+</th>
+<!-- Header 5: paid -->
+<th class="px-3 py-1.5" scope="col">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="font-semibold text-ink text-body">paid</span>
+<span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-50 text-formula border border-purple-200/60 font-semibold" title="Boolean">bool</span>
+</div>
+<!-- Mini Distribution Histogram (Binary) -->
+<div class="flex items-end gap-1 h-3 w-8" title="True / False proportion">
+<span class="w-2.5 h-3 bg-success rounded-t-xs" title="68% True"></span>
+<span class="w-2.5 h-1.5 bg-slate-300 rounded-t-xs" title="32% False"></span>
+</div>
+</div>
+</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-hairline">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/80 transition-colors h-[31px]">
+<td class="text-center text-caption text-tertiary border-r border-hairline bg-slate-50/30">1</td>
+<td class="px-3 border-r border-hairline font-mono text-xs text-body-text">10001</td>
+<td class="px-3 border-r border-hairline text-body-text">$428.50</td>
+<td class="px-3 border-r border-hairline text-body-text">EMEA</td>
+<td class="px-3 border-r border-hairline text-body-text font-mono text-xs">2024-03-01</td>
+<td class="px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+<span class="material-symbols-outlined !text-[12px]" data-icon="check">check</span> Yes
+                      </span>
+</td>
+</tr>
+<!-- Row 2 (Null amount) -->
+<tr class="hover:bg-slate-50/80 transition-colors h-[31px]">
+<td class="text-center text-caption text-tertiary border-r border-hairline bg-slate-50/30">2</td>
+<td class="px-3 border-r border-hairline font-mono text-xs text-body-text">10002</td>
+<td class="px-3 border-r border-hairline">
+<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[11px] font-mono bg-amber-50 text-amber-700 border border-amber-200/60">null</span>
+</td>
+<td class="px-3 border-r border-hairline text-body-text">APAC</td>
+<td class="px-3 border-r border-hairline text-body-text font-mono text-xs">2024-03-01</td>
+<td class="px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+<span class="material-symbols-outlined !text-[12px]" data-icon="close">close</span> No
+                      </span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/80 transition-colors h-[31px]">
+<td class="text-center text-caption text-tertiary border-r border-hairline bg-slate-50/30">3</td>
+<td class="px-3 border-r border-hairline font-mono text-xs text-body-text">10003</td>
+<td class="px-3 border-r border-hairline text-body-text">$1,280.00</td>
+<td class="px-3 border-r border-hairline text-body-text">Americas</td>
+<td class="px-3 border-r border-hairline text-body-text font-mono text-xs">2024-03-02</td>
+<td class="px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+<span class="material-symbols-outlined !text-[12px]" data-icon="check">check</span> Yes
+                      </span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50/80 transition-colors h-[31px]">
+<td class="text-center text-caption text-tertiary border-r border-hairline bg-slate-50/30">4</td>
+<td class="px-3 border-r border-hairline font-mono text-xs text-body-text">10004</td>
+<td class="px-3 border-r border-hairline text-body-text">$89.90</td>
+<td class="px-3 border-r border-hairline text-body-text">EMEA</td>
+<td class="px-3 border-r border-hairline text-body-text font-mono text-xs">2024-03-02</td>
+<td class="px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+<span class="material-symbols-outlined !text-[12px]" data-icon="check">check</span> Yes
+                      </span>
+</td>
+</tr>
+<!-- Row 5 (Null amount) -->
+<tr class="hover:bg-slate-50/80 transition-colors h-[31px]">
+<td class="text-center text-caption text-tertiary border-r border-hairline bg-slate-50/30">5</td>
+<td class="px-3 border-r border-hairline font-mono text-xs text-body-text">10005</td>
+<td class="px-3 border-r border-hairline">
+<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[11px] font-mono bg-amber-50 text-amber-700 border border-amber-200/60">null</span>
+</td>
+<td class="px-3 border-r border-hairline text-body-text">Americas</td>
+<td class="px-3 border-r border-hairline text-body-text font-mono text-xs">2024-03-03</td>
+<td class="px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+<span class="material-symbols-outlined !text-[12px]" data-icon="close">close</span> No
+                      </span>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-slate-50/80 transition-colors h-[31px]">
+<td class="text-center text-caption text-tertiary border-r border-hairline bg-slate-50/30">6</td>
+<td class="px-3 border-r border-hairline font-mono text-xs text-body-text">10006</td>
+<td class="px-3 border-r border-hairline text-body-text">$2,450.25</td>
+<td class="px-3 border-r border-hairline text-body-text">APAC</td>
+<td class="px-3 border-r border-hairline text-body-text font-mono text-xs">2024-03-03</td>
+<td class="px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+<span class="material-symbols-outlined !text-[12px]" data-icon="check">check</span> Yes
+                      </span>
+</td>
+</tr>
+<!-- Row 7 -->
+<tr class="hover:bg-slate-50/80 transition-colors h-[31px]">
+<td class="text-center text-caption text-tertiary border-r border-hairline bg-slate-50/30">7</td>
+<td class="px-3 border-r border-hairline font-mono text-xs text-body-text">10007</td>
+<td class="px-3 border-r border-hairline text-body-text">$310.00</td>
+<td class="px-3 border-r border-hairline text-body-text">EMEA</td>
+<td class="px-3 border-r border-hairline text-body-text font-mono text-xs">2024-03-04</td>
+<td class="px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+<span class="material-symbols-outlined !text-[12px]" data-icon="check">check</span> Yes
+                      </span>
+</td>
+</tr>
+<!-- Row 8 -->
+<tr class="hover:bg-slate-50/80 transition-colors h-[31px]">
+<td class="text-center text-caption text-tertiary border-r border-hairline bg-slate-50/30">8</td>
+<td class="px-3 border-r border-hairline font-mono text-xs text-body-text">10008</td>
+<td class="px-3 border-r border-hairline text-body-text">$745.10</td>
+<td class="px-3 border-r border-hairline text-body-text">Americas</td>
+<td class="px-3 border-r border-hairline text-body-text font-mono text-xs">2024-03-04</td>
+<td class="px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+<span class="material-symbols-outlined !text-[12px]" data-icon="close">close</span> No
+                      </span>
+</td>
+</tr>
+<!-- Row 9 -->
+<tr class="hover:bg-slate-50/80 transition-colors h-[31px]">
+<td class="text-center text-caption text-tertiary border-r border-hairline bg-slate-50/30">9</td>
+<td class="px-3 border-r border-hairline font-mono text-xs text-body-text">10009</td>
+<td class="px-3 border-r border-hairline text-body-text">$512.40</td>
+<td class="px-3 border-r border-hairline text-body-text">APAC</td>
+<td class="px-3 border-r border-hairline text-body-text font-mono text-xs">2024-03-05</td>
+<td class="px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+<span class="material-symbols-outlined !text-[12px]" data-icon="check">check</span> Yes
+                      </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- SECTION 2: COLUMNS SCHEMA CONFIGURATION -->
+<section class="flex flex-col">
+<div class="flex items-center justify-between mb-1.5">
+<h2 class="text-[11px] uppercase font-semibold tracking-wider text-slate-500">Schema &amp; Column Settings</h2>
+<span class="text-[11px] font-caption text-secondary">Verify types and handle empty states before ingest</span>
+</div>
+<div class="bg-content-bg border border-slate-200/80 rounded-xl overflow-hidden shadow-xs">
+<table class="w-full border-collapse text-left text-body font-body tabular-nums">
+<thead>
+<tr class="bg-slate-50/90 border-b border-hairline text-caption font-semibold text-secondary">
+<th class="py-2.5 px-4 font-semibold w-40" scope="col">Column Name</th>
+<th class="py-2.5 px-4 font-semibold w-44" scope="col">Data Type</th>
+<th class="py-2.5 px-4 font-semibold w-36" scope="col">Empty Count</th>
+<th class="py-2.5 px-4 font-semibold w-36" scope="col">Distinct Values</th>
+<th class="py-2.5 px-4 font-semibold" scope="col">Sample Values</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-hairline text-body-text">
+<!-- Row 1: order -->
+<tr class="hover:bg-slate-50/50 transition-colors">
+<td class="py-2 px-4 font-semibold text-ink flex items-center gap-2">
+<span class="text-tertiary font-mono text-xs">#</span>
+<span>order</span>
+</td>
+<td class="py-2 px-4">
+<div class="relative w-36">
+<select class="w-full bg-white border border-slate-200 text-ink text-caption font-body rounded-[10px] pl-2.5 pr-7 py-1 appearance-none focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container shadow-2xs cursor-pointer">
+<option selected="">Integer</option>
+<option>Decimal</option>
+<option>Text</option>
+<option>Date</option>
+</select>
+<span class="material-symbols-outlined !text-[15px] text-tertiary absolute right-2 top-2 pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</td>
+<td class="py-2 px-4">
+<span class="text-caption text-slate-500">0</span>
+</td>
+<td class="py-2 px-4 font-mono text-caption text-ink">
+                    1,000,000
+                  </td>
+<td class="py-2 px-4 text-tertiary text-caption font-mono truncate max-w-[280px]">
+                    10001, 10002, 10003...
+                  </td>
+</tr>
+<!-- Row 2: amount -->
+<tr class="hover:bg-slate-50/50 transition-colors bg-amber-50/20">
+<td class="py-2 px-4 font-semibold text-ink flex items-center gap-2">
+<span class="text-primary font-mono text-xs">0.0</span>
+<span>amount</span>
+</td>
+<td class="py-2 px-4">
+<div class="relative w-36">
+<select class="w-full bg-white border border-slate-200 text-ink text-caption font-body rounded-[10px] pl-2.5 pr-7 py-1 appearance-none focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container shadow-2xs cursor-pointer">
+<option>Integer</option>
+<option selected="">Decimal</option>
+<option>Text</option>
+<option>Currency</option>
+</select>
+<span class="material-symbols-outlined !text-[15px] text-tertiary absolute right-2 top-2 pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</td>
+<td class="py-2 px-4">
+<span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200/60 rounded px-2 py-0.5 text-caption font-medium tabular-nums">
+<span class="material-symbols-outlined !text-[12px] text-amber-600" data-icon="warning">warning</span>
+                      49,912
+                    </span>
+</td>
+<td class="py-2 px-4 font-mono text-caption text-ink">
+                    184,290
+                  </td>
+<td class="py-2 px-4 text-tertiary text-caption font-mono truncate max-w-[280px]">
+                    428.50, 1280.00, 89.90...
+                  </td>
+</tr>
+<!-- Row 3: region -->
+<tr class="hover:bg-slate-50/50 transition-colors">
+<td class="py-2 px-4 font-semibold text-ink flex items-center gap-2">
+<span class="text-tertiary font-mono text-xs">Aa</span>
+<span>region</span>
+</td>
+<td class="py-2 px-4">
+<div class="relative w-36">
+<select class="w-full bg-white border border-slate-200 text-ink text-caption font-body rounded-[10px] pl-2.5 pr-7 py-1 appearance-none focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container shadow-2xs cursor-pointer">
+<option>Integer</option>
+<option>Decimal</option>
+<option selected="">Text</option>
+<option>Category</option>
+</select>
+<span class="material-symbols-outlined !text-[15px] text-tertiary absolute right-2 top-2 pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</td>
+<td class="py-2 px-4">
+<span class="text-caption text-slate-500">0</span>
+</td>
+<td class="py-2 px-4">
+<span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-caption font-semibold font-mono">
+                      5
+                    </span>
+</td>
+<td class="py-2 px-4 text-tertiary text-caption font-mono truncate max-w-[280px]">
+                    EMEA, APAC, Americas, LATAM, MEA
+                  </td>
+</tr>
+<!-- Row 4: day -->
+<tr class="hover:bg-slate-50/50 transition-colors bg-amber-50/20">
+<td class="py-2 px-4 font-semibold text-ink flex items-center gap-2">
+<span class="material-symbols-outlined !text-[14px] text-blue-600" data-icon="calendar_today">calendar_today</span>
+<span>day</span>
+</td>
+<td class="py-2 px-4">
+<div class="relative w-36">
+<select class="w-full bg-white border border-slate-200 text-ink text-caption font-body rounded-[10px] pl-2.5 pr-7 py-1 appearance-none focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container shadow-2xs cursor-pointer">
+<option>Text</option>
+<option selected="">Date</option>
+<option>Timestamp</option>
+</select>
+<span class="material-symbols-outlined !text-[15px] text-tertiary absolute right-2 top-2 pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</td>
+<td class="py-2 px-4">
+<span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200/60 rounded px-2 py-0.5 text-caption font-medium tabular-nums">
+<span class="material-symbols-outlined !text-[12px] text-amber-600" data-icon="warning">warning</span>
+                      30,283
+                    </span>
+</td>
+<td class="py-2 px-4 font-mono text-caption text-ink">
+                    365
+                  </td>
+<td class="py-2 px-4 text-tertiary text-caption font-mono truncate max-w-[280px]">
+                    2024-03-01, 2024-03-02...
+                  </td>
+</tr>
+<!-- Row 5: paid -->
+<tr class="hover:bg-slate-50/50 transition-colors">
+<td class="py-2 px-4 font-semibold text-ink flex items-center gap-2">
+<span class="material-symbols-outlined !text-[14px] text-formula" data-icon="toggle_on">toggle_on</span>
+<span>paid</span>
+</td>
+<td class="py-2 px-4">
+<div class="relative w-36">
+<select class="w-full bg-white border border-slate-200 text-ink text-caption font-body rounded-[10px] pl-2.5 pr-7 py-1 appearance-none focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container shadow-2xs cursor-pointer">
+<option>Integer</option>
+<option>Text</option>
+<option selected="">Yes/No</option>
+</select>
+<span class="material-symbols-outlined !text-[15px] text-tertiary absolute right-2 top-2 pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</td>
+<td class="py-2 px-4">
+<span class="text-caption text-slate-500">0</span>
+</td>
+<td class="py-2 px-4">
+<span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-caption font-semibold font-mono">
+                      2
+                    </span>
+</td>
+<td class="py-2 px-4 text-tertiary text-caption font-mono truncate max-w-[280px]">
+                    true, false
+                  </td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Modal Footer -->
+<footer class="border-t border-slate-900/10 flex justify-between items-center pt-3 mt-1 flex-shrink-0">
+<!-- Left: Quiet Back Pill Button -->
+<button class="rounded-full px-5 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors duration-150 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-slate-400" type="button">
+<span class="material-symbols-outlined !text-[16px]" data-icon="arrow_back">arrow_back</span>
+<span>Back</span>
+</button>
+<!-- Center: Quick info helper -->
+<div class="text-[11px] text-tertiary flex items-center gap-2">
+<span class="material-symbols-outlined !text-[14px]" data-icon="info">info</span>
+<span>Missing values will be converted to NULL in destination sheet</span>
+</div>
+<!-- Right: Primary 'Create table' Pill Button -->
+<button class="bg-primary-container hover:bg-primary-hover text-on-primary px-6 py-2 rounded-full text-sm font-semibold shadow-sm flex items-center gap-2 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2" type="button">
+<span class="material-symbols-outlined !text-[18px]" data-icon="table">table</span>
+<span>Create table</span>
+</button>
+</footer>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>omxplorer · Liquid · Claude artboards</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* omxplorer · Liquid (light): the tokens of liquid.md. Content solid, controls glass, motion on springs. */
+:root {
+  --backdrop: linear-gradient(180deg, #eef2f7, #e4e9f1);
+  --sheet: #ffffff; --raised: #f6f8fb; --line: rgba(15,23,42,.07); --strong: rgba(15,23,42,.14);
+  --glass: rgba(255,255,255,.62); --glass-strong: rgba(255,255,255,.84); --rim: rgba(255,255,255,.75); --hi: rgba(255,255,255,.9);
+  --glass-shadow: 0 8px 32px rgba(15,23,42,.10), 0 1px 2px rgba(15,23,42,.06);
+  --ink: #0f172a; --body: #334155; --ink2: #64748b; --ink3: #94a3b8;
+  --accent: #0e7c86; --accent-hover: #0b6870; --wash: rgba(14,124,134,.10); --selfill: rgba(14,124,134,.08);
+  --fx: #6a4fd6; --good: #16a34a; --bad: #dc2626; --warn: #d97706;
+  --s1:#0e7c86; --s2:#f59e0b; --s3:#6366f1; --s4:#ec4899; --s5:#22c55e;
+  --snappy: linear(0, 0.02, 0.071, 0.142, 0.226, 0.316, 0.407, 0.494, 0.577, 0.653, 0.72, 0.78, 0.831, 0.875, 0.911, 0.94, 0.964, 0.983, 0.997, 1.007, 1.014, 1.019, 1.021, 1.023, 1.023, 1.022, 1.02, 1.018, 1.017, 1.014, 1.012, 1.01, 1.009, 1.007, 1.006, 1.004, 1.003, 1.002, 1.002, 1.001, 1);
+  --bouncy: linear(0, 0.045, 0.161, 0.317, 0.49, 0.66, 0.814, 0.941, 1.04, 1.108, 1.148, 1.165, 1.163, 1.147, 1.123, 1.095, 1.066, 1.04, 1.017, 0.999, 0.986, 0.977, 0.973, 0.973, 0.974, 0.978, 0.982, 0.987, 0.992, 0.996, 0.999, 1.002, 1.003, 1.004, 1.005, 1.004, 1.004, 1.003, 1.002, 1.002, 1);
+  --gentle: linear(0, 0.023, 0.079, 0.154, 0.237, 0.322, 0.405, 0.482, 0.553, 0.617, 0.674, 0.723, 0.766, 0.803, 0.835, 0.862, 0.885, 0.905, 0.921, 0.935, 0.946, 0.955, 0.963, 0.97, 0.975, 0.98, 0.983, 0.986, 0.989, 0.991, 0.993, 0.994, 0.995, 0.996, 0.997, 0.997, 0.998, 0.998, 0.999, 0.999, 1);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #0b0c10; color: #ddd; font: 13px/1.4 Inter, system-ui, sans-serif; font-feature-settings: "tnum" 1, "cv11" 1; }
+.viewer { padding: 16px 28px; display: flex; gap: 16px; align-items: baseline; border-bottom: 1px solid #1d1f25; }
+.viewer h1 { font-size: 16px; margin: 0; color: #fff; } .viewer p { margin: 0; color: #8a8c93; font-size: 12px; }
+.board { padding: 24px 28px; display: flex; flex-wrap: wrap; gap: 28px; }
+.cap { color: #8a8c93; font-size: 12px; margin-top: 8px; }
+
+/* ---- the window ---- */
+.win { width: 1440px; height: 900px; border-radius: 14px; overflow: hidden; position: relative; background: var(--backdrop); color: var(--body);
+       box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08); display: flex; flex-direction: column; }
+.glass { background: var(--glass); backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);
+         border: 1px solid var(--rim); box-shadow: inset 0 1px 0 var(--hi), var(--glass-shadow); }
+.ic { width: 18px; height: 18px; display: inline-block; background: currentColor; -webkit-mask: var(--i) center/contain no-repeat; mask: var(--i) center/contain no-repeat; flex: none; }
+.ic.s { width: 15px; height: 15px; }
+
+/* menu bar: one strip, one type */
+.menubar { height: 34px; margin: 8px 10px 0; border-radius: 12px; display: flex; align-items: center; padding: 0 6px; gap: 2px; position: relative; z-index: 5; }
+.menubar .app { font-weight: 700; color: var(--ink); padding: 0 10px 0 8px; letter-spacing: -.2px; }
+.menubar .m { padding: 4px 10px; border-radius: 8px; color: var(--body); font-size: 13px; transition: background 430ms var(--snappy); cursor: default; }
+.menubar .m:hover, .menubar .m.open { background: rgba(15,23,42,.06); color: var(--ink); }
+.menubar .doc { margin-left: auto; color: var(--ink2); font-size: 12px; padding-right: 10px; }
+.menu { position: absolute; top: 40px; width: 280px; border-radius: 14px; padding: 6px; z-index: 20; background: var(--glass-strong);
+        transform-origin: top left; animation: drop 790ms var(--bouncy) both; }
+.menu .it { height: 30px; border-radius: 8px; display: flex; align-items: center; gap: 10px; padding: 0 10px; color: var(--ink); font-size: 13px; transition: background 430ms var(--snappy); }
+.menu .it .ic { color: var(--ink2); }
+.menu .it:hover, .menu .it.hot { background: var(--accent); color: #fff; } .menu .it:hover .ic, .menu .it.hot .ic, .menu .it:hover .k, .menu .it.hot .k { color: #fff; }
+.menu .k { margin-left: auto; color: var(--ink3); font-size: 12px; }
+.menu .sep { height: 1px; background: var(--line); margin: 5px 8px; }
+.menu .lead { width: 18px; display: inline-flex; justify-content: center; }
+.sub { position: absolute; width: 200px; border-radius: 14px; padding: 6px; background: #fff; box-shadow: 0 12px 40px rgba(15,23,42,.16), 0 0 0 1px var(--line); z-index: 21; animation: drop 790ms var(--bouncy) both; transform-origin: top left; }
+.sw { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(15,23,42,.12); }
+@keyframes drop { from { opacity: 0; transform: scale(.94) translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* toolbar: one floating island */
+.toolbar { margin: 8px 10px 0; border-radius: 18px; padding: 6px; display: flex; align-items: center; gap: 2px; position: relative; z-index: 4; }
+.tool { width: 62px; height: 52px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+        font-size: 11px; font-weight: 500; color: var(--body); transition: background 430ms var(--snappy), transform 430ms var(--snappy); cursor: default; }
+.tool:hover { background: rgba(15,23,42,.06); } .tool:active { transform: scale(.96); }
+.tool.on { background: var(--wash); color: var(--accent); }
+.tool.sq { width: 34px; height: 34px; }
+.gap { width: 1px; height: 30px; background: var(--strong); opacity: .5; margin: 0 8px; }
+.spacer { flex: 1; }
+.field { height: 30px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px var(--strong); display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--ink); font-size: 13px; }
+.lbl { display: flex; flex-direction: column; gap: 3px; font-size: 11px; font-weight: 500; color: var(--ink2); margin: 0 6px; }
+
+/* formula bar */
+.fbar { margin: 8px 10px 0; display: flex; gap: 8px; align-items: center; }
+.ref { width: 70px; justify-content: center; font-weight: 500; }
+.fx { flex: 1; font-family: "JetBrains Mono", monospace; font-size: 12.5px; }
+.fx b { color: var(--accent); font-style: italic; font-family: Georgia, serif; font-weight: 400; margin-right: 6px; }
+
+/* work area */
+.work { flex: 1; display: flex; gap: 10px; margin: 8px 10px; min-height: 0; }
+.sheetcard { flex: 1; background: var(--sheet); border-radius: 16px; box-shadow: 0 0 0 1px var(--line), 0 1px 3px rgba(15,23,42,.05); overflow: hidden; position: relative; }
+table.grid { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+.grid th { position: sticky; top: 0; background: var(--raised); text-align: left; font-weight: 600; color: var(--ink); padding: 8px 12px 6px; border-bottom: 1px solid var(--line); height: 58px; vertical-align: top; }
+.grid th .b { font-size: 10px; font-weight: 500; color: var(--ink2); background: #fff; box-shadow: inset 0 0 0 1px var(--strong); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+.grid th.sel { background: #e6f2f3; color: var(--accent); }
+.hist { display: flex; align-items: end; gap: 2px; height: 16px; margin-top: 8px; } .hist i { flex: 1; background: var(--accent); opacity: .35; border-radius: 2px 2px 0 0; }
+.grid th.sel .hist i { opacity: .8; }
+.grid td { height: 30px; padding: 0 12px; border-bottom: 1px solid var(--line); color: var(--body); white-space: nowrap; }
+.grid td.n { text-align: right; color: var(--ink); } .grid td.rn { width: 52px; text-align: right; color: var(--ink3); font-size: 12px; background: var(--raised); }
+.grid tr.selrow td.rn { color: var(--accent); background: #e6f2f3; }
+.grid td.e { color: var(--ink3); }
+.range { position: absolute; border: 2px solid var(--accent); border-radius: 4px; background: var(--selfill); pointer-events: none; transition: all 710ms var(--gentle); }
+.range::after { content: ""; position: absolute; right: -5px; bottom: -5px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px #fff; }
+
+/* inspector: glass panel */
+.insp { width: 300px; border-radius: 18px; padding: 10px; display: flex; flex-direction: column; gap: 14px; animation: slide 710ms var(--gentle) both; }
+@keyframes slide { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+.seg { display: flex; background: rgba(15,23,42,.06); border-radius: 999px; padding: 3px; position: relative; }
+.seg span { flex: 1; text-align: center; padding: 5px 0; font-size: 12px; font-weight: 500; color: var(--ink2); border-radius: 999px; position: relative; z-index: 1; transition: color 430ms var(--snappy); }
+.seg span.on { color: var(--ink); background: #fff; box-shadow: 0 1px 3px rgba(15,23,42,.12), 0 0 0 .5px rgba(15,23,42,.06); }
+.sec { padding: 0 6px; } .sec h4 { margin: 0 0 8px; font-size: 10.5px; letter-spacing: .7px; color: var(--ink3); font-weight: 600; }
+.row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; color: var(--body); }
+.row b { font-weight: 500; color: var(--ink); }
+.step { display: inline-flex; align-items: center; gap: 0; background: #fff; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--strong); }
+.step i { font-style: normal; width: 26px; text-align: center; color: var(--ink2); } .step b { width: 26px; text-align: center; }
+.switch { width: 34px; height: 20px; border-radius: 999px; background: var(--accent); position: relative; } .switch::after { content: ""; position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.ihist { display: flex; align-items: end; gap: 2px; height: 56px; margin-top: 6px; } .ihist i { flex: 1; background: var(--accent); border-radius: 3px 3px 0 0; opacity: .75; }
+
+/* bottom strip: tabs + live figures */
+.bottom { margin: 0 10px 10px; height: 38px; border-radius: 14px; display: flex; align-items: center; padding: 0 5px; gap: 4px; }
+.tab { padding: 5px 14px; border-radius: 999px; font-weight: 500; color: var(--ink2); transition: all 430ms var(--snappy); }
+.tab.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(15,23,42,.12); }
+.figs { margin-left: auto; display: flex; gap: 18px; color: var(--ink2); font-size: 12px; padding-right: 10px; } .figs b { color: var(--ink); font-weight: 500; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); display: inline-block; margin-right: 6px; box-shadow: 0 0 0 3px rgba(22,163,74,.15); }
+
+/* buttons */
+.btn { height: 32px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px var(--strong); transition: transform 430ms var(--snappy), background 430ms var(--snappy); }
+.btn:active { transform: scale(.96); }
+.btn.pri { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(14,124,134,.3), inset 0 1px 0 rgba(255,255,255,.18); } .btn.pri:hover { background: var(--accent-hover); }
+.btn.lg { height: 38px; padding: 0 20px; font-size: 14px; }
+
+/* report */
+.page { flex: 1; overflow: hidden; padding: 22px 26px; }
+.title { font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -.3px; display: flex; align-items: baseline; gap: 12px; }
+.title small { font-size: 12.5px; font-weight: 400; color: var(--ink2); letter-spacing: 0; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+.tile { background: #fff; border-radius: 16px; padding: 16px 18px; box-shadow: 0 0 0 1px var(--line), 0 1px 3px rgba(15,23,42,.05); position: relative; animation: land 790ms var(--bouncy) both; transition: box-shadow 430ms var(--snappy), transform 430ms var(--snappy); }
+.tile:hover { box-shadow: 0 0 0 1px var(--line), 0 10px 30px rgba(15,23,42,.10); transform: translateY(-2px); }
+@keyframes land { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+.tile .l { color: var(--ink2); font-weight: 500; } .tile .v { font-size: 34px; font-weight: 650; color: var(--ink); letter-spacing: -.8px; margin: 6px 0 12px; }
+.tile .v.acc { color: var(--accent); }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); color: var(--body); font-size: 12px; }
+.tile .x { position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: var(--ink2); background: var(--raised); opacity: 0; transition: opacity 430ms var(--snappy); }
+.tile:hover .x, .tile.hov .x { opacity: 1; }
+.wide { grid-column: span 3; }
+
+/* start */
+.start { flex: 1; display: flex; gap: 10px; margin: 8px 10px 10px; min-height: 0; }
+.side { width: 280px; border-radius: 18px; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; }
+.side .brand { font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -.4px; padding: 4px 10px 14px; } .side .brand span { color: var(--accent); }
+.side .a { height: 36px; border-radius: 10px; display: flex; align-items: center; gap: 10px; padding: 0 10px; color: var(--ink); font-weight: 500; transition: background 430ms var(--snappy); }
+.side .a:hover, .side .a.on { background: rgba(15,23,42,.06); }
+.gpu { margin-top: auto; background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 0 0 1px var(--line); font-size: 12px; color: var(--ink2); }
+.gpu b { color: var(--ink); font-weight: 600; display: block; margin-bottom: 4px; }
+.main { flex: 1; overflow: hidden; padding: 18px 26px; display: flex; flex-direction: column; gap: 14px; }
+.h { font-size: 15px; font-weight: 600; color: var(--ink); margin-top: 6px; }
+.drop { background: #fff; border-radius: 20px; padding: 30px; display: flex; align-items: center; gap: 22px; box-shadow: 0 0 0 1px var(--line); outline: 2px dashed rgba(14,124,134,.25); outline-offset: -10px; }
+.drop .big { width: 56px; height: 56px; border-radius: 16px; background: var(--wash); color: var(--accent); display: grid; place-items: center; }
+.drop .t { font-size: 17px; font-weight: 600; color: var(--ink); } .drop p { margin: 4px 0 0; color: var(--ink2); }
+.list { background: #fff; border-radius: 16px; box-shadow: 0 0 0 1px var(--line); overflow: hidden; }
+.list .r { height: 46px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); color: var(--ink); }
+.list .r:last-child { border-bottom: 0; } .list .r small { color: var(--ink3); } .list .r .when { margin-left: auto; color: var(--ink2); font-size: 12px; }
+.samples { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.sample { background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: 6px; min-height: 140px; }
+.sample .n { font-size: 15px; font-weight: 600; color: var(--ink); } .sample p { margin: 0; color: var(--ink2); flex: 1; }
+.sample .art { height: 36px; display: flex; align-items: end; gap: 3px; } .sample .art i { flex: 1; border-radius: 3px 3px 0 0; background: var(--accent); opacity: .5; }
+
+/* import dialog */
+.dim { position: absolute; inset: 0; background: rgba(15,23,42,.18); backdrop-filter: blur(6px); z-index: 30; display: grid; place-items: center; }
+.dlg { width: 1120px; height: 790px; background: #fff; border-radius: 22px; box-shadow: 0 40px 100px rgba(15,23,42,.30), 0 0 0 1px var(--line); display: flex; flex-direction: column; animation: rise 790ms var(--bouncy) both; overflow: hidden; }
+@keyframes rise { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
+.dh { padding: 22px 26px 16px; display: flex; align-items: flex-start; gap: 16px; }
+.dh h2 { margin: 0; font-size: 17px; color: var(--ink); } .dh .meta { color: var(--good); margin-top: 3px; font-size: 12.5px; }
+.steps { margin-left: auto; display: flex; gap: 6px; align-items: center; color: var(--ink2); font-size: 12px; }
+.steps span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; }
+.steps span i { font-style: normal; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--strong); }
+.steps span.done i { background: var(--accent); color: #fff; box-shadow: none; } .steps span.on { background: var(--wash); color: var(--accent); font-weight: 600; } .steps span.on i { background: var(--accent); color: #fff; box-shadow: none; }
+.prev { margin: 0 26px; border-radius: 14px; box-shadow: 0 0 0 1px var(--line); overflow: hidden; height: 318px; position: relative; }
+.prev::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: linear-gradient(transparent, #fff); }
+.cols { margin: 18px 26px 0; flex: 1; }
+.cols h3 { margin: 0 0 8px; font-size: 13px; color: var(--ink); }
+table.prof { width: 100%; border-collapse: collapse; } .prof th { text-align: left; font-size: 10.5px; letter-spacing: .7px; color: var(--ink3); font-weight: 600; padding: 6px 10px; }
+.prof td { padding: 0 10px; height: 38px; border-top: 1px solid var(--line); color: var(--ink); } .prof td.g { color: var(--ink2); } .prof td.w { color: var(--warn); font-weight: 500; }
+.prof .field { height: 28px; font-size: 12.5px; }
+.df { padding: 16px 26px; display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--line); background: var(--raised); }
+
+/* phone */
+.phone { width: 390px; height: 844px; border-radius: 48px; overflow: hidden; position: relative; background: var(--backdrop); box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 10px #1b1d22, 0 0 0 11px #333; color: var(--body); }
+.ptop { position: absolute; top: 50px; left: 12px; right: 12px; height: 48px; border-radius: 999px; display: flex; align-items: center; padding: 0 6px; gap: 6px; z-index: 3; }
+.ptop .t { flex: 1; text-align: center; font-weight: 600; color: var(--ink); font-size: 15px; }
+.rb { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); }
+.ptools { position: absolute; top: 106px; left: 12px; right: 12px; display: flex; gap: 8px; z-index: 3; }
+.ptools span { flex: 1; height: 48px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10.5px; font-weight: 500; }
+.pgrid { position: absolute; top: 164px; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 24px 24px 0 0; overflow: hidden; }
+.pgrid table.grid th { height: 50px; padding: 6px 10px; font-size: 12.5px; } .pgrid table.grid td { height: 40px; padding: 0 10px; font-size: 13px; }
+.bsheet { position: absolute; left: 8px; right: 8px; bottom: 96px; height: 290px; border-radius: 30px; padding: 8px 18px 16px; z-index: 4; background: rgba(255,255,255,.78); animation: rise 790ms var(--bouncy) both; }
+.grab { width: 38px; height: 5px; border-radius: 3px; background: rgba(15,23,42,.2); margin: 0 auto 12px; }
+.pfig { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .pfig div { background: #fff; border-radius: 16px; padding: 10px 12px; box-shadow: 0 0 0 1px var(--line); }
+.pfig small { color: var(--ink2); font-size: 11.5px; } .pfig b { display: block; font-size: 17px; color: var(--ink); font-weight: 650; margin-top: 2px; }
+.pills { display: flex; gap: 8px; margin-top: 12px; } .pills span { height: 40px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; background: #fff; box-shadow: inset 0 0 0 1px var(--strong); font-weight: 500; color: var(--ink); }
+.pills span.on { background: var(--accent); color: #fff; box-shadow: none; }
+.ptab { position: absolute; left: 50%; transform: translateX(-50%); bottom: 26px; height: 60px; border-radius: 999px; display: flex; align-items: center; padding: 6px; gap: 4px; z-index: 5; }
+.ptab span { height: 48px; min-width: 88px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; color: var(--ink2); }
+.ptab span.on { background: #fff; color: var(--accent); box-shadow: 0 1px 4px rgba(15,23,42,.14); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 150ms !important; transition-duration: 150ms !important; } }
+</style>
+</head>
+<body>
+<header class="viewer"><h1>omxplorer · Liquid (light) · Claude</h1><p>Live artboards at actual size: hover anything; menus, tiles and dialogs arrive on springs. Content solid, controls glass.</p></header>
+<main class="board" id="board"></main>
+<script>
+const ICONS = "../../../mojoui/hosts/static/icons/";
+const ic = (n, s = "") => `<span class="ic ${s}" style="--i:url(${ICONS}${n}.svg)"></span>`;
+let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const REG = ["South","South","North","South","North","North","North","Central","East","West","South","East","West","North","Central","South","West","East","South","North","Central","West"];
+const rows = REG.map((r, i) => ({ order: i + 1, amount: [6, 7, 13].includes(i + 1) ? "" : (1000 + rnd() * 8999).toFixed(2), region: r, day: `2025-${String(1 + Math.floor(rnd() * 9)).padStart(2, "0")}-${String(1 + Math.floor(rnd() * 28)).padStart(2, "0")}`, paid: rnd() > .45 ? "true" : "false" }));
+rows[0].amount = "8922.63"; rows[1].amount = "2801.47"; rows[2].amount = "2617.13"; rows[3].amount = "4612.00";
+const hist = (n, f) => Array.from({ length: n }, (_, k) => `<i style="height:${f ? Math.round(40 + rnd() * 60) : Math.round(18 + 80 * Math.exp(-((k - n * .4) ** 2) / (n * 1.6)) + rnd() * 8)}%"></i>`).join("");
+const MENUS = ["File","Edit","View","Insert","Data","Format","Help"];
+const menubar = (open = "", doc = "sales-1m · 1,000,000 rows") => `<div class="menubar glass"><span class="app">omxplorer</span>${MENUS.map(m => `<span class="m ${m === open ? "open" : ""}">${m}</span>`).join("")}<span class="doc">${doc}</span></div>`;
+const tool = (i, l, c = "") => `<div class="tool ${c}">${ic(i)}${l}</div>`;
+const sq = (i, c = "") => `<div class="tool sq ${c}">${ic(i)}</div>`;
+const bottom = (rep, figs) => `<div class="bottom glass"><span class="tab ${rep ? "" : "on"}">Sheet</span><span class="tab ${rep ? "on" : ""}">Report</span><span class="tab">${ic("plus", "s")}</span><div class="figs">${figs}<span><span class="dot"></span>RTX 4090 · 0.3 ms</span></div></div>`;
+const gridTable = (sel, n = 22, cols = ["order", "amount", "region", "day", "paid"]) => {
+  const B = { order: "#", amount: "0.0", region: "Aa", day: "date", paid: "bool" };
+  const W = { order: 110, amount: 150, region: 150, day: 150, paid: 120 };
+  return `<table class="grid"><tr><th style="width:52px;background:var(--raised)"></th>${cols.map(c => `<th class="${sel.includes(c) ? "sel" : ""}" style="width:${W[c]}px">${c}<span class="b">${B[c]}</span><div class="hist">${hist(c === "region" ? 5 : c === "paid" ? 2 : 14, c === "region" || c === "paid")}</div></th>`).join("")}<th></th></tr>
+  ${rows.slice(0, n).map((r, i) => `<tr class="${i >= 2 && i <= 7 && sel.length ? "selrow" : ""}"><td class="rn">${i + 1}</td>${cols.map(c => `<td class="${c === "order" || c === "amount" ? "n" : ""}">${r[c]}</td>`).join("")}<td></td></tr>`).join("")}</table>`;
+};
+
+function sheet() {
+  const fmt = [["bold","Bold","Ctrl+B"],["italic","Italic","Ctrl+I"],["underline","Underline","Ctrl+U"],["strikethrough","Strikethrough","Ctrl+5"],0,["text-colour","Text colour","›",1],["fill","Fill colour","›"],["align-left","Align","›"],0,["format","Format as","›"],["clear-format","Clear formatting",""],0,["check","Format inspector",""]];
+  const menu = `<div class="menu glass" style="left:${10 + 108 + 5 * 52}px">${fmt.map(f => f === 0 ? `<div class="sep"></div>` : `<div class="it ${f[3] ? "hot" : ""}"><span class="lead">${ic(f[0], "s")}</span>${f[1]}<span class="k">${f[2]}</span></div>`).join("")}</div>`;
+  const sw = [["Automatic","#0f172a"],["Red","#dc2626"],["Orange","#ea580c"],["Amber","#d97706"],["Green","#16a34a"],["Teal","#0e7c86"],["Blue","#2563eb"],["Purple","#7c3aed"],["Grey","#64748b"]];
+  const sub = `<div class="sub" style="left:${10 + 108 + 5 * 52 + 276}px;top:${40 + 6 + 4 * 30 + 11}px">${sw.map(([n, c], k) => `<div class="menu" style="all:unset;display:block"><div class="it" style="height:30px;border-radius:8px;display:flex;align-items:center;gap:10px;padding:0 10px;color:var(--ink)"><span class="sw" style="background:${c}"></span>${n}${k === 0 ? `<span class="k" style="margin-left:auto;color:var(--accent)">${ic("check", "s")}</span>` : ""}</div></div>`).join("")}</div>`;
+  return `<div class="win">${menubar("Format")}${menu}${sub}
+  <div class="toolbar glass">${tool("save","Save")}${tool("undo","Undo")}<div class="gap"></div>${tool("row-plus","Add row")}${tool("formula","Formula")}${tool("sort","Sort")}${tool("pivot","Pivot")}${tool("chart-bar","Chart")}<div class="gap"></div>
+    ${sq("bold","on")}${sq("italic")}${sq("underline")}${sq("strikethrough")}<div class="gap"></div>${sq("text-colour")}${sq("fill")}<div class="gap"></div>${sq("align-left")}${sq("align-center")}${sq("align-right")}<div class="gap"></div>${sq("currency")}${sq("percent")}${sq("decimals-more")}<div class="spacer"></div>${tool("format","Format","on")}</div>
+  <div class="fbar"><span class="field ref">B4</span><span class="field fx" style="flex:1"><b>fx</b>4612.00</span></div>
+  <div class="work"><div class="sheetcard">${gridTable(["amount", "region"])}<div class="range" style="left:162px;top:${58 + 2 * 31}px;width:300px;height:${6 * 31}px"></div></div>
+    <div class="insp glass"><div class="seg"><span class="on">Format</span><span>Column</span><span>Table</span></div>
+      <div class="sec"><h4>NUMBER</h4><div class="seg" style="margin-bottom:10px"><span>Auto</span><span class="on">Number</span><span>Currency</span><span>%</span></div>
+        <div class="row">Decimals <span class="step"><i>−</i><b>2</b><i>+</i></span></div><div class="row">Thousands separator <span class="switch"></span></div>
+        <div class="row">Negatives <span class="seg" style="width:150px"><span class="on">−1,234</span><span>(1,234)</span></span></div></div>
+      <div class="sec"><h4>COLUMN STATS · AMOUNT</h4>
+        ${[["Count","950,088"],["Empty","49,912"],["Distinct","812,441"],["Min","1,000.02"],["Max","9,999.87"],["Mean","5,004.92"]].map(([a, b]) => `<div class="row">${a}<b>${b}</b></div>`).join("")}
+        <div class="ihist">${hist(26)}</div><div class="row" style="font-size:11.5px;color:var(--ink3)"><span>1,000</span><span>computed on the GPU in 0.3 ms</span><span>10k</span></div></div></div></div>
+  ${bottom(false, "<span>Sum <b>31,842.07</b></span><span>Average <b>5,307.01</b></span><span>Count <b>6</b></span>")}</div>`;
+}
+
+function report() {
+  const t = (l, v, acc, hov) => `<div class="tile ${hov ? "hov" : ""}"><div class="l">${l}</div><div class="v ${acc ? "acc" : ""}">${v}</div><span class="chip">region = South</span><span class="x">${ic("close", "s")}</span></div>`;
+  const regs = [["South", 920], ["North", 905], ["West", 918], ["East", 899], ["Central", 911]];
+  const chart = `<svg width="100%" height="190" viewBox="0 0 1000 190">${[0, 1, 2, 3].map(k => `<line x1="70" x2="990" y1="${20 + k * 45}" y2="${20 + k * 45}" stroke="rgba(15,23,42,.07)"/>`).join("")}
+    ${regs.map(([n, v], i) => `<rect x="${110 + i * 180}" y="${155 - (v - 880) * 3.4}" width="90" height="${(v - 880) * 3.4}" rx="8" fill="var(--s${i === 0 ? 1 : 1})" opacity="${i === 0 ? 1 : .35}"/><text x="${155 + i * 180}" y="180" text-anchor="middle" font-size="12" fill="#64748b">${n}</text><text x="${155 + i * 180}" y="${147 - (v - 880) * 3.4}" text-anchor="middle" font-size="12" font-weight="600" fill="#0f172a">${v}M</text>`).join("")}</svg>`;
+  return `<div class="win">${menubar()}
+  <div class="toolbar glass">${tool("save","Save")}${tool("undo","Undo")}<div class="gap"></div>
+    <div class="lbl">Tiles of<span class="field">amount ${ic("chevron", "s")}</span></div>${tool("plus","Sum")}${tool("plus","Average")}${tool("plus","Median")}${tool("plus","Distinct")}${tool("plus","Count")}${tool("chart-bar","Chart")}<div class="gap"></div>
+    <div class="lbl">Filter · every tile<span class="field">region = South ${ic("chevron", "s")}</span></div><div class="spacer"></div>${tool("format","Format")}${tool("open","Open")}</div>
+  <div class="work"><div class="sheetcard page"><div class="title">Report <small>sales-1m · region = South · 199,812 of 1,000,000 rows · 4 ms on the GPU</small></div>
+    <div class="tiles">${t("Sum of amount", "920,404,385.00", 1)}${t("Median of amount", "5,008.11", 0, 1)}${t("Average of amount", "5,004.92")}${t("Distinct of region", "5")}${t("Count of order", "199,812")}
+    <div class="tile" style="display:grid;place-items:center;box-shadow:none;background:transparent;outline:2px dashed var(--strong);outline-offset:-2px;color:var(--ink2)"><span>${ic("plus")} Add a tile from the toolbar</span></div>
+    <div class="tile wide"><div class="l">Sum of amount by region</div>${chart}</div></div></div></div>
+  ${bottom(true, "<span>Filtered <b>199,812</b> of 1,000,000 rows</span>")}</div>`;
+}
+
+function start() {
+  const rec = [["sales-1m.parquet", "~/data/sales-1m.parquet", "2 min ago"], ["orders.csv", "~/work/q3/orders.csv", "Yesterday"], ["taxi-2024.parquet", "/mnt/data/taxi-2024.parquet", "Oct 14"], ["budget.omx", "~/Documents/budget.omx", "Oct 11"]];
+  return `<div class="win">${menubar("", "")}<div class="start">
+  <div class="side glass"><div class="brand"><span>o</span>mxplorer</div><div class="a on">${ic("file")}Start</div><div class="a">${ic("grid")}New blank sheet</div><div class="a">${ic("open")}Open file…</div><div class="a">${ic("gear")}Settings…</div>
+    <div class="gpu"><b><span class="dot"></span>RTX 4090 ready</b>Parquet files bigger than memory open too: streamed from disk, still editable.</div></div>
+  <div class="main"><div class="drop"><div class="big">${ic("upload")}</div><div><div class="t">Drop a CSV, Parquet or .omx file here</div><p>A million rows is fine: you see a preview first, the rest loads while you work.</p></div><div class="spacer"></div><span class="btn pri lg">${ic("import", "s")}Choose a file</span></div>
+    <div class="h">Recent</div><div class="list">${rec.map(([n, p, w]) => `<div class="r">${ic("file", "s")}<span>${n}</span><small>${p}</small><span class="when">${w}</span></div>`).join("")}</div>
+    <div class="h">Try a sample</div><div class="samples">
+      <div class="sample"><div class="art">${hist(18)}</div><div class="n">Orders</div><p>1M rows · a year of sales by region, product and carrier</p><span><span class="btn">Open the sample</span></span></div>
+      <div class="sample"><div class="art" style="opacity:.4">${hist(18, 1)}</div><div class="n">Blank sheet</div><p>An empty table to type into</p><span><span class="btn">New blank sheet</span></span></div>
+      <div class="sample"><div class="art">${hist(18, 1)}</div><div class="n">Taxi trips</div><p>100M rows · a GPU workout, streamed from disk</p><span><span class="btn">Open the sample</span></span></div></div></div></div>
+  <div class="bottom glass" style="margin-top:0"><span style="padding-left:10px;color:var(--ink2)">Ready</span><div class="figs">omxplorer · omxapp</div></div></div>`;
+}
+
+function importScreen() {
+  const prof = [["order", "Integer", "0", "—", "1 · 2 · 3"], ["amount", "Decimal", "49,912", "—", "8922.63 · 2801.47 · 2617.13"], ["region", "Text", "30,283", "5", "South · South · North"], ["day", "Date", "0", "—", "2025-03-03 · 2025-07-29"], ["paid", "Yes/No", "0", "2", "true · false · true"]];
+  return `<div class="win">${menubar("", "")}<div class="start" style="filter:saturate(.9)"><div class="side glass"></div><div class="main"></div></div>
+  <div class="dim"><div class="dlg"><div class="dh"><div><h2>Import sales-1m.parquet</h2><div class="meta">1,000,000 rows · 5 columns · read in 0.02 s</div></div>
+    <div class="steps"><span class="done"><i>${ic("check", "s")}</i>File</span>›<span class="on"><i>2</i>Columns</span>›<span><i>3</i>Table</span></div></div>
+    <div class="prev">${gridTable([], 9)}</div>
+    <div class="cols"><h3>Columns</h3><table class="prof"><tr><th>COLUMN</th><th>TYPE</th><th style="text-align:right">EMPTY</th><th style="text-align:right">DISTINCT</th><th>FIRST VALUES</th></tr>
+      ${prof.map(([n, t, e, d, f]) => `<tr><td style="font-weight:500">${n}</td><td><span class="field">${t} ${ic("chevron", "s")}</span></td><td class="${e !== "0" ? "w" : "g"}" style="text-align:right">${e}</td><td class="g" style="text-align:right">${d}</td><td class="g">${f}</td></tr>`).join("")}</table></div>
+    <div class="df"><span class="btn">Back</span><span style="color:var(--ink2);margin-left:8px">Empty cells stay empty; types can change later from the column's menu.</span><div class="spacer"></div><span class="btn pri lg">${ic("table", "s")}Create table</span></div></div></div></div>`;
+}
+
+function phone() {
+  return `<div class="phone"><div class="ptop glass"><span class="rb">‹</span><span class="t">sales-1m</span><span class="rb">•••</span></div>
+  <div class="ptools">${[["chart-bar","Chart"],["pivot","Pivot"],["formula","Formula"],["sort","Sort"],["format","Format"]].map(([i, l]) => `<span class="glass">${ic(i, "s")}${l}</span>`).join("")}</div>
+  <div class="pgrid">${gridTable(["amount"], 14, ["order", "amount", "region"])}<div class="range" style="left:162px;top:${50 + 2 * 41}px;width:150px;height:${6 * 41}px"></div></div>
+  <div class="bsheet glass"><div class="grab"></div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><b style="color:var(--ink);font-size:16px">amount · 6 cells</b><small style="color:var(--ink2)">B3:B8</small></div>
+    <div class="pfig"><div><small>Sum</small><b>31,842.07</b></div><div><small>Average</small><b>5,307.01</b></div><div><small>Count</small><b>6</b></div></div>
+    <div class="ihist" style="height:48px">${hist(22)}</div><div class="pills"><span>Number</span><span class="on">Currency</span><span>Percent</span></div></div>
+  <div class="ptab glass"><span class="on">${ic("sheet", "s")}Sheet</span><span>${ic("chart-bar", "s")}Report</span><span style="min-width:48px">${ic("plus", "s")}</span></div></div>`;
+}
+
+const SCREENS = { start, import: importScreen, sheet, report, phone };
+const only = new URLSearchParams(location.search).get("screen");
+document.getElementById("board").innerHTML = (only ? [only] : Object.keys(SCREENS)).map(k => `<div>${SCREENS[k]()}<div class="cap">${k}</div></div>`).join("");
+if (only) { document.querySelector(".viewer").remove(); document.body.style.background = "transparent"; document.querySelector(".board").style.padding = "0"; document.querySelector(".cap").remove(); }
+</script>
+</body>
+</html>

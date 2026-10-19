@@ -256,3 +256,8 @@ One line per fork: `D-nn · chose X over Y · why · reversible?`
 - D-222 · a streamed column's cached totals are keyed by the device asked for as well as the edits · a test switching to the GPU got the CPU's cached answer back · yes
 - D-223 · text order is the owner's (MX frame's) everywhere: case ignored, bytes breaking ties; pinned by tests/test_text_order and M2 in the app, in memory and streamed; charts and pivots keep the file's word order and sort nothing by name · settled by the owner through MX frame · yes
 - D-224 · review: a chart or pivot that fails to compute says so (its error was replaced by the timing message); the inspector names the device the last aggregate ran on (it always said "the GPU"); `use_gpu=False` keeps a streamed sheet on the CPU · the reviewer's should-fix list · yes
+
+## Goal 24: omxplorer polished: Liquid, smooth, a showcase (2026-10-18)
+- D-225 · Liquid **light** (frosted white glass over a soft cool backdrop, omxplorer's teal) over Liquid's navy and over keeping Ledger · long sessions with numbers, the owner's earlier pick of a light sheet, the Mac feel they asked for · reversible: yes (a skin; Ledger, Graphite and Blueprint stay in Settings)
+- D-226 · the design: Claude's structure (glass islands, today's features exactly) with Stitch's detail (tile corner icons, tile footer lines, yes/no pills, stats as cards, the range named) over Stitch's whole screens (they invent actions the app doesn't have) · reversible: yes
+- D-227 · on GTK, glass is translucent white with a rim, highlight and shadow (GTK can't blur what's behind a widget); springs are keyframes with an overshoot (GTK CSS has no linear()); the selection ring's glide is drawn on the frame clock · reversible: yes

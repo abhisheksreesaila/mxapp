@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>sales-1m · omxplorer</title>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN with forms/container plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary": "#94a3b8",
+            "glass-rim": "rgba(255,255,255,0.75)",
+            "on-surface-variant": "#3e494a",
+            "content-bg": "#ffffff",
+            "surface-container": "#ebeeef",
+            "outline-variant": "#bdc9ca",
+            "primary-wash": "rgba(14,124,134,0.10)",
+            "danger": "#dc2626",
+            "surface-container-high": "#e5e9e9",
+            "on-surface": "#181c1d",
+            "on-background": "#181c1d",
+            "on-primary-fixed": "#001f23",
+            "on-primary-container": "#ddfbff",
+            "secondary": "#505f76",
+            "tertiary-container": "#a26031",
+            "secondary-container": "#d0e1fb",
+            "on-tertiary-container": "#fff3ee",
+            "on-secondary-fixed": "#0b1c30",
+            "ink": "#0f172a",
+            "primary-fixed-dim": "#7cd4df",
+            "inverse-on-surface": "#eef1f2",
+            "error-container": "#ffdad6",
+            "warning": "#d97706",
+            "formula": "#6a4fd6",
+            "tertiary-fixed-dim": "#ffb688",
+            "on-error-container": "#93000a",
+            "error": "#ba1a1a",
+            "surface-tint": "#006972",
+            "selection-fill": "rgba(14,124,134,0.08)",
+            "on-primary-fixed-variant": "#004f56",
+            "strong-line": "rgba(15,23,42,0.14)",
+            "surface-container-highest": "#dfe3e3",
+            "on-secondary-fixed-variant": "#38485d",
+            "body-text": "#334155",
+            "on-secondary": "#ffffff",
+            "inverse-primary": "#7cd4df",
+            "on-error": "#ffffff",
+            "success": "#16a34a",
+            "secondary-fixed": "#d3e4fe",
+            "surface-dim": "#d7dbdb",
+            "glass-panel": "rgba(255,255,255,0.62)",
+            "inverse-surface": "#2d3132",
+            "on-secondary-container": "#54647a",
+            "on-tertiary-fixed-variant": "#6f380b",
+            "primary": "#00626a",
+            "window-backdrop-bottom": "#e6ebf2",
+            "surface-variant": "#dfe3e3",
+            "on-primary": "#ffffff",
+            "outline": "#6e797a",
+            "on-tertiary": "#ffffff",
+            "hairline": "rgba(15,23,42,0.07)",
+            "glass-highlight": "rgba(255,255,255,0.9)",
+            "raised-surface": "#f6f8fb",
+            "primary-hover": "#0b6870",
+            "on-tertiary-fixed": "#311300",
+            "tertiary-fixed": "#ffdbc7",
+            "surface-container-low": "#f1f4f4",
+            "secondary-fixed-dim": "#b7c8e1",
+            "surface-bright": "#f7fafa",
+            "primary-fixed": "#98f0fb",
+            "surface": "#f7fafa",
+            "surface-container-lowest": "#ffffff",
+            "primary-container": "#0e7c86",
+            "background": "#f7fafa",
+            "window-backdrop-top": "#eef2f7"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "gutter": "12px",
+            "space-sm": "8px",
+            "space-md": "12px",
+            "space-xs": "4px",
+            "space-xl": "24px",
+            "margin": "10px",
+            "space-lg": "16px"
+          },
+          "fontFamily": {
+            "headline-sm": ["Inter", "sans-serif"],
+            "headline-lg": ["Inter", "sans-serif"],
+            "display-lg": ["Inter", "sans-serif"],
+            "body": ["Inter", "sans-serif"],
+            "caption": ["Inter", "sans-serif"],
+            "body-medium": ["Inter", "sans-serif"],
+            "headline-md": ["Inter", "sans-serif"],
+            "formula-bar": ["JetBrains Mono", "monospace"],
+            "toolbar": ["Inter", "sans-serif"]
+          },
+          "fontSize": {
+            "headline-sm": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "headline-lg": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.3px", "fontWeight": "700" }],
+            "display-lg": ["34px", { "lineHeight": "40px", "fontWeight": "650" }],
+            "body": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+            "headline-md": ["17px", { "lineHeight": "22px", "fontWeight": "600" }],
+            "formula-bar": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "toolbar": ["11px", { "lineHeight": "14px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 20px;
+      line-height: 1;
+      display: inline-block;
+    }
+    /* Smooth liquid glass edge reflections */
+    .liquid-glass {
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+    }
+    /* Tabular figures for numbers */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Custom scrollbar suppression for tactile native look */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-gradient-to-b from-window-backdrop-top to-window-backdrop-bottom text-on-surface h-full w-full flex items-center justify-center p-0 select-none overflow-hidden font-body">
+<!-- iPhone Frame Mockup Container (390 x 844 px) -->
+<div class="relative w-[390px] h-[844px] bg-gradient-to-b from-[#eef2f7] to-[#e6ebf2] rounded-[48px] shadow-[0_25px_60px_-15px_rgba(15,23,42,0.3),0_0_0_12px_#1e293b,0_0_0_14px_rgba(255,255,255,0.4)] overflow-hidden flex flex-col border border-white/50">
+<!-- 1. iOS Status Bar (44px) with Dynamic Island Area -->
+<header class="relative z-40 w-full h-[44px] px-7 flex items-center justify-between shrink-0 pointer-events-none">
+<div class="w-12 text-left">
+<span class="text-caption font-semibold tracking-tight text-ink font-body">9:41</span>
+</div>
+<!-- Subtle Dynamic Island -->
+<div class="w-28 h-[24px] bg-ink rounded-full flex items-center justify-end px-3">
+<div class="w-2.5 h-2.5 rounded-full bg-emerald-500/80 mr-1 animate-pulse"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-[#1e293b]"></div>
+</div>
+<!-- Battery & Signal -->
+<div class="w-12 flex items-center justify-end gap-1.5 text-ink">
+<span class="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[14px]">wifi</span>
+<span class="material-symbols-outlined text-[18px]">battery_charging_full</span>
+</div>
+</header>
+<!-- 2. TopAppBar: Docked Glass Header matching JSON specifications -->
+<nav class="relative z-40 flex items-center justify-between px-space-md h-12 w-full bg-glass-panel backdrop-blur-xl border-b border-glass-rim shadow-sm shrink-0">
+<!-- Leading Back Button (48px tap target) -->
+<button aria-label="Back" class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-primary-wash active:scale-95 transition-all text-primary">
+<div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center border border-white/80 shadow-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">chevron_left</span>
+</div>
+</button>
+<!-- Center Title & Metadata -->
+<div class="flex flex-col items-center justify-center">
+<div class="flex items-center gap-1.5">
+<span class="text-headline-sm font-headline-sm font-semibold text-on-surface tracking-tight">sales-1m</span>
+<span class="inline-flex items-center px-1.5 py-0.2 rounded bg-surface-container text-[9px] font-semibold tracking-wider text-secondary uppercase">RAM</span>
+</div>
+<span class="text-[11px] font-toolbar text-secondary">1,000,000 rows • Parquet</span>
+</div>
+<!-- Trailing Overflow Button (48px tap target) -->
+<button aria-label="More Options" class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-primary-wash active:scale-95 transition-all text-secondary">
+<div class="w-8 h-8 rounded-full bg-white/70 flex items-center justify-center border border-white/80 shadow-xs">
+<span class="material-symbols-outlined text-secondary text-[20px]">more_horiz</span>
+</div>
+</button>
+</nav>
+<!-- 3. Floating Tool Strip Island (Frosted Glass) -->
+<div class="relative z-30 px-space-md pt-2 pb-1 shrink-0">
+<div class="w-full h-[52px] liquid-glass rounded-2xl flex items-center justify-around px-2 py-1 shadow-[0_4px_16px_rgba(15,23,42,0.06)]">
+<!-- Chart Tool -->
+<button class="w-12 h-12 flex flex-col items-center justify-center rounded-xl hover:bg-primary-wash active:scale-95 transition-transform group">
+<span class="material-symbols-outlined text-primary text-[19px] group-hover:scale-105 transition-transform">insert_chart</span>
+<span class="text-[10px] font-toolbar font-medium text-secondary mt-0.5">Chart</span>
+</button>
+<div class="w-[1px] h-5 bg-strong-line/30"></div>
+<!-- Pivot Tool -->
+<button class="w-12 h-12 flex flex-col items-center justify-center rounded-xl hover:bg-primary-wash active:scale-95 transition-transform group">
+<span class="material-symbols-outlined text-secondary text-[19px] group-hover:text-primary transition-colors">pivot_table_chart</span>
+<span class="text-[10px] font-toolbar font-medium text-secondary mt-0.5">Pivot</span>
+</button>
+<div class="w-[1px] h-5 bg-strong-line/30"></div>
+<!-- Formula Tool (Active wash demonstration) -->
+<button class="w-12 h-12 flex flex-col items-center justify-center rounded-xl bg-primary-wash text-primary active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary text-[19px]">function</span>
+<span class="text-[10px] font-toolbar font-semibold text-primary mt-0.5">Formula</span>
+</button>
+<div class="w-[1px] h-5 bg-strong-line/30"></div>
+<!-- Sort Tool -->
+<button class="w-12 h-12 flex flex-col items-center justify-center rounded-xl hover:bg-primary-wash active:scale-95 transition-transform group">
+<span class="material-symbols-outlined text-secondary text-[19px] group-hover:text-primary transition-colors">sort</span>
+<span class="text-[10px] font-toolbar font-medium text-secondary mt-0.5">Sort</span>
+</button>
+<div class="w-[1px] h-5 bg-strong-line/30"></div>
+<!-- Format Tool -->
+<button class="w-12 h-12 flex flex-col items-center justify-center rounded-xl hover:bg-primary-wash active:scale-95 transition-transform group">
+<span class="material-symbols-outlined text-secondary text-[19px] group-hover:text-primary transition-colors">style</span>
+<span class="text-[10px] font-toolbar font-medium text-secondary mt-0.5">Format</span>
+</button>
+</div>
+</div>
+<!-- 4. Content Sheet: Crisp Solid White Data Grid -->
+<main class="relative z-10 flex-1 w-full bg-content-bg flex flex-col overflow-hidden shadow-inner mt-1">
+<!-- Grid Header Row (32px height) -->
+<div class="h-8 bg-raised-surface border-b border-hairline flex items-center text-secondary text-[11px] font-semibold shrink-0 select-none">
+<!-- Gutter Corner -->
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-surface-container-low text-tertiary font-formula-bar text-[10px]">
+          #
+        </div>
+<!-- Column order_id (text) -->
+<div class="w-[84px] h-full px-2 flex items-center justify-between border-r border-hairline">
+<span class="truncate">order_id</span>
+<span class="text-[9px] px-1 py-0.5 bg-surface-container rounded text-tertiary">str</span>
+</div>
+<!-- Column amount (Selected Header with Teal Tint) -->
+<div class="w-[96px] h-full px-2 flex items-center justify-between border-r border-hairline bg-primary-wash/50 text-primary">
+<span class="truncate font-bold">amount</span>
+<span class="text-[9px] px-1 py-0.5 bg-primary/10 text-primary rounded font-bold">$</span>
+</div>
+<!-- Column region (text) -->
+<div class="w-[85px] h-full px-2 flex items-center justify-between border-r border-hairline">
+<span class="truncate">region</span>
+<span class="text-[9px] px-1 py-0.5 bg-surface-container rounded text-tertiary">str</span>
+</div>
+<!-- Column day (date) -->
+<div class="flex-1 h-full px-2 flex items-center justify-between">
+<span class="truncate">day</span>
+<span class="text-[9px] px-1 py-0.5 bg-surface-container rounded text-tertiary">date</span>
+</div>
+</div>
+<!-- Scrollable Virtual Grid Area -->
+<div class="flex-1 overflow-y-auto no-scrollbar relative bg-content-bg divide-y divide-hairline">
+<!-- Row 1 -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-surface-container-low text-tertiary font-formula-bar text-[10px] tabular-nums">1</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94021</div>
+<div class="w-[96px] px-2 text-right tabular-nums font-formula-bar">1,240.50</div>
+<div class="w-[85px] px-2 truncate text-body-text">North-EMEA</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-01</div>
+</div>
+<!-- Row 2 -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-surface-container-low text-tertiary font-formula-bar text-[10px] tabular-nums">2</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94022</div>
+<div class="w-[96px] px-2 text-right tabular-nums font-formula-bar">4,892.10</div>
+<div class="w-[85px] px-2 truncate text-body-text">US-East</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-01</div>
+</div>
+<!-- SELECTED RANGE (Rows 3 to 8 on 'amount' column) -->
+<!-- Row 3 (Selection Top Border) -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-primary-wash/40 text-primary font-formula-bar text-[10px] font-semibold tabular-nums">3</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94023</div>
+<!-- Selected Cell 3 -->
+<div class="w-[96px] h-full px-2 flex items-center justify-end tabular-nums font-formula-bar font-medium bg-selection-fill text-primary-container border-t-2 border-x-2 border-primary-container">
+            6,420.00
+          </div>
+<div class="w-[85px] px-2 truncate text-body-text">APAC-JP</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-02</div>
+</div>
+<!-- Row 4 -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-primary-wash/40 text-primary font-formula-bar text-[10px] font-semibold tabular-nums">4</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94024</div>
+<!-- Selected Cell 4 -->
+<div class="w-[96px] h-full px-2 flex items-center justify-end tabular-nums font-formula-bar font-medium bg-selection-fill text-primary-container border-x-2 border-primary-container">
+            3,195.42
+          </div>
+<div class="w-[85px] px-2 truncate text-body-text">US-West</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-02</div>
+</div>
+<!-- Row 5 -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-primary-wash/40 text-primary font-formula-bar text-[10px] font-semibold tabular-nums">5</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94025</div>
+<!-- Selected Cell 5 -->
+<div class="w-[96px] h-full px-2 flex items-center justify-end tabular-nums font-formula-bar font-medium bg-selection-fill text-primary-container border-x-2 border-primary-container">
+            7,810.00
+          </div>
+<div class="w-[85px] px-2 truncate text-body-text">EU-Central</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-03</div>
+</div>
+<!-- Row 6 -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-primary-wash/40 text-primary font-formula-bar text-[10px] font-semibold tabular-nums">6</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94026</div>
+<!-- Selected Cell 6 -->
+<div class="w-[96px] h-full px-2 flex items-center justify-end tabular-nums font-formula-bar font-medium bg-selection-fill text-primary-container border-x-2 border-primary-container">
+            2,941.15
+          </div>
+<div class="w-[85px] px-2 truncate text-body-text">LATAM-BR</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-03</div>
+</div>
+<!-- Row 7 -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-primary-wash/40 text-primary font-formula-bar text-[10px] font-semibold tabular-nums">7</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94027</div>
+<!-- Selected Cell 7 -->
+<div class="w-[96px] h-full px-2 flex items-center justify-end tabular-nums font-formula-bar font-medium bg-selection-fill text-primary-container border-x-2 border-primary-container">
+            5,124.50
+          </div>
+<div class="w-[85px] px-2 truncate text-body-text">APAC-SG</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-04</div>
+</div>
+<!-- Row 8 (Bottom Selection Cell with Teal Fill Handle) -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-primary-wash/40 text-primary font-formula-bar text-[10px] font-semibold tabular-nums">8</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94028</div>
+<!-- Selected Cell 8 + Fill Handle -->
+<div class="relative w-[96px] h-full px-2 flex items-center justify-end tabular-nums font-formula-bar font-medium bg-selection-fill text-primary-container border-b-2 border-x-2 border-primary-container">
+            6,351.00
+            <!-- Corner Drag Handle -->
+<div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-full bg-primary-container border-2 border-white shadow-sm z-20"></div>
+</div>
+<div class="w-[85px] px-2 truncate text-body-text">US-East</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-04</div>
+</div>
+<!-- Row 9 -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-surface-container-low text-tertiary font-formula-bar text-[10px] tabular-nums">9</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94029</div>
+<div class="w-[96px] px-2 text-right tabular-nums font-formula-bar">8,102.30</div>
+<div class="w-[85px] px-2 truncate text-body-text">North-EMEA</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-05</div>
+</div>
+<!-- Row 10 -->
+<div class="h-[30px] flex items-center text-body text-ink text-[12px]">
+<div class="w-9 h-full flex items-center justify-center border-r border-hairline bg-surface-container-low text-tertiary font-formula-bar text-[10px] tabular-nums">10</div>
+<div class="w-[84px] px-2 truncate tabular-nums text-secondary font-formula-bar">ORD-94030</div>
+<div class="w-[96px] px-2 text-right tabular-nums font-formula-bar">1,940.00</div>
+<div class="w-[85px] px-2 truncate text-body-text">US-Central</div>
+<div class="flex-1 px-2 truncate text-secondary font-formula-bar">2024-03-05</div>
+</div>
+</div>
+</main>
+<!-- 5. Half-Height Glass Bottom Sheet (Inspector / Selection Summary) -->
+<div class="relative z-30 w-full rounded-t-[28px] liquid-glass border-t border-glass-rim shadow-[0_-12px_36px_rgba(15,23,42,0.12)] pt-2 pb-2 px-4 shrink-0 flex flex-col">
+<!-- Grabber Handle -->
+<div class="w-full flex justify-center py-1">
+<div class="w-9 h-1 rounded-full bg-slate-300"></div>
+</div>
+<!-- Sheet Header / Range Indicator -->
+<div class="flex items-center justify-between mt-1 mb-2">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span class="text-caption font-semibold text-ink">Selection (amount: D3:D8)</span>
+</div>
+<div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/70 border border-white/90 text-[10px] font-semibold text-secondary">
+<span class="w-1.5 h-1.5 rounded-full bg-success inline-block"></span>
+<span>GPU DuckDB</span>
+</div>
+</div>
+<!-- Live Aggregate Metrics Cards (Bento-style 3-up) -->
+<div class="grid grid-cols-3 gap-2 mb-2.5">
+<!-- Sum Metric -->
+<div class="bg-white/80 rounded-xl p-2 border border-white/90 shadow-xs flex flex-col">
+<span class="text-[10px] font-toolbar font-medium text-secondary uppercase tracking-wider">Sum</span>
+<span class="text-[15px] font-bold text-ink tabular-nums tracking-tight mt-0.5">31,842.07</span>
+</div>
+<!-- Average Metric -->
+<div class="bg-white/80 rounded-xl p-2 border border-white/90 shadow-xs flex flex-col">
+<span class="text-[10px] font-toolbar font-medium text-secondary uppercase tracking-wider">Average</span>
+<span class="text-[15px] font-bold text-ink tabular-nums tracking-tight mt-0.5">5,307.01</span>
+</div>
+<!-- Count Metric -->
+<div class="bg-white/80 rounded-xl p-2 border border-white/90 shadow-xs flex flex-col">
+<span class="text-[10px] font-toolbar font-medium text-secondary uppercase tracking-wider">Count</span>
+<span class="text-[15px] font-bold text-ink tabular-nums tracking-tight mt-0.5">6</span>
+</div>
+</div>
+<!-- Spark Distribution & Quick Format Bar (Combined Row) -->
+<div class="flex items-center justify-between gap-3 bg-white/50 rounded-xl p-2 border border-white/80">
+<!-- Mini Histogram (6 selected points) -->
+<div class="flex flex-col">
+<span class="text-[9px] font-semibold text-tertiary uppercase tracking-wider mb-1">Density</span>
+<div class="flex items-end gap-1 h-5 w-24">
+<div class="flex-1 bg-primary-container rounded-t-sm h-[70%]" title="6,420"></div>
+<div class="flex-1 bg-primary/40 rounded-t-sm h-[35%]" title="3,195"></div>
+<div class="flex-1 bg-primary-container rounded-t-sm h-[95%]" title="7,810"></div>
+<div class="flex-1 bg-primary/40 rounded-t-sm h-[30%]" title="2,941"></div>
+<div class="flex-1 bg-primary/60 rounded-t-sm h-[55%]" title="5,124"></div>
+<div class="flex-1 bg-primary-container rounded-t-sm h-[75%]" title="6,351"></div>
+</div>
+</div>
+<!-- Format Selector Pills (44px min tap targets) -->
+<div class="flex items-center gap-1.5">
+<button class="h-8 px-2.5 rounded-lg text-[11px] font-medium text-secondary bg-white hover:bg-slate-50 border border-slate-200/80 active:scale-95 transition-all">
+            Number
+          </button>
+<button class="h-8 px-2.5 rounded-lg text-[11px] font-semibold text-primary-container bg-primary-wash border border-primary/20 active:scale-95 transition-all shadow-xs flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">check</span>
+            Currency
+          </button>
+<button class="h-8 px-2.5 rounded-lg text-[11px] font-medium text-secondary bg-white hover:bg-slate-50 border border-slate-200/80 active:scale-95 transition-all">
+            Percent
+          </button>
+</div>
+</div>
+</div>
+<!-- 6. BottomNavBar: Strict execution from JSON schema -->
+<nav class="relative z-40 w-full bg-glass-panel backdrop-blur-xl border-t border-glass-rim shadow-[0_-8px_32px_rgba(15,23,42,0.08)] px-space-md py-space-xs flex justify-around items-center shrink-0">
+<!-- Tab 1: Sheet (ACTIVE based on screen intent - exact classes applied) -->
+<button aria-label="Sheet" class="flex flex-col items-center justify-center bg-content-bg text-primary rounded-full px-space-md py-1 shadow-sm active:scale-95 transition-transform duration-150 min-w-[72px]">
+<span class="material-symbols-outlined text-[20px]" data-weight="fill" style="font-variation-settings: 'FILL' 1;">table_view</span>
+<span class="text-toolbar font-toolbar">Sheet</span>
+</button>
+<!-- Tab 2: Report (INACTIVE) -->
+<button aria-label="Report" class="flex flex-col items-center justify-center text-secondary hover:bg-primary-wash px-space-md py-1 active:scale-95 transition-transform duration-150 min-w-[72px]">
+<span class="material-symbols-outlined text-[20px]">insert_chart</span>
+<span class="text-toolbar font-toolbar">Report</span>
+</button>
+<!-- Tab 3: New (INACTIVE / Action) -->
+<button aria-label="New" class="flex flex-col items-center justify-center text-secondary hover:bg-primary-wash px-space-md py-1 active:scale-95 transition-transform duration-150 min-w-[72px]">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span class="text-toolbar font-toolbar">New</span>
+</button>
+</nav>
+<!-- iOS Home Indicator Safe Area (20px) -->
+<div class="w-full h-5 bg-glass-panel flex items-center justify-center pb-1 shrink-0">
+<div class="w-32 h-1 bg-ink/70 rounded-full"></div>
+</div>
+</div>
+</body></html>

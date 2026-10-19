@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>omxplorer - Desktop Data Studio</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-fixed-dim": "#ffb688",
+            "primary": "#00626a",
+            "on-secondary-fixed": "#0b1c30",
+            "glass-panel": "rgba(255,255,255,0.62)",
+            "inverse-primary": "#7cd4df",
+            "window-backdrop-bottom": "#e6ebf2",
+            "surface": "#f7fafa",
+            "success": "#16a34a",
+            "on-secondary-container": "#54647a",
+            "on-background": "#181c1d",
+            "raised-surface": "#f6f8fb",
+            "on-secondary": "#ffffff",
+            "tertiary-fixed": "#ffdbc7",
+            "on-primary-container": "#ddfbff",
+            "on-primary-fixed": "#001f23",
+            "strong-line": "rgba(15,23,42,0.14)",
+            "secondary-fixed": "#d3e4fe",
+            "body-text": "#334155",
+            "surface-bright": "#f7fafa",
+            "error-container": "#ffdad6",
+            "secondary": "#505f76",
+            "window-backdrop-top": "#eef2f7",
+            "surface-container-lowest": "#ffffff",
+            "inverse-on-surface": "#eef1f2",
+            "on-tertiary-container": "#fff3ee",
+            "primary-hover": "#0b6870",
+            "background": "#f7fafa",
+            "primary-wash": "rgba(14,124,134,0.10)",
+            "on-surface-variant": "#3e494a",
+            "surface-container-low": "#f1f4f4",
+            "on-tertiary": "#ffffff",
+            "formula": "#6a4fd6",
+            "warning": "#d97706",
+            "surface-container": "#ebeeef",
+            "primary-container": "#0e7c86",
+            "on-error-container": "#93000a",
+            "outline-variant": "#bdc9ca",
+            "on-primary": "#ffffff",
+            "surface-variant": "#dfe3e3",
+            "content-bg": "#ffffff",
+            "surface-container-high": "#e5e9e9",
+            "inverse-surface": "#2d3132",
+            "on-primary-fixed-variant": "#004f56",
+            "glass-rim": "rgba(255,255,255,0.75)",
+            "danger": "#dc2626",
+            "selection-fill": "rgba(14,124,134,0.08)",
+            "surface-dim": "#d7dbdb",
+            "surface-container-highest": "#dfe3e3",
+            "ink": "#0f172a",
+            "secondary-container": "#d0e1fb",
+            "primary-fixed": "#98f0fb",
+            "on-surface": "#181c1d",
+            "on-tertiary-fixed": "#311300",
+            "primary-fixed-dim": "#7cd4df",
+            "error": "#ba1a1a",
+            "hairline": "rgba(15,23,42,0.07)",
+            "on-error": "#ffffff",
+            "outline": "#6e797a",
+            "on-tertiary-fixed-variant": "#6f380b",
+            "on-secondary-fixed-variant": "#38485d",
+            "secondary-fixed-dim": "#b7c8e1",
+            "glass-highlight": "rgba(255,255,255,0.9)",
+            "tertiary": "#94a3b8",
+            "surface-tint": "#006972",
+            "tertiary-container": "#a26031"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-lg": "16px",
+            "space-xl": "24px",
+            "space-md": "12px",
+            "space-sm": "8px",
+            "space-xs": "4px",
+            "margin": "10px",
+            "gutter": "12px"
+          },
+          "fontFamily": {
+            "headline-md": ["Inter"],
+            "formula-bar": ["JetBrains Mono"],
+            "body": ["Inter"],
+            "toolbar": ["Inter"],
+            "headline-lg": ["Inter"],
+            "display-lg": ["Inter"],
+            "caption": ["Inter"],
+            "headline-sm": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "headline-md": ["17px", { "lineHeight": "22px", "fontWeight": "600" }],
+            "formula-bar": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "body": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "toolbar": ["11px", { "lineHeight": "14px", "fontWeight": "500" }],
+            "headline-lg": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.3px", "fontWeight": "700" }],
+            "display-lg": ["34px", { "lineHeight": "40px", "fontWeight": "650" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-sm": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-medium": ["13px", { "lineHeight": "18px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-window-backdrop-top to-window-backdrop-bottom text-ink antialiased h-screen w-screen overflow-hidden select-none font-body text-body relative">
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-2.5 inset-x-2.5 h-10 rounded-xl bg-glass-panel dark:bg-inverse-surface/80 backdrop-blur-xl border border-glass-rim shadow-[0_8px_32px_rgba(15,23,42,0.10)] z-40 flex items-center justify-between px-3">
+<!-- Window controls + App branding & Menu links -->
+<div class="flex items-center gap-4">
+<!-- Window Action Dots -->
+<div class="flex items-center gap-1.5 pl-1 pr-2">
+<span class="w-3 h-3 rounded-full bg-danger opacity-85 hover:opacity-100 transition-opacity cursor-pointer shadow-sm"></span>
+<span class="w-3 h-3 rounded-full bg-warning opacity-85 hover:opacity-100 transition-opacity cursor-pointer shadow-sm"></span>
+<span class="w-3 h-3 rounded-full bg-success opacity-85 hover:opacity-100 transition-opacity cursor-pointer shadow-sm"></span>
+</div>
+<div class="h-4 w-[1px] bg-hairline"></div>
+<!-- App Logo / Title -->
+<span class="font-headline-sm text-headline-sm text-on-surface dark:text-inverse-on-surface font-semibold tracking-tight">omxplorer</span>
+<!-- Primary Application Menus -->
+<nav class="flex items-center gap-1 font-toolbar text-toolbar ml-2">
+<button class="text-primary dark:text-inverse-primary font-medium bg-selection-fill rounded-lg px-2.5 py-1 hover:bg-surface-container/60 transition-colors">File</button>
+<button class="text-secondary dark:text-tertiary hover:text-on-surface px-2.5 py-1 font-normal hover:bg-surface-container/60 transition-colors rounded-lg">Edit</button>
+<button class="text-secondary dark:text-tertiary hover:text-on-surface px-2.5 py-1 font-normal hover:bg-surface-container/60 transition-colors rounded-lg">View</button>
+<button class="text-secondary dark:text-tertiary hover:text-on-surface px-2.5 py-1 font-normal hover:bg-surface-container/60 transition-colors rounded-lg">Data</button>
+<button class="text-secondary dark:text-tertiary hover:text-on-surface px-2.5 py-1 font-normal hover:bg-surface-container/60 transition-colors rounded-lg">Model</button>
+<button class="text-secondary dark:text-tertiary hover:text-on-surface px-2.5 py-1 font-normal hover:bg-surface-container/60 transition-colors rounded-lg">Window</button>
+<button class="text-secondary dark:text-tertiary hover:text-on-surface px-2.5 py-1 font-normal hover:bg-surface-container/60 transition-colors rounded-lg">Help</button>
+</nav>
+</div>
+<!-- Right utility controls -->
+<div class="flex items-center gap-2">
+<!-- Search pill -->
+<div class="flex items-center gap-2 bg-surface-container-lowest/80 border border-hairline rounded-lg px-2.5 py-1 text-secondary text-caption shadow-sm w-44">
+<span class="material-symbols-outlined text-[15px] text-tertiary">search</span>
+<span class="text-secondary font-caption">Search commands...</span>
+<span class="ml-auto text-[10px] font-formula-bar text-tertiary border border-hairline px-1 rounded bg-surface-container-low">⌘K</span>
+</div>
+<div class="flex items-center gap-0.5">
+<button class="w-7 h-7 flex items-center justify-center rounded-lg text-secondary hover:bg-surface-container/60 hover:text-on-surface transition-colors" title="Engine Tuning">
+<span class="material-symbols-outlined text-[16px]">tune</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center rounded-lg text-secondary hover:bg-surface-container/60 hover:text-on-surface transition-colors relative" title="Notifications">
+<span class="material-symbols-outlined text-[16px]">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary-container ring-1 ring-white"></span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center rounded-lg text-secondary hover:bg-surface-container/60 hover:text-on-surface transition-colors" title="Settings">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+</button>
+</div>
+<div class="h-4 w-[1px] bg-hairline mx-1"></div>
+<!-- Action buttons -->
+<button class="px-2.5 py-1 rounded-lg text-body text-secondary hover:text-on-surface hover:bg-surface-container/60 transition-colors font-medium">
+        Import
+      </button>
+<button class="px-3 py-1 bg-primary-container hover:bg-primary-hover text-on-primary rounded-lg text-toolbar font-medium flex items-center gap-1.5 shadow-sm active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-[14px]">add</span>
+        New Workspace
+      </button>
+</div>
+</header>
+<!-- Left SideNavBar (Shared Component) -->
+<aside class="fixed top-14 left-2.5 bottom-12 w-[280px] rounded-xl bg-glass-panel dark:bg-inverse-surface/80 backdrop-blur-xl border border-glass-rim shadow-[0_8px_32px_rgba(15,23,42,0.10)] z-30 flex flex-col justify-between p-3.5">
+<div>
+<!-- Brand header -->
+<div class="flex items-center gap-3 px-2 py-1.5 mb-4">
+<div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center shadow-md text-on-primary">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">dataset</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm text-ink dark:text-inverse-on-surface font-semibold tracking-tight">omxplorer</h1>
+<p class="font-caption text-caption text-secondary">Local Studio v2.4</p>
+</div>
+</div>
+<!-- Navigation & Action Rows -->
+<nav class="space-y-1">
+<!-- Exact matches to shared component + specific action items -->
+<a class="flex items-center gap-3 bg-surface-container-lowest dark:bg-inverse-surface text-primary dark:text-inverse-primary shadow-sm font-body-medium text-body-medium rounded-lg px-3 py-2 border border-hairline" href="#">
+<span class="material-symbols-outlined text-[18px]">home</span>
+<span>Home</span>
+</a>
+<a class="flex items-center gap-3 text-secondary dark:text-tertiary hover:text-on-surface font-body text-body rounded-lg px-3 py-2 hover:bg-surface-container-high/60 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">history</span>
+<span>Recent Workspaces</span>
+</a>
+<a class="flex items-center gap-3 text-secondary dark:text-tertiary hover:text-on-surface font-body text-body rounded-lg px-3 py-2 hover:bg-surface-container-high/60 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">database</span>
+<span>Data Connectors</span>
+</a>
+<a class="flex items-center gap-3 text-secondary dark:text-tertiary hover:text-on-surface font-body text-body rounded-lg px-3 py-2 hover:bg-surface-container-high/60 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">terminal</span>
+<span>Query Console</span>
+</a>
+<div class="my-2.5 h-[1px] bg-hairline mx-2"></div>
+<!-- Start Quick Action Rows -->
+<button class="w-full flex items-center justify-between text-secondary hover:text-on-surface font-body text-body rounded-lg px-3 py-2 hover:bg-surface-container-high/60 transition-colors group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[18px] text-primary-container">note_add</span>
+<span class="font-medium text-ink">New blank sheet</span>
+</div>
+<span class="text-caption font-formula-bar text-tertiary">⌘N</span>
+</button>
+<button class="w-full flex items-center justify-between text-secondary hover:text-on-surface font-body text-body rounded-lg px-3 py-2 hover:bg-surface-container-high/60 transition-colors group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[18px] text-secondary">file_open</span>
+<span>Open file…</span>
+</div>
+<span class="text-caption font-formula-bar text-tertiary">⌘O</span>
+</button>
+<button class="w-full flex items-center justify-between text-secondary hover:text-on-surface font-body text-body rounded-lg px-3 py-2 hover:bg-surface-container-high/60 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[18px] text-secondary">cable</span>
+<span>Connect database…</span>
+</div>
+</button>
+<button class="w-full flex items-center justify-between text-secondary hover:text-on-surface font-body text-body rounded-lg px-3 py-2 hover:bg-surface-container-high/60 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[18px] text-secondary">settings</span>
+<span>Settings…</span>
+</div>
+<span class="text-caption font-formula-bar text-tertiary">⌘,</span>
+</button>
+</nav>
+</div>
+<!-- Bottom GPU status card -->
+<div class="space-y-2">
+<div class="bg-surface-container-lowest/90 border border-hairline rounded-xl p-3 shadow-sm">
+<div class="flex items-center justify-between mb-1.5">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+</span>
+<span class="font-toolbar text-toolbar font-semibold text-ink">GPU · RTX 4090 ready</span>
+</div>
+<span class="font-formula-bar text-[10px] text-primary-container bg-primary-wash px-1.5 py-0.5 rounded font-medium">CUDA 12.4</span>
+</div>
+<p class="font-caption text-[11px] leading-4 text-secondary">
+          Parquet files bigger than memory open too: streamed directly from NVMe disk.
+        </p>
+</div>
+<div class="flex items-center justify-between px-2 pt-1 font-caption text-caption text-tertiary">
+<a class="flex items-center gap-1.5 hover:text-secondary transition-colors" href="#">
+<span class="material-symbols-outlined text-[15px]">help</span>
+<span>Documentation</span>
+</a>
+<span class="text-hairline">|</span>
+<span class="flex items-center gap-1 text-secondary font-medium">
+<span class="material-symbols-outlined text-[14px] text-success">memory</span>
+          v2.4.2
+        </span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas (Solid White Sheet Layer with Island floating inside) -->
+<main class="fixed top-14 left-[302px] right-2.5 bottom-12 rounded-xl bg-content-bg border border-hairline shadow-[0_8px_32px_rgba(15,23,42,0.06)] overflow-y-auto custom-scroll p-8">
+<div class="max-w-4xl mx-auto space-y-8">
+<!-- Welcome Header -->
+<div class="flex items-center justify-between border-b border-hairline pb-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-ink font-semibold">Start</h2>
+<p class="font-body text-body text-secondary mt-0.5">Explore ultra-large tables, stream Parquet datasets, or start with fresh modeling sheets.</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 bg-surface-container text-body-text rounded-lg text-toolbar hover:bg-surface-container-high transition-colors font-medium flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">cloud_sync</span>
+            Sync Cloud
+          </button>
+<button class="px-3.5 py-1.5 bg-primary-container text-on-primary rounded-lg text-toolbar hover:bg-primary-hover shadow-sm font-medium flex items-center gap-1.5 active:scale-[0.98] transition-transform">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+            New Sheet
+          </button>
+</div>
+</div>
+<!-- Large Drop Zone -->
+<section class="relative group">
+<div class="w-full rounded-2xl border-2 border-dashed border-outline-variant/60 hover:border-primary-container bg-surface-bright p-8 transition-all duration-200 flex flex-col items-center justify-center text-center cursor-pointer shadow-sm hover:shadow-md">
+<div class="w-14 h-14 rounded-full bg-primary-wash flex items-center justify-center text-primary mb-3.5 group-hover:scale-105 transition-transform duration-200">
+<span class="material-symbols-outlined text-[28px]">cloud_upload</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-ink font-semibold">Drop a CSV, Parquet or .omx file here</h3>
+<p class="font-body text-body text-secondary mt-1 mb-5">A million rows is fine: you see a preview first</p>
+<div class="flex items-center gap-3">
+<label class="px-5 py-2.5 bg-primary-container hover:bg-primary-hover text-on-primary rounded-full text-body-medium font-medium cursor-pointer shadow-sm active:scale-[0.98] transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>
+              Choose a file
+              <input accept=".csv,.parquet,.omx,.tsv" class="hidden" type="file"/>
+</label>
+<span class="text-caption text-tertiary">or press ⌘O</span>
+</div>
+<div class="mt-4 flex items-center gap-3 text-caption text-secondary">
+<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span> Zero memory overhead</span>
+<span>•</span>
+<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span> DuckDB &amp; Arrow engine</span>
+<span>•</span>
+<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span> Instant sub-second parsing</span>
+</div>
+</div>
+</section>
+<!-- Section: Recent Files -->
+<section class="space-y-3">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-headline-sm text-ink font-semibold flex items-center gap-2">
+<span>Recent</span>
+<span class="font-caption text-[11px] font-medium text-secondary bg-surface-container px-2 py-0.5 rounded-full">4 files</span>
+</h3>
+<button class="font-caption text-caption text-primary hover:text-primary-hover font-medium">View all recent</button>
+</div>
+<div class="border border-hairline rounded-xl divide-y divide-hairline bg-content-bg overflow-hidden shadow-sm">
+<!-- Recent Item 1 -->
+<div class="flex items-center justify-between p-3.5 hover:bg-raised-surface transition-colors group">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="font-formula-bar text-[11px] font-semibold text-primary-container bg-primary-wash border border-primary-wash px-2 py-1 rounded-md uppercase tracking-wider">
+                .parquet
+              </span>
+<div class="min-w-0">
+<div class="font-body-medium text-body-medium text-ink font-medium truncate flex items-center gap-2">
+<span>q3_financial_breakdown.parquet</span>
+<span class="text-[11px] font-normal text-tertiary font-formula-bar">4.2 GB · 18.4M rows</span>
+</div>
+<div class="font-caption text-caption text-tertiary truncate">
+                  /Users/data/analytics/finance/2024/q3_financial_breakdown.parquet
+                </div>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0 pl-3">
+<span class="font-caption text-caption text-secondary">12 mins ago</span>
+<button class="px-3 py-1 bg-surface-container-high hover:bg-primary-container hover:text-on-primary text-ink text-toolbar font-medium rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-sm">
+                Open
+              </button>
+</div>
+</div>
+<!-- Recent Item 2 -->
+<div class="flex items-center justify-between p-3.5 hover:bg-raised-surface transition-colors group">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="font-formula-bar text-[11px] font-semibold text-warning bg-surface-container border border-hairline px-2 py-1 rounded-md uppercase tracking-wider">
+                .csv
+              </span>
+<div class="min-w-0">
+<div class="font-body-medium text-body-medium text-ink font-medium truncate flex items-center gap-2">
+<span>customer_churn_2024.csv</span>
+<span class="text-[11px] font-normal text-tertiary font-formula-bar">142 MB · 950K rows</span>
+</div>
+<div class="font-caption text-caption text-tertiary truncate">
+                  /Users/data/analytics/growth/retention/customer_churn_2024.csv
+                </div>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0 pl-3">
+<span class="font-caption text-caption text-secondary">Yesterday at 4:15 PM</span>
+<button class="px-3 py-1 bg-surface-container-high hover:bg-primary-container hover:text-on-primary text-ink text-toolbar font-medium rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-sm">
+                Open
+              </button>
+</div>
+</div>
+<!-- Recent Item 3 -->
+<div class="flex items-center justify-between p-3.5 hover:bg-raised-surface transition-colors group">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="font-formula-bar text-[11px] font-semibold text-formula bg-surface-container border border-hairline px-2 py-1 rounded-md uppercase tracking-wider">
+                .omx
+              </span>
+<div class="min-w-0">
+<div class="font-body-medium text-body-medium text-ink font-medium truncate flex items-center gap-2">
+<span>ad_clicks_stream_agg.omx</span>
+<span class="text-[11px] font-normal text-tertiary font-formula-bar">Saved workspace · 8 sheets</span>
+</div>
+<div class="font-caption text-caption text-tertiary truncate">
+                  /Users/data/analytics/workspaces/ad_clicks_stream_agg.omx
+                </div>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0 pl-3">
+<span class="font-caption text-caption text-secondary">3 days ago</span>
+<button class="px-3 py-1 bg-surface-container-high hover:bg-primary-container hover:text-on-primary text-ink text-toolbar font-medium rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-sm">
+                Open
+              </button>
+</div>
+</div>
+<!-- Recent Item 4 -->
+<div class="flex items-center justify-between p-3.5 hover:bg-raised-surface transition-colors group">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="font-formula-bar text-[11px] font-semibold text-primary-container bg-primary-wash border border-primary-wash px-2 py-1 rounded-md uppercase tracking-wider">
+                .parquet
+              </span>
+<div class="min-w-0">
+<div class="font-body-medium text-body-medium text-ink font-medium truncate flex items-center gap-2">
+<span>inventory_snapshot_march.parquet</span>
+<span class="text-[11px] font-normal text-tertiary font-formula-bar">890 MB · 3.1M rows</span>
+</div>
+<div class="font-caption text-caption text-tertiary truncate">
+                  /Users/data/analytics/warehouse/inventory_snapshot_march.parquet
+                </div>
+</div>
+</div>
+<div class="flex items-center gap-4 shrink-0 pl-3">
+<span class="font-caption text-caption text-secondary">May 12</span>
+<button class="px-3 py-1 bg-surface-container-high hover:bg-primary-container hover:text-on-primary text-ink text-toolbar font-medium rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-sm">
+                Open
+              </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Try a Sample (Bento Cards) -->
+<section class="space-y-3 pb-4">
+<h3 class="font-headline-sm text-headline-sm text-ink font-semibold">Try a sample</h3>
+<div class="grid grid-cols-3 gap-4">
+<!-- Card 1: Orders -->
+<div class="bg-surface-bright border border-hairline hover:border-primary-container/50 rounded-xl p-4.5 cursor-pointer group hover:shadow-md transition-all flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary-container group-hover:bg-primary-wash transition-colors">
+<span class="material-symbols-outlined text-[20px]">bar_chart</span>
+</div>
+<span class="font-formula-bar text-[11px] text-secondary bg-surface-container-lowest px-2 py-0.5 rounded-full border border-hairline">
+                  1M rows
+                </span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-ink font-semibold group-hover:text-primary transition-colors">Orders</h4>
+<p class="font-caption text-caption text-secondary mt-1">A year of ecommerce sales with store categories, refunds, and margin filters.</p>
+</div>
+<!-- Mini metric chip preview -->
+<div class="mt-4 pt-3 border-t border-hairline flex items-center justify-between">
+<div class="flex items-end gap-1 h-5">
+<div class="w-1.5 h-2 bg-primary-container/40 rounded-t-sm"></div>
+<div class="w-1.5 h-3.5 bg-primary-container/60 rounded-t-sm"></div>
+<div class="w-1.5 h-5 bg-primary-container rounded-t-sm"></div>
+<div class="w-1.5 h-3 bg-primary-container/50 rounded-t-sm"></div>
+<div class="w-1.5 h-4 bg-primary-container/70 rounded-t-sm"></div>
+</div>
+<span class="font-toolbar text-toolbar text-primary-container font-medium group-hover:translate-x-0.5 transition-transform flex items-center">
+                Launch sample <span class="material-symbols-outlined text-[14px] ml-0.5">arrow_forward</span>
+</span>
+</div>
+</div>
+<!-- Card 2: Blank sheet -->
+<div class="bg-surface-bright border border-hairline hover:border-primary-container/50 rounded-xl p-4.5 cursor-pointer group hover:shadow-md transition-all flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-secondary group-hover:bg-primary-wash group-hover:text-primary-container transition-colors">
+<span class="material-symbols-outlined text-[20px]">table_rows</span>
+</div>
+<span class="font-formula-bar text-[11px] text-secondary bg-surface-container-lowest px-2 py-0.5 rounded-full border border-hairline">
+                  Scratchpad
+                </span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-ink font-semibold group-hover:text-primary transition-colors">Blank sheet</h4>
+<p class="font-caption text-caption text-secondary mt-1">An empty reactive spreadsheet table ready for quick keyboard typing or pasting.</p>
+</div>
+<!-- Mini Table preview -->
+<div class="mt-4 pt-3 border-t border-hairline flex items-center justify-between">
+<div class="grid grid-cols-3 gap-1 w-14">
+<div class="h-2 bg-hairline rounded-sm"></div>
+<div class="h-2 bg-hairline rounded-sm"></div>
+<div class="h-2 bg-hairline rounded-sm"></div>
+<div class="h-2 bg-hairline rounded-sm"></div>
+<div class="h-2 bg-hairline rounded-sm"></div>
+<div class="h-2 bg-hairline rounded-sm"></div>
+</div>
+<span class="font-toolbar text-toolbar text-primary-container font-medium group-hover:translate-x-0.5 transition-transform flex items-center">
+                New sheet <span class="material-symbols-outlined text-[14px] ml-0.5">arrow_forward</span>
+</span>
+</div>
+</div>
+<!-- Card 3: Taxi trips -->
+<div class="bg-surface-bright border border-hairline hover:border-primary-container/50 rounded-xl p-4.5 cursor-pointer group hover:shadow-md transition-all flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-warning group-hover:bg-warning/20 transition-colors">
+<span class="material-symbols-outlined text-[20px]">bolt</span>
+</div>
+<span class="font-formula-bar text-[11px] font-semibold text-warning bg-amber-50/80 px-2 py-0.5 rounded-full border border-amber-200">
+                  GPU workout
+                </span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-ink font-semibold group-hover:text-primary transition-colors">Taxi trips</h4>
+<p class="font-caption text-caption text-secondary mt-1">100M rows NYC yellow cabs. Interactive filter pass in under 12 milliseconds.</p>
+</div>
+<!-- Performance chip preview -->
+<div class="mt-4 pt-3 border-t border-hairline flex items-center justify-between">
+<div class="flex items-center gap-1.5 font-formula-bar text-[11px] text-tertiary">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+<span>100,000,000 rows</span>
+</div>
+<span class="font-toolbar text-toolbar text-primary-container font-medium group-hover:translate-x-0.5 transition-transform flex items-center">
+                Stress test <span class="material-symbols-outlined text-[14px] ml-0.5">arrow_forward</span>
+</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Floating Status Strip -->
+<footer class="fixed bottom-2.5 inset-x-2.5 h-8 rounded-xl bg-glass-panel dark:bg-inverse-surface/80 backdrop-blur-xl border border-glass-rim shadow-[0_8px_32px_rgba(15,23,42,0.10)] z-40 flex items-center justify-between px-3 text-caption font-caption text-secondary">
+<!-- Left Engine status -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-success shadow-sm"></span>
+<span class="font-medium text-ink">Ready</span>
+</div>
+<span class="text-hairline">|</span>
+<div class="flex items-center gap-2 font-formula-bar text-[11px] text-tertiary">
+<span>RAM: <strong class="font-medium text-secondary">1.2 GB / 64 GB</strong></span>
+<span>•</span>
+<span>VRAM: <strong class="font-medium text-secondary">0.4 GB / 24 GB</strong></span>
+<span>•</span>
+<span>NVMe Read: <strong class="font-medium text-secondary">6.8 GB/s</strong></span>
+</div>
+</div>
+<!-- Center active sheets preview / quick indicator -->
+<div class="flex items-center gap-1">
+<span class="px-2 py-0.5 bg-surface-container-lowest rounded-md text-[11px] font-medium text-ink border border-hairline shadow-sm">
+        Welcome Screen
+      </span>
+</div>
+<!-- Right identity & version -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1 text-[11px]">
+<span class="material-symbols-outlined text-[13px] text-primary-container">format_image_left</span>
+<span>Encrypted Local Cache</span>
+</div>
+<span class="text-hairline">|</span>
+<span class="font-formula-bar text-[11px] text-tertiary">omxplorer · omxapp</span>
+</div>
+</footer>
+</body></html>
