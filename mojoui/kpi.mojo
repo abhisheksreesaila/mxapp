@@ -22,17 +22,15 @@ struct KpiView(Copyable, Movable):
 
     def view(self, canvas: Int, version: Int, on_close: Int = NO_MSG, fact: String = "") -> View:
         """The card; with on_close, a small Remove (✕) button inside its top-right corner (it shows fully on hover).
-        With `fact`, a footer under a hairline: the note as a chip on the left, the fact on the right ("199,812 matched").
-        The sparkline's canvas only when there is a sparkline."""
+        With `fact`, a footer under a hairline instead of the sparkline: the note as a chip on the left, the fact on the
+        right ("199,812 matched")."""
         var bottom: View
         if fact != "":
             bottom = VStack(Divider().fill(), HStack(Text(self.note, style=CAPTION).tone(self.tone).tag("kpi-note"), Spacer(),
                                                      Text(fact, style=CAPTION).tag("kpi-fact"), spacing=8).fill().align(CENTER), spacing=10).fill()
-        elif len(self.spark) > 0:
+        else:  # (the sparkline's canvas even when empty: apps count canvases in order, e.g. MX Studio's checks)
             bottom = HStack(Text(self.note, style=CAPTION).tone(self.tone).tag("kpi-note"),
                             Canvas(canvas, version, on_gesture=NO_MSG).width(110).height(34), spacing=8).fill()
-        else:
-            bottom = Text(self.note, style=CAPTION).tone(self.tone).tag("kpi-note")
         var head = HStack(Text(self.label, style=CAPTION).tag("kpi-label"), Spacer(), Button("Remove", on_close, ICON_ONLY, icon="close"), spacing=8).fill().align(CENTER) \
             if on_close != NO_MSG else Text(self.label, style=CAPTION).tag("kpi-label")
         return Card(
