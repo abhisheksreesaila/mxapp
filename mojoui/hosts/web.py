@@ -638,6 +638,7 @@ button.tool span { font-size: 11px; line-height: 13px; }
 button.tool.inline, label.picker.tool.inline { flex-direction: row; gap: 6px; min-width: 0; min-height: 34px; padding: 0 10px; }
 button.tool.inline span, label.picker.tool.inline span { font-size: 12px; }
 [data-tag=toolbar] button.icon-only { min-width: 34px; min-height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+@media (pointer: coarse) { [data-tag=toolbar] button.icon-only, button.tool.inline, label.picker.tool.inline { min-width: 44px; min-height: 44px; } }
 body.omarchy button.tool { border-radius: 6px; } body.omarchy button.tool.on, body.omarchy button.icon-only.on { background: var(--o-raised); color: var(--o-accent); }
 body.omarchy select, body.omarchy input[type=text], body.omarchy input[type=date], body.omarchy textarea { border-radius: 3px; min-height: 28px;
   border: 1px solid var(--o-strong); background: var(--o-page); color: var(--o-ink); font: inherit; }

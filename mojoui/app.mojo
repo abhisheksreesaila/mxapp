@@ -4,7 +4,6 @@ from mojoui.view import View, CANVAS, BOARD, FIELD, PAN, ZOOM, KEY
 from mojoui.diff import Diff, diff
 from mojoui.canvas import Surface
 from std.time import perf_counter_ns
-from std.os import getenv
 
 
 struct Event(Copyable, Movable):
@@ -110,7 +109,7 @@ struct Runtime[A: App](Movable):
     def __init__(out self, var app: Self.A):
         self.shown = app.view()
         self.app = app^
-        self.trace = getenv("MOJOUI_TRACE") != ""
+        self.trace = False  # (hosts that can read the environment turn it on: GTK reads MOJOUI_TRACE; iOS has no getenv)
 
     def dispatch(mut self, event: Event) -> Diff:
         var t0 = perf_counter_ns()

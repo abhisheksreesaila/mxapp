@@ -3,6 +3,7 @@
 #   pixi run mojo run -I . tests/test_diff_keep.mojo
 from std.testing import assert_equal, assert_true, assert_false
 from mojoui import *
+from mojoui.diff import SET_SIZE
 
 
 def screen(var inspector: View, var extra: List[View]) -> View:
@@ -28,6 +29,9 @@ def test_a_text_change_is_a_patch() raises:
     var d = diff(a, b)
     assert_false(d.rebuild)
     assert_equal(len(d.patches), 1)
+    assert_equal(d.patches[0].op, SET_TEXT)
+    assert_equal(d.patches[0].text, "region · Text")
+    assert_equal(b.nodes[d.patches[0].node].text, "region · Text", "the patch names the right node")
 
 
 def test_the_inspector_changing_keeps_the_grid() raises:
@@ -41,6 +45,8 @@ def test_the_inspector_changing_keeps_the_grid() raises:
     assert_equal(len(d.resync), 1, "one stack lays out its children again")
     assert_equal(d.resync[0], find(b, "inspector"))
     assert_equal(len(d.patches), 1, "the title's text")
+    assert_equal(d.patches[0].op, SET_TEXT)
+    assert_equal(b.nodes[d.patches[0].node].text, "region · Text", "the patch names the new title node")
 
 
 def test_a_menu_opening_builds_only_the_menu() raises:
@@ -66,6 +72,42 @@ def test_a_changed_child_of_a_fixed_container_replaces_the_container() raises:
     assert_equal(d.kept[find(b, "grid")], find(a, "grid"))
 
 
+def test_a_size_change_is_a_size_patch() raises:
+    var a = screen(VStack(Text("x")).width(300).tag("inspector"), [])
+    var b = screen(VStack(Text("x")).width(260).tag("inspector"), [])
+    var d = diff(a, b)
+    assert_true(d.rebuild and d.partial, "sizes travel only in partial diffs (hosts that only patch rebuild)")
+    assert_equal(len(d.resync), 0)
+    assert_equal(len(d.patches), 1)
+    assert_equal(d.patches[0].op, SET_SIZE)
+    assert_equal(d.patches[0].node, find(b, "inspector"))
+    for k in range(len(d.kept)):
+        assert_equal(d.kept[k], k, "every widget stays")
+
+
+def test_a_size_set_where_there_was_none_is_a_new_layout() raises:
+    var a = screen(VStack(Text("x")).tag("inspector"), [])
+    var b = screen(VStack(Text("x")).width(260).tag("inspector"), [])
+    var d = diff(a, b)
+    assert_true(d.partial)
+    assert_equal(d.kept[find(b, "inspector")], -1, "built again: a width where there was none changes how it takes space")
+
+
+def test_a_failed_sibling_rolls_back_what_its_cousins_recorded() raises:
+    # A centred row (justify spacers: not a stack hosts resync) whose second child changes kind is built again; its
+    # first child, a stack, had recorded a resync of its own: that must be undone (the host builds it fresh instead).
+    var a = VStack(HStack(VStack(Text("a"), Text("b")).tag("inner"), Text("x")).justify(CENTER).tag("row"), Text("keep"))
+    var b = VStack(HStack(VStack(Text("a")).tag("inner"), Button("x", 9)).justify(CENTER).tag("row"), Text("keep"))
+    var d = diff(a, b)
+    assert_true(d.partial)
+    var inner = find(b, "inner")
+    for r in d.resync:
+        assert_true(r != inner, "no resync of a stack inside a container built again")
+    assert_equal(d.kept[inner], -1)
+    assert_equal(d.kept[find(b, "row")], -1)
+    assert_equal(len(d.resync), 1, "only the root re-lays its children (the row in place of the old one)")
+
+
 def test_a_new_root_rebuilds_everything() raises:
     var d = diff(VStack(Text("x")), HStack(Text("x")))
     assert_true(d.rebuild)
@@ -77,5 +119,8 @@ def main() raises:
     test_the_inspector_changing_keeps_the_grid()
     test_a_menu_opening_builds_only_the_menu()
     test_a_changed_child_of_a_fixed_container_replaces_the_container()
+    test_a_size_change_is_a_size_patch()
+    test_a_size_set_where_there_was_none_is_a_new_layout()
+    test_a_failed_sibling_rolls_back_what_its_cousins_recorded()
     test_a_new_root_rebuilds_everything()
     print("DIFF KEEP TESTS PASSED")

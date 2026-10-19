@@ -217,14 +217,19 @@ struct Node(Copyable, Movable, Equatable, Writable):
         )
 
     def same_layout(self, other: Self) -> Bool:
+        return self.same_layout_but(other, False, False)
+
+    def same_layout_but(self, other: Self, sizes: Bool, place: Bool) -> Bool:
+        """same_layout, ignoring the sizes (w, h, min_w, max_w) and/or the place on a Board (x, y) when asked."""
         return (
-            self.pad_v == other.pad_v and self.pad_h == other.pad_h and self.w == other.w and self.h == other.h
-            and self.min_w == other.min_w and self.max_w == other.max_w and self.grows == other.grows
+            self.pad_v == other.pad_v and self.pad_h == other.pad_h
+            and (sizes or (self.w == other.w and self.h == other.h and self.min_w == other.min_w and self.max_w == other.max_w))
+            and self.grows == other.grows
             and self.fills == other.fills and self.align_items == other.align_items
             and self.justify_items == other.justify_items and self.name == other.name
             and self.width_from_parent == other.width_from_parent
             and self.height_from_parent == other.height_from_parent
-            and self.x == other.x and self.y == other.y and self.tip == other.tip
+            and (place or (self.x == other.x and self.y == other.y)) and self.tip == other.tip
         )
 
     def sized_width(self) -> Bool:

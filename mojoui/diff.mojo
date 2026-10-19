@@ -1,6 +1,6 @@
 # Compare the screen before and after an update, so hosts change only what changed.
 
-from mojoui.view import View, Node, NAVBAR, ALERT, CANVAS, BOARD, VSTACK, HSTACK, AUTO, START
+from mojoui.view import View, Node, NAVBAR, ALERT, CANVAS, BOARD, VSTACK, HSTACK, GRID, TOAST, AUTO, START
 
 comptime SET_TEXT = 1  # label text, button title, field contents, toggle label
 comptime SET_MSG = 2
@@ -126,15 +126,11 @@ def compatible(x: Node, y: Node, x_on_board: Bool, y_on_board: Bool) -> Bool:
         return False
     if not resizable(x, y):
         return False
-    var z = y.copy()  # (sizes are a patch, SET_SIZE; so is a place on a Board, SET_PLACE)
-    z.w = x.w
-    z.h = x.h
-    z.min_w = x.min_w
-    z.max_w = x.max_w
-    if y_on_board:
-        z.x = x.x
-        z.y = x.y
-    if not x.same_layout(z):  # other layout settings changed: lay it out again
+    if not x.same_layout_but(y, True, y_on_board):  # (sizes are a patch, SET_SIZE; so is a place on a Board, SET_PLACE)
+        return False  # other layout settings changed: lay it out again
+    if x.kind == GRID and x.value != y.value:  # (another number of columns: placed again)
+        return False
+    if x.kind == TOAST and x.text != y.text:  # (a toast's text can't change once it's up: a new toast)
         return False
     # A Back button appearing or going, or an alert's question changing, is a new layout.
     if x.kind == NAVBAR and (x.msg == 0) != (y.msg == 0):
@@ -157,8 +153,9 @@ def sized_differently(a: Node, b: Node) -> Bool:
 
 
 def resyncable(n: Node) -> Bool:
-    """A plain stack: hosts can add, remove and reorder its children in place (no justify spacers between them)."""
-    return (n.kind == VSTACK or n.kind == HSTACK) and (n.justify_items == AUTO or n.justify_items == START)
+    """A plain stack (no justify spacers between its children), a grid or a Board: hosts can add, remove and reorder its
+    children in place (a grid places them again, row by row; a Board puts new objects where they say)."""
+    return ((n.kind == VSTACK or n.kind == HSTACK) and (n.justify_items == AUTO or n.justify_items == START)) or n.kind == GRID or n.kind == BOARD
 
 
 def same_key(a: Node, b: Node) -> Bool:

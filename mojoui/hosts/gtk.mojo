@@ -471,6 +471,9 @@ struct GtkHost[A: App](Movable):
     var id_node: List[Int]  # id → the node it is now (-1: gone)
     var content_w: Int  # the content area's size last told to the app (App.resize)
     var content_h: Int
+    var release_node: Int  # a canvas whose drag ended while the host was busy (-1: none): it gets its RELEASE after
+    var release_x: Float64
+    var release_y: Float64
     var pending: Diff  # a partial rebuild waiting for the next idle turn
     var has_pending: Bool
     var dialog: Int  # the open alert dialog, if any
@@ -495,6 +498,7 @@ struct GtkHost[A: App](Movable):
 
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
+        self.rt.trace = getenv("MOJOUI_TRACE") != ""
         self.canvases = List[GtkCanvas]()
         self.boards = List[BoardChild]()
         self.window_w = 0
@@ -514,6 +518,9 @@ struct GtkHost[A: App](Movable):
         self.id_node = List[Int]()
         self.content_w = 0
         self.content_h = 0
+        self.release_node = -1
+        self.release_x = 0
+        self.release_y = 0
         self.pending = Diff(False, List[Patch]())
         self.has_pending = False
         self.dialog = 0
@@ -576,6 +583,91 @@ struct GtkHost[A: App](Movable):
             external_call["adw_clamp_set_child", NoneType](clamp, w)
             return clamp
         return w
+
+    def regrid(mut self, j: Int, kept: List[Int], self_addr: Int) -> Int:
+        """A grid whose children changed: the ones that stay move to their new cells (never taken out, so they don't
+        arrive again), the ones that went are removed, new ones are built and attached. Returns how many were built."""
+        var grid = self.widgets[j]
+        var cols = max(self.rt.shown.nodes[j].value, 1)
+        var want = List[Int]()
+        var built = 0
+        var children = self.rt.shown.nodes[j].children.copy()
+        for c in children:
+            want.append(self.outers[c] if kept[c] >= 0 else 0)
+        var cur = external_call["gtk_widget_get_first_child", Int](grid)
+        while cur != 0:
+            var next = external_call["gtk_widget_get_next_sibling", Int](cur)
+            if cur not in want:
+                external_call["gtk_grid_remove", NoneType](grid, cur)
+            cur = next
+        var layout = external_call["gtk_widget_get_layout_manager", Int](grid)
+        for k in range(len(children)):
+            if want[k] != 0:
+                var lc = external_call["gtk_layout_manager_get_layout_child", Int](layout, want[k])
+                external_call["gtk_grid_layout_child_set_column", NoneType](lc, c_int(k % cols))
+                external_call["gtk_grid_layout_child_set_row", NoneType](lc, c_int(k // cols))
+            else:
+                var child = self.build(children[k], self_addr)
+                external_call["gtk_grid_attach", NoneType](grid, child, c_int(k % cols), c_int(k // cols), c_int(1), c_int(1))
+                built += 1
+        return built
+
+    def board_drag(self, board: Int) -> Bool:
+        """Whether Board node `board` (current numbering) has objects, so its drag gesture is known."""
+        for b in self.boards:
+            if b.board == board:
+                return True
+        return False
+
+    def reboard(mut self, j: Int, kept: List[Int], self_addr: Int) -> Int:
+        """A Board whose objects changed (an in-place editor opening, a chart added): the objects that stay stay put
+        (the grid keeps its canvas, its keyboard and its drag), the ones that went are removed, new ones are put
+        where they say. Returns how many were built."""
+        var fixed = self.widgets[j]
+        var drag = 0
+        for b in self.boards:
+            if b.board == j:
+                drag = b.drag
+        var children = self.rt.shown.nodes[j].children.copy()
+        var want = List[Int]()
+        for c in children:
+            want.append(self.outers[c] if kept[c] >= 0 else 0)
+        var cur = external_call["gtk_widget_get_first_child", Int](fixed)
+        while cur != 0:
+            var next = external_call["gtk_widget_get_next_sibling", Int](cur)
+            if cur not in want:
+                external_call["gtk_fixed_remove", NoneType](fixed, cur)
+            cur = next
+        var mine = List[BoardChild]()
+        var built = 0
+        for k in range(len(children)):
+            var c = children[k]
+            var child = want[k]
+            var entry = BoardChild(j, c, k, child, fixed, drag)
+            if child == 0:
+                child = self.build(c, self_addr)
+                external_call["gtk_fixed_put", NoneType](fixed, child, Float64(self.rt.shown.nodes[c].x), Float64(self.rt.shown.nodes[c].y))
+                entry.widget = child
+                built += 1
+            else:
+                for b in self.boards:
+                    if b.board == j and b.node == c:
+                        entry.active = b.active
+                        entry.resizing = b.resizing
+            mine.append(entry^)
+        var boards = List[BoardChild]()
+        for b in self.boards:
+            if b.board != j:
+                boards.append(b.copy())
+        for e in mine:
+            boards.append(e.copy())
+        var last = 0
+        for k in range(len(boards)):  # (each board's drag knows its first object's place in the list)
+            if boards[k].drag != last:
+                set_index(boards[k].drag, k)
+                last = boards[k].drag
+        self.boards = boards^
+        return built
 
     def resize_widget(self, i: Int):
         """A SET_SIZE patch: node i's sizes onto the widget apply_layout() sized (inside its clamp, if it has one)."""
@@ -1281,18 +1373,21 @@ struct GtkHost[A: App](Movable):
         for pop in self.popups:  # a context menu opens once its anchor is in the window
             external_call["gtk_popover_popup", NoneType](pop)
         self.popups = List[Int]()
-        self.focus_after_build()
+        self.focus_after_build(List[Bool](length=len(self.rt.shown.nodes), fill=True))
         set_busy(False)
         if self.rt.trace:
             print("TRACE: rebuild " + ms(perf_counter_ns() - t_show) + " widgets " + String(len(self.rt.shown.nodes)))
 
-    def focus_after_build(mut self):
-        """After new widgets went up: an in-place editor takes the keyboard, or it goes back to the canvas that had it."""
+    def focus_after_build(mut self, fresh: List[Bool]):
+        """After new widgets went up: an in-place editor takes the keyboard, or it goes back to the canvas that had it.
+        fresh: which nodes were just built (an editor that stayed keeps its text and caret)."""
         var editor = False
         for k in range(len(self.rt.shown.nodes)):  # an in-place editor (.focused()) takes the keyboard, its text selected
             if self.rt.shown.nodes[k].kind == FIELD and self.rt.shown.nodes[k].value >= 1 and self.widgets[k] != 0:
                 editor = True
                 self.editor_node = k
+                if not fresh[k]:
+                    continue
                 if self.rt.shown.nodes[k].value == 1:
                     _ = external_call["gtk_widget_grab_focus", c_int](self.widgets[k])
                     external_call["gtk_editable_select_region", NoneType](self.widgets[k], c_int(0), c_int(-1))
@@ -1337,6 +1432,11 @@ struct GtkHost[A: App](Movable):
         var t0 = perf_counter_ns()
         set_busy(True)
         self.has_pending = False
+        for j in self.pending.resync:  # a Board shown as a list (a narrow window), or one with no objects yet: whole
+            if self.rt.shown.nodes[j].kind == BOARD and (self.board_list or not self.board_drag(self.pending.kept[j])):
+                self.show(self_addr)
+                return
+        var key_before = self.key_node
         var kept = self.pending.kept.copy()
         var resync = self.pending.resync.copy()
         var patches = self.pending.patches.copy()
@@ -1352,7 +1452,7 @@ struct GtkHost[A: App](Movable):
             if new_of_old[o] >= 0 or self.widgets[o] == 0:
                 continue
             var kind = self.kinds[o]
-            if kind == DIALOG and self.widgets[o] == self.dialog:
+            if (kind == DIALOG or kind == ALERT) and self.widgets[o] == self.dialog:
                 set_node(self.dialog, -1)  # (closing now isn't on_close: the app took it away)
                 _ = external_call["adw_dialog_force_close", c_int](self.dialog)
                 external_call["g_object_unref", NoneType](self.dialog)
@@ -1368,13 +1468,18 @@ struct GtkHost[A: App](Movable):
                         rest.append(pop)
                 self.popovers = rest^
         # Ids: the kept nodes keep theirs (their widgets' data stays right); the rest are new.
+        var free = List[Int]()  # (the ids of nodes that went: their widgets are gone, so the ids can be used again)
         for o in range(old_n):
             if new_of_old[o] < 0 and o < len(self.ids) and 0 <= self.ids[o] < len(self.id_node):
                 self.id_node[self.ids[o]] = -1
+                free.append(self.ids[o])
         var ids = List[Int](length=n, fill=-1)
         for j in range(n):
             if kept[j] >= 0:
                 ids[j] = self.ids[kept[j]]
+                self.id_node[ids[j]] = j
+            elif len(free) > 0:
+                ids[j] = free.pop()
                 self.id_node[ids[j]] = j
             else:
                 ids[j] = len(self.id_node)
@@ -1426,12 +1531,19 @@ struct GtkHost[A: App](Movable):
         self.editor_node = new_of_old[self.editor_node] if 0 <= self.editor_node < old_n else -1
         self.picker_node = new_of_old[self.picker_node] if 0 <= self.picker_node < old_n else -1
         self.reveal_pending = new_of_old[self.reveal_pending] if 0 <= self.reveal_pending < old_n else -1
+        self.release_node = new_of_old[self.release_node] if 0 <= self.release_node < old_n else -1
         # The stacks whose children changed: build the new children, drop the old, put them in order.
         var dialog_before = self.dialog
         var built = 0
         self.toast_claimed = False
         for j in resync:
             var box = self.widgets[j]
+            if self.rt.shown.nodes[j].kind == GRID:
+                built += self.regrid(j, kept, self_addr)
+                continue
+            if self.rt.shown.nodes[j].kind == BOARD:
+                built += self.reboard(j, kept, self_addr)
+                continue
             var want = List[Int]()
             for c in self.rt.shown.nodes[j].children.copy():
                 if kept[c] >= 0:
@@ -1470,8 +1582,33 @@ struct GtkHost[A: App](Movable):
         self.popups = List[Int]()
         if self.reveal_pending >= 0:
             _ = external_call["gtk_widget_add_tick_callback", c_uint](self.window, on_reveal_tick[Self.A], self_addr, 0)
-        self.focus_after_build()
+        for j in range(n):  # a kept popover whose anchor was built again moves to the new anchor
+            if kept[j] >= 0 and (self.kinds[j] == POPOVER or (self.kinds[j] == MENU and self.rt.shown.nodes[j].style == 1)) and self.widgets[j] != 0:
+                var anchor = self.window
+                for k in range(n):
+                    if self.rt.shown.nodes[k].name == self.rt.shown.nodes[j].text and self.widgets[k] != 0:
+                        anchor = self.widgets[k]
+                if external_call["gtk_widget_get_parent", Int](self.widgets[j]) != anchor:
+                    external_call["gtk_widget_unparent", NoneType](self.widgets[j])
+                    external_call["gtk_widget_set_parent", NoneType](self.widgets[j], anchor)
+                    external_call["gtk_popover_popup", NoneType](self.widgets[j])
+        if self.key_node < 0 and key_before >= 0:  # the canvas that had the keyboard was built again: the new one has it
+            for c in self.canvases:
+                if c.keys != 0:
+                    self.key_node = c.node
+                    break
+        var fresh = List[Bool](length=n, fill=False)
+        for j in range(n):
+            fresh[j] = kept[j] < 0
+        self.focus_after_build(fresh)  # (a kept field keeps its text and caret: someone may be typing in it)
         self.apply_patches(patches, self_addr)
+        if self.release_node >= 0:  # a drag ended while this was pending: the app still hears it
+            var node = self.release_node
+            self.release_node = -1
+            for k in range(len(self.canvases)):
+                if self.canvases[k].node == node:
+                    self.canvas_send(k, RELEASE, self.release_x, self.release_y, 0, 0, 1, self_addr)
+                    break
         if self.rt.trace:
             print("TRACE: partial " + ms(perf_counter_ns() - t0) + " built " + String(built) + " of " + String(n) + " in " + String(len(resync)) + " stacks")
 
@@ -1948,10 +2085,14 @@ def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi
 
 
 def on_drag_end[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr: Int) abi("C"):
-    if busy():
-        return
     var host = host_at[A](host_addr)
     var ci = get_index(drag)
+    if busy():  # (mid-update: the release still counts; it's sent once the widgets are up, if they stay)
+        if 0 <= ci < len(host[].canvases) and host[].canvases[ci].moved and host[].has_pending:
+            host[].release_node = host[].canvases[ci].node
+            host[].release_x = host[].canvases[ci].start_x + off_x
+            host[].release_y = host[].canvases[ci].start_y + off_y
+        return
     if ci < 0 or ci >= len(host[].canvases) or not host[].canvases[ci].moved:
         return  # (a plain tap: the click gesture sends TAP)
     host[].canvas_send(ci, RELEASE, host[].canvases[ci].start_x + off_x, host[].canvases[ci].start_y + off_y, 0, 0, 1, host_addr)
@@ -2420,10 +2561,14 @@ def on_alert_response[A: App](dialog: Int, response: Int, host_addr: Int) abi("C
         return
     var host = host_at[A](host_addr)
     var node = get_node(dialog)
+    if node < 0 or node >= len(host[].rt.shown.nodes) or host[].rt.shown.nodes[node].kind != ALERT:
+        return  # (an alert the app already took away)
     var index = 0
     try:
         index = Int(c_str(response))
     except:
+        return
+    if index < 0 or index >= len(host[].rt.shown.nodes[node].options):
         return
     host[].send(node, False, host[].rt.shown.nodes[node].options[index], index, host_addr)
 

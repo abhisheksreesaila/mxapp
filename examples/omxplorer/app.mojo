@@ -299,6 +299,7 @@ struct Main(App):
         swap(self.frame, sheet)  # (sheet is the old one now)
         sheet.release()
         self.has_table = True
+        self.stats_key = ""  # (the new file's edits count from 0 again: its stats are its own)
 
     def open_path(mut self, path: String):
         """A CSV or Parquet file → the Import step (its columns as read; a Parquet file too big for memory is streamed,

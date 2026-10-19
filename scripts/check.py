@@ -106,16 +106,19 @@ def m1():
     err = g20.mojo_test("tests/test_diff_keep.mojo", "DIFF KEEP TESTS PASSED", "test_diff_keep")
     if err:
         problems.append(err)
-    out, _ = gtk(SHEET + ";glide:Left;glide:Right;glide:Right;glide:Right;glide:Right;open:Format;pause:300;menu:File>Settings…;pause:300;dismiss;"
-                 "tap:Report;tap:Sum tile;tap:Median tile", "partial", MOJOUI_TRACE="1")
+    # Each action that changes the screen's shape: 4 column moves (the inspector changes with the column's kind), a
+    # right-click's context menu and choosing from it, Settings and its close, the Report tab, two tiles.
+    out, _ = gtk(SHEET + ";glide:Left;glide:Right;glide:Right;glide:Right;glide:Right;rightclick:0=300,200;pause:200;dismiss;"
+                 "menu:File>Settings…;pause:300;dismiss;tap:Report;tap:Sum tile;tap:Median tile", "partial", MOJOUI_TRACE="1")
     sheet_at = [m.start() for m in re.finditer(r"^TRACE: rebuild [\d.]+ widgets (\d+)$", out, re.M)]
     after = out[sheet_at[-1]:] if sheet_at else ""
     full = re.findall(r"^TRACE: rebuild ", after, re.M)
+    shape_changes = len(re.findall(r"^TRACE: (?:event|refresh|resize).* REBUILD$", after, re.M))
     parts = [(int(b), int(n)) for b, n in re.findall(r"^TRACE: partial [\d.]+ built (\d+) of (\d+)", after, re.M)]
     if len(sheet_at) != 3 or len(full) != 1:  # (the start, the import, the sheet: then partial updates only)
         problems.append(f"full rebuilds after the sheet opened: {len(full) - 1} ({len(sheet_at)} in all)")
-    if len(parts) < 7:
-        problems.append(f"only {len(parts)} partial updates for 7 shape changes (4 columns, Settings, its close, the Report tab, 2 tiles)")
+    if shape_changes < 10 or len(parts) != shape_changes:
+        problems.append(f"{shape_changes} shape changes (want at least 10: columns, a context menu, Settings, the Report tab, tiles), {len(parts)} partial updates")
     big = [(b, n) for b, n in parts if b * 5 > n]
     if big:
         problems.append(f"partial updates building more than a fifth of the window: {big}")
@@ -133,11 +136,15 @@ def m1():
                                                   f"at most {max(b for b, _ in parts)} widgets built); a real drag selects the 21-cell block (Sum {want:,.2f})")
 
 
-def gap_beside(content, insp):
-    """How far the content stops short of the inspector (or of the window's right edge when it's closed)."""
+def gap_beside(content, insp, width):
+    """How far the content stops short of the inspector; None when either is missing, overlaps the other, or the
+    inspector runs past the window's right edge."""
     if not content or not insp:
         return None
-    return insp[0][0] - (content[0][0] + content[0][2])
+    gap = insp[0][0] - (content[0][0] + content[0][2])
+    if gap < 0 or insp[0][0] + insp[0][2] > width + 0.5 or content[0][0] < 0:
+        return None
+    return gap
 
 
 def m2():
@@ -152,7 +159,7 @@ def m2():
                 problems.append(f"GTK {screen} {w}x{h}: the window grew to {png_size(shot)}")
             if not status or status[0][1] + status[0][3] > h + 0.5:
                 problems.append(f"GTK {screen} {w}x{h}: the status bar isn't inside the window ({status})")
-            g = gap_beside(content, insp)
+            g = gap_beside(content, insp, w)
             if g is None or g > 24 + 16:  # (16: the stack's spacing between them)
                 problems.append(f"GTK {screen} {w}x{h}: the {tag} stops {g} pt short of the inspector")
             out = web(steps, name, (w, h))
@@ -162,7 +169,7 @@ def m2():
                 problems.append(f"web {screen} {w}x{h}: the page is {page.group(0) if page else '?'} (it scrolls)")
             if not status or status[0][1] + status[0][3] > h + 0.5:
                 problems.append(f"web {screen} {w}x{h}: the status bar isn't inside the window ({status})")
-            g = gap_beside(content, insp)
+            g = gap_beside(content, insp, w)
             if g is None or g > 24 + 16:
                 problems.append(f"web {screen} {w}x{h}: the {tag} stops {g} px short of the inspector")
     return not problems, "; ".join(problems) or "the sheet and the report fit 1742×876, 1280×720 and 2560×1400 on GTK and the web (status bar inside, no gap beside the inspector)"
@@ -258,7 +265,8 @@ def m6():
     for skin in ("liquid", "ledger"):
         name = f"import-live-{skin}"
         shot = OUT / f"{name}.png"
-        out = live(f"wait:1500;shot:{shot};report;wheel:800,250,5;wait:400;report", name, skin=skin)
+        after = OUT / f"{name}-scrolled.png"
+        out = live(f"wait:1500;shot:{shot};report;wheel:800,250,5;wait:400;report;shot:{after}", name, skin=skin)
         reps = out.split("LIVE: reported")
         if len(reps) < 3:
             problems.append(f"{skin}: the live app didn't report ({out[-300:]})")
@@ -266,8 +274,16 @@ def m6():
         first, second = labels(reps[0]), labels(reps[1])
         if "Import small.parquet" not in first:
             problems.append(f"{skin}: not on the import screen ({first[:3]})")
-        if not re.search(r"^TRACE: draw canvas 1 ", reps[1], re.M):
-            problems.append(f"{skin}: scrolling the preview didn't redraw it")
+        prev = boxes(reps[0], "import-preview")
+        if prev and after.exists():
+            from PIL import ImageChops, Image
+            x, y, w, h = (int(v) for v in prev[0])
+            crop = (x, y + 60, x + w, y + h)  # (the rows, below the header)
+            moved = ImageChops.difference(Image.open(shot).convert("RGB").crop(crop), Image.open(after).convert("RGB").crop(crop)).getbbox()
+            if not moved:
+                problems.append(f"{skin}: the preview's rows didn't move under the wheel")
+        else:
+            problems.append(f"{skin}: no import-preview box or second screenshot")
         cols = boxes(reps[0], "import-columns")
         back = boxes(reps[0], "import/Back")
         if cols:

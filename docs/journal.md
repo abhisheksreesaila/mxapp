@@ -276,3 +276,12 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - Message number clash: COPY = 41 fell inside RECENT (40–49) and silently did nothing; moved to 28.
 - `key:` steps take canvas index and the hosts' key names (`ArrowDown`), not `Down`.
 - Reviewer: round 1 NEEDS WORK (big blocks would freeze the app, Ctrl+C in fields, weak checks for Bold/Average/footers), round 2 NEEDS WORK (mixed-scale Sum), round 3 PASS. Mac to check on first run: Cmd+C in a text field must copy the field (the AppKit host may route Copy to the app's item, not `copy:` on the focused view).
+
+## Goal 25 (2026-10-19): omxplorer feels native
+- Owner, after using goal 24's build on their 3440×1440 screen at 1.6× (window 1742×876): import screen "stuck", liquid not natural, multi-select unreliable, toolbar icons not on one line, the sheet's bottom bar off the screen, "is the UI on another thread, decoupled?".
+- Measured first (MOJOUI_TRACE: update/view/diff per event, rebuild and draw times): view + diff ~0.1 ms; a grid frame 4–7 ms; every shape change a full rebuild of 150–190 widgets (10–40 ms) — moving from a number column to a text column, Settings, a tile, the Report tab.
+- scripts/live.py: real XTest input on the headless display. A real drag from amount to day stopped after two rows: the inspector changed, the window rebuilt, the grid's GtkGestureDrag died with its widget. MOJOUI_TEST steps never saw it (they call handlers).
+- The reconciler (D-243) and update_part on GTK: the same drag selects 21 cells; a column change builds 1 widget in ~1 ms.
+- App.resize (D-245): first try made the window grow 8 pt per resize (the layout asked for exactly the window's width plus margins); the sheet's column now grows instead of asking.
+- GTK layout bugs exposed once sizes stopped being forced: Spacers expanded vertically inside the toolbar; the inspector's .grow() took half the free width (D-246).
+- Ghost under the import's column table (owner's screenshot): not reproduced with cairo or software GL (Mesa llvmpipe through Xvfb); recorded (D-250). The preview's canvas had no gesture message at all: it now scrolls.

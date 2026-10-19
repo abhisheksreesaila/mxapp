@@ -25,3 +25,7 @@ One line per rule that prevents a mistake that happened.
 - 2026-10-19 · A new message constant fell inside another's range (COPY = 41 inside RECENT 40–49): Copy silently did nothing. Before picking a message number, grep the app's `m >= X and m < X + n` ranges.
 - 2026-10-19 · A view whose number of children depends on the selection (status items, inspector controls) rebuilds the whole screen on every move, restarting canvases and animations: keep fixed slots (StatusBar's 8).
 - 2026-10-19 · A test-only probe must fail when the thing never stops: GLIDE first passed on a 2 s timeout; it now reports "settled".
+- 2026-10-19 · (encoded) The "a changing child count rebuilds the whole screen" lesson came back a second time (a drag died when the inspector changed): it is now structure, not a rule: the diff keeps every widget it can (tests/test_diff_keep.mojo, goal 25 M1 counts full rebuilds).
+- 2026-10-19 · Test steps call the host's handlers directly, so they never saw a rebuild kill a GTK drag in progress. Anything gesture-shaped is proven with real input too (scripts/live.py: XTest on the headless display, `report` prints the state).
+- 2026-10-19 · Every check ran at 1440×900, the size the layout's constants were made for, and passed while the owner's 1742×876 window lost its status bar. Layout checks run at several window sizes (goal 25 M2: three).
+- 2026-10-19 · Count bytes with code, not by hand: " · " is 4 bytes in UTF-8 and a hard-coded 5 ate the first digit of "5,000 of 5,000 rows".
