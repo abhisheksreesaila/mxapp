@@ -790,16 +790,20 @@ struct Main(App):
                 var w = 520 if m == INSERT_CHART else max(width - 520 - 16, 520)  # (a chart and a pivot side by side)
                 var spot = free_spot(self.objects, self.table_y + (self.table_h_set if self.table_h_set > 0 else TABLE_H), width, w, 340)  # (below the table as it'll be once objects share the sheet, wherever it is)
                 var obj = SheetObject.chart(value, texts[0], spot[0], spot[1], w, 340) if m == INSERT_CHART else SheetObject.pivot(value, texts[0], texts[1] if len(texts) > 1 else -1, spot[0], spot[1], w, 340)
+                var problem = String("")
                 try:
                     compute(obj, self.frame)
                 except e:
-                    self.message = "Couldn't compute: " + String(e)
+                    problem = String(e)
                 self.objects.append(obj^)
                 self.active = len(self.objects) - 1
                 self.insp_tab = 2
                 self.reveal = self.active + 1  # (child 0 is the table)
                 self.reveal_count += 1
-                self.message = ("Chart: " if m == INSERT_CHART else "Pivot: ") + object_title(self.objects[self.active], self.frame) + " (" + fixed(self.objects[self.active].milliseconds, 1) + " ms on " + self.frame.last_device() + (", streamed from disk" if self.frame.streamed() else "") + ")"
+                if problem != "":  # (said, not replaced by the chart's timing)
+                    self.message = "Couldn't compute the " + ("chart" if m == INSERT_CHART else "pivot") + ": " + problem
+                else:
+                    self.message = ("Chart: " if m == INSERT_CHART else "Pivot: ") + object_title(self.objects[self.active], self.frame) + " (" + fixed(self.objects[self.active].milliseconds, 1) + " ms on " + self.frame.last_device() + (", streamed from disk" if self.frame.streamed() else "") + ")"
             self.version += 1
         elif m == MOVE or m == RESIZE:  # a sheet object (child 0: the table) dragged by its title bar, or by its corner
             var k = event.number - 1
@@ -1337,7 +1341,7 @@ struct Main(App):
         var texts = self.texts()
         var head = List[View]()
         head.append(Text(object_title(o, self.frame), HEADLINE))
-        head.append(Text("Follows edits to " + self.sheet_name + " (" + fixed(o.milliseconds, 1) + " ms on the GPU)", CAPTION))
+        head.append(Text("Follows edits to " + self.sheet_name + " (" + fixed(o.milliseconds, 1) + " ms on " + self.frame.last_device() + ")", CAPTION))
         sections.append(Section("Chart" if o.kind == OBJ_CHART else "Pivot", head))
         var data = List[View]()
         if o.kind == OBJ_CHART:

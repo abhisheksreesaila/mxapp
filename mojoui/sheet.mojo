@@ -152,8 +152,9 @@ struct Sheet(Movable, GridSource):
             except:
                 self.device = None
 
-    def __init__(out self, scan: ParquetScan):
-        """A streamed sheet over a Parquet file: its columns now, its words and rows when they're shown; editable."""
+    def __init__(out self, scan: ParquetScan, use_gpu: Bool = True):
+        """A streamed sheet over a Parquet file: its columns now, its words and rows when they're shown; editable.
+        use_gpu False: always the CPU."""
         self.frame = MxFrame(scan)
         self.formats = List[ColumnFormat]()
         self.styles = List[Int]()
@@ -162,8 +163,8 @@ struct Sheet(Movable, GridSource):
         self.last_undone = ""
         self.device = None
         self.device_name = "CPU"
-        self.mode = MX_AUTO  # (the package picks per machine and plan: F-146; the CPU on many cores, the GPU on few)
-        if gpu_available():  # (the GPU's name, for "… ms on <GPU>": a one-row device table, given back at once)
+        self.mode = MX_AUTO if use_gpu else MX_CPU  # (the package picks per machine and plan: F-146; the CPU on many cores, the GPU on few)
+        if use_gpu and gpu_available():  # (the GPU's name, for "… ms on <GPU>": a one-row device table, given back at once)
             try:
                 var probe = DeviceTable(empty_table().share())
                 self.device_name = probe.context().name()

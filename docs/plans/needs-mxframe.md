@@ -43,7 +43,8 @@ covers MX Studio's Sheet and Report. These need MX frame and are skipped or stub
 - **The GPU for a streamed file** (goal 23, MX frame 1889b7f, F-146): a streamed sheet asks for AUTO, and the GPU's
   totals, charts and pivots over a streamed file with edits equal the CPU's. On this 12-core machine AUTO keeps the
   CPU, which is faster here (100M rows: a total 0.21 s on the CPU, 0.39 s on the GPU; a group-by 0.34 s and 0.44 s).
-  On 2–4 cores the package picks the GPU. Text sorts ignore case, bytes breaking ties (the owner's rule, MX frame's
+  The package picks the GPU when a plan's kernel instructions per row exceed 3 × columns read × cores (a plain total:
+  on 2 cores; this app's group-by: not even there). Text sorts ignore case, bytes breaking ties (the owner's rule, MX frame's
   order everywhere).
 
 ## Still waiting (the package has none of these yet)

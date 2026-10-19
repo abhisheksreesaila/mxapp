@@ -1,6 +1,6 @@
 # Text order as the owner settled it (goal 23 M2, MX frame's rule everywhere): sorting a text column puts its words in
 # alphabetical order ignoring case, bytes breaking ties ("Apple" < "apple"), on a sheet in memory and streamed; largest
-# first is the reverse; empty cells go last either way.
+# first is the reverse.
 #   scripts/mxbuild.sh tests/test_text_order.mojo -o build/test_text_order && build/test_text_order
 from std.testing import assert_equal
 from mxframe import Table, write_parquet, scan_parquet, UNCOMPRESSED, TEXT as MX_TEXT

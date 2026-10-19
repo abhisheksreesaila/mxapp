@@ -139,7 +139,7 @@ def read_document(path: String, mut j: Json, use_gpu: Bool) raises -> Sheet:
             j = parse_meta(big.value().metadata())
         except e:
             raise Error("can't open " + path + ": " + String(e))
-        sheet = Sheet(big.value())
+        sheet = Sheet(big.value(), use_gpu)
     else:
         var table = Table()
         try:

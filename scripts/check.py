@@ -41,7 +41,7 @@ def m1():
     if not fresh.exists() or fresh.read_bytes() != (ROOT / "vendor/mxframe.mojoc").read_bytes():
         problems.append("vendor/mxframe.mojoc isn't the package built from the archive in build/mxframe-src")
     src = (ROOT / "mojoui/sheet.mojo").read_text()
-    if "self.mode = MX_AUTO  # (the package picks per machine and plan" not in src:
+    if "self.mode = MX_AUTO if use_gpu else MX_CPU  # (the package picks per machine and plan" not in src:
         problems.append("a streamed sheet doesn't ask for AUTO")
     err = g20.mojo_test("tests/test_streamed.mojo", "STREAMED GPU: totals, chart and pivot with edits equal the CPU's", "test_streamed")
     if err:
@@ -50,7 +50,7 @@ def m1():
     b = run(["scripts/mxbuild.sh", "tests/bench_stream_device.mojo", "-o", str(BUILD / "bench_stream_device")], timeout=1800)
     r = run([str(BUILD / "bench_stream_device"), str(big)], timeout=1800) if b.returncode == 0 else b
     times = [l for l in r.stdout.splitlines() if l.startswith(("total:", "group-by:"))]
-    if r.returncode != 0 or "BENCH DONE" not in r.stdout or len(times) != 2 or "GPU" not in times[0]:
+    if r.returncode != 0 or "BENCH DONE" not in r.stdout or len(times) != 2 or ", GPU " not in times[0]:
         problems.append("the 100M-row device benchmark failed (or ran no GPU): " + (r.stdout + r.stderr)[-500:])
     else:
         OUT.mkdir(parents=True, exist_ok=True)
