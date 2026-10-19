@@ -4,6 +4,19 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 25 (2026-10-19): omxplorer feels native: partial rebuilds, the window's size, calm motion (goal 25)
+- **Setup:** the owner used goal 24's build on a 3440×1440 screen at 1.6× (window 1742×876): multi-select unreliable, toolbar not straight, bottom bar off screen, "not smooth", "is it implementation?".
+- **Worked:**
+  - Measured first (MOJOUI_TRACE, real XTest input via scripts/live.py): every shape change rebuilt the whole window and killed drags.
+  - A reconciling diff (pairs children by kind/style/tag) and GTK partial updates with stable widget ids: a column change builds 1 widget in ~1 ms; stacks, grids and Boards update in place.
+  - App.resize on GTK and the web; size patches; omxplorer fills any window. Inline toolbar tools; calm motion; controlled fields.
+  - M1–M7 PASS (with every earlier goal); reviewer PASS (round 3 + a final pass).
+- **Broke and fixed:** the window grew 8 pt per resize (the layout asked for exactly its width); spacers expanded across their stack; the inspector's grow took half the width; alerts weren't closed by partial updates; the cell editor on the Board rebuilt the grid and lost the keyboard (goal 14); iOS and Android links got getenv/clock symbols from the runtime's trace; goal 9's formula field kept its text (controlled fields); a list built during a partial update was refreshed at once (goal 4's row count).
+- **Means:** smoothness was the update model, not Mojo or GTK. The next lever is rendering (goal 26: a display list on the GPU, layers for motion).
+- **Next:** goal 26, the Scene spike on GTK.
+
+---
+
 ## Experiment 24 (2026-10-18/19): omxplorer polished: Liquid, motion, blocks of cells (goal 24)
 - **Setup:** the owner's screenshots of the real app ("looks like an intern app"); Stitch and Claude drafts of a Liquid skin; the owner picked Stitch's.
 - **Worked:**
