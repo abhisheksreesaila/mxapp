@@ -14,7 +14,8 @@
 from mojoui.app import Event
 from mojoui.view import View, TextField, TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE, KEY, SHIFT, CTRL, ALT
 from mojoui.canvas import Surface
-from mojoui.text import Font, MONO, RIGHT, CENTRE
+from mojoui.scene import Painter, SurfacePainter, Scene
+from mojoui.text import Font, MONO, RIGHT, CENTRE, LEFT, REGULAR
 from mojoui.cellstyle import CellStyle, swatch, fill_over, AUTO_ALIGN, ALIGN_LEFT, ALIGN_CENTRE, ALIGN_RIGHT, ITALIC_SLANT
 from mojoui.draw import rect, hline, line, circle, with_alpha
 from std.time import perf_counter_ns
@@ -851,12 +852,26 @@ struct DataGrid(Copyable, Movable):
         return moving
 
     def draw[S: GridSource](mut self, mut s: Surface, src: S, font: Font, p: Palette):
+        """Paints into pixels (the reference, and hosts without a display-list path)."""
+        var sp = SurfacePainter(Surface(s.address, s.width, s.height, s.scale))
+        sp.s.still = s.still
+        self.paint(sp, src, font, p)
+        s.again = sp.s.again
+
+    def draw_scene[S: GridSource](mut self, mut sc: Scene, src: S, font: Font, p: Palette):
+        """Records the grid as a display list (goal 26): the cells, then the selection ring in a layer of its own."""
+        self.paint(sc, src, font, p)
+
+    def paint[S: GridSource, P: Painter](mut self, mut s: P, src: S, font: Font, p: Palette):
+        """The grid, onto any Painter: pixels or a display list. Two layers: "cells" (everything that scrolls with the
+        data) and "ring" (the selection ring, which moves on its own: a host keeps the cells when only it changed)."""
         self.prepare(src, font, p)
-        self.size = (s.points_width(), s.points_height())
-        var k = s.scale
+        var k = s.scale()
+        self.size = (Float64(s.width()) / k, Float64(s.height()) / k)
+        s.begin_layer("cells")
         s.fill(p.card)
-        var w = Float64(s.width)
-        var h = Float64(s.height)
+        var w = Float64(s.width())
+        var h = Float64(s.height())
         var head = self.header_h() * k
         var right = w - GRID_BAR_W * k  # the columns stop where the scroll bar starts
         var gut = GRID_GUTTER * k
@@ -872,7 +887,7 @@ struct DataGrid(Copyable, Movable):
             widths.append(cw)
             xpos += cw
         # header (and each column's distribution under its name)
-        rect(s, 0, 0, w, head, p.raised)
+        s.rect(0, 0, w, head, p.raised, 0)
         for c in range(ncols):
             var x = lefts[c]
             var cw = widths[c]
@@ -882,8 +897,8 @@ struct DataGrid(Copyable, Movable):
                 continue
             cw = min(cw, right - x)
             if c == col_pick:
-                rect(s, x, 0, cw, h, p.accent_wash)  # the column, tinted top to bottom
-                rect(s, x, 0, cw, head, p.accent)
+                s.rect(x, 0, cw, h, p.accent_wash, 0)  # the column, tinted top to bottom
+                s.rect(x, 0, cw, head, p.accent, 0)
             var name = src.grid_name(c)
             if src.grid_formula(c):
                 name = "ƒ " + name
@@ -891,14 +906,14 @@ struct DataGrid(Copyable, Movable):
             var badge = src.grid_badge(c)
             var bw = (font.measure(badge, 9.5 * k, MONO) + 8 * k) if badge != "" else 0.0
             var shown_name = self.clip(name, cw - 26 * k - bw, 12.5 * k, p.medium, font)
-            font.draw(s, shown_name, x + 8 * k, 20 * k, 12.5 * k, ink, p.medium)
+            s.text(font, shown_name, x + 8 * k, 20 * k, 12.5 * k, ink, p.medium, LEFT, 0)
             if badge != "" and shown_name == name:  # the type badge, after the name (when the name fits whole)
                 var bx = x + 8 * k + font.measure(name, 12.5 * k, p.medium) + 6 * k
                 if bx + bw <= x + cw - 18 * k:
                     var badge_ink = p.accent_ink if c == col_pick else (p.formula if badge == "ƒx" else p.ink3)
-                    rect(s, bx, 9 * k, bw, 14 * k, p.accent_ink if c == col_pick else p.line)
-                    rect(s, bx + 1, 9 * k + 1, bw - 2, 14 * k - 2, p.accent if c == col_pick else p.card)
-                    font.draw(s, badge, bx + 4 * k, 19.5 * k, 9.5 * k, badge_ink, MONO)
+                    s.rect(bx, 9 * k, bw, 14 * k, p.accent_ink if c == col_pick else p.line, 0)
+                    s.rect(bx + 1, 9 * k + 1, bw - 2, 14 * k - 2, p.accent if c == col_pick else p.card, 0)
+                    s.text(font, badge, bx + 4 * k, 19.5 * k, 9.5 * k, badge_ink, MONO, LEFT, 0)
             if c == self.sort_col:  # a small triangle (the font has no arrows): ▼ largest first, ▲ smallest first
                 var ax = x + cw - 14 * k
                 var ay = 15 * k
@@ -906,7 +921,7 @@ struct DataGrid(Copyable, Movable):
                 for r in range(Int(5 * k)):
                     var half = Float64(r) * 0.9
                     var yy = ay + (2.5 * k - Float64(r) if self.sort_desc else Float64(r) - 2.5 * k)  # widest row on top: ▼
-                    rect(s, ax - half, yy, 2 * half + 1, 1, tint)
+                    s.rect(ax - half, yy, 2 * half + 1, 1, tint, 0)
             if c < len(self.histograms) and len(self.histograms[c]) > 0:
                 ref bars = self.histograms[c]
                 var n = len(bars)
@@ -915,13 +930,12 @@ struct DataGrid(Copyable, Movable):
                 var tall = (GRID_HISTOGRAM_H - 7) * k
                 for b in range(n):
                     var bh = max(bars[b] * tall, 1.0 * k if bars[b] > 0 else 0.0)
-                    rect(s, x + 8 * k + Float64(b) * bw, base_y - bh, max(bw - 1.5 * k, 1.0), bh,
-                         p.accent_ink if c == col_pick else p.accent_tint)
-            line(s, x + cw, 0, x + cw, h, 1, p.line)
+                    s.rect(x + 8 * k + Float64(b) * bw, base_y - bh, max(bw - 1.5 * k, 1.0), bh, p.accent_ink if c == col_pick else p.accent_tint, 0)
+            s.line(x + cw, 0, x + cw, h, 1, p.line)
             if c == self.resize_col:
-                line(s, x + cw - 1, 0, x + cw - 1, h, 2, p.accent)  # the edge being dragged
-        rect(s, 0, 0, gut, head, p.raised)  # (the gutter stays put when the grid scrolls sideways)
-        hline(s, 0, w, head, p.line_strong)
+                s.line(x + cw - 1, 0, x + cw - 1, h, 2, p.accent)  # the edge being dragged
+        s.rect(0, 0, gut, head, p.raised, 0)  # (the gutter stays put when the grid scrolls sideways)
+        s.rect(Float64(Int(0)), Float64(Int(head)), Float64(Int(w) - Int(0)), 1, p.line_strong, 0)
         var yes_no = List[Bool](capacity=ncols)  # columns of true/false: drawn as small green and red pills
         for c in range(ncols):
             yes_no.append(src.grid_badge(c) == "bool")
@@ -948,7 +962,7 @@ struct DataGrid(Copyable, Movable):
                     ring_top = y
                 ring_bottom = y + GRID_ROW_H * k
             if row == self.cur_row and not multi:
-                rect(s, 0, y, right, GRID_ROW_H * k, p.accent_wash)
+                s.rect(0, y, right, GRID_ROW_H * k, p.accent_wash, 0)
             for c in range(ncols):
                 var x = lefts[c]
                 var cw = widths[c]
@@ -966,14 +980,14 @@ struct DataGrid(Copyable, Movable):
                 var active = row == self.cur_row and c == self.cur_col
                 var in_block = multi and in_rows and blk[2] <= c <= blk[3] and not active
                 if in_block:  # the block's cells: a soft wash (the active cell stays clear)
-                    rect(s, x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash, st.fill()) if st.fill() > 0 else p.accent_wash)
+                    s.rect(x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash, st.fill()) if st.fill() > 0 else p.accent_wash, 0)
                 elif st.fill() > 0:
-                    rect(s, x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash if row == self.cur_row and not multi else p.card, st.fill()))
+                    s.rect(x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash if row == self.cur_row and not multi else p.card, st.fill()), 0)
                 if active:
-                    rect(s, x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.card, st.fill()) if st.fill() > 0 else p.card)
+                    s.rect(x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.card, st.fill()) if st.fill() > 0 else p.card, 0)
                 if src.grid_edited(c, row):  # changed this session: a small accent triangle in the corner
                     for r in range(Int(6 * k)):
-                        rect(s, x + cw - 6 * k + Float64(r), y + Float64(r), 6 * k - Float64(r), 1, p.accent)
+                        s.rect(x + cw - 6 * k + Float64(r), y + Float64(r), 6 * k - Float64(r), 1, p.accent, 0)
                 var align = st.align()
                 if align == AUTO_ALIGN:
                     align = ALIGN_RIGHT if src.grid_numeric(c) else ALIGN_LEFT  # (numbers right, text left)
@@ -989,45 +1003,54 @@ struct DataGrid(Copyable, Movable):
                     var tone = p.good if good else p.bad
                     var pw = font.measure(text, 11.5 * k, p.medium) + 14 * k
                     var px = x + 8 * k if align == ALIGN_LEFT else (tx - 7 * k)
-                    rect(s, px, y + 5 * k, pw, GRID_ROW_H * k - 10 * k, mix(p.card, tone, 0.12), (GRID_ROW_H * k - 10 * k) / 2)
-                    font.draw(s, text, px + 7 * k, base - 0.5 * k, 11.5 * k, tone, p.medium)
+                    s.rect(px, y + 5 * k, pw, GRID_ROW_H * k - 10 * k, mix(p.card, tone, 0.12), (GRID_ROW_H * k - 10 * k) / 2)
+                    s.text(font, text, px + 7 * k, base - 0.5 * k, 11.5 * k, tone, p.medium, LEFT, 0)
                     continue
                 if text == "" and src.grid_numeric(c) and not active:  # an empty number: a faint dash where the figure would be
-                    font.draw(s, "–", x + cw - 16 * k, base, 13 * k, p.line_strong, p.regular)
+                    s.text(font, "–", x + cw - 16 * k, base, 13 * k, p.line_strong, p.regular, LEFT, 0)
                     continue
-                font.draw(s, text, tx, base, 13 * k, color, weight, slant=slant)
+                var ax = tx  # (anchored where it's aligned: a host measuring with its own text engine lines it up there)
+                var al = LEFT
+                if align == ALIGN_CENTRE:
+                    ax = x + cw / 2
+                    al = CENTRE
+                elif align != ALIGN_LEFT:
+                    ax = x + cw - 8 * k - (3 * k if st.italic() else 0)
+                    al = RIGHT
+                s.text(font, text, ax, base, 13 * k, color, weight, al, slant)
                 if st.bold():  # (Inter's medium is only a little heavier than regular: draw it again, a touch to the right)
-                    font.draw(s, text, tx + 0.6 * k, base, 13 * k, color, weight, slant=slant)
+                    s.text(font, text, ax + 0.6 * k, base, 13 * k, color, weight, al, slant)
                 if st.underline():
-                    rect(s, tx, base + 2 * k, tw, max(1.0, k), color)
+                    s.rect(tx, base + 2 * k, tw, max(1.0, k), color, 0)
                 if st.strike():
-                    rect(s, tx, base - 4.5 * k, tw, max(1.0, k), color)
-            rect(s, 0, y, gut, GRID_ROW_H * k, p.accent_wash if in_rows else p.card)
-            font.draw(s, grouped(row + 1), (GRID_GUTTER - 10) * k, base, 12 * k, p.accent if in_rows else p.ink3, p.regular, RIGHT)
+                    s.rect(tx, base - 4.5 * k, tw, max(1.0, k), color, 0)
+            s.rect(0, y, gut, GRID_ROW_H * k, p.accent_wash if in_rows else p.card, 0)
+            s.text(font, grouped(row + 1), (GRID_GUTTER - 10) * k, base, 12 * k, p.accent if in_rows else p.ink3, p.regular, RIGHT, 0)
             y += GRID_ROW_H * k
-            hline(s, 0, right, y, p.line)
+            s.rect(Float64(Int(0)), Float64(Int(y)), Float64(Int(right) - Int(0)), 1, p.line, 0)
             shown += 1
-        line(s, gut, 0, gut, h, 1, p.line)
+        s.line(gut, 0, gut, h, 1, p.line)
+        # the scroll bar: a thin track, a thumb sized to the share of rows on screen
+        var t = self.thumb(h / k, src)
+        s.rect(right, head, GRID_BAR_W * k, h - head, p.card, 0)
+        s.rect(right + 3 * k, t[0] * k + 2 * k, (GRID_BAR_W - 6) * k, t[1] * k - 4 * k, p.ink3 if self.bar_drag else p.line_strong, 0)
+        s.begin_layer("ring")
         # the selection ring around the block (or the cell): it glides to where the selection went, on a spring
         if blk[2] >= 0 and ring_top >= 0 and blk[2] < len(lefts):
             var c1 = min(blk[3], len(lefts) - 1)
             var to: List[Float64] = [max(lefts[blk[2]], gut) / k, ring_top / k, (min(lefts[c1] + widths[c1], right) - max(lefts[blk[2]], gut)) / k, (ring_bottom - ring_top) / k]
-            if self.glide(to^, s.still or self.dragging):  # (a drag: the ring stays under the pointer; keys glide)
-                s.again = True  # mid-glide: the host draws the next frame too
+            if self.glide(to^, s.still() or self.dragging):  # (a drag: the ring stays under the pointer; keys glide)
+                s.set_again()  # mid-glide: the host draws the next frame too
             var rx = self.ring[0] * k
             var ry = self.ring[1] * k
             var rw = self.ring[2] * k
             var rh = self.ring[3] * k
             var t = 2 * k
-            rect(s, rx, ry, rw, t, p.accent)
-            rect(s, rx, ry + rh - t, rw, t, p.accent)
-            rect(s, rx, ry, t, rh, p.accent)
-            rect(s, rx + rw - t, ry, t, rh, p.accent)
-            circle(s, rx + rw - 1, ry + rh - 1, 4 * k, p.card)  # the fill handle: a teal dot ringed in white
-            circle(s, rx + rw - 1, ry + rh - 1, 3 * k, p.accent)
+            s.rect(rx, ry, rw, t, p.accent, 0)
+            s.rect(rx, ry + rh - t, rw, t, p.accent, 0)
+            s.rect(rx, ry, t, rh, p.accent, 0)
+            s.rect(rx + rw - t, ry, t, rh, p.accent, 0)
+            s.circle(rx + rw - 1, ry + rh - 1, 4 * k, p.card)  # the fill handle: a teal dot ringed in white
+            s.circle(rx + rw - 1, ry + rh - 1, 3 * k, p.accent)
         else:
             self.ring = List[Float64]()
-        # the scroll bar: a thin track, a thumb sized to the share of rows on screen
-        var t = self.thumb(h / k, src)
-        rect(s, right, head, GRID_BAR_W * k, h - head, p.card)
-        rect(s, right + 3 * k, t[0] * k + 2 * k, (GRID_BAR_W - 6) * k, t[1] * k - 4 * k, p.ink3 if self.bar_drag else p.line_strong)
