@@ -23,7 +23,7 @@ from mojoui.canvas import Surface, rgba
 from mojoui.icons_data import LUCIDE_NAMES, lucide_svg
 from mojoui.theme import Palette, hex_of, mix, skin_palette, skin_name
 from std.math import log2
-from std.time import perf_counter_ns
+from std.time import perf_counter_ns, sleep
 
 comptime G_APPLICATION_NON_UNIQUE = 32
 comptime HORIZONTAL = 0
@@ -2308,6 +2308,31 @@ def run_step[A: App](host_addr: Int, step: String):
             return
         var s = String("clicked")
         external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[item], s.as_c_string_span())
+    elif verb == "pause":  # pause:3000: keep the main loop running that long (a screen grab of the display can catch popovers)
+        var until = perf_counter_ns() + to_int(rest) * 1_000_000
+        while perf_counter_ns() < until:
+            _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
+            sleep(0.01)
+    elif verb == "open":  # open:Format, open:Format>Text colour: pops the bar's menu (or its submenu) up and leaves it open, for screenshots
+        var t = split_at(rest, ">")
+        var menu = -1
+        for k in range(len(host[].rt.shown.nodes)):
+            ref n = host[].rt.shown.nodes[k]
+            if n.kind == MENU and n.style == 0 and n.text == t[0]:
+                menu = k
+        if menu < 0:
+            print("TEST: no menu", t[0])
+            return
+        var target = menu
+        if t[1] != "":
+            target = -1
+            for c in host[].rt.shown.nodes[menu].children:
+                if host[].rt.shown.nodes[c].text == t[1] and len(host[].rt.shown.nodes[c].children) > 0:
+                    target = c
+        if target < 0:
+            print("TEST: no menu item", t[1])
+            return
+        external_call["gtk_menu_button_popup", NoneType](host[].widgets[target])
     elif verb == "toast":  # toast:Undo: the toast's button, through its own signal
         var i = find(host[], TOAST, "", 0)
         if i < 0 or host[].toast == 0 or len(host[].rt.shown.nodes[i].options) == 0 or host[].rt.shown.nodes[i].options[0] != rest:
@@ -3003,7 +3028,10 @@ def skin_css(p: Palette, cls: String) -> String:
         + "popover.mui-menu-popover label.mui-menu-key { color: " + ink3 + "; font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-left: 24px; }\n"
         + "popover.mui-menu-popover label.mui-menu-label { color: " + ink3 + "; font-size: 10.5px; font-weight: 600; letter-spacing: .8px; padding: 6px 10px 4px; }\n"
         + "popover.mui-menu-popover separator.mui-menu-sep { margin: 4px 6px; background: " + line + "; }\n"
-        + "popover.mui-menu-popover menubutton > button { min-height: 28px; padding: 0 10px; border-radius: 4px; }\n"
+        # a submenu row is a menubutton: its inner button must look exactly like a plain item (no hairline, same type)
+        + "popover.mui-menu-popover menubutton > button { min-height: 28px; padding: 0 10px; border-radius: 4px; font-size: 12.5px; font-weight: 400; color: " + ink + "; background: transparent; box-shadow: none; }\n"
+        + "popover.mui-menu-popover menubutton > button:hover, popover.mui-menu-popover menubutton > button:checked { background: " + wash + "; }\n"
+        + "popover.mui-menu-popover menubutton > button image { color: " + ink3 + "; -gtk-icon-size: 15px; }\n"
         + "popover.mui-menu-popover menubutton arrow { -gtk-icon-size: 0; min-width: 0; min-height: 0; margin: 0; }\n"
         + "dialog.mui-dialog-surface, " + w + "dialog, dialog > sheet { border-radius: 8px; }\n"
         + ".mui-dialog { background: " + card + "; color: " + ink + "; border-radius: 8px; }\n"
