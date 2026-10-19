@@ -479,6 +479,7 @@ struct GtkHost[A: App](Movable):
     var release_y: Float64
     var pending: Diff  # a partial rebuild waiting for the next idle turn
     var has_pending: Bool
+    var partial_ok: Bool
     var dialog: Int  # the open alert dialog, if any
     var popovers: List[Int]  # context-menu popovers parented to anchors (unparented at the next rebuild)
     var popups: List[Int]  # popovers to pop up once the new screen is in the window
@@ -502,6 +503,7 @@ struct GtkHost[A: App](Movable):
     def __init__(out self, var app: Self.A):
         self.rt = Runtime(app^)
         self.rt.trace = getenv("MOJOUI_TRACE") != ""
+        self.partial_ok = getenv("MOJOUI_NO_PARTIAL") == ""  # (MOJOUI_NO_PARTIAL=1: every shape change rebuilds the window, to compare)
         self.canvases = List[GtkCanvas]()
         self.boards = List[BoardChild]()
         self.window_w = 0
@@ -1630,7 +1632,7 @@ struct GtkHost[A: App](Movable):
         for j in range(n):
             fresh[j] = kept[j] < 0
         self.focus_after_build(fresh)  # (a kept field keeps its text and caret: someone may be typing in it)
-        self.apply_patches(patches, self_addr)
+        self.apply_patches(patches, self_addr, fresh)
         if self.release_node >= 0:  # a drag ended while this was pending: the app still hears it
             var node = self.release_node
             self.release_node = -1
@@ -1781,7 +1783,7 @@ struct GtkHost[A: App](Movable):
     def apply(mut self, d: Diff, self_addr: Int):
         self.apply_design()
         self.copy_if_asked()
-        if d.rebuild and d.partial and not self.has_pending and len(self.widgets) > 0 and not busy():
+        if d.rebuild and d.partial and self.partial_ok and not self.has_pending and len(self.widgets) > 0 and not busy():
             # Only the parts that changed, on the next idle turn (never inside a signal handler: a widget that goes
             # may be the one that sent the signal). Events wait until then.
             self.pending = d.copy()
@@ -1802,7 +1804,8 @@ struct GtkHost[A: App](Movable):
             return
         self.apply_patches(d.patches, self_addr)
 
-    def apply_patches(mut self, patches: List[Patch], self_addr: Int):
+    def apply_patches(mut self, patches: List[Patch], self_addr: Int, fresh: List[Bool] = List[Bool]()):
+        """The patches onto the widgets; then every long list's rows again (fresh: nodes just built, which skip that)."""
         set_busy(True)
         for p in patches:
             var w = self.widgets[p.node]
@@ -1883,7 +1886,7 @@ struct GtkHost[A: App](Movable):
         # view, so an edit that keeps the row count wouldn't show otherwise. GTK only
         # re-binds rows whose items changed, so the list gets fresh items (scroll is kept).
         for k in range(len(self.rt.shown.nodes)):
-            if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
+            if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0 and not (k < len(fresh) and fresh[k]):
                 refresh_rows(self.widgets[k], self.rt.shown.nodes[k].value)
         if 0 <= self.echo_node < len(self.rt.shown.nodes) and self.widgets[self.echo_node] != 0:
             # The app answered a field's event with another value than was typed (it cleared the field after Return,
