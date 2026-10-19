@@ -253,6 +253,10 @@ def step(page, s):
         sel, prop = rest.rsplit("=", 1)  # (a selector may hold "=": [data-tag=inspector] hr)
         value = page.evaluate("([s, p]) => { const e = document.querySelector(s); return e ? getComputedStyle(e).getPropertyValue(p) : 'none'; }", [sel, prop])
         return f"STYLE: {sel} {prop} {value}"
+    elif verb == "attr":  # attr:selector=attribute: the first match's attribute (ATTR: selector attribute value, or none)
+        sel, name = rest.rsplit("=", 1)
+        value = page.evaluate("([s, a]) => { const e = document.querySelector(s); return e && e.getAttribute(a) !== null ? e.getAttribute(a) : 'none'; }", [sel, name])
+        return f"ATTR: {sel} {name} {value[:80]}"
     elif verb == "wait":  # until a button with this title appears (e.g. after frames change the screen)
         page.locator("[data-kind=button]").filter(has_text=exact(rest)).first.wait_for(timeout=15000)
     elif verb == "pause":  # pause:1000: let animations run that long (as the GTK step does)

@@ -28,7 +28,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 from fasthtml.common import (
-    Button, Canvas, Dialog, Div, FastHTML, Form, H1, H2, H3, H4, Header, Hr, I, Img, Input, Label, Main, Meta, NotStr,
+    Button, Canvas, Dialog, Div, FastHTML, Form, H1, H2, H3, H4, Header, Hr, I, Img, Input, Label, Link, Main, Meta, NotStr,
     Option, P, Progress, Response, Script, Select, Span, Style, Textarea, Title, UploadFile,
 )
 from PIL import Image
@@ -1222,7 +1222,11 @@ def make_app(module_dir):
             mark = mod.logo(s.handle)
             if mark:
                 ICONS["app-logo"] = mark
-        return Title(mod.title(s.handle)), *root(s, sid), *skin(s.design, accent=s.accent)
+        icon = ()
+        if "app-logo" in ICONS:  # (the app's mark as the tab's icon)
+            from urllib.parse import quote
+            icon = (Link(rel="icon", type="image/svg+xml", href="data:image/svg+xml," + quote(ICONS["app-logo"])),)
+        return Title(mod.title(s.handle)), *icon, *root(s, sid), *skin(s.design, accent=s.accent)
 
     def skin(design, oob=False, accent=0):
         """The page's design: a body class and, for Omarchy and the skins, the palette's CSS variables (from the
@@ -1268,6 +1272,16 @@ def make_app(module_dir):
             s.list_top[n] = max(top, 0)
             return rows_div(s, n, sid, s.list_top[n])
 
+    def restyle(s, out):
+        """A skin picked in Settings, or a mode's tint (App.accent) changed: the page restyles with whatever else goes out (D-156)."""
+        design = mod.design(s.handle)
+        accent = mod.accent(s.handle) if hasattr(mod, "accent") else 0
+        if design == getattr(s, "design", design) and accent == getattr(s, "accent", accent):
+            return out
+        s.design = design
+        s.accent = accent
+        return (out if isinstance(out, tuple) else ((out,) if out != "" else ())) + skin(design, oob=True, accent=accent)
+
     def changes(s, sid, d, n=-1, text="", number=0):
         """What to send the page after a change: the whole screen on a rebuild, else the changed
         controls (out-of-band swaps). Call with s.lock held, after s.nodes was refreshed."""
@@ -1281,7 +1295,7 @@ def make_app(module_dir):
             s.focus = n if source and source["kind"] in typing and s.nodes[n]["kind"] == source["kind"] else None
             out = root(s, sid, oob=True)
             s.focus = None
-            return out
+            return restyle(s, out)
         changed = []
         moved = []  # SET_PLACE: the object's div is moved in place (re-rendering it would restart its canvases)
         for p in d["patches"]:
@@ -1317,7 +1331,7 @@ def make_app(module_dir):
                 el.attrs["hx-swap-oob"] = "true"
                 out.append(el)
         out += moved
-        return tuple(out) if out else ""
+        return restyle(s, tuple(out)) if out else restyle(s, "")
 
     def merge(a, b):
         """Two diffs one after the other, as one."""
@@ -1356,14 +1370,7 @@ def make_app(module_dir):
             if d.get("ignored"):
                 return ""
             s.nodes = json.loads(mod.view(s.handle))  # the screen as Mojo now has it
-            out = changes(s, sid, d, n, text, number)
-            design = mod.design(s.handle)
-            accent = mod.accent(s.handle) if hasattr(mod, "accent") else 0
-            if design != getattr(s, "design", design) or accent != getattr(s, "accent", accent):  # a skin picked in Settings, or a mode's tint: restyle the open page (D-156)
-                s.design = design
-                s.accent = accent
-                out = (out if isinstance(out, tuple) else ((out,) if out != "" else ())) + skin(design, oob=True, accent=accent)
-            return out
+            return changes(s, sid, d, n, text, number)  # (restyles too, when the skin or the tint changed)
 
     @app.post("/resize/{sid}")
     def resize(sid: str, w: int = 0, h: int = 0):

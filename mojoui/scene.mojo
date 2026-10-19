@@ -19,6 +19,9 @@ comptime OP_CIRCLE = 2  # x, y, radius
 comptime OP_LINE = 3  # x0, y0, x1, y1, width
 comptime OP_TEXT = 4  # x, baseline, size, slant, weight, align (+ the text)
 comptime OP_FILL = 5  # the whole canvas, one colour (set, not blended)
+comptime OP_CLIP = 6  # x, y, w, h: what follows (until OP_UNCLIP) is cut to this rect
+comptime OP_UNCLIP = 7
+comptime OP_IMAGE = 8  # x, y, w, h, image (pixels made elsewhere: a lens, a video frame), scaled to the rect
 comptime STRIDE = 6  # floats per op
 
 
@@ -46,6 +49,26 @@ trait Painter:
         """What follows (until the next layer) is one layer: a host can keep it when it comes again unchanged."""
         ...
 
+    def layer_version(mut self, version: Int):
+        """The current layer's version, when the drawing code knows it: the same key and version is the same picture
+        (a host reuses it without comparing its items). Unset (or -1): the host compares the items."""
+        ...
+
+    def push_clip(mut self, x: Float64, y: Float64, w: Float64, h: Float64):
+        """Cuts what follows (until pop_clip) to this rect."""
+        ...
+
+    def pop_clip(mut self):
+        ...
+
+    def image(mut self, pixels: List[UInt32], pw: Int, ph: Int, x: Float64, y: Float64, w: Float64, h: Float64):
+        """Pixels made elsewhere (a GPU kernel's output: the lens, a heat map, a video frame), scaled into the rect."""
+        ...
+
+    def note(mut self, meaning: String):
+        """What the item just drawn stands for ("cell amount 2"), for the agent host and tests; hosts don't draw it."""
+        ...
+
     def fill(mut self, color: UInt32):
         ...
 
@@ -62,6 +85,19 @@ trait Painter:
              slant: Float64):
         """`text` with its baseline at `baseline`, starting at x (or centred on it, or ending at it: `align`)."""
         ...
+
+
+def blit(mut s: Surface, pixels: List[UInt32], pw: Int, ph: Int, x: Float64, y: Float64, w: Float64, h: Float64):
+    """Pixels scaled (nearest) into a rect of the surface."""
+    if pw <= 0 or ph <= 0 or w <= 0 or h <= 0:
+        return
+    var x0 = Int(x)
+    var y0 = Int(y)
+    for dy in range(Int(h)):
+        var sy = min(ph - 1, Int(Float64(dy) * Float64(ph) / h))
+        for dx in range(Int(w)):
+            var sx = min(pw - 1, Int(Float64(dx) * Float64(pw) / w))
+            s.set(x0 + dx, y0 + dy, pixels[sy * pw + sx])
 
 
 struct SurfacePainter(Painter, Movable):
@@ -88,6 +124,21 @@ struct SurfacePainter(Painter, Movable):
         self.s.again = True
 
     def begin_layer(mut self, key: String):
+        pass
+
+    def layer_version(mut self, version: Int):
+        pass
+
+    def push_clip(mut self, x: Float64, y: Float64, w: Float64, h: Float64):
+        pass  # (pixels are measured with the same metrics they're drawn with: nothing spills)
+
+    def pop_clip(mut self):
+        pass
+
+    def image(mut self, pixels: List[UInt32], pw: Int, ph: Int, x: Float64, y: Float64, w: Float64, h: Float64):
+        blit(self.s, pixels, pw, ph, x, y, w, h)
+
+    def note(mut self, meaning: String):
         pass
 
     def fill(mut self, color: UInt32):
@@ -122,6 +173,10 @@ struct Scene(Painter, Movable, Copyable):
     var texts: List[String]
     var layer_keys: List[String]
     var layer_starts: List[Int]  # the first op of each layer
+    var layer_versions: List[Int]  # each layer's version (-1: compare its items)
+    var images: List[List[UInt32]]  # OP_IMAGE's pixels (num 4 = which, num 5 = its width; height = len / width)
+    var note_ops: List[Int]  # the ops that carry a meaning, and the meanings
+    var notes: List[String]
 
     def __init__(out self, width: Int, height: Int, scale: Float64):
         self.w = width
@@ -136,6 +191,10 @@ struct Scene(Painter, Movable, Copyable):
         self.texts = List[String](capacity=1024)
         self.layer_keys = List[String]()
         self.layer_starts = List[Int]()
+        self.layer_versions = List[Int]()
+        self.images = List[List[UInt32]]()
+        self.note_ops = List[Int]()
+        self.notes = List[String]()
 
     def reset(mut self, width: Int, height: Int, scale: Float64):
         """Empty again for the next frame, keeping the memory (a host recycles last frame's list)."""
@@ -151,6 +210,10 @@ struct Scene(Painter, Movable, Copyable):
         self.texts.clear()
         self.layer_keys.clear()
         self.layer_starts.clear()
+        self.layer_versions.clear()
+        self.images.clear()
+        self.note_ops.clear()
+        self.notes.clear()
 
     def width(self) -> Int:
         return self.w
@@ -173,6 +236,35 @@ struct Scene(Painter, Movable, Copyable):
     def begin_layer(mut self, key: String):
         self.layer_keys.append(key)
         self.layer_starts.append(len(self.kinds))
+        self.layer_versions.append(-1)
+
+    def layer_version(mut self, version: Int):
+        if len(self.layer_versions) > 0:
+            self.layer_versions[len(self.layer_versions) - 1] = version
+
+    def push_clip(mut self, x: Float64, y: Float64, w: Float64, h: Float64):
+        self._op(OP_CLIP, x, y, w, h, 0, 0, 0, -1)
+
+    def pop_clip(mut self):
+        self._op(OP_UNCLIP, 0, 0, 0, 0, 0, 0, 0, -1)
+
+    def image(mut self, pixels: List[UInt32], pw: Int, ph: Int, x: Float64, y: Float64, w: Float64, h: Float64):
+        if pw <= 0 or ph <= 0 or len(pixels) < pw * ph:
+            return
+        self.images.append(pixels.copy())
+        self._op(OP_IMAGE, x, y, w, h, Float64(len(self.images) - 1), Float64(pw), 0, -1)
+
+    def note(mut self, meaning: String):
+        if len(self.kinds) > 0:
+            self.note_ops.append(len(self.kinds) - 1)
+            self.notes.append(meaning)
+
+    def meaning_of(self, op: Int) -> String:
+        """What op `op` stands for ("" when it carries no note)."""
+        for k in range(len(self.note_ops)):
+            if self.note_ops[k] == op:
+                return self.notes[k]
+        return ""
 
     def layers(self) -> Int:
         return len(self.layer_keys)
@@ -228,7 +320,11 @@ struct Scene(Painter, Movable, Copyable):
         """Whether layer i of this scene draws exactly what layer j of `other` does (same ops, numbers, colours, texts)."""
         var a = self.layer_range(i)
         var b = other.layer_range(j)
-        if a[1] - a[0] != b[1] - b[0] or self.layer_keys[i] != other.layer_keys[j]:
+        if self.layer_keys[i] != other.layer_keys[j]:
+            return False
+        if self.layer_versions[i] >= 0 and other.layer_versions[j] >= 0:  # (the drawing code said which picture it is)
+            return self.layer_versions[i] == other.layer_versions[j]
+        if a[1] - a[0] != b[1] - b[0]:
             return False
         for n in range(a[1] - a[0]):
             var p = a[0] + n
@@ -240,21 +336,56 @@ struct Scene(Painter, Movable, Copyable):
                     return False
             if self.text_of[p] >= 0 and self.text_at(p) != other.text_at(q):
                 return False
+            if Int(self.kinds[p]) == OP_IMAGE and self.images[Int(self.num(p, 4))] != other.images[Int(other.num(q, 4))]:
+                return False
         return True
 
     def raster(self, mut s: Surface, font: Font):
         """Plays the list into pixels (the CPU reference: tests, screenshots, hosts without a GPU path)."""
+        var clips = List[Tuple[Float64, Float64, Float64, Float64]]()  # (x0, y0, x1, y1): rects are cut to the innermost
         for op in range(len(self.kinds)):
             var kind = Int(self.kinds[op])
             var c = self.colors[op]
             if kind == OP_FILL:
                 s.fill(c)
+            elif kind == OP_CLIP:
+                var x0 = self.num(op, 0)
+                var y0 = self.num(op, 1)
+                var x1 = x0 + self.num(op, 2)
+                var y1 = y0 + self.num(op, 3)
+                if len(clips) > 0:
+                    ref o = clips[len(clips) - 1]
+                    x0 = max(x0, o[0])
+                    y0 = max(y0, o[1])
+                    x1 = min(x1, o[2])
+                    y1 = min(y1, o[3])
+                clips.append((x0, y0, x1, y1))
+            elif kind == OP_UNCLIP:
+                if len(clips) > 0:
+                    _ = clips.pop()
             elif kind == OP_RECT:
-                rect(s, self.num(op, 0), self.num(op, 1), self.num(op, 2), self.num(op, 3), c, self.num(op, 4))
+                var x = self.num(op, 0)
+                var y = self.num(op, 1)
+                var w = self.num(op, 2)
+                var h = self.num(op, 3)
+                if len(clips) > 0:  # (text isn't cut: pixels are measured with the metrics they're drawn with)
+                    ref k = clips[len(clips) - 1]
+                    var x1 = min(x + w, k[2])
+                    var y1 = min(y + h, k[3])
+                    x = max(x, k[0])
+                    y = max(y, k[1])
+                    w = x1 - x
+                    h = y1 - y
+                if w > 0 and h > 0:
+                    rect(s, x, y, w, h, c, self.num(op, 4))
             elif kind == OP_CIRCLE:
                 circle(s, self.num(op, 0), self.num(op, 1), self.num(op, 2), c)
             elif kind == OP_LINE:
                 line(s, self.num(op, 0), self.num(op, 1), self.num(op, 2), self.num(op, 3), self.num(op, 4), c)
+            elif kind == OP_IMAGE:
+                var pw = Int(self.num(op, 5))
+                ref px = self.images[Int(self.num(op, 4))]
+                blit(s, px, pw, len(px) // pw, self.num(op, 0), self.num(op, 1), self.num(op, 2), self.num(op, 3))
             elif kind == OP_TEXT:
                 font.draw(s, self.text_at(op), self.num(op, 0), self.num(op, 1), self.num(op, 2), c, Int(self.num(op, 4)), Int(self.num(op, 5)),
                           self.num(op, 3))

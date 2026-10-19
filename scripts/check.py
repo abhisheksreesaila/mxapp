@@ -87,9 +87,20 @@ def m0():
         if not ImageChops.difference(Image.open(before).convert("RGB").crop(crop), Image.open(after).convert("RGB").crop(crop)).getbbox():
             problems.append("dragging the preview's scroll bar didn't move its rows")
     # 3. The inspector's sections are separated by hairlines (and titled in small caps), GTK and web.
-    src = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
-    if ".mui-tag-inspector separator" not in src or ".mui-tag-section-title" not in src:
-        problems.append("GTK: no inspector hairline or section-title rule")
+    out_i, shot_i = gtk(SHEET, "inspector-lines-gtk")
+    insp = boxes(out_i, "inspector")
+    if not insp:
+        problems.append("GTK: no inspector box")
+    else:
+        im = Image.open(shot_i).convert("RGB")
+        ix, iy, iw, ih = (int(v) for v in insp[0])
+        lines = 0
+        for yy in range(iy + 60, iy + ih - 10):
+            row = [im.getpixel((xx, yy)) for xx in range(ix + 20, ix + iw - 20, 4)]
+            if row and all(near(p_, (217, 222, 230), 14) for p_ in row):  # (Liquid's line_strong #d9dee6, across the panel)
+                lines += 1
+        if lines < 2:
+            problems.append(f"GTK: the inspector shows {lines} hairlines between its sections (want 2 or more)")
     out = web(SHEET + ";style:[data-tag=inspector] hr=border-top-width;style:[data-tag=inspector] hr=border-top-style", "inspector-lines")
     got = dict(re.findall(r"^STYLE: \[data-tag=inspector\] hr (\S+) (.+)$", out, re.M))
     if got.get("border-top-width") != "1px" or got.get("border-top-style") != "solid":
@@ -131,7 +142,7 @@ def m0():
 
 
 BENCH_RE = re.compile(r"^BENCH: (\w+) (\d+) at (\d+)x(\d+) px draws (\d+) paint p50 ([\d.]+) p95 ([\d.]+) upload p50 ([\d.]+) p95 ([\d.]+) "
-                      r"frame-paint p50 [\d.]+ p95 [\d.]+ interval p50 ([\d.]+) p99 ([\d.]+)", re.M)
+                      r"frame-paint p50 [\d.]+ p95 [\d.]+ interval p50 ([\d.]+) p99 ([\d.]+) within-8.3ms ([\d.]+)% cells built (\d+) uploads (\d+)", re.M)
 ORDERS_1M = ROOT / "build/data/orders_1m.csv"
 
 
@@ -141,7 +152,7 @@ def bench(name, **more):
     import headless
     headless.ensure()
     OUT.mkdir(parents=True, exist_ok=True)
-    env = dict(g25.env(name), MOJOUI_TEST=f"pick:Choose a file={ORDERS_1M};tap:Create table;bench:scroll=60;bench:glide=10",
+    env = dict(g25.env(name), MOJOUI_TEST=f"pick:Choose a file={ORDERS_1M};tap:Create table;bench:glide=10;bench:scroll=60",  # (glides first: the selection on screen)
                MOJOUI_WINDOW="2800x1400", MOJOUI_TRACE="1", MOJOUI_SHOT=str(OUT / f"{name}.png"), **{k: str(v) for k, v in more.items()})
     r = run([str(BUILD / "omxplorer" / "linux" / "omxplorer")], env=env, timeout=1200)
     out = r.stdout + r.stderr
@@ -166,7 +177,7 @@ def m1():
 def m2():
     """The Scene: its tests (a replay draws the pixels the calls drew)."""
     err = g20.mojo_test("tests/test_scene.mojo", "SCENE TESTS PASSED", "test_scene", "tests")
-    return err is None, err or "tests/test_scene.mojo: a Scene replays to exactly the pixels its calls draw (rect, rounded rect, line, circle, text)"
+    return err is None, err or "tests/test_scene.mojo: a Scene replays to exactly the pixels its calls draw (rect, rounded rect, line, circle, text, image, clip); a layer's version decides when it has one"
 
 
 def m3():
@@ -176,8 +187,8 @@ def m3():
     problems = [err] if err else []
     if "def draw_scene" not in src or 'begin_layer("ring")' not in src:
         problems.append("DataGrid has no draw_scene or ring layer")
-    return not problems, "; ".join(problems) or ("the grid recorded as a Scene and replayed is the grid drawn (every pixel); two layers, cells and ring; "
-                                                  "an unchanged frame's layers compare equal, a moved ring doesn't; the cells' text reads from the list")
+    return not problems, "; ".join(problems) or ("the grid recorded as a Scene and replayed is the grid drawn (every pixel); layers cells, selection, ring, bar; "
+                                                  "the selection moving leaves the cells layer equal; each cell's text says which cell it is; a browse grid never selects")
 
 
 def m4():
@@ -197,8 +208,15 @@ def m4():
         b = Image.open(new_shot).convert("RGB").crop((x, y, x + w, y + h))
         diff = ImageChops.difference(a, b).convert("L").point(lambda v: 255 if v > 48 else 0)
         share = sum(1 for v in diff.get_flattened_data() if v) / (w * h)
-        if share > 0.05:  # (text is drawn by another engine: glyph edges differ; shapes and places must not)
-            problems.append(f"{share:.1%} of the grid's pixels differ from the pixel path")
+        # Text is drawn by another engine (its glyph edges differ); everything else (fills, lines, pills, ring) must
+        # match: compare the pixels that are text-coloured in neither picture, and a little around them.
+        from PIL import ImageFilter
+        ink = lambda im: im.convert("L").point(lambda v: 255 if v < 170 else 0).filter(ImageFilter.MaxFilter(5))
+        text = ImageChops.lighter(ink(a), ink(b))
+        rest = [d for d, t in zip(diff.get_flattened_data(), text.get_flattened_data()) if not t]
+        off = sum(1 for d in rest if d) / max(1, len(rest))
+        if off > 0.01:
+            problems.append(f"{off:.2%} of the grid's non-text pixels differ from the pixel path (lines, fills, pills, the ring)")
         (OUT / "compare.html").write_text(
             "<!doctype html><meta charset=utf-8><title>goal 26: pixels vs Scene</title><style>body{font:14px Inter,sans-serif;margin:24px}"
             "img{width:100%;border:1px solid #ddd}td{vertical-align:top;width:50%;padding:8px}</style><h2>The grid: today's pixels vs the Scene (GTK render nodes)</h2>"
@@ -207,7 +225,7 @@ def m4():
     else:
         problems.append("no grid box")
     return not problems, "; ".join(problems) or (f"MOJOUI_SCENE=1 draws the grid as render nodes ({replays[-1]} ops a frame); "
-                                                  f"the grid differs from the pixel path in {share:.1%} of pixels (text edges); build/g26/compare.html")
+                                                  f"{off:.2%} of its non-text pixels differ from the pixel path ({share:.1%} with text edges); build/g26/compare.html")
 
 
 def m5():
@@ -228,21 +246,24 @@ def m5():
     sc, gl = found["scroll"], found["glide"]
     scroll_p95 = float(sc[6]) + float(sc[8])
     glide_p50 = float(gl[5]) + float(gl[7])
-    built = re.search(r"^BENCH: glide .* layers built (\d+) reused (\d+)", out, re.M)
+    cells_built = int(gl[12])
+    uploads = int(gl[13]) + int(sc[13])
     problems = []
     if scroll_p95 > 2.0:
         problems.append(f"a scroll frame costs {scroll_p95:.1f} ms p95 (build {sc[6]} + replay {sc[8]})")
-    if glide_p50 > 0.4:
-        problems.append(f"a glide frame costs {glide_p50:.1f} ms p50")
-    cells_built = int(built.group(1)) - int(gl[4]) if built else 999  # (one ring layer a draw; the rest are cells)
-    if cells_built > 10:
-        problems.append(f"the cells were built {cells_built} times in 10 glides (want at most once a key)")
+    if glide_p50 > 0.3:
+        problems.append(f"a glide frame costs {glide_p50:.1f} ms p50 (want ≤ 0.3)")
+    if cells_built != 0:
+        problems.append(f"the cells layer was built {cells_built} times in 10 glides (want 0: only the selection and ring move)")
+    if uploads != 0:
+        problems.append(f"{uploads} pixel textures handed to GTK (the Scene path uploads none)")
     base = (ROOT / "docs/goals/26/baseline.txt").read_text() if (ROOT / "docs/goals/26/baseline.txt").exists() else ""
     (ROOT / "docs/goals/26/scene.txt").write_text("Goal 26: the Scene (MOJOUI_SCENE=1), same run as the baseline\n" + "\n".join(
-        f"{k}: {v[2]}x{v[3]} px, {v[4]} draws, build p50 {v[5]} ms p95 {v[6]} ms, replay p50 {v[7]} ms p95 {v[8]} ms, interval p50 {v[9]} p95 {v[10]}"
+        f"{k}: {v[2]}x{v[3]} px, {v[4]} draws, build p50 {v[5]} ms p95 {v[6]} ms, replay p50 {v[7]} ms p95 {v[8]} ms, frame interval p50 {v[9]} p99 {v[10]}, "
+        f"cells built {v[12]}, textures {v[13]}"
         for k, v in found.items()) + "\n")
     return not problems, "; ".join(problems) or (f"scroll: {scroll_p95:.1f} ms p95 a frame (build {sc[6]} + replay {sc[8]}); glide: {glide_p50:.1f} ms p50, "
-                                                  f"cells built {cells_built} times in 10 glides, no texture upload (docs/goals/26/scene.txt)")
+                                                  f"the cells layer built 0 times in 10 glides; 0 textures uploaded (docs/goals/26/scene.txt)")
 
 
 def m6():
@@ -254,12 +275,13 @@ def m6():
         return False, "blocked: waits for the owner to run scripts/scene-bench.sh on their display"
     text = run_file.read_text()
     scene = text.split("== scene", 1)[1] if "== scene" in text else ""
-    m = re.search(r"interval p50 ([\d.]+) p99 ([\d.]+)", scene)
+    m = re.search(r"interval p50 ([\d.]+) p99 ([\d.]+) within-8.3ms ([\d.]+)%", scene)
     if not m:
         return False, "the owner's run has no Scene intervals"
-    p50, p99 = float(m.group(1)), float(m.group(2))
-    ok = p99 <= p50 * 1.15
-    return ok, f"owner's display: frame interval p50 {p50} ms, p99 {p99} ms ({'every frame on time' if ok else 'late frames'})"
+    p50, p99, share = float(m.group(1)), float(m.group(2)), float(m.group(3))
+    ok = share >= 99  # (the bar: 120 fps, D-252: at least 99% of frames within 9.5 ms)
+    note = "" if ok else (f" (the display ran at {1000 / p50:.0f} Hz: 120 fps can't be shown on it)" if p50 > 12 else "")
+    return ok, f"owner's display: {share}% of frames within 9.5 ms, interval p50 {p50} ms, p99 {p99} ms{note}"
 
 
 def contrast(a, b):
@@ -277,12 +299,17 @@ def m8():
     problems = []
     want = {"start": "#4f46e5", "sheet": "#0e7a43", "report": "#c8243f"}
     for name, hexv in want.items():
-        for other in ("#ffffff",):
+        rgb = [int(hexv[i:i + 2], 16) for i in (1, 3, 5)]
+        wash = "#" + "".join(f"{round(255 + (v - 255) * 0.10):02x}" for v in rgb)  # (Palette.with_accent: 10% over the white card)
+        for other in ("#ffffff", wash):
             if contrast(hexv, other) < 4.5:
-                problems.append(f"{name} {hexv} on white: {contrast(hexv, other):.2f}:1 (AA wants 4.5)")
+                problems.append(f"{name} {hexv} on {other}: {contrast(hexv, other):.2f}:1 (AA wants 4.5)")
     steps = {"start": "pause:200", "sheet": SHEET + ";pause:300", "report": REPORT}
     for name, st in steps.items():
-        out = web(st + ";style:body=--o-accent;style:[data-tag=app-mark] svg=width", f"brand-{name}")
+        out = web(st + ";style:body=--o-accent;style:[data-tag=app-mark] svg=width;attr:link[rel=icon]=href", f"brand-{name}")
+        fav = re.search(r"^ATTR: link\[rel=icon\] href (.+)$", out, re.M)
+        if not fav or not fav.group(1).startswith("data:image/svg+xml"):
+            problems.append(f"web {name}: no app icon for the tab ({fav.group(1)[:30] if fav else None})")
         got = dict(re.findall(r"^STYLE: (\S+(?: svg)?) \S+ (.+)$", out, re.M))
         acc = re.search(r"^STYLE: body --o-accent (.+)$", out, re.M)
         logo = re.search(r"^STYLE: \[data-tag=app-mark\] svg width (.+)$", out, re.M)
@@ -293,6 +320,8 @@ def m8():
     out, shot = gtk(SHEET + ";glide:Down", "brand-sheet-gtk")
     if "ICON: app-logo" not in out:
         problems.append("GTK: no app-logo icon in the menu bar")
+    if "WINDOW-ICON: mojoui-app-logo" not in out:
+        problems.append("GTK: the window's icon isn't the logo")
     img = Image.open(shot).convert("RGB")
     ring = [(x, y) for x in range(100, 1400, 2) for y in range(240, 760, 2) if near(img.getpixel((x, y)), (14, 122, 67), 24)]
     if len(ring) < 50:

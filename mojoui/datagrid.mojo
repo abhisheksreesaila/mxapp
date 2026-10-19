@@ -939,11 +939,15 @@ struct DataGrid(Copyable, Movable):
         var yes_no = List[Bool](capacity=ncols)  # columns of true/false: drawn as small green and red pills
         for c in range(ncols):
             yes_no.append(src.grid_badge(c) == "bool")
-        # rows
+        # rows: the data only (the selection's wash, the gutter and the ring are layers of their own, so moving the
+        # selection never touches the cells: a host keeps their nodes)
         var blk = self.block(src)  # the selected block (display indices, columns), or one cell
         var multi = self.has_block()
         var ring_top = -1.0  # the block's visible top and bottom (pixels), for the ring
         var ring_bottom = -1.0
+        var row_ys = List[Float64]()  # each drawn row's top, its data row, and whether the selection covers it
+        var row_ids = List[Int]()
+        var row_sel = List[Bool]()
         var y = head
         var i = self.top
         var shown = 0
@@ -961,8 +965,9 @@ struct DataGrid(Copyable, Movable):
                 if ring_top < 0:
                     ring_top = y
                 ring_bottom = y + GRID_ROW_H * k
-            if row == self.cur_row and not multi:
-                s.rect(0, y, right, GRID_ROW_H * k, p.accent_wash, 0)
+            row_ys.append(y)
+            row_ids.append(row)
+            row_sel.append(in_rows)
             for c in range(ncols):
                 var x = lefts[c]
                 var cw = widths[c]
@@ -973,18 +978,14 @@ struct DataGrid(Copyable, Movable):
                 cw = min(cw, right - x)
                 var st = src.grid_style(c, row)
                 var weight = p.medium if st.bold() else p.regular
-                var text = self.clip(src.grid_text(c, row), cw - 16 * k - (3 * k if st.italic() else 0), 13 * k, weight, font)
+                var room = cw - 16 * k - (3 * k if st.italic() else 0)
+                var full = src.grid_text(c, row)
+                var text = self.clip(full, room, 13 * k, weight, font)
                 var color = p.formula if src.grid_formula(c) else p.ink  # (a read-only column that isn't a formula reads as data)
                 if st.ink() > 0:
                     color = swatch(st.ink())
-                var active = row == self.cur_row and c == self.cur_col
-                var in_block = multi and in_rows and blk[2] <= c <= blk[3] and not active
-                if in_block:  # the block's cells: a soft wash (the active cell stays clear)
-                    s.rect(x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash, st.fill()) if st.fill() > 0 else p.accent_wash, 0)
-                elif st.fill() > 0:
-                    s.rect(x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash if row == self.cur_row and not multi else p.card, st.fill()), 0)
-                if active:
-                    s.rect(x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.card, st.fill()) if st.fill() > 0 else p.card, 0)
+                if st.fill() > 0:
+                    s.rect(x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.card, st.fill()), 0)
                 if src.grid_edited(c, row):  # changed this session: a small accent triangle in the corner
                     for r in range(Int(6 * k)):
                         s.rect(x + cw - 6 * k + Float64(r), y + Float64(r), 6 * k - Float64(r), 1, p.accent, 0)
@@ -993,7 +994,7 @@ struct DataGrid(Copyable, Movable):
                     align = ALIGN_RIGHT if src.grid_numeric(c) else ALIGN_LEFT  # (numbers right, text left)
                 var slant = ITALIC_SLANT if st.italic() else 0.0
                 var tx = x + 8 * k  # where the text starts
-                var tw = font.measure(text, 13 * k, weight) if st.underline() or st.strike() or align != ALIGN_LEFT else 0.0
+                var tw = font.measure(text, 13 * k, weight)
                 if align == ALIGN_CENTRE:
                     tx = x + (cw - tw) / 2
                 elif align != ALIGN_LEFT:
@@ -1006,7 +1007,7 @@ struct DataGrid(Copyable, Movable):
                     s.rect(px, y + 5 * k, pw, GRID_ROW_H * k - 10 * k, mix(p.card, tone, 0.12), (GRID_ROW_H * k - 10 * k) / 2)
                     s.text(font, text, px + 7 * k, base - 0.5 * k, 11.5 * k, tone, p.medium, LEFT, 0)
                     continue
-                if text == "" and src.grid_numeric(c) and not active:  # an empty number: a faint dash where the figure would be
+                if text == "" and src.grid_numeric(c):  # an empty number: a faint dash where the figure would be
                     s.text(font, "–", x + cw - 16 * k, base, 13 * k, p.line_strong, p.regular, LEFT, 0)
                     continue
                 var ax = tx  # (anchored where it's aligned: a host measuring with its own text engine lines it up there)
@@ -1017,23 +1018,47 @@ struct DataGrid(Copyable, Movable):
                 elif align != ALIGN_LEFT:
                     ax = x + cw - 8 * k - (3 * k if st.italic() else 0)
                     al = RIGHT
+                var tight = tw > room - 3 * k or text != full  # (another text engine's widths could spill a pixel or two: cut it to the cell)
+                if tight:
+                    s.push_clip(x + 1, y, cw - 2, GRID_ROW_H * k)
                 s.text(font, text, ax, base, 13 * k, color, weight, al, slant)
+                s.note("cell " + String(c) + " " + String(row))
                 if st.bold():  # (Inter's medium is only a little heavier than regular: draw it again, a touch to the right)
                     s.text(font, text, ax + 0.6 * k, base, 13 * k, color, weight, al, slant)
+                if tight:
+                    s.pop_clip()
                 if st.underline():
                     s.rect(tx, base + 2 * k, tw, max(1.0, k), color, 0)
                 if st.strike():
                     s.rect(tx, base - 4.5 * k, tw, max(1.0, k), color, 0)
-            s.rect(0, y, gut, GRID_ROW_H * k, p.accent_wash if in_rows else p.card, 0)
-            s.text(font, grouped(row + 1), (GRID_GUTTER - 10) * k, base, 12 * k, p.accent if in_rows else p.ink3, p.regular, RIGHT, 0)
             y += GRID_ROW_H * k
-            s.rect(Float64(Int(0)), Float64(Int(y)), Float64(Int(right) - Int(0)), 1, p.line, 0)
+            s.rect(Float64(Int(gut)), Float64(Int(y)), Float64(Int(right) - Int(gut)), 1, p.line, 0)
             shown += 1
+        # the selection: a translucent wash over the cells it covers (the active cell stays clear), then the gutter
+        s.begin_layer("selection")
+        var wash = with_alpha(p.accent, 0.10)
+        var span_l = max(lefts[blk[2]], gut) if 0 <= blk[2] < len(lefts) else gut
+        var span_r = min(lefts[min(blk[3], len(lefts) - 1)] + widths[min(blk[3], len(lefts) - 1)], right) if 0 <= blk[2] < len(lefts) else right
+        var act_l = -1.0
+        var act_r = -1.0
+        if 0 <= self.cur_col < len(lefts):
+            act_l = max(lefts[self.cur_col], gut)
+            act_r = min(lefts[self.cur_col] + widths[self.cur_col], right)
+        for r in range(len(row_ys)):
+            var ry = row_ys[r]
+            var covered = (multi and row_sel[r]) or (not multi and row_ids[r] == self.cur_row)
+            if covered:
+                var l = span_l if multi else gut
+                var rr = span_r if multi else right
+                if row_ids[r] == self.cur_row and act_l >= 0 and act_l < rr and act_r > l:  # (around the active cell)
+                    s.rect(l, ry + 1, act_l - l, GRID_ROW_H * k - 1, wash, 0)
+                    s.rect(act_r, ry + 1, rr - act_r, GRID_ROW_H * k - 1, wash, 0)
+                else:
+                    s.rect(l, ry + 1, rr - l, GRID_ROW_H * k - 1, wash, 0)
+            s.rect(0, ry, gut, GRID_ROW_H * k, p.accent_wash if row_sel[r] else p.card, 0)
+            s.text(font, grouped(row_ids[r] + 1), (GRID_GUTTER - 10) * k, ry + 18 * k, 12 * k, p.accent if row_sel[r] else p.ink3, p.regular, RIGHT, 0)
+            s.rect(0, Float64(Int(ry + GRID_ROW_H * k)), Float64(Int(gut)), 1, p.line, 0)
         s.line(gut, 0, gut, h, 1, p.line)
-        # the scroll bar: a thin track, a thumb sized to the share of rows on screen
-        var t = self.thumb(h / k, src)
-        s.rect(right, head, GRID_BAR_W * k, h - head, p.card, 0)
-        s.rect(right + 3 * k, t[0] * k + 2 * k, (GRID_BAR_W - 6) * k, t[1] * k - 4 * k, p.ink3 if self.bar_drag else p.line_strong, 0)
         s.begin_layer("ring")
         # the selection ring around the block (or the cell): it glides to where the selection went, on a spring
         if blk[2] >= 0 and ring_top >= 0 and blk[2] < len(lefts):
@@ -1054,3 +1079,8 @@ struct DataGrid(Copyable, Movable):
             s.circle(rx + rw - 1, ry + rh - 1, 3 * k, p.accent)
         else:
             self.ring = List[Float64]()
+        # the scroll bar: a thin track, a thumb sized to the share of rows on screen (on top, as before the layers)
+        s.begin_layer("bar")
+        var t = self.thumb(h / k, src)
+        s.rect(right, head, GRID_BAR_W * k, h - head, p.card, 0)
+        s.rect(right + 3 * k, t[0] * k + 2 * k, (GRID_BAR_W - 6) * k, t[1] * k - 4 * k, p.ink3 if self.bar_drag else p.line_strong, 0)

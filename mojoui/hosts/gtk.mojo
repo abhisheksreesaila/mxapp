@@ -20,7 +20,7 @@ from mojoui.view import (
 from mojoui.diff import Diff, Patch, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE, SET_SIZE
 from mojoui.app import App, Event, Runtime, ms
 from mojoui.canvas import Surface, rgba
-from mojoui.scene import Scene, OP_RECT, OP_CIRCLE, OP_LINE, OP_TEXT, OP_FILL
+from mojoui.scene import Scene, OP_RECT, OP_CIRCLE, OP_LINE, OP_TEXT, OP_FILL, OP_CLIP, OP_UNCLIP, OP_IMAGE
 from std.collections import Dict
 from mojoui.icons_data import LUCIDE_NAMES, lucide_svg
 from mojoui.theme import Palette, hex_of, mix, skin_palette, skin_name
@@ -516,6 +516,8 @@ struct GtkHost[A: App](Movable):
     var scratch: List[Float32]  # GdkRGBA, graphene rects and points, GskRoundedRect handed to GTK by address
     var nodes_built: Int  # layers built into render nodes, and layers reused untouched (bench reports them)
     var nodes_reused: Int
+    var cells_built: Int  # the "cells" layer built into nodes (not reused), and pixel textures handed to GTK: bench reports them
+    var uploads: Int
     var new_layouts: Int  # text laid out for the first time, and how long that took (ns): the replay's own trace
     var new_layout_ns: Int
     var dialog: Int  # the open alert dialog, if any
@@ -529,6 +531,7 @@ struct GtkHost[A: App](Movable):
     var skin_provider: Int  # the design's CSS provider (replaced when design() changes: Settings → Appearance)
     var skin_design: Int  # the design that provider is for
     var skin_accent: UInt32  # and the accent (App.accent)
+    var icons_design: Int  # the design the icons were written for
     var fonts: Bool  # the app's own fonts (Inter, JetBrains Mono) were handed to fontconfig
     var css: Int  # one GtkCssProvider for padding classes
     var css_rules: String
@@ -559,7 +562,9 @@ struct GtkHost[A: App](Movable):
         self.nodes_built = 0
         self.nodes_reused = 0
         self.new_layouts = 0
-        self.new_layout_ns = 0  # (MOJOUI_NO_PARTIAL=1: every shape change rebuilds the window, to compare)
+        self.new_layout_ns = 0
+        self.cells_built = 0
+        self.uploads = 0  # (MOJOUI_NO_PARTIAL=1: every shape change rebuilds the window, to compare)
         self.canvases = List[GtkCanvas]()
         self.boards = List[BoardChild]()
         self.window_w = 0
@@ -601,6 +606,7 @@ struct GtkHost[A: App](Movable):
         self.skin_provider = 0
         self.skin_design = -1
         self.skin_accent = 0
+        self.icons_design = -1
         self.fonts = False
         self.css = 0
         self.css_rules = ""
@@ -1415,6 +1421,7 @@ struct GtkHost[A: App](Movable):
             self.ids.append(k)
             self.id_node.append(k)
         self.publish_ids()
+        self.release_canvases(List[Bool]())
         self.canvases = List[GtkCanvas]()
         self.boards = List[BoardChild]()
         self.board_scrollers = List[Tuple[Int, Int]]()
@@ -1574,6 +1581,11 @@ struct GtkHost[A: App](Movable):
         self.outers = outers^
         self.kinds = kinds^
         # Canvases and boards that stay are renumbered (and their controllers told their new place in the list).
+        var staying = List[Bool](length=len(self.canvases), fill=False)
+        for k in range(len(self.canvases)):
+            var cn = self.canvases[k].node
+            staying[k] = cn >= 0 and cn < old_n and new_of_old[cn] >= 0
+        self.release_canvases(staying)
         var canvases = List[GtkCanvas]()
         for ref c in self.canvases:
             if c.node >= 0 and c.node < old_n and new_of_old[c.node] >= 0:
@@ -1840,7 +1852,12 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_css_provider_load_from_string", NoneType](self.skin_provider, rules.as_c_string_span())
             external_call["gtk_style_context_add_provider_for_display", NoneType](display, self.skin_provider, c_uint(801))
             add_class(self.window, cls)
-        install_icons(design, skin_palette(design).with_accent(accent), self.rt.app.logo())
+        if design != self.icons_design:  # (the icons' ink doesn't depend on the accent: a tab switch doesn't rewrite them)
+            self.icons_design = design
+            install_icons(design, skin_palette(design), self.rt.app.logo())
+            if self.rt.app.logo() != "" and self.window != 0:
+                var icon = String("mojoui-app-logo")
+                external_call["gtk_window_set_icon_name", NoneType](self.window, icon.as_c_string_span())  # (the window's icon, where the desktop shows one)
 
     def apply(mut self, d: Diff, self_addr: Int):
         self.apply_design()
@@ -2087,6 +2104,7 @@ struct GtkHost[A: App](Movable):
             var tex = texture(self.canvases[ci].pixels, wpx, hpx)
             external_call["gtk_picture_set_paintable", NoneType](widget, tex)
             external_call["g_object_unref", NoneType](tex)
+            self.uploads += 1
         self.trace_diff("refresh after draw", t0, d)
         var t2 = perf_counter_ns()
         self.canvases[ci].paint_ms = Float64(Int(t1 - t0)) / 1e6
@@ -2152,8 +2170,6 @@ struct GtkHost[A: App](Movable):
         self.new_layouts += 1
         var t_new = perf_counter_ns()
         if len(self.layout_ptrs) > 30000:  # (scrolled through a lot: start over rather than grow without end)
-            for lp in self.layout_ptrs:
-                external_call["g_object_unref", NoneType](lp)
             for ln in self.layout_nodes:
                 if ln != 0:
                     external_call["gsk_render_node_unref", NoneType](ln)
@@ -2178,13 +2194,14 @@ struct GtkHost[A: App](Movable):
         external_call["pango_layout_set_text", NoneType](layout, t.as_c_string_span(), c_int(t.byte_length()))
         var wh = List[Int32](length=2, fill=0)
         external_call["pango_layout_get_pixel_size", NoneType](layout, Int(wh.unsafe_ptr()), Int(wh.unsafe_ptr()) + 4)
-        self.layout_ptrs.append(layout)
         self.put_rgba(color)
         var ts = external_call["gtk_snapshot_new", Int]()
         external_call["gtk_snapshot_append_layout", NoneType](ts, layout, self.at(0))
         self.layout_nodes.append(external_call["gtk_snapshot_free_to_node", Int](ts))
         self.layout_w.append(Float64(Int(wh[0])))
         self.layout_base.append(Float64(Int(external_call["pango_layout_get_baseline", c_int](layout))) / 1024)
+        self.layout_ptrs.append(0)  # (the layout itself isn't needed again: its node and measures are kept)
+        external_call["g_object_unref", NoneType](layout)
         self.layouts[key] = len(self.layout_ptrs) - 1
         self.new_layout_ns += Int(perf_counter_ns()) - Int(t_new)
         return len(self.layout_ptrs) - 1
@@ -2227,9 +2244,41 @@ struct GtkHost[A: App](Movable):
                     self.snap_rect(snap, x0 - lw / 2, min(y0, y1), lw, abs(y1 - y0), c, 0)
                 elif y0 == y1:
                     self.snap_rect(snap, min(x0, x1), y0 - lw / 2, abs(x1 - x0), lw, c, 0)
+                else:  # (any other line: a stroked path)
+                    var b = external_call["gsk_path_builder_new", Int]()
+                    external_call["gsk_path_builder_move_to", NoneType](b, Float32(x0), Float32(y0))
+                    external_call["gsk_path_builder_line_to", NoneType](b, Float32(x1), Float32(y1))
+                    var path = external_call["gsk_path_builder_free_to_path", Int](b)
+                    var stroke = external_call["gsk_stroke_new", Int](Float32(lw))
+                    self.put_rgba(c)
+                    external_call["gtk_snapshot_append_stroke", NoneType](snap, path, stroke, self.at(0))
+                    external_call["gsk_stroke_free", NoneType](stroke)
+                    external_call["gsk_path_unref", NoneType](path)
+            elif kind == OP_CLIP:
+                self.put_rect(sc.num(op, 0), sc.num(op, 1), sc.num(op, 2), sc.num(op, 3))
+                external_call["gtk_snapshot_push_clip", NoneType](snap, self.at(4))
+            elif kind == OP_UNCLIP:
+                external_call["gtk_snapshot_pop", NoneType](snap)
+            elif kind == OP_IMAGE:  # (pixels made elsewhere: a texture, scaled by the renderer)
+                var pw = Int(sc.num(op, 5))
+                ref px = sc.images[Int(sc.num(op, 4))]
+                var tex = texture(px, pw, len(px) // pw)
+                self.put_rect(sc.num(op, 0), sc.num(op, 1), sc.num(op, 2), sc.num(op, 3))
+                external_call["gtk_snapshot_append_texture", NoneType](snap, tex, self.at(4))
+                external_call["g_object_unref", NoneType](tex)
             elif kind == OP_TEXT:
                 self.snap_text(snap, sc.text_at(op), sc.num(op, 0), sc.num(op, 1), sc.num(op, 2), c, Int(sc.num(op, 4)), Int(sc.num(op, 5)), sc.num(op, 3))
         return external_call["gtk_snapshot_free_to_node", Int](snap)
+
+    def release_canvases(mut self, staying: List[Bool]):
+        """The render nodes of the canvases that go (all of them when `staying` is empty)."""
+        for k in range(len(self.canvases)):
+            if k < len(staying) and staying[k]:
+                continue
+            for n in self.canvases[k].layer_nodes:
+                if n != 0:
+                    external_call["gsk_render_node_unref", NoneType](n)
+            self.canvases[k].layer_nodes = List[Int]()
 
     def replay(mut self, ci: Int, var sc: Scene, wpx: Int, hpx: Int):
         """The display list onto canvas ci's picture: each layer becomes a render node, and a layer that came again
@@ -2248,6 +2297,8 @@ struct GtkHost[A: App](Movable):
             else:
                 node = self.build_layer(sc, i)
                 self.nodes_built += 1
+                if sc.layer_keys[i] == "cells":
+                    self.cells_built += 1
             nodes.append(node)
         var snap = external_call["gtk_snapshot_new", Int]()
         for n in nodes:
@@ -2345,6 +2396,17 @@ def intervals(times: List[Int]) -> List[Float64]:
     return out^
 
 
+def share_within(xs: List[Float64], limit: Float64) -> Float64:
+    """The share (percent) of xs at or under limit (frames on time for 120 Hz: 9.5 ms, a little slack on 8.3)."""
+    if len(xs) == 0:
+        return 0
+    var n = 0
+    for x in xs:
+        if x <= limit:
+            n += 1
+    return 100.0 * Float64(n) / Float64(len(xs))
+
+
 def pct(xs: List[Float64], q: Float64) -> Float64:
     """The q-th quantile of xs (0 when empty)."""
     if len(xs) == 0:
@@ -2405,6 +2467,8 @@ def on_after_paint[A: App](clock: Int, host_addr: Int) abi("C"):
     if host[].paint_t0 > 0:
         host[].frame_paints.append(Float64(Int(perf_counter_ns()) - host[].paint_t0) / 1e6)
         host[].frame_times.append(Int(external_call["gdk_frame_clock_get_frame_time", Int64](clock)) * 1000)
+        if len(host[].frame_times) > 4096:
+            host[].frame_times = List[Int]()
         if len(host[].frame_paints) > 4096:
             host[].frame_paints = List[Float64]()
 
@@ -3270,6 +3334,8 @@ def run_step[A: App](host_addr: Int, step: String):
         var draws0 = host[].canvases[gi].draws
         host[].nodes_built = 0
         host[].nodes_reused = 0
+        host[].cells_built = 0
+        host[].uploads = 0
         var t_start = perf_counter_ns()
         for _ in range(count):
             var before = host[].canvases[gi].draws
@@ -3294,6 +3360,8 @@ def run_step[A: App](host_addr: Int, step: String):
               + " upload p50 " + one_decimal(Float32(pct(uploads, 0.5))) + " p95 " + one_decimal(Float32(pct(uploads, 0.95)))
               + " frame-paint p50 " + one_decimal(Float32(pct(host[].frame_paints, 0.5))) + " p95 " + one_decimal(Float32(pct(host[].frame_paints, 0.95)))
               + " interval p50 " + one_decimal(Float32(pct(intervals(host[].frame_times), 0.5))) + " p99 " + one_decimal(Float32(pct(intervals(host[].frame_times), 0.99)))
+              + " within-8.3ms " + one_decimal(Float32(share_within(intervals(host[].frame_times), 9.5))) + "%"
+              + " cells built " + String(host[].cells_built) + " uploads " + String(host[].uploads)
               + " layers built " + String(host[].nodes_built) + " reused " + String(host[].nodes_reused) + " seconds " + one_decimal(Float32(secs)))
     elif verb == "pause":  # pause:3000: keep the main loop running that long (a screen grab of the display can catch popovers)
         var until = perf_counter_ns() + to_int(rest) * 1_000_000
@@ -3633,6 +3701,8 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
     var host = host_at[A](host_addr)
     if not alerts:
         print("NATIVE: GTK " + String(external_call["gtk_get_major_version", c_int]()) + "." + String(external_call["gtk_get_minor_version", c_int]()))
+        if host[].window != 0 and external_call["gtk_window_get_icon_name", Int](host[].window) != 0:
+            print("WINDOW-ICON: " + c_str(external_call["gtk_window_get_icon_name", Int](host[].window)))
         if host[].rt.app.design() == FLUENT:
             print("DESIGN: fluent")
         elif skin_name(host[].rt.app.design()) != "":
