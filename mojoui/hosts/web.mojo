@@ -114,6 +114,14 @@ def web_design[A: App](handle: Int) -> Int:
     return session_at[A](handle)[].app.design()
 
 
+def web_accent[A: App](handle: Int) -> Int:
+    return Int(session_at[A](handle)[].app.accent())
+
+
+def web_logo[A: App](handle: Int) -> String:
+    return session_at[A](handle)[].app.logo()
+
+
 def web_view[A: App](handle: Int) -> String:
     return view_to_json(session_at[A](handle)[].shown)
 

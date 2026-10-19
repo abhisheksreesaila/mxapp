@@ -17,6 +17,7 @@ from mojoui.theme import Palette, skin_palette, skin_name, skin_of
 from mojoui.menus import MenuBar, Menu, Item, Separator, Submenu, ContextMenu
 from mojoui.overlays import Dialog, Toast, Popover, Checkbox, Clipboard
 from mojoui.view import Radio, LEDGER, GRAPHITE, BLUEPRINT, LIQUID
+from mojoui.theme import BRAND_INDIGO, SHEET_GREEN, REPORT_RED
 from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
 from mojoui.numformat import fixed as numfixed, pow10
@@ -139,6 +140,7 @@ comptime SKINS: List[String] = ["Liquid", "Ledger", "Graphite", "Blueprint"]
 comptime MAX_OBJECTS = 40  # per sheet, and tiles per report (canvas ids 10…49, 60…99, 120…159)
 comptime TABLE_H = 400  # the table's height once objects share the sheet
 
+comptime OMX_LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><g transform="translate(6 6) scale(.97)"><defs><clipPath id="L1c"><circle cx="42.0" cy="42.0" r="20.5"/></clipPath></defs><circle cx="42.0" cy="42.0" r="25.0" fill="none" stroke="#4f46e5" stroke-width="9.0"/><g clip-path="url(#L1c)"><rect x="28.5" y="47" width="7.5" height="60" rx="2" fill="#4f46e5"/><rect x="38.3" y="37.5" width="7.5" height="60" rx="2" fill="#4f46e5"/><rect x="48" y="28" width="7.5" height="60" rx="2" fill="#4f46e5"/></g><line x1="59.68" y1="59.68" x2="80" y2="80" stroke="#4f46e5" stroke-width="12" stroke-linecap="round"/></g></svg>'  # logo 1, the lens over bars (docs/design/brand/, D-254)
 comptime APP = "omxapp"  # (settings live in ~/.config/omxapp)
 comptime W = 1440  # the window (Stitch's artboards; the web check's viewport)
 comptime INSPECTOR_W = 300
@@ -290,7 +292,18 @@ struct Main(App):
         return max(240, self.win_h - CHROME_H)
 
     def design(self) -> Int:
-        return self.skin  # omxplorer's own skin on every platform (D-149), never the desktop's theme
+        return self.skin
+
+    def accent(self) -> UInt32:
+        """Liquid's tint per mode (D-254): the sheet green, the report red, the rest the brand's indigo; other skins keep theirs."""
+        if self.skin != LIQUID:
+            return 0
+        if self.screen == SHEET:
+            return SHEET_GREEN if self.sheet_tab == 0 else REPORT_RED
+        return BRAND_INDIGO
+
+    def logo(self) -> String:
+        return OMX_LOGO  # omxplorer's own skin on every platform (D-149), never the desktop's theme
 
     # ---------- data in ----------
 
@@ -1233,10 +1246,12 @@ struct Main(App):
         """The grid as a display list (goal 26; hosts that can draw one: GTK with MOJOUI_SCENE=1)."""
         if canvas != 0:
             return False
+        self.pal = skin_palette(self.skin).with_accent(self.accent())
         self.grid.draw_scene(scene, self.frame, self.font, self.pal)
         return True
 
     def draw(mut self, canvas: Int, mut surface: Surface):
+        self.pal = skin_palette(self.skin).with_accent(self.accent())  # (the mode's tint, as the chrome has it)
         if 0 <= canvas < len(self.chart_sizes):
             self.chart_sizes[canvas] = (surface.points_width(), surface.points_height())
         if canvas == 0:
@@ -1408,7 +1423,7 @@ struct Main(App):
             Menu("Help", [Item("About omxplorer", ABOUT, icon="file")]),
         ])
         var doc = (self.sheet_name + " · " + grouped(self.frame.rows()) + " rows") if on_sheet else String("")
-        return HStack(Text("omxplorer", HEADLINE).tag("app-mark"), bar^, Spacer(), Text(doc, CAPTION).tag("doc-chip"),
+        return HStack(HStack(Icon("app-logo", 18), Text("omxplorer", HEADLINE), spacing=6).align(CENTER).tag("app-mark"), bar^, Spacer(), Text(doc, CAPTION).tag("doc-chip"),
                       Text(self.gpu_chip(), CAPTION).tag("gpu-chip"), spacing=10).fill().align(CENTER).height(38).padding(2, 10).tag("menubar")
 
     def context_menu(self) -> View:
@@ -1661,7 +1676,7 @@ struct Main(App):
         """The Report tab (Stitch 06): KPI and chart tiles over the filtered rows, and the row that adds them."""
         var kpis = List[View]()
         var charts = List[View]()
-        var first_kpi = True
+        var first_kpi = self.accent() != REPORT_RED  # (a red figure would read as a loss: in the report the tint is for the chrome only, D-254)
         for k in range(len(self.tiles)):
             ref t = self.tiles[k]
             if t.kind == TILE_CHART:

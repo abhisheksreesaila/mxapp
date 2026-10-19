@@ -92,6 +92,14 @@ trait App(Movable, Deinitable):
         it; size changes reach the screen as patches, not rebuilds. The default ignores it."""
         pass
 
+    def accent(self) -> UInt32:
+        """A tint over the design's accent (0: the design's own): hosts restyle when it changes (a mode's colour)."""
+        return 0
+
+    def logo(self) -> String:
+        """The app's mark as SVG ("": none): hosts install it as the icon "app-logo" (Icon("app-logo", 18))."""
+        return ""
+
     def design(self) -> Int:
         """The design language hosts style native controls with: NATIVE (default), FLUENT or OMARCHY."""
         return 0

@@ -215,20 +215,20 @@ def gtk_icon(name: String) -> String:
     if name == "food": return "emoji-food-symbolic"
     if name == "fun": return "emoji-activities-symbolic"
     if name == "chart": return "x-office-spreadsheet-symbolic"
+    if name == "app-logo": return "mojoui-app-logo"  # (the app's own mark: App.logo, installed by install_icons)
     for n in materialize[LUCIDE_NAMES]():
         if n == name:
             return "mojoui-" + name  # the same Lucide SVG as the web (written by install_icons)
     return "image-missing-symbolic"
 
 
-def install_icons(design: Int):
+def install_icons(design: Int, pal: Palette, logo: String):
     """Writes the Lucide icons as SVG files in the design's ink (Fluent's neutral grey, a theme's secondary ink; and
     the on-accent colour for filled buttons) to a cache folder and adds it to the display's icon theme: icons named
     "mojoui-<name>" and "mojoui-<name>-light"."""
     var themed = design == OMARCHY or skin_name(design) != ""
     var base = c_str(external_call["g_get_user_cache_dir", Int]()) + "/mojoui/icons-" + (skin_name(design) if skin_name(design) != "" else ("omarchy" if themed else "1"))
     _ = external_call["g_mkdir_with_parents", c_int](base.as_c_string_span(), c_int(0o755))
-    var pal = skin_palette(design)
     var ink = hex_of(pal.ink2) if themed else String("#424242")
     var on_accent = hex_of(pal.accent_ink) if themed else String("#ffffff")
     for n in materialize[LUCIDE_NAMES]():
@@ -240,6 +240,12 @@ def install_icons(design: Int):
                     f.write(svg.replace("currentColor", variant[1]))
             except:
                 pass
+    if logo != "":  # the app's own mark, in its own colours (not recoloured: "app-logo", not a symbolic icon)
+        try:
+            with open(base + "/mojoui-app-logo.svg", "w") as f:
+                f.write(logo)
+        except:
+            pass
     var display = external_call["gdk_display_get_default", Int]()
     var theme = external_call["gtk_icon_theme_get_for_display", Int](display)
     external_call["gtk_icon_theme_add_search_path", NoneType](theme, base.as_c_string_span())
@@ -522,6 +528,7 @@ struct GtkHost[A: App](Movable):
     var toast_claimed: Bool  # the new screen still has the toast's node
     var skin_provider: Int  # the design's CSS provider (replaced when design() changes: Settings → Appearance)
     var skin_design: Int  # the design that provider is for
+    var skin_accent: UInt32  # and the accent (App.accent)
     var fonts: Bool  # the app's own fonts (Inter, JetBrains Mono) were handed to fontconfig
     var css: Int  # one GtkCssProvider for padding classes
     var css_rules: String
@@ -593,6 +600,7 @@ struct GtkHost[A: App](Movable):
         self.toast_claimed = False
         self.skin_provider = 0
         self.skin_design = -1
+        self.skin_accent = 0
         self.fonts = False
         self.css = 0
         self.css_rules = ""
@@ -1795,8 +1803,10 @@ struct GtkHost[A: App](Movable):
         """Styles the window for the app's design(): once at start, and again when it changes (a skin picked in
         Settings): the old provider goes, the new one loads, so the switch is live (D-156)."""
         var design = self.rt.app.design()
-        if design == self.skin_design:
+        var accent = self.rt.app.accent()
+        if design == self.skin_design and accent == self.skin_accent:
             return
+        self.skin_accent = accent
         var display = external_call["gdk_display_get_default", Int]()
         if self.skin_provider != 0:
             external_call["gtk_style_context_remove_provider_for_display", NoneType](display, self.skin_provider)
@@ -1819,7 +1829,7 @@ struct GtkHost[A: App](Movable):
             rules = omarchy_css(pal)
             cls = "omarchy"
         elif skin_name(design) != "":  # omxplorer's skins: the same tokens as the web's CSS
-            var pal = skin_palette(design)
+            var pal = skin_palette(design).with_accent(accent)  # (a mode's tint over the skin: App.accent)
             external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if pal.dark else 1))
             rules = skin_css(pal, skin_name(design))
             if design == LIQUID:  # the showcase skin: Liquid's islands, type scale and motion over the shared skin rules
@@ -1830,7 +1840,7 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_css_provider_load_from_string", NoneType](self.skin_provider, rules.as_c_string_span())
             external_call["gtk_style_context_add_provider_for_display", NoneType](display, self.skin_provider, c_uint(801))
             add_class(self.window, cls)
-        install_icons(design)
+        install_icons(design, skin_palette(design).with_accent(accent), self.rt.app.logo())
 
     def apply(mut self, d: Diff, self_addr: Int):
         self.apply_design()
@@ -3922,7 +3932,7 @@ def liquid_css(p: Palette) -> String:
         + w + "button.mui-tool { min-width: 62px; min-height: 52px; border-radius: 12px; font-size: 11px; font-weight: 500; color: " + body + "; background: transparent; box-shadow: none;"
         + " transition: background 150ms " + spring + ", transform 150ms " + spring + "; }\n"
         + w + "button.mui-tool:hover { background: " + hover + "; } " + w + "button.mui-tool:active { transform: scale(0.97); }\n"
-        + w + "button.mui-tool-on, " + w + "button.mui-tool-on:hover { background: rgba(14,124,134,0.10); color: " + accent + "; }\n"
+        + w + "button.mui-tool-on, " + w + "button.mui-tool-on:hover { background: " + hex_of(p.accent_wash) + "; color: " + accent + "; }\n"
         + w + "label.mui-tool-label { font-size: 11px; }\n"
         # inline tools (TOOL_INLINE): the title beside the icon, one height with the icon-only toggles, one line
         + w + "button.mui-tool.mui-tool-inline { min-width: 0; min-height: 34px; padding: 0 10px; border-radius: 10px; }\n"
@@ -3933,7 +3943,7 @@ def liquid_css(p: Palette) -> String:
         + w + "button { border-radius: 999px; font-size: 13px; transition: background 150ms " + spring + ", box-shadow 150ms " + spring + ", transform 150ms " + spring + "; }\n"
         + w + "button:active { transform: scale(0.97); }\n"
         + w + "button.image-button, " + w + "button.flat.image-button { border-radius: 10px; }\n"
-        + w + "button.suggested-action { box-shadow: 0 1px 2px rgba(14,124,134,0.30), inset 0 1px rgba(255,255,255,0.18); }\n"
+        + w + "button.suggested-action { box-shadow: 0 1px 2px " + hex_of(p.accent_tint) + ", inset 0 1px rgba(255,255,255,0.18); }\n"
         # the formula bar: a field on the backdrop
         + w + ".mui-tag-formula-bar { background: transparent; border-bottom: none; margin: 0 10px; }\n"
         + w + ".mui-tag-formula-bar entry { font-size: 13px; }\n"

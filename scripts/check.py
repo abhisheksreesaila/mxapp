@@ -262,6 +262,49 @@ def m6():
     return ok, f"owner's display: frame interval p50 {p50} ms, p99 {p99} ms ({'every frame on time' if ok else 'late frames'})"
 
 
+def contrast(a, b):
+    def lum(h):
+        c = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        c = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    hi, lo = sorted((lum(a), lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def m8():
+    """The brand (D-254): logo 1 in the menu bar; indigo for the app, green for the sheet, red for the report (chrome only)."""
+    from PIL import Image
+    problems = []
+    want = {"start": "#4f46e5", "sheet": "#0e7a43", "report": "#c8243f"}
+    for name, hexv in want.items():
+        for other in ("#ffffff",):
+            if contrast(hexv, other) < 4.5:
+                problems.append(f"{name} {hexv} on white: {contrast(hexv, other):.2f}:1 (AA wants 4.5)")
+    steps = {"start": "pause:200", "sheet": SHEET + ";pause:300", "report": REPORT}
+    for name, st in steps.items():
+        out = web(st + ";style:body=--o-accent;style:[data-tag=app-mark] svg=width", f"brand-{name}")
+        got = dict(re.findall(r"^STYLE: (\S+(?: svg)?) \S+ (.+)$", out, re.M))
+        acc = re.search(r"^STYLE: body --o-accent (.+)$", out, re.M)
+        logo = re.search(r"^STYLE: \[data-tag=app-mark\] svg width (.+)$", out, re.M)
+        if not acc or acc.group(1).strip().lower() != want[name]:
+            problems.append(f"web {name}: accent {acc.group(1) if acc else None}, want {want[name]}")
+        if not logo or logo.group(1).strip() in ("none", "0px", "auto"):
+            problems.append(f"web {name}: no logo in the menu bar ({logo.group(1) if logo else None})")
+    out, shot = gtk(SHEET + ";glide:Down", "brand-sheet-gtk")
+    if "ICON: app-logo" not in out:
+        problems.append("GTK: no app-logo icon in the menu bar")
+    img = Image.open(shot).convert("RGB")
+    ring = [(x, y) for x in range(100, 1400, 2) for y in range(240, 760, 2) if near(img.getpixel((x, y)), (14, 122, 67), 24)]
+    if len(ring) < 50:
+        problems.append(f"GTK sheet: the selection ring isn't Ledger green ({len(ring)} green pixels)")
+    out, _ = gtk(REPORT, "brand-report-gtk")
+    tones = re.findall(r"^TONE: ([\d,.]+) = (\w+)$", out, re.M)
+    if any(t == "accent" for _, t in tones):
+        problems.append(f"GTK report: a figure in the accent (red would read as a loss): {tones}")
+    return not problems, "; ".join(problems) or ("logo 1 in the menu bar (GTK, web); indigo on the start screen, Ledger green on the sheet (the ring too), "
+                                                  "Signal red on the report's chrome with neutral figures; every accent ≥ 4.5:1 on white")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -278,7 +321,7 @@ def m7():
     return not problems, "; ".join(problems) or "goal 25's M1–M7 (goals 3–24 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M8", todo("the brand")), ("M7", m7)]
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5), ("M6", m6), ("M8", m8), ("M7", m7)]
 
 
 def main():

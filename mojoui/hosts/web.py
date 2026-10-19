@@ -782,12 +782,12 @@ body.liquid button.tool, body.liquid label.picker.tool { min-width: 62px; min-he
   transition: background 150ms var(--sp-snappy), transform 150ms var(--sp-snappy); }
 body.liquid button.tool:hover, body.liquid label.picker.tool:hover { background: rgba(15,23,42,.06); }
 body.liquid button.tool:active, body.liquid button:active { transform: scale(.97); }
-body.liquid button.tool.on, body.liquid button.icon-only.on { background: rgba(14,124,134,.10); color: var(--o-accent); }
+body.liquid button.tool.on, body.liquid button.icon-only.on { background: var(--o-wash); color: var(--o-accent); }
 body.liquid button.tool.inline, body.liquid label.picker.tool.inline { min-width: 0; min-height: 34px; padding: 0 10px; border-radius: 10px; font-size: 12px; }
 body.liquid [data-tag=toolbar] button.icon-only { border-radius: 10px; }
 body.liquid button { border-radius: 999px; transition: background 150ms var(--sp-snappy), box-shadow 150ms var(--sp-snappy), transform 150ms var(--sp-snappy); }
 body.liquid button.icon-only { border-radius: 10px; }
-body.liquid button.prominent { box-shadow: 0 1px 2px rgba(14,124,134,.3), inset 0 1px rgba(255,255,255,.18); }
+body.liquid button.prominent { box-shadow: 0 1px 2px var(--o-tint), inset 0 1px rgba(255,255,255,.18); }
 body.liquid [data-tag=formula-bar] { background: transparent; border: 0; margin: 0 10px; }
 body.liquid [data-tag=formula-bar] input[type=text] { font-size: 13px; }
 body.liquid select, body.liquid input[type=text], body.liquid input[type=date], body.liquid textarea { border-radius: 10px; }
@@ -1217,16 +1217,21 @@ def make_app(module_dir):
                 import shutil  # (its uploads go with it)
                 shutil.rmtree(Path(os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxapp" / "uploads")) / old_sid, ignore_errors=True)
         s.design = mod.design(s.handle)
-        return Title(mod.title(s.handle)), *root(s, sid), *skin(s.design)
+        s.accent = mod.accent(s.handle) if hasattr(mod, "accent") else 0
+        if hasattr(mod, "logo") and "app-logo" not in ICONS:
+            mark = mod.logo(s.handle)
+            if mark:
+                ICONS["app-logo"] = mark
+        return Title(mod.title(s.handle)), *root(s, sid), *skin(s.design, accent=s.accent)
 
-    def skin(design, oob=False):
+    def skin(design, oob=False, accent=0):
         """The page's design: a body class and, for Omarchy and the skins, the palette's CSS variables (from the
         Mojo module). oob: after a change (Settings → Appearance), swapped into the open page (D-156)."""
         if design == 1:
             parts = (Style("", id="mojoui-skin"), Script("document.body.className = ''; document.body.classList.add('fluent')", id="mojoui-skin-js"))
         elif design in (2, 3, 4, 5, 6):  # Omarchy, or one of omxplorer's skins
             name = {2: "omarchy", 3: "skin ledger", 4: "skin graphite", 5: "skin blueprint", 6: "skin liquid"}[design]
-            pal = dict(kv.split("=", 1) for kv in mod.palette(design).split(";"))
+            pal = dict(kv.split("=", 1) for kv in (mod.palette_for(design, accent) if hasattr(mod, "palette_for") else mod.palette(design)).split(";"))
             shadow = "0 6px 20px rgba(0,0,0,.55), 0 0 0 1px #34363b" if pal.get("dark") == "1" else "0 4px 16px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08)"
             css_vars = "body {" + "".join(f"--o-{k}: {v};" for k, v in pal.items() if k != "dark") + f"--o-shadow: {shadow};" + \
                        ("color-scheme: dark;" if pal.get("dark") == "1" else "color-scheme: light;") + "}"
@@ -1353,9 +1358,11 @@ def make_app(module_dir):
             s.nodes = json.loads(mod.view(s.handle))  # the screen as Mojo now has it
             out = changes(s, sid, d, n, text, number)
             design = mod.design(s.handle)
-            if design != getattr(s, "design", design):  # a skin picked in Settings: restyle the open page (D-156)
+            accent = mod.accent(s.handle) if hasattr(mod, "accent") else 0
+            if design != getattr(s, "design", design) or accent != getattr(s, "accent", accent):  # a skin picked in Settings, or a mode's tint: restyle the open page (D-156)
                 s.design = design
-                out = (out if isinstance(out, tuple) else ((out,) if out != "" else ())) + skin(design, oob=True)
+                s.accent = accent
+                out = (out if isinstance(out, tuple) else ((out,) if out != "" else ())) + skin(design, oob=True, accent=accent)
             return out
 
     @app.post("/resize/{sid}")

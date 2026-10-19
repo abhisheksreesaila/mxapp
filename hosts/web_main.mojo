@@ -7,7 +7,7 @@ from std.python.bindings import PythonModuleBuilder
 from app import Main
 from mojoui.shared import shared_loads
 from mojoui.theme import Palette, hex_of, skin_palette
-from mojoui.hosts.web import web_init_shared, web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design, web_key, web_cancel, web_describe, web_resize
+from mojoui.hosts.web import web_init_shared, web_new, web_title, web_view, web_event, web_image, web_rows, web_close, web_draw, web_gesture, web_frame, web_design, web_key, web_cancel, web_describe, web_resize, web_accent, web_logo
 
 
 @export
@@ -23,6 +23,9 @@ def PyInit_mojoui_app() abi("C") -> PythonObject:
         m.def_function[rows]("rows", docstring="JSON list of a LazyList's row texts (node, first, count).")
         m.def_function[close]("close", docstring="End a session.")
         m.def_function[design]("design", docstring="The app's design language (0 native, 1 Fluent 2, 2 Omarchy).")
+        m.def_function[accent]("accent", docstring="The app's tint over its design (0: none), as a number.")
+        m.def_function[logo]("logo", docstring="The app's mark as SVG ('': none).")
+        m.def_function[palette_for]("palette_for", docstring="The colours of a design with an accent as CSS variables.")
         m.def_function[palette]("palette", docstring="The Omarchy palette as 'name=#rrggbb;…' (dark=1 or 0 first).")
         m.def_function[draw]("draw", docstring="Paint a canvas (node, width, height, scale, still: no motion); JSON with the pixels' address and what changed.")
         m.def_function[gesture]("gesture", docstring="A canvas gesture (node, kind, x, y, dx, dy, zoom); returns what changed as JSON.")
@@ -102,9 +105,21 @@ def design(handle: PythonObject) raises -> PythonObject:
     return PythonObject(web_design[Main](Int(py=handle)))
 
 
+def accent(handle: PythonObject) raises -> PythonObject:
+    return PythonObject(web_accent[Main](Int(py=handle)))
+
+
+def logo(handle: PythonObject) raises -> PythonObject:
+    return PythonObject(web_logo[Main](Int(py=handle)))
+
+
 def palette(design: PythonObject) raises -> PythonObject:
-    """The colours of a design as CSS variables (Omarchy's file, or a skin's tokens)."""
-    var p = skin_palette(Int(py=design))
+    return palette_for(design, PythonObject(0))
+
+
+def palette_for(design: PythonObject, accent: PythonObject) raises -> PythonObject:
+    """The colours of a design (with an app's accent over it) as CSS variables (Omarchy's file, or a skin's tokens)."""
+    var p = skin_palette(Int(py=design)).with_accent(UInt32(Int(py=accent)))
     return PythonObject("dark=" + ("1" if p.dark else "0") + ";page=" + hex_of(p.page) + ";card=" + hex_of(p.card) + ";raised=" + hex_of(p.raised)
                         + ";ink=" + hex_of(p.ink) + ";ink2=" + hex_of(p.ink2) + ";ink3=" + hex_of(p.ink3) + ";line=" + hex_of(p.line)
                         + ";strong=" + hex_of(p.line_strong) + ";accent=" + hex_of(p.accent) + ";on-accent=" + hex_of(p.accent_ink)

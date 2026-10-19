@@ -13,6 +13,11 @@ from mojoui.shared import environment
 from mojoui.view import FLUENT, OMARCHY, LEDGER, GRAPHITE, BLUEPRINT, LIQUID
 from std.sys import CompilationTarget
 
+# omxplorer's brand (owner, D-254): indigo for the app itself, a tint per mode
+comptime BRAND_INDIGO: UInt32 = 0xFFE5464F  # #4f46e5 (R in the low byte)
+comptime SHEET_GREEN: UInt32 = 0xFF437A0E  # #0e7a43
+comptime REPORT_RED: UInt32 = 0xFF3F24C8  # #c8243f
+
 comptime OMARCHY_COLORS = "/.local/state/omarchy/current/theme/colors.toml"
 
 
@@ -165,6 +170,18 @@ struct Palette(Copyable, Movable):
         return Palette(False, hx("#eef0f3"), hx("#ffffff"), hx("#f0f2f5"), hx("#1b1f24"), hx("#3d434c"), hx("#6b7380"),
                        hx("#e1e4e8"), hx("#c9ced6"), hx("#0e7c86"), hx("#ffffff"), mix(hx("#ffffff"), hx("#0e7c86"), 0.45), hx("#e3f2f3"),
                        hx("#6a4fd6"), hx("#1f8a4c"), hx("#c8364c"), hx("#b7791f"), REGULAR, MEDIUM, LEDGER, hx("#f5f6f8"), hx("#1b1f24"), hx("#e1e4e8"))
+
+    def with_accent(self, accent: UInt32) -> Palette:
+        """The same palette with another accent (0: unchanged): a mode's tint (the sheet's green, the report's red)."""
+        if accent == 0:
+            return self.copy()
+        var p = self.copy()
+        p.accent = accent
+        p.accent_tint = mix(p.card, accent, 0.40)
+        p.accent_wash = mix(p.card, accent, 0.10)
+        if accent == REPORT_RED:  # (in a report, red only means "a report": false and errors take other tones, D-254)
+            p.bad = hx("#9f6b75")
+        return p^
 
     @staticmethod
     def liquid() -> Palette:
