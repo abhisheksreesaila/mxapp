@@ -16,7 +16,9 @@ from mojoui.view import View, TextField, TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE,
 from mojoui.canvas import Surface
 from mojoui.text import Font, MONO, RIGHT, CENTRE
 from mojoui.cellstyle import CellStyle, swatch, fill_over, AUTO_ALIGN, ALIGN_LEFT, ALIGN_CENTRE, ALIGN_RIGHT, ITALIC_SLANT
-from mojoui.draw import rect, hline, line
+from mojoui.draw import rect, hline, line, circle, with_alpha
+from std.time import perf_counter_ns
+from std.math import exp
 from mojoui.theme import Palette
 from mojoui.maths import log2
 from mojoui.charts import grouped
@@ -98,6 +100,14 @@ struct DataGrid(Copyable, Movable):
     var sort_desc: Bool
     var cur_row: Int  # selection: a cell, or (cur_row -1) a whole column
     var cur_col: Int
+    var anchor_row: Int  # a block of cells: from the anchor to (cur_row, cur_col); the anchor is the cell itself when it's one cell
+    var anchor_col: Int
+    var dragging: Bool  # a press on a cell, then a drag: the block follows the pointer
+    var ring: List[Float64]  # the selection ring as drawn (x, y, w, h in points), gliding toward `ring_to`
+    var ring_from: List[Float64]
+    var ring_to: List[Float64]
+    var ring_t0: Int  # when the glide began (ns)
+    var ring_view: Tuple[Int, Float64]  # (top, left) when the ring was last placed: a scroll moves it at once, never glides
     var widths: List[Float64]  # per column, points (0 = its default)
     var min_widths: List[Float64]  # per column: its header's width (from prepare())
     var type_widths: List[Float64]  # per column: the source's default width for its values (from prepare())
@@ -124,6 +134,14 @@ struct DataGrid(Copyable, Movable):
         self.sort_desc = False
         self.cur_row = -1
         self.cur_col = -1
+        self.anchor_row = -1
+        self.anchor_col = -1
+        self.dragging = False
+        self.ring = List[Float64]()
+        self.ring_from = List[Float64]()
+        self.ring_to = List[Float64]()
+        self.ring_t0 = 0
+        self.ring_view = (0, 0.0)
         self.widths = List[Float64]()
         self.min_widths = List[Float64]()
         self.type_widths = List[Float64]()
@@ -301,11 +319,38 @@ struct DataGrid(Copyable, Movable):
     def select(mut self, row: Int, col: Int):
         self.cur_row = row
         self.cur_col = col
+        self.anchor_row = row
+        self.anchor_col = col
         self.editing = False
         self.typed = ""
         self.typing = False
         self.then = "Enter"
         self.redraw()
+
+    def extend(mut self, row: Int, col: Int):
+        """Grows (or shrinks) the block to (row, col), keeping its anchor."""
+        if self.anchor_row < 0 or self.anchor_col < 0:
+            self.anchor_row = self.cur_row
+            self.anchor_col = self.cur_col
+        self.cur_row = row
+        self.cur_col = col
+        self.editing = False
+        self.typing = False
+        self.redraw()
+
+    def has_block(self) -> Bool:
+        """More than one cell selected."""
+        return self.cur_row >= 0 and self.anchor_row >= 0 and (self.anchor_row != self.cur_row or self.anchor_col != self.cur_col)
+
+    def block[S: GridSource](self, src: S) -> Tuple[Int, Int, Int, Int]:
+        """The selected block as (first, last) display indices and (first, last) columns; one cell when there's no block;
+        (-1, -1, -1, -1) when nothing (or a whole column) is selected."""
+        if self.cur_row < 0 or self.cur_col < 0:
+            return (-1, -1, -1, -1)
+        var i1 = self.index_of(self.cur_row, src)
+        var i0 = self.index_of(self.anchor_row, src) if self.has_block() else i1
+        var c0 = self.anchor_col if self.has_block() else self.cur_col
+        return (min(i0, i1), max(i0, i1), min(c0, self.cur_col), max(c0, self.cur_col))
 
     def cancel_edit(mut self):
         """The editor closed without writing (its Escape, or anything else the app does meanwhile)."""
@@ -478,9 +523,17 @@ struct DataGrid(Copyable, Movable):
             if was:
                 self.redraw()
                 return GRID_REDRAW
+            if event.y >= head and self.in_columns(event.x):  # a press on a cell: a drag from here selects a block
+                var at = self.cell_hit(event.x, event.y, src)
+                if at[0] >= 0 and at[1] >= 0:
+                    self.dragging = True
+                    if Int(event.dx) & SHIFT == 0:  # (Shift held: the press extends the block instead, on TAP)
+                        self.select(at[0], at[1])
+                    return GRID_SELECTED
             return GRID_NONE
-        if event.number == RELEASE:  # a drag ended: the thumb (or a column edge) lets go
+        if event.number == RELEASE:  # a drag ended: the thumb (or a column edge) lets go, a block stays
             var result = GRID_NONE
+            self.dragging = False
             if self.resize_col >= 0:
                 self.last_col = self.resize_col
                 self.resize_col = -1
@@ -527,10 +580,19 @@ struct DataGrid(Copyable, Movable):
                 return GRID_NONE
             var hit = self.cell_hit(event.x, event.y, src)
             if hit[0] >= 0 and hit[1] >= 0:
-                self.select(hit[0], hit[1])
+                if Int(event.dx) & SHIFT != 0 and self.cur_row >= 0:  # Shift+click: the block to here
+                    self.extend(hit[0], hit[1])
+                elif not self.has_block() or self.cur_row != hit[0] or self.cur_col != hit[1]:
+                    self.select(hit[0], hit[1])
                 return GRID_SELECTED
             return GRID_NONE
         if event.number == PAN:
+            if self.dragging and self.resize_col < 0 and not self.bar_drag:  # a drag over cells: the block follows the pointer
+                var at = self.cell_hit(min(max(event.x, GRID_GUTTER + 1), self.size[0] - GRID_BAR_W - 1), max(event.y, head + 1), src)
+                if at[0] >= 0 and at[1] >= 0 and (at[0] != self.cur_row or at[1] != self.cur_col):
+                    self.extend(at[0], at[1])
+                    return GRID_SELECTED
+                return GRID_NONE
             if self.resize_col >= 0:
                 self.set_width(self.resize_col, self.resize_w0 + event.x - self.resize_x0)
             elif self.bar_drag:
@@ -666,6 +728,12 @@ struct DataGrid(Copyable, Movable):
         var row = self.cur_row
         var col = self.cur_col
         var page = max(self.rows_in(self.size[1]) - 1, 1)
+        if shift and (name == "ArrowDown" or name == "ArrowUp" or name == "ArrowLeft" or name == "ArrowRight"):  # Shift+arrows: the block grows
+            var r = self.step_row(row, 1 if name == "ArrowDown" else (-1 if name == "ArrowUp" else 0), src) if name == "ArrowDown" or name == "ArrowUp" else row
+            var c = min(max(col + (1 if name == "ArrowRight" else (-1 if name == "ArrowLeft" else 0)), 0), src.grid_columns() - 1)
+            self.extend(r, c)
+            self.keep_in_view(r, c, src)
+            return GRID_SELECTED
         if name == "ArrowDown" or (name == "Enter" and not shift):
             return self.move_to(self.step_row(row, 1, src), col, src)
         if name == "ArrowUp" or (name == "Enter" and shift):
@@ -724,6 +792,37 @@ struct DataGrid(Copyable, Movable):
         if src.grid_formula(c):
             name = "ƒ " + name
         return self.col_left(c, src) + 8 + font.measure(name, 12.5) + 6
+
+    def glide(mut self, var to: List[Float64]) -> Bool:
+        """Moves the drawn ring toward `to` (points) on a critically damped spring (~140 ms to settle). A scroll or the
+        first ring jumps straight there. Returns whether it is still moving (draw again next frame)."""
+        var view = (self.top, self.left)
+        var now = Int(perf_counter_ns())
+        if len(self.ring) != 4 or view[0] != self.ring_view[0] or view[1] != self.ring_view[1]:
+            self.ring = to.copy()
+            self.ring_to = to^
+            self.ring_view = view
+            return False
+        var same = True
+        for j in range(4):
+            if abs(to[j] - self.ring_to[j]) > 0.01:
+                same = False
+        if not same:  # a new target: glide from where the ring is now
+            self.ring_from = self.ring.copy()
+            self.ring_to = to^
+            self.ring_t0 = now
+        if len(self.ring_from) != 4:
+            self.ring = self.ring_to.copy()
+            return False
+        var t = Float64(now - self.ring_t0) / 1e9
+        var w = 38.0  # spring frequency (rad/s): settles within ~0.15 s, no overshoot
+        var e = 1.0 - (1.0 + w * t) * exp(-w * t)
+        var moving = e < 0.995
+        for j in range(4):
+            self.ring[j] = self.ring_from[j] + (self.ring_to[j] - self.ring_from[j]) * (e if moving else 1.0)
+        if not moving:
+            self.ring_from = List[Float64]()
+        return moving
 
     def draw[S: GridSource](mut self, mut s: Surface, src: S, font: Font, p: Palette):
         self.prepare(src, font, p)
@@ -798,6 +897,10 @@ struct DataGrid(Copyable, Movable):
         rect(s, 0, 0, gut, head, p.raised)  # (the gutter stays put when the grid scrolls sideways)
         hline(s, 0, w, head, p.line_strong)
         # rows
+        var blk = self.block(src)  # the selected block (display indices, columns), or one cell
+        var multi = self.has_block()
+        var ring_top = -1.0  # the block's visible top and bottom (pixels), for the ring
+        var ring_bottom = -1.0
         var y = head
         var i = self.top
         var shown = 0
@@ -805,11 +908,17 @@ struct DataGrid(Copyable, Movable):
             var row = self.shown_row(i, src)
             if row < 0:
                 break
+            var di = i  # this row's display index
             i += 1
             if not src.grid_alive(row):
                 continue
             var base = y + 18 * k
-            if row == self.cur_row:
+            var in_rows = blk[0] <= di <= blk[1]
+            if in_rows:
+                if ring_top < 0:
+                    ring_top = y
+                ring_bottom = y + GRID_ROW_H * k
+            if row == self.cur_row and not multi:
                 rect(s, 0, y, right, GRID_ROW_H * k, p.accent_wash)
             for c in range(ncols):
                 var x = lefts[c]
@@ -825,11 +934,14 @@ struct DataGrid(Copyable, Movable):
                 var color = p.formula if src.grid_formula(c) else p.ink  # (a read-only column that isn't a formula reads as data)
                 if st.ink() > 0:
                     color = swatch(st.ink())
-                if st.fill() > 0:
-                    rect(s, x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash if row == self.cur_row else p.card, st.fill()))
-                if row == self.cur_row and c == self.cur_col:
-                    rect(s, x, y, cw, GRID_ROW_H * k, p.accent)
-                    rect(s, x + 2 * k, y + 2 * k, cw - 4 * k, GRID_ROW_H * k - 4 * k, fill_over(p.card, st.fill()) if st.fill() > 0 else p.card)
+                var active = row == self.cur_row and c == self.cur_col
+                var in_block = multi and in_rows and blk[2] <= c <= blk[3] and not active
+                if in_block:  # the block's cells: a soft wash (the active cell stays clear)
+                    rect(s, x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash, st.fill()) if st.fill() > 0 else p.accent_wash)
+                elif st.fill() > 0:
+                    rect(s, x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.accent_wash if row == self.cur_row and not multi else p.card, st.fill()))
+                if active:
+                    rect(s, x + 1, y + 1, cw - 1, GRID_ROW_H * k - 1, fill_over(p.card, st.fill()) if st.fill() > 0 else p.card)
                 if src.grid_edited(c, row):  # changed this session: a small accent triangle in the corner
                     for r in range(Int(6 * k)):
                         rect(s, x + cw - 6 * k + Float64(r), y + Float64(r), 6 * k - Float64(r), 1, p.accent)
@@ -850,12 +962,31 @@ struct DataGrid(Copyable, Movable):
                     rect(s, tx, base + 2 * k, tw, max(1.0, k), color)
                 if st.strike():
                     rect(s, tx, base - 4.5 * k, tw, max(1.0, k), color)
-            rect(s, 0, y, gut, GRID_ROW_H * k, p.accent_wash if row == self.cur_row else p.card)
-            font.draw(s, grouped(row + 1), (GRID_GUTTER - 10) * k, base, 12 * k, p.ink3, p.regular, RIGHT)
+            rect(s, 0, y, gut, GRID_ROW_H * k, p.accent_wash if in_rows else p.card)
+            font.draw(s, grouped(row + 1), (GRID_GUTTER - 10) * k, base, 12 * k, p.accent if in_rows else p.ink3, p.regular, RIGHT)
             y += GRID_ROW_H * k
             hline(s, 0, right, y, p.line)
             shown += 1
         line(s, gut, 0, gut, h, 1, p.line)
+        # the selection ring around the block (or the cell): it glides to where the selection went, on a spring
+        if blk[2] >= 0 and ring_top >= 0 and blk[2] < len(lefts):
+            var c1 = min(blk[3], len(lefts) - 1)
+            var to: List[Float64] = [max(lefts[blk[2]], gut) / k, ring_top / k, (min(lefts[c1] + widths[c1], right) - max(lefts[blk[2]], gut)) / k, (ring_bottom - ring_top) / k]
+            if self.glide(to^):
+                s.again = True  # mid-glide: the host draws the next frame too
+            var rx = self.ring[0] * k
+            var ry = self.ring[1] * k
+            var rw = self.ring[2] * k
+            var rh = self.ring[3] * k
+            var t = 2 * k
+            rect(s, rx, ry, rw, t, p.accent)
+            rect(s, rx, ry + rh - t, rw, t, p.accent)
+            rect(s, rx, ry, t, rh, p.accent)
+            rect(s, rx + rw - t, ry, t, rh, p.accent)
+            circle(s, rx + rw - 1, ry + rh - 1, 4 * k, p.card)  # the fill handle: a teal dot ringed in white
+            circle(s, rx + rw - 1, ry + rh - 1, 3 * k, p.accent)
+        else:
+            self.ring = List[Float64]()
         # the scroll bar: a thin track, a thumb sized to the share of rows on screen
         var t = self.thumb(h / k, src)
         rect(s, right, head, GRID_BAR_W * k, h - head, p.card)

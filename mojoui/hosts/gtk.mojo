@@ -12,7 +12,7 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.menus import items_text, CHECKED, DISABLED, DANGER
 from mojoui.view import (
-    LIQUID, View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
+    LIQUID, CLIPBOARD, View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, SECONDARY, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, KEY, SHIFT, CTRL, ALT,
@@ -359,6 +359,7 @@ struct GtkCanvas(Copyable, Movable):
     var scale: Float64
     var drawn: Int  # the version last drawn (-1: none yet)
     var draws: Int
+    var draw_ms: Float64  # how long the last draw took (paint + upload), for GLIDE
     var frames: Int  # frame events sent
     var first_us: Int  # frame-clock time of the first and last frame event (for FRAMES)
     var last_us: Int
@@ -387,6 +388,7 @@ struct GtkCanvas(Copyable, Movable):
         self.scale = 1
         self.drawn = -1
         self.draws = 0
+        self.draw_ms = 0
         self.frames = 0
         self.first_us = 0
         self.last_us = 0
@@ -433,6 +435,10 @@ struct GtkHost[A: App](Movable):
     var board_list: Bool  # the last build showed boards as lists
     var board_scrollers: List[Tuple[Int, Int]]  # (Board node, its GtkScrolledWindow)
     var revealed: Int  # the last Board reveal token scrolled to (Board's value)
+    var clip_version: Int  # the Clipboard view's version last copied
+    var key_draws: Int  # draws of canvases that take keys (the grid), across rebuilds: GLIDE counts them
+    var key_draw_ms: Float64
+    var clip_text: String  # (tests print it: the clipboard itself is asynchronous)
     var reveal_pending: Int  # a Board node waiting for its layout to scroll a child into view, or -1
     var window: Int
     var widgets: List[Int]  # the GTK widget drawn for each node of rt.shown
@@ -465,6 +471,10 @@ struct GtkHost[A: App](Movable):
         self.board_scrollers = List[Tuple[Int, Int]]()
         self.revealed = 0
         self.reveal_pending = -1
+        self.clip_version = 0
+        self.key_draws = 0
+        self.key_draw_ms = 0
+        self.clip_text = ""
         self.window = 0
         self.widgets = List[Int]()
         self.dialog = 0
@@ -882,6 +892,8 @@ struct GtkHost[A: App](Movable):
             self.dialog = dlg
             self.widgets[i] = dlg
             w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))  # nothing in the layout itself
+        elif node.kind == CLIPBOARD:  # nothing on screen; apply() copies its text when its version changes
+            w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
         elif node.kind == TOAST:
             if self.toast != 0 and self.toast_text == node.text:  # the same toast, still up: keep it
                 set_node(self.toast, i)
@@ -1342,6 +1354,7 @@ struct GtkHost[A: App](Movable):
 
     def apply(mut self, d: Diff, self_addr: Int):
         self.apply_design()
+        self.copy_if_asked()
         if d.rebuild:
             # Rebuild on the next idle turn, never inside a signal handler: the widget
             # that sent the signal would be destroyed while GTK is still using it.
@@ -1520,17 +1533,32 @@ struct GtkHost[A: App](Movable):
             return
         if len(self.canvases[ci].pixels) != wpx * hpx:
             self.canvases[ci].pixels = List[UInt32](length=wpx * hpx, fill=0)
+        var t0 = perf_counter_ns()
         var surface = Surface(Int(self.canvases[ci].pixels.unsafe_ptr()), wpx, hpx, scale)
         var d = self.rt.draw(node, surface)
         var tex = texture(self.canvases[ci].pixels, wpx, hpx)
         external_call["gtk_picture_set_paintable", NoneType](widget, tex)
         external_call["g_object_unref", NoneType](tex)
+        self.canvases[ci].draw_ms = Float64(Int(perf_counter_ns() - t0)) / 1e6
+        if self.canvases[ci].keys != 0:
+            self.key_draws += 1
+            self.key_draw_ms = self.canvases[ci].draw_ms
         self.canvases[ci].wpx = wpx
         self.canvases[ci].hpx = hpx
         self.canvases[ci].scale = scale
-        self.canvases[ci].drawn = version
+        self.canvases[ci].drawn = version if not surface.again else -1  # mid-animation: draw again next frame
         self.canvases[ci].draws += 1
         self.apply(d, self_addr)
+
+    def copy_if_asked(mut self):
+        """A Clipboard view whose version moved on: its text goes on the system clipboard."""
+        for ref n in self.rt.shown.nodes:
+            if n.kind == CLIPBOARD and n.value > 0 and n.value != self.clip_version:
+                self.clip_version = n.value
+                var t = n.text
+                var display = external_call["gdk_display_get_default", Int]()
+                external_call["gdk_clipboard_set_text", NoneType](external_call["gdk_display_get_clipboard", Int](display), t.as_c_string_span())
+                self.clip_text = t
 
     def canvases_drawn(self) -> Bool:
         """Whether every canvas shows its current version at its current size."""
@@ -1609,7 +1637,7 @@ def on_drag_begin[A: App](drag: Int, x: Float64, y: Float64, host_addr: Int) abi
         _ = external_call["gtk_widget_grab_focus", c_int](host[].canvases[ci].widget)
         host[].key_node = host[].canvases[ci].node
     if not busy():
-        host[].canvas_send(ci, PRESS, x, y, 0, 0, 1, host_addr)  # where a drag (or a tap) starts
+        host[].canvas_send(ci, PRESS, x, y, Float64(mods_of(drag)), 0, 1, host_addr)  # where a drag (or a tap) starts (dx: modifiers)
 
 
 def on_drag_end[A: App](drag: Int, off_x: Float64, off_y: Float64, host_addr: Int) abi("C"):
@@ -1874,6 +1902,12 @@ def on_shortcut_pressed[A: App](controller: Int, keyval: c_uint, keycode: c_uint
     return 0
 
 
+def mods_of(controller: Int) -> Int:
+    """SHIFT, CTRL and ALT held during the controller's current event (a Shift+click extends a selection)."""
+    var st = Int(external_call["gtk_event_controller_get_current_event_state", c_uint](controller))
+    return (SHIFT if (st & 1) != 0 else 0) + (CTRL if (st & 4) != 0 else 0) + (ALT if (st & 8) != 0 else 0)
+
+
 def on_click_released[A: App](click: Int, presses: c_int, x: Float64, y: Float64, host_addr: Int) abi("C"):
     if busy():
         return
@@ -1881,7 +1915,7 @@ def on_click_released[A: App](click: Int, presses: c_int, x: Float64, y: Float64
     var ci = get_index(click)
     if ci < 0 or ci >= len(host[].canvases) or host[].canvases[ci].moved:
         return
-    host[].canvas_send(ci, DOUBLE if presses == 2 else TAP, x, y, 0, 0, 1, host_addr)  # (the first click of a double was a TAP)
+    host[].canvas_send(ci, DOUBLE if presses == 2 else TAP, x, y, Float64(mods_of(click)), 0, 1, host_addr)  # (the first click of a double was a TAP; dx: modifiers)
 
 
 def board_object[A: App](host: Pointer[GtkHost[A], MutUntrackedOrigin], drag: Int) -> Int:
@@ -2357,6 +2391,38 @@ def run_step[A: App](host_addr: Int, step: String):
             return
         var s = String("clicked")
         external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[item], s.as_c_string_span())
+    elif verb == "glide":  # glide:Down: a key on the grid (the first canvas that takes keys), then frames until its ring settles
+        var gi = -1
+        for k in range(len(host[].canvases)):
+            if host[].canvases[k].keys != 0:
+                gi = k
+                break
+        if gi < 0:
+            print("TEST: no canvas takes keys")
+            return
+        var name = "Arrow" + rest if rest == "Down" or rest == "Up" or rest == "Left" or rest == "Right" else rest
+        var ready_by = perf_counter_ns() + 1_000_000_000  # (the ring must be on screen before it can glide)
+        while host[].canvases[gi].drawn != host[].rt.shown.nodes[host[].canvases[gi].node].value and perf_counter_ns() < ready_by:
+            _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
+            sleep(0.002)
+        host[].canvas_key(gi, name, 0, host_addr)
+        var before = host[].key_draws
+        var worst = 0.0
+        var until = perf_counter_ns() + 2_000_000_000
+        var last = before
+        while perf_counter_ns() < until:
+            _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
+            if host[].key_draws != last:
+                last = host[].key_draws
+                worst = max(worst, host[].key_draw_ms)
+            var settled = True
+            for ref cv in host[].canvases:
+                if cv.keys != 0 and cv.drawn != host[].rt.shown.nodes[cv.node].value:
+                    settled = False
+            if settled and last > before:
+                break
+            sleep(0.002)
+        print("GLIDE: frames " + String(host[].key_draws - before) + " max_ms " + one_decimal(Float32(worst)))
     elif verb == "pause":  # pause:3000: keep the main loop running that long (a screen grab of the display can catch popovers)
         var until = perf_counter_ns() + to_int(rest) * 1_000_000
         while perf_counter_ns() < until:
@@ -2782,6 +2848,9 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
             print("DIALOG: " + n.text)
             if getenv("MOJOUI_SHOT") != "":
                 print("DIALOGSHOWN: " + ("yes" if external_call["gtk_widget_get_mapped", c_int](w) != 0 else "no"))
+        elif n.kind == CLIPBOARD:
+            if host[].clip_version > 0:
+                print("CLIPBOARD: " + host[].clip_text.replace("\t", "\\t").replace("\n", "\\n"))
         elif n.kind == TOAST:
             print("TOAST: " + n.text + (" | " + n.options[0] if len(n.options) > 0 else ""))
         elif n.kind == POPOVER:

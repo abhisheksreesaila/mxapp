@@ -10,7 +10,7 @@
 # Like a context menu, a dialog, toast or popover is part of the view while it shows: the app puts it in the tree
 # and takes it out on its on_close (a click elsewhere, Escape, ✕, the toast's time running out) or its own buttons.
 
-from mojoui.view import View, Node, DIALOG, TOAST, POPOVER, TOGGLE, _one, _container
+from mojoui.view import View, Node, DIALOG, TOAST, POPOVER, TOGGLE, CLIPBOARD, _one, _container
 
 
 def Dialog(title: String, content: View, on_close: Int, width: Int = 560) -> View:
@@ -21,6 +21,14 @@ def Dialog(title: String, content: View, on_close: Int, width: Int = 560) -> Vie
     var items = List[View]()
     items.append(content.copy())
     return _container(n^, items)
+
+
+def Clipboard(text: String, version: Int) -> View:
+    """Puts `text` on the system clipboard each time `version` changes (0: nothing yet). Keep it in the screen while the
+    app can copy, bump the version on Copy: the hosts copy declaratively, as they show a toast."""
+    var n = Node(CLIPBOARD, text)
+    n.value = version
+    return _one(n^)
 
 
 def Toast(text: String, action: String = "", on_action: Int = 0, on_close: Int = 0, seconds: Int = 6) -> View:

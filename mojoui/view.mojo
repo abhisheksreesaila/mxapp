@@ -37,6 +37,7 @@ comptime MENUBAR = 27  # a row of menus (mojoui.menus): children = MENU nodes
 comptime MENU = 28  # text = title; children = ITEM nodes; style 1 = a context menu: text = the anchor's tag, x/y = where in it, msg2 = on_close
 comptime DIALOG = 30  # a modal panel over a dimmed page (mojoui.overlays): text = title, child = content, msg2 = on_close, w = width
 comptime TOAST = 31  # a short message at the bottom: text, options[0] = action title, msg = on_action, msg2 = on_close, size = seconds
+comptime CLIPBOARD = 33  # puts `text` on the system clipboard whenever `value` (a version, from 1) changes; nothing on screen (mojoui.overlays.Clipboard)
 comptime POPOVER = 32  # a panel attached to the view tagged `text`: hint = title, child = content, msg2 = on_close, x/y = where in the anchor
 comptime ITEM = 29  # a menu item: text = title, msg, hint = icon, options[0] = shortcut, value = flags (1 checked, 2 disabled, 4 danger); style 1 = separator, 2 = section label; children = a submenu
 

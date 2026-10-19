@@ -130,7 +130,7 @@ def web_draw[A: App](handle: Int, node: Int, width: Int, height: Int, scale: Flo
     var surface = Surface(Int(tab[].pixels.unsafe_ptr()), w, h, scale if scale > 0 else 1.0)
     var d = tab[].rt.draw(node, surface)
     return ('{"address":' + String(Int(tab[].pixels.unsafe_ptr())) + ',"width":' + String(w) + ',"height":' + String(h)
-            + ',"diff":' + diff_to_json(d, tab[].rt.shown) + "}")
+            + ',"again":' + ("true" if surface.again else "false") + ',"diff":' + diff_to_json(d, tab[].rt.shown) + "}")
 
 
 def web_gesture[A: App](handle: Int, node: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64) -> String:

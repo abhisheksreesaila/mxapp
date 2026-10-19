@@ -36,7 +36,7 @@ from PIL import Image
 # Mirrors mojoui/view.mojo and mojoui/diff.mojo.
 (TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
  SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY, MENUBAR, MENU, ITEM,
- DIALOG, TOAST, POPOVER) = range(1, 33)
+ DIALOG, TOAST, POPOVER, CLIPBOARD) = range(1, 34)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, ICON_ON = 0, 1, 2, 3, 4, 5, 6, 7
@@ -253,6 +253,16 @@ MENU_JS = r"""
     if (item) { e.preventDefault(); e.stopPropagation(); menus.closeAll(); item.click(); }
   }, true);
   document.addEventListener('htmx:afterSettle', menus.place);
+  // Clipboard(text, version): a new version puts the text on the system clipboard (window.mojouiClip keeps it for tests)
+  const copyAsked = () => document.querySelectorAll('[data-kind=clipboard]').forEach(c => {
+    const v = Number(c.dataset.version || 0);
+    if (v > 0 && v !== window.mojouiClipVersion) {
+      window.mojouiClipVersion = v; window.mojouiClip = c.dataset.text;
+      if (navigator.clipboard) navigator.clipboard.writeText(c.dataset.text).catch(() => {});
+    }
+  });
+  document.addEventListener('htmx:afterSettle', copyAsked);
+  document.addEventListener('htmx:oobAfterSwap', () => setTimeout(copyAsked, 0));
   document.addEventListener('htmx:oobAfterSwap', () => setTimeout(menus.place, 0));
   addEventListener('load', menus.place); addEventListener('resize', menus.place);
 })();
@@ -437,6 +447,7 @@ CANVAS_JS = r"""
           div.dataset.frame = `${st.count} ${cv.width}x${cv.height} ${r.width.toFixed(0)}x${r.height.toFixed(0)} ${dpr}`;
           if (res.headers.get('X-Mojoui-Pending') === '1') update();
           if (meta() && meta().dataset.version !== String(st.drawn)) st.want = true;
+          if (res.headers.get('X-Mojoui-Again') === '1') { st.want = true; await new Promise(ok => requestAnimationFrame(ok)); }  // mid-animation (a gliding ring): the next frame
         }
       } finally { st.busy = false; }
     }
@@ -478,11 +489,12 @@ CANVAS_JS = r"""
       });
     }
     cv.addEventListener('contextmenu', e => { e.preventDefault(); const [x, y] = at(e); send(SECONDARY, x, y, 0, 0, 1); });
+    const mods = e => (e.shiftKey ? 1 : 0) + (e.ctrlKey || e.metaKey ? 2 : 0) + (e.altKey ? 4 : 0);  // SHIFT, CTRL, ALT (mojoui.view)
     cv.addEventListener('pointerdown', e => {
       if (e.button !== 0) return;  // a right click opens a context menu (contextmenu), it doesn't press
       if (keys) cv.focus({ preventScroll: true });
       cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, at(e));
-      if (pointers.size === 1) { moved = false; const [x, y] = at(e); send(PRESS, x, y, 0, 0, 1); }  // where a drag (or tap) starts
+      if (pointers.size === 1) { moved = false; const [x, y] = at(e); send(PRESS, x, y, mods(e), 0, 1); }  // where a drag (or tap) starts (dx: Shift, Ctrl, Alt held)
       if (pointers.size === 2) spread = distance();
     });
     cv.addEventListener('pointermove', e => {
@@ -503,7 +515,7 @@ CANVAS_JS = r"""
       pointers.delete(e.pointerId);
       // a second click within the double-click time is the DOUBLE that 'dblclick' sends, not another TAP (as on GTK)
       const now = performance.now(), second = st.lastTap && now - st.lastTap.t < 500 && Math.abs(x - st.lastTap.x) + Math.abs(y - st.lastTap.y) < 6;
-      if (pointers.size === 0 && !moved && e.type === 'pointerup') { if (second) st.lastTap = null; else { st.lastTap = { t: now, x, y }; send(TAP, x, y, 0, 0, 1); } }
+      if (pointers.size === 0 && !moved && e.type === 'pointerup') { if (second) st.lastTap = null; else { st.lastTap = { t: now, x, y }; send(TAP, x, y, mods(e), 0, 1); } }
       else if (pointers.size === 0 && moved) send(RELEASE, x, y, 0, 0, 1);  // a drag ended
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
@@ -983,6 +995,8 @@ def render_node(s, i, sid):
         body = Div(*[render(s, c, sid) for c in n["children"]], cls="dialog-body")
         panel = Div(head, body, cls="dialog", role="dialog", aria_modal="true", aria_labelledby=f"{nid}-t", style=f"width:{n['w'] or 560}px")
         return Div(Div(cls="scrim"), panel, cls="dialog-layer", id=nid, data_kind="dialog", data_title=n["text"], data_node=str(i), data_sid=sid, data_v=str(s.shape))
+    if kind == CLIPBOARD:  # nothing on screen: the page copies its text when its version moves on (CLIP_JS)
+        return Div(id=nid, data_kind="clipboard", data_version=str(n["value"]), data_text=n["text"], hidden=True)
     if kind == TOAST:  # bottom centre; its action is msg, ✕ and its time running out are on_close
         action = n["options"][0] if n["options"] else ""
         parts = [Span(n["text"], cls="toast-text")]
@@ -1366,7 +1380,7 @@ def make_app(module_dir):
         else:  # a still picture (charts, text): exact PNG
             picture.save(out, "PNG", compress_level=1)
         return Response(out.getvalue(), media_type="image/jpeg" if tick else "image/png",
-                        headers={"Cache-Control": "no-store", "X-Mojoui-Pending": "1" if pending else "0",
+                        headers={"Cache-Control": "no-store", "X-Mojoui-Pending": "1" if pending else "0", "X-Mojoui-Again": "1" if r.get("again") else "0",
                                  "X-Mojoui-Draw-Ms": f"{(time.perf_counter() - now) * 1000:.2f}"})
 
     @app.post("/pending/{sid}")

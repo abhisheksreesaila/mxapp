@@ -112,12 +112,16 @@ def FormulaBar(cell: String, text: String, on_submit: Int, on_cancel: Int = NO_M
                   spacing=10).fill().align(CENTER).padding(4, 12).tag("formula-bar")
 
 
+comptime STATUS_SLOTS = 8
+
+
 def StatusBar(items: List[String], right: String = "") -> View:
-    """Small facts about the selection and the engine, along the bottom of the window."""
+    """Small facts about the selection and the engine, along the bottom of the window. Always the same number of
+    slots (STATUS_SLOTS, empty ones blank), so a selection that brings fewer facts patches the texts instead of
+    rebuilding the screen (which would restart the grid's canvas and its gliding ring)."""
     var views = List[View]()
-    for t in items:
-        views.append(Text(t, CAPTION))
+    for k in range(max(STATUS_SLOTS, len(items))):
+        views.append(Text(items[k] if k < len(items) else String(""), CAPTION))
     views.append(Spacer())
-    if right != "":
-        views.append(Text(right, CAPTION))
+    views.append(Text(right, CAPTION))
     return HStack(views^, spacing=18).fill().align(CENTER).padding(4, 14).tag("status-bar")

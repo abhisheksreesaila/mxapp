@@ -3,10 +3,13 @@
 Engines: Stitch (project "omxplorer · liquid", 15162298038433052241) and Claude (live HTML), same brief and design system (`docs/design/liquid/liquid.md`). Side by side: `docs/design/liquid/compare.html`. Web and desktop language: Liquid light; phone: Liquid (reference only this goal).
 
 ## Chosen
-Claude's structure, with Stitch's detail (D-226):
-- **From Claude:** floating glass islands (menu bar, toolbar, inspector, bottom strip) on a soft backdrop; icon-over-label tools; exactly today's features; the import dialog as a centred white sheet with a step pill, the preview, then a left-aligned column table and a footer.
-- **From Stitch:** a small icon in each tile's top-right corner (it becomes the ✕ on hover); a footer line under each tile's figure ("199,812 matched", "p50 exact"); yes/no cells as small coloured pills; column stats as small cards; the selection's range (B3:B8) named beside the stats.
-- **Left out:** Stitch's invented actions (Execute Query, Export View, Share, Window menu).
+**Stitch's screens** (owner, 2026-10-18: "I love the STITCH designs, I absolutely want that", D-232), with macOS-level fluidity. References: `docs/design/liquid/img/stitch-{start,import,sheet,report,phone}.png` and their HTML beside them. What that means for the build:
+- **Menu bar:** the app's mark and name, the document chip (name · rows) and a GPU chip in one slim bar; the same menus as today.
+- **Toolbar:** one glass island; icon-and-label tools in groups; the report's toolbar as inline icon + label pills ("+ Sum tile").
+- **Sheet:** yes/no cells as small green/red pills; empty cells as a faint dash; the selected block ringed with a fill handle; histograms on the right of each header.
+- **Inspector:** a "Selection Details" title with the device chip; the Format · Column · Table segmented control; column stats as small cards (Mean, Median, Std Dev, Nulls) and a frequency chart.
+- **Report:** tiles with a small icon at the top-right (✕ on hover), the figure, a hairline, then a footer: the filter chip left, a fact right ("199,812 matched", "p50 exact", "σ = 2,886.7"); an "Add metric tile" dashed card; a title row with an "Active view" pill and the GPU timing in green.
+- **Left out:** Stitch's invented actions (Execute Query, Export View, Share, the Window menu, Grid 3-col): GOAL.md keeps new features out of bounds.
 
 ## Tokens
 Exact values in `docs/design/liquid/liquid.md`. Summary: backdrop #eef2f7 → #e6ebf2; sheet #ffffff; raised #f6f8fb; hairline rgba(15,23,42,.07); ink #0f172a / body #334155 / secondary #64748b / tertiary #94a3b8; accent #0e7c86 (wash rgba(14,124,134,.10)); glass rgba(255,255,255,.62) + rim rgba(255,255,255,.75) + highlight + shadow 0 8px 32px rgba(15,23,42,.10). Radii: window 14, islands 18, cards/tiles 16, menus 14 (items 8), inputs 10, pills full, cells 0, selection ring 4. Type: Inter (tabular figures), JetBrains Mono for formulas; scale 11 · 12 · 13 · 15 · 17 · 22 · 34 px.

@@ -10,10 +10,11 @@
 | M3 | The screens the owner flagged look right | every row of an open menu (submenus included) has the same height and type; the import dialog's column table lines up with its preview and its empty area holds no stray drawing; report tiles sit in a grid of equal widths (at most 3 a row) with their remove button inside the tile; the toolbar's tools share one height; the Liquid skin uses one type scale (11, 12, 13, 15, 17, 22, 34 px) |
 | M4 | Liquid motion | the Liquid skin animates hover and press (transitions) and menus, popovers and dialogs arriving (a spring-shaped animation) on both hosts; moving the selection glides the ring over at least 6 frames, each drawn in under 20 ms (GTK, measured) |
 | M5 | Select a range of cells | a drag, Shift+click or Shift+arrows select a block; the status bar's Sum, Average and Count are the block's (pyarrow's answer); Bold applies to every cell of the block; Copy puts the block on the clipboard as tab-separated text; the same on GTK and the web |
+| M7 | Stitch's details (owner's pick, D-232) | on GTK and the web: the menu bar carries the app's name and the GPU chip; yes/no cells draw as green/red pills; the inspector shows the column's stats as at least 4 small cards (`stat-card`); each report tile has a footer fact (Sum: "… matched", Median: "p50 exact", Average: "σ = …", Count: "…% of rows"); `build/g24/compare.html` sets the Stitch screen beside GTK and the web for start, import, sheet and report |
 | M6 | Nothing regressed | goal 23's checks (M1–M3; every earlier goal's inside them) pass |
 
 ## Done means
-`scripts/check` prints PASS for M1–M6; `docs/report.md` is short, with before/after screenshots. Push to `origin` after (owner's standing permission).
+`scripts/check` prints PASS for M1–M7; `docs/report.md` is short, with before/after screenshots. Push to `origin` after (owner's standing permission).
 
 ## Out of bounds
 New features beyond range selection (no SQL, no AI, no new tile kinds); changing MX frame; deploying, paid services, secrets, anything outside this repo; `../mojo-ui-apple-test` stays untouched; the phone design is a reference only (no phone build this goal).

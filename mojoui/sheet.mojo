@@ -484,6 +484,21 @@ struct Sheet(Movable, GridSource):
                     self.cell_styles[key] = bits
         self.style_log.append(StyleChange(steps^, len(self.frame.log), List[String]()))
 
+    def restyle_cells(mut self, cells: List[Tuple[Int, Int]], mask: Int, value: Int):
+        """restyle() on each (column, row) of a block: one Undo step for all of them."""
+        var before = len(self.style_log)
+        for at in cells:
+            self.restyle(at[0], at[1], mask, value)
+        if len(self.style_log) - before > 1:
+            var steps = List[StyleStep]()
+            var edits = self.style_log[before].edits
+            for k in range(before, len(self.style_log)):
+                for st in self.style_log[k].steps:
+                    steps.append(st.copy())
+            while len(self.style_log) > before:
+                _ = self.style_log.pop()
+            self.style_log.append(StyleChange(steps^, edits, List[String]()))
+
     def clear_style(mut self, c: Int, row: Int):
         """Clear formatting: the cell (or with row -1 the column and every cell in it) back to plain, its number
         format too when it's the whole column."""

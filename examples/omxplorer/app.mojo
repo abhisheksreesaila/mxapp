@@ -14,10 +14,11 @@ from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette, skin_palette, skin_name, skin_of
 from mojoui.menus import MenuBar, Menu, Item, Separator, Submenu, ContextMenu
-from mojoui.overlays import Dialog, Toast, Popover, Checkbox
+from mojoui.overlays import Dialog, Toast, Popover, Checkbox, Clipboard
 from mojoui.view import Radio, LEDGER, GRAPHITE, BLUEPRINT, LIQUID
 from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
+from mojoui.numformat import fixed as numfixed, pow10
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
 from mojoui.sheet import Sheet, placeholder_sheet, blank_table, INT, DECIMAL, TEXT, DATE
@@ -63,6 +64,7 @@ comptime THOUSANDS = 14
 comptime NEGATIVES = 15
 comptime SYMBOL = 16
 comptime ADD_ROW = 17
+comptime COPY = 28  # Edit > Copy (Ctrl+C): the selected cell or block, as tab-separated text
 comptime NEW_FORMULA = 18
 comptime FORMULA_SUBMIT = 19
 comptime SORT = 20
@@ -155,6 +157,8 @@ struct Main(App):
     var formula_open: Bool  # the formula bar adds a column instead of editing a cell
     var edit_text: String
     var message: String
+    var clip_text: String  # what Copy put on the clipboard last, and its version (the Clipboard view)
+    var clip_version: Int
     var sum: Int  # the selected column's total and count (GPU, with the session's edits)
     var count: Int
     var milliseconds: Float64
@@ -209,6 +213,8 @@ struct Main(App):
         self.message = ""
         self.sum = 0
         self.count = 0
+        self.clip_text = ""
+        self.clip_version = 0
         self.milliseconds = 0
         self.recent = read_recent(APP)
         self.objects = List[SheetObject]()
@@ -515,8 +521,84 @@ struct Main(App):
         var at = self.style_target()
         if at[0] < 0:
             return
+        if self.grid.has_block():  # every cell of the block, one Undo step
+            var cells = self.block_cells()
+            self.frame.restyle_cells(cells, mask, value)
+            self.message = String(len(cells)) + " cells: " + self.frame.style_of(at[0], at[1]).words()
+            self.grid.redraw()
+            self.version += 1
+            return
         self.frame.restyle(at[0], at[1], mask, value)
         self.after_style(at[0], at[1])
+
+    def block_cells(self) -> List[Tuple[Int, Int]]:
+        """The selected block's cells as (column, row), row by row (a single cell when there's no block)."""
+        var out = List[Tuple[Int, Int]]()
+        var b = self.grid.block(self.frame)
+        if b[0] < 0:
+            return out^
+        for i in range(b[0], b[1] + 1):
+            var row = self.grid.shown_row(i, self.frame)
+            if row < 0 or not self.frame.grid_alive(row):
+                continue
+            for c in range(b[2], b[3] + 1):
+                out.append((c, row))
+        return out^
+
+    def copy_block(mut self):
+        """Edit > Copy: the cell or block as tab-separated text (cells as shown), onto the clipboard."""
+        var b = self.grid.block(self.frame)
+        if b[0] < 0:
+            self.message = "Select a cell or a block of cells to copy"
+            self.version += 1
+            return
+        var text = String("")
+        var lines = 0
+        for i in range(b[0], b[1] + 1):
+            var row = self.grid.shown_row(i, self.frame)
+            if row < 0 or not self.frame.grid_alive(row):
+                continue
+            if lines > 0:
+                text += "\n"
+            for c in range(b[2], b[3] + 1):
+                if c > b[2]:
+                    text += "\t"
+                text += self.frame.display(c, row)
+            lines += 1
+        self.clip_text = text
+        self.clip_version += 1
+        self.message = "Copied " + String(lines * (b[3] - b[2] + 1)) + " cells"
+        self.version += 1
+
+    def block_status(self) -> List[String]:
+        """The block's figures for the status bar: Cells (its size), Count (non-empty), Sum and Average (its numbers)."""
+        var out = List[String]()
+        var b = self.grid.block(self.frame)
+        var cells = 0
+        var filled = 0
+        var numbers = 0
+        var total = Int64(0)  # exact: every number brought to 4 decimal places
+        for i in range(b[0], b[1] + 1):
+            var row = self.grid.shown_row(i, self.frame)
+            if row < 0 or not self.frame.grid_alive(row):
+                continue
+            for c in range(b[2], b[3] + 1):
+                cells += 1
+                if self.frame.is_null(c, row):
+                    continue
+                filled += 1
+                if self.frame.kind(c) == INT or self.frame.kind(c) == DECIMAL:
+                    numbers += 1
+                    var sc = self.frame.scale(c)
+                    var v = self.frame.value(c, row)
+                    total += v * pow10(4 - sc) if sc <= 4 else v // pow10(sc - 4)
+        out.append("Cells " + grouped(cells))
+        out.append("Count " + grouped(filled))
+        if numbers > 0:
+            var mean = total // Int64(numbers)
+            out.append("Sum " + ("-" if total < 0 else "") + numfixed(total, 4, 2, True))
+            out.append("Average " + ("-" if mean < 0 else "") + numfixed(mean, 4, 2, True))
+        return out^
 
     def after_style(mut self, col: Int, row: Int):
         var words = self.frame.style_of(col, row).words()
@@ -701,6 +783,8 @@ struct Main(App):
             if f.decimals < 0:
                 f.decimals = 2
             self.set_format(f^)
+        elif m == COPY:
+            self.copy_block()
         elif m == ADD_ROW:
             try:
                 var row = self.frame.append()
@@ -1175,7 +1259,8 @@ struct Main(App):
             Menu("File", [Item("New blank sheet", BLANK, icon="grid", shortcut="Ctrl+N"), Item("Open…", BACK, icon="open", shortcut="Ctrl+O", disabled=not on_sheet),
                           Separator(), Item("Save", SAVE, icon="save", shortcut="Ctrl+S", disabled=not edits), Separator(),
                           Item("Settings…", SETTINGS, icon="gear", shortcut="Ctrl+,")]),
-            Menu("Edit", [Item("Undo", UNDO, icon="undo", shortcut="Ctrl+Z", disabled=not on_sheet), Separator(),  # (a streamed file's formats can be undone)
+            Menu("Edit", [Item("Undo", UNDO, icon="undo", shortcut="Ctrl+Z", disabled=not on_sheet), Separator(),
+                          Item("Copy", COPY, icon="copy", shortcut="Ctrl+C", disabled=not on_sheet or self.sheet_tab != 0), Separator(),  # (a streamed file's formats can be undone)
                           Item("Add row", ADD_ROW, icon="row-plus", shortcut="Ctrl+Shift+R", disabled=not edits)]),
             Menu("View", [Item("Inspector", TOGGLE_INSPECTOR, checked=self.inspector_open, shortcut="Ctrl+Shift+I", disabled=not on_sheet), Separator(),
                           Item("Sheet", SHOW_SHEET, icon="sheet", checked=on_sheet and self.sheet_tab == 0, disabled=not on_sheet),
@@ -1417,6 +1502,14 @@ struct Main(App):
     def status(self) -> View:
         var items = List[String]()
         var col = self.grid.cur_col
+        if self.grid.has_block():
+            var b = self.grid.block(self.frame)
+            items.append("Selection " + String(b[1] - b[0] + 1) + " rows × " + String(b[3] - b[2] + 1) + " columns")
+            for t in self.block_status():
+                items.append(t)
+            if self.message != "":
+                items.append(self.message)
+            return StatusBar(items, (fixed(self.milliseconds, 1) + " ms on " + (self.frame.device_name if self.ran_gpu else "CPU")) if self.show_timings else "")
         if col >= 0 and self.grid.cur_row >= 0:
             items.append("Selection " + self.frame.name(col) + " · row " + grouped(self.grid.cur_row + 1) + " · " + self.frame.display(col, self.grid.cur_row))
         elif col >= 0:
@@ -1490,6 +1583,7 @@ struct Main(App):
         parts.append(self.status().height(30))
         if self.ctx_col >= 0 and self.sheet_tab == 0:
             parts.append(self.context_menu())
+        parts.append(Clipboard(self.clip_text, self.clip_version))
         for o in self.overlays():
             parts.append(o.copy())
         return VStack(parts^, spacing=6).fill().grow()

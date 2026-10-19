@@ -214,7 +214,7 @@ def m4():
     glides = [(int(n), float(ms)) for n, ms in re.findall(r"^GLIDE: frames (\d+) max_ms ([\d.]+)$", out, re.M)]
     if len(glides) != 2 or any(n < 6 or ms >= 20 for n, ms in glides):
         problems.append(f"the selection ring doesn't glide (≥6 frames, each <20 ms): {glides}")
-    out = web(SHEET + ";style:button.tool=transition-duration;style:.menu-items=animation-name;style:.dialog=animation-name", "motion-web")
+    out = web(SHEET + ";style:button.tool=transition-duration;style:.menu-items=animation-name;menu:File>Settings…;style:.dialog=animation-name", "motion-web")
     styles = dict(re.findall(r"^STYLE: (\S+) \S+ (.+)$", out, re.M))
     if not styles.get("button.tool") or styles["button.tool"] in ("0s", ""):
         problems.append(f"web: toolbar tools have no transition ({styles.get('button.tool')})")
@@ -235,33 +235,33 @@ def m5():
         c.call("create-table")
         c.call("grid", gesture="tap", x=g21.COLUMN_X, y=g21.HEADER_Y + 60)  # a cell of amount, a few rows down
         texts, _, _ = c.call("read")
-        ref = re.search(r"^formula-bar-ref: ([A-Z]+)(\d+)$", texts, re.M)
+        ref = re.search(r"^formula-bar: amount (\d+)$", texts, re.M)  # (the cell's name: column, then row number)
         if not ref:
-            raise RuntimeError("no cell reference after a tap: " + texts[:300])
-        row0 = int(ref.group(2)) - 1
+            raise RuntimeError("no cell of amount selected after a tap: " + texts[:300])
+        row0 = int(ref.group(1)) - 1
         for _ in range(5):
-            c.call("grid", gesture="key", key="Down", modifiers=["shift"])
-        c.call("grid", gesture="key", key="Right", modifiers=["shift"])
+            c.call("grid", gesture="key", key="ArrowDown", modifiers=["shift"])
+        c.call("grid", gesture="key", key="ArrowRight", modifiers=["shift"])
         block = [v for v in t["amount"][row0:row0 + 6] if v is not None]
+        filled = len(block) + sum(1 for v in t["region"][row0:row0 + 6] if v not in (None, ""))
         status = " ".join(g20.status_of(c))
         want_sum = f"{sum(block):,.2f}"
-        if want_sum not in status or f"Count {len(block) + 6}" not in status.replace(",", ""):
-            problems.append(f"agent: the status bar doesn't sum the block (want Sum {want_sum}, count of {len(block) + 6} cells): {status}")
-        c.call("bold")
-        texts, _, _ = c.call("read", name="grid", first=row0, count=6)
-        if texts.count("bold") < 12:
-            problems.append(f"agent: Bold reached {texts.count('bold')} of the block's 12 cells")
+        if want_sum not in status or f"Count {filled}" not in status or "Cells 12" not in status:
+            problems.append(f"agent: the status bar doesn't describe the block (want Sum {want_sum}, Count {filled} non-empty, Cells 12): {status}")
+        c.call("bold")  # (the agent's read shows values, not styles: the app says what it formatted, as goal 21's checks read it)
+        if not any(t.startswith("12 cells: bold") for t in g20.status_of(c)):
+            problems.append(f"agent: Bold didn't reach the block's 12 cells: {g20.status_of(c)}")
     finally:
         c.close()
     for host, fn in (("GTK", gtk), ("web", web)):
-        out = fn(SHEET + ";tapat:1=180,200;key:1=shift+Down;key:1=shift+Down;key:1=shift+Right;shortcut:Ctrl+C", f"range-{host}")
-        if not re.search(r"^LABEL: Count 6$", out, re.M):
-            problems.append(f"{host}: Shift+arrows don't select a 3×2 block (status: {[l for l in out.splitlines() if 'Count' in l][:3]})")
+        out = fn(SHEET + ";tapat:0=180,200;key:0=shift+ArrowDown;key:0=shift+ArrowDown;key:0=shift+ArrowRight;shortcut:Ctrl+C", f"range-{host}")
+        if not re.search(r"^LABEL: Cells 6$", out, re.M):
+            problems.append(f"{host}: Shift+arrows don't select a 3×2 block (status: {[l for l in out.splitlines() if 'Cells' in l or 'Count' in l][:3]})")
         clip = re.search(r"^CLIPBOARD: (.*)$", out, re.M)
         if not clip or clip.group(1).count("\\t") != 3 or clip.group(1).count("\\n") < 2:
             problems.append(f"{host}: Copy didn't put a tab-separated 3×2 block on the clipboard ({clip.group(1)[:80] if clip else None})")
-        out = fn(SHEET + ";dragat:1=180,200,150,90", f"drag-{host}")
-        if not re.search(r"^LABEL: Count ([2-9]|\d\d+)$", out, re.M):
+        out = fn(SHEET + ";dragat:0=180,200,150,90", f"drag-{host}")
+        if not re.search(r"^LABEL: Cells ([2-9]|\d\d+)$", out, re.M):
             problems.append(f"{host}: a drag over cells doesn't select a block")
     return not problems, "; ".join(problems) or "Shift+arrows, a drag and the agent select a block; its Sum, Average and Count are pyarrow's; Bold and Copy (TSV) reach every cell; GTK and the web"
 

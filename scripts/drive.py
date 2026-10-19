@@ -80,7 +80,7 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
 })).concat([...document.querySelectorAll('[data-kind=button], label.picker')].map(b => {
   const t = b.parentElement && b.parentElement.closest('[data-tag]'), r = b.getBoundingClientRect();
   return t && r.width > 0 ? 'BOX: ' + t.dataset.tag + '/' + (b.title || b.textContent.trim()) + ' ' + [r.x, r.y, r.width, r.height].map(v => v.toFixed(1)).join(' ') : '';
-}).filter(Boolean)).concat([...document.body.classList].filter(c => c !== 'skin').map(c => 'DESIGN: ' + c)).concat(
+}).filter(Boolean)).concat(window.mojouiClip !== undefined ? ['CLIPBOARD: ' + window.mojouiClip.split(String.fromCharCode(9)).join(String.fromCharCode(92) + 't').split(String.fromCharCode(10)).join(String.fromCharCode(92) + 'n')] : []).concat([...document.body.classList].filter(c => c !== 'skin').map(c => 'DESIGN: ' + c)).concat(
   document.body.classList.contains('skin') && document.fonts.check('13px Inter') && document.fonts.check('13px "JetBrains Mono"') ? ["FONT: Inter, JetBrains Mono (the app's own)"] : []
 ).concat(['PAGE: ' + document.documentElement.scrollWidth + 'x' + document.documentElement.scrollHeight
   + ' in ' + innerWidth + 'x' + innerHeight]).join(String.fromCharCode(10))"""
