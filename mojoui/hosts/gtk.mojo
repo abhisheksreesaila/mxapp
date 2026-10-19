@@ -472,6 +472,8 @@ struct GtkHost[A: App](Movable):
     var id_node: List[Int]  # id → the node it is now (-1: gone)
     var content_w: Int  # the content area's size last told to the app (App.resize)
     var content_h: Int
+    var echo_node: Int  # the field whose event the app just answered (-1: none), and the text it sent
+    var echo_text: String
     var release_node: Int  # a canvas whose drag ended while the host was busy (-1: none): it gets its RELEASE after
     var release_x: Float64
     var release_y: Float64
@@ -520,6 +522,8 @@ struct GtkHost[A: App](Movable):
         self.id_node = List[Int]()
         self.content_w = 0
         self.content_h = 0
+        self.echo_node = -1
+        self.echo_text = ""
         self.release_node = -1
         self.release_x = 0
         self.release_y = 0
@@ -1354,6 +1358,7 @@ struct GtkHost[A: App](Movable):
         self.board_scrollers = List[Tuple[Int, Int]]()
         self.board_drags = List[Tuple[Int, Int]]()
         self.release_node = -1  # (a release from the old screen names a canvas that's gone)
+        self.echo_node = -1
         var root = self.build(0, self_addr)
         if self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills:  # the screen fills the window
             external_call["gtk_widget_set_valign", NoneType](root, c_int(0))
@@ -1546,11 +1551,12 @@ struct GtkHost[A: App](Movable):
         self.picker_node = new_of_old[self.picker_node] if 0 <= self.picker_node < old_n else -1
         self.reveal_pending = new_of_old[self.reveal_pending] if 0 <= self.reveal_pending < old_n else -1
         self.release_node = new_of_old[self.release_node] if 0 <= self.release_node < old_n else -1
+        self.echo_node = new_of_old[self.echo_node] if 0 <= self.echo_node < old_n else -1
         # The stacks whose children changed: build the new children, drop the old, put them in order.
         var moving = List[Int]()  # kept popovers whose anchor is being built again: held, then moved to the new one
         for j in range(n):
             if kept[j] >= 0 and (self.kinds[j] == POPOVER or (self.kinds[j] == MENU and self.rt.shown.nodes[j].style == 1)) and self.widgets[j] != 0:
-                var stays = False
+                var stays = external_call["gtk_widget_get_parent", Int](self.widgets[j]) == self.window  # (no anchor: it sits on the window, which stays)
                 for k in range(n):
                     if self.rt.shown.nodes[k].name == self.rt.shown.nodes[j].text and kept[k] >= 0 and self.widgets[k] != 0:
                         stays = external_call["gtk_widget_get_parent", Int](self.widgets[j]) == self.widgets[k]
@@ -1644,7 +1650,9 @@ struct GtkHost[A: App](Movable):
             return
         self.content_w = w
         self.content_h = h
+        var t0 = perf_counter_ns()
         var d = self.rt.resize(w, h)
+        self.trace_diff("resize " + String(w) + "x" + String(h), t0, d)
         self.apply(d, self_addr)
 
     def scroller_of(self, board: Int) -> Int:
@@ -1681,6 +1689,8 @@ struct GtkHost[A: App](Movable):
         var cy = Float64(rect[1])
         var cw = Float64(rect[2])
         var ch = Float64(rect[3])
+        if cw <= 0 or ch <= 0:  # (an object just put on the Board isn't laid out yet: next frame)
+            return False
         _ = len(rect)
         var v = external_call["gtk_adjustment_get_value", Float64](vadj)
         if cy < v + 72 or cy + min(ch, page - 160) > v + page - 56:  # (clear of the top and bottom islands)
@@ -1875,6 +1885,19 @@ struct GtkHost[A: App](Movable):
         for k in range(len(self.rt.shown.nodes)):
             if self.rt.shown.nodes[k].kind == LAZYLIST and self.widgets[k] != 0:
                 refresh_rows(self.widgets[k], self.rt.shown.nodes[k].value)
+        if 0 <= self.echo_node < len(self.rt.shown.nodes) and self.widgets[self.echo_node] != 0:
+            # The app answered a field's event with another value than was typed (it cleared the field after Return,
+            # say): the field shows the app's. A diff can't see it when the app's own value didn't change.
+            ref en = self.rt.shown.nodes[self.echo_node]
+            var ew = self.widgets[self.echo_node]
+            var want = en.text
+            if en.kind == FIELD and want != self.echo_text and c_str(external_call["gtk_editable_get_text", Int](ew)) != want:
+                external_call["gtk_editable_set_text", NoneType](ew, want.as_c_string_span())
+            elif en.kind == TEXTAREA and want != self.echo_text:
+                var buffer = external_call["gtk_text_view_get_buffer", Int](ew)
+                if buffer_text(buffer) != want:
+                    external_call["gtk_text_buffer_set_text", NoneType](buffer, want.as_c_string_span(), c_int(-1))
+        self.echo_node = -1
         self.arm_all(self_addr)  # a new version, frames starting, or a layout change: canvases look again
         set_busy(False)
 
@@ -1904,13 +1927,17 @@ struct GtkHost[A: App](Movable):
     def canvas_send(mut self, ci: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64, self_addr: Int):
         if ci < 0 or ci >= len(self.canvases):
             return
+        var t0 = perf_counter_ns()
         var d = self.rt.gesture(self.canvases[ci].node, kind, x, y, dx, dy, zoom)
+        self.trace_diff("event gesture", t0, d)
         self.apply(d, self_addr)
 
     def canvas_key(mut self, ci: Int, name: String, modifiers: Int, self_addr: Int):
         if ci < 0 or ci >= len(self.canvases):
             return
+        var t0 = perf_counter_ns()
         var d = self.rt.key(self.canvases[ci].node, name, modifiers)
+        self.trace_diff("event key " + name, t0, d)
         self.apply(d, self_addr)
 
     def pointer(self, ci: Int) -> Tuple[Float64, Float64]:
@@ -1934,7 +1961,9 @@ struct GtkHost[A: App](Movable):
             if self.canvases[ci].frames == 0:
                 self.canvases[ci].first_us = now
             self.canvases[ci].frames += 1
+            var t0 = perf_counter_ns()
             var d = self.rt.frame(node, now - last if last > 0 else 16667)
+            self.trace_diff("event frame", t0, d)
             self.apply(d, self_addr)
             if d.rebuild:
                 return False  # the new widgets get their own ticks
@@ -1971,6 +2000,7 @@ struct GtkHost[A: App](Movable):
         var surface = Surface(Int(self.canvases[ci].pixels.unsafe_ptr()), wpx, hpx, scale)
         surface.still = not animations_enabled()  # (GNOME's "reduce animation": animations jump to their end)
         var d = self.rt.draw(node, surface)
+        self.trace_diff("refresh after draw", t0, d)
         var tex = texture(self.canvases[ci].pixels, wpx, hpx)
         external_call["gtk_picture_set_paintable", NoneType](widget, tex)
         external_call["g_object_unref", NoneType](tex)
@@ -2006,6 +2036,12 @@ struct GtkHost[A: App](Movable):
                 return False
         return True
 
+    def trace_diff(self, what: String, t0: Int, d: Diff):
+        """MOJOUI_TRACE: one line per change the app made (its kind and how long the app took)."""
+        if self.rt.trace:
+            print("TRACE: " + what + " " + ms(perf_counter_ns() - t0) + " nodes " + String(len(self.rt.shown.nodes))
+                  + (" REBUILD" if d.rebuild else " patches " + String(len(d.patches))))
+
     def send(mut self, node: Int, second: Bool, text: String, number: Int, self_addr: Int):
         """A widget changed: build the event, run update(), patch the widgets."""
         ref n = self.rt.shown.nodes[node]
@@ -2013,7 +2049,13 @@ struct GtkHost[A: App](Movable):
         if message == 0:
             return
         self.focus = node if n.kind == FIELD else -1
+        var typed = n.kind == FIELD or n.kind == TEXTAREA
+        var t0 = perf_counter_ns()
         var d = self.rt.dispatch(Event(message, text, number))
+        self.trace_diff("event " + String(message), t0, d)
+        if typed:  # (controlled input: if the app's value isn't what was typed, the field shows the app's)
+            self.echo_node = node
+            self.echo_text = text
         self.apply(d, self_addr)
 
 

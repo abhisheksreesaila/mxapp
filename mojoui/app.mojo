@@ -3,7 +3,6 @@
 from mojoui.view import View, CANVAS, BOARD, FIELD, PAN, ZOOM, KEY
 from mojoui.diff import Diff, diff
 from mojoui.canvas import Surface
-from std.time import perf_counter_ns
 
 
 struct Event(Copyable, Movable):
@@ -104,7 +103,7 @@ struct Runtime[A: App](Movable):
 
     var app: Self.A
     var shown: View
-    var trace: Bool  # MOJOUI_TRACE=1: each event's update, view and diff times on stdout (TRACE: lines)
+    var trace: Bool  # MOJOUI_TRACE=1: hosts print each change's time and kind (TRACE: lines); the runtime keeps no clock (Android and iOS link no timing symbols here)
 
     def __init__(out self, var app: Self.A):
         self.shown = app.view()
@@ -112,17 +111,10 @@ struct Runtime[A: App](Movable):
         self.trace = False  # (hosts that can read the environment turn it on: GTK reads MOJOUI_TRACE; iOS has no getenv)
 
     def dispatch(mut self, event: Event) -> Diff:
-        var t0 = perf_counter_ns()
         self.app.update(event)
-        var t1 = perf_counter_ns()
         var next = self.app.view()
-        var t2 = perf_counter_ns()
         var d = diff(self.shown, next)
-        var t3 = perf_counter_ns()
         self.shown = next^
-        if self.trace:
-            print("TRACE: event " + String(event.message) + " update " + ms(t1 - t0) + " view " + ms(t2 - t1) + " diff " + ms(t3 - t2)
-                  + " nodes " + String(len(self.shown.nodes)) + (" REBUILD" if d.rebuild else " patches " + String(len(d.patches))))
         return d^
 
     def dispatch(mut self, message: Int) -> Diff:
@@ -131,22 +123,15 @@ struct Runtime[A: App](Movable):
 
     def refresh(mut self) -> Diff:
         """The screen again after state changed outside update() (e.g. in draw())."""
-        var t0 = perf_counter_ns()
         var next = self.app.view()
         var d = diff(self.shown, next)
         self.shown = next^
-        if self.trace:
-            print("TRACE: refresh " + ms(perf_counter_ns() - t0) + (" REBUILD" if d.rebuild else " patches " + String(len(d.patches))))
         return d^
 
     def resize(mut self, width: Int, height: Int) -> Diff:
         """The window's content area changed size: the app hears it, then the screen catches up."""
-        var t0 = perf_counter_ns()
         self.app.resize(width, height)
-        var d = self.refresh()
-        if self.trace:
-            print("TRACE: resize " + String(width) + "x" + String(height) + " " + ms(perf_counter_ns() - t0))
-        return d^
+        return self.refresh()
 
     def draw(mut self, node: Int, mut surface: Surface) -> Diff:
         """Paints canvas node `node`, then returns what else changed on screen."""
