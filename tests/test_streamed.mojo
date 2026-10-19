@@ -113,7 +113,9 @@ def main() raises:
             assert_equal(back.display(c, row), whole.display(c, row), "saved " + back.name(c) + " row " + String(row))
     # Undo takes the formula column back first (the sheet logs formulas: the package doesn't), then the edits
     assert_equal(s.columns(), 6)
+    assert_equal(s.undo_drops(), 5)  # (an app moves what reads it first)
     assert_true(s.undo())
+    assert_equal(s.undo_drops(), -1)
     assert_equal(s.columns(), 5)
     assert_true(s.last_undone.startswith("the formula column double"), s.last_undone)
     assert_true(whole.undo())

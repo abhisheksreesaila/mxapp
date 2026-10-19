@@ -486,6 +486,20 @@ struct Main(App):
         self.message = self.frame.name(self.grid.cur_col) + ": " + f.summary() + " (the whole column)"
         self.version += 1
 
+    def uses(self, c: Int) -> String:
+        """What reads column c and would break without it: a chart, a pivot, a Report tile or its filter ("" none)."""
+        if c < 0:
+            return ""
+        for o in self.objects:
+            if o.value == c or o.group == c or o.across == c:
+                return "a chart" if o.kind == OBJ_CHART else "a pivot"
+        for t in self.tiles:
+            if t.col == c or (t.kind == TILE_CHART and t.group == c):
+                return "a Report tile"
+        if self.filter.col == c:
+            return "the Report's filter"
+        return ""
+
     # ---------- cell formats ----------
 
     def style_target(mut self) -> Tuple[Int, Int]:
@@ -956,7 +970,17 @@ struct Main(App):
             self.renaming = -1
             self.message = "Kept the name"
             self.version += 1
+        elif m == UNDO and self.uses(self.frame.undo_drops()) != "":
+            var gone = self.frame.undo_drops()
+            self.message = "Can't undo the formula column " + self.frame.name(gone) + " yet: " + self.uses(gone) + " reads it. Remove that first"
+            self.version += 1
         elif m == UNDO:
+            var gone = self.frame.undo_drops()
+            if gone >= 0:  # (what only looks at the column lets go of it: a sort, the Report's tile column)
+                if self.grid.sort_col == gone:
+                    self.grid.clear_order()
+                if self.report_col == gone:
+                    self.report_col = self.first_number()
             if self.frame.undo():
                 self.grid.min_widths = List[Float64]()  # (a formula column may have gone)
                 self.grid.prepare(self.frame, self.font, self.pal)

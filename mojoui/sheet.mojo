@@ -365,6 +365,17 @@ struct Sheet(Movable, GridSource):
         """A new empty row; returns its number."""
         return self.frame.append(List[String]())
 
+    def undo_drops(self) -> Int:
+        """The column the next Undo would take away (a new formula column), -1 if none: an app moves or refuses what
+        reads it first (a chart, a tile, a sort)."""
+        var edits = len(self.frame.log)
+        if len(self.style_log) > 0 and self.style_log[len(self.style_log) - 1].edits >= edits:
+            ref last = self.style_log[len(self.style_log) - 1]
+            for st in last.steps:
+                if st.row == -3 and len(last.texts) < self.columns() - self.stored():
+                    return self.columns() - 1
+        return -1
+
     def undo(mut self) -> Bool:
         """Takes back the last change: a format change (styles, number formats) or an edit to the table, whichever
         came last."""
@@ -381,8 +392,8 @@ struct Sheet(Movable, GridSource):
                     for t in change.texts:
                         try:
                             _ = self.frame.formula(t)
-                        except:
-                            pass  # (it was accepted before: it reads the same columns)
+                        except e:  # (it was accepted before and reads the same columns: say so if it ever doesn't come back)
+                            self.last_undone += "; couldn't bring back " + t + ": " + String(e)
                 elif s.row == -2:
                     self.set_format(s.col, s.number)
                 elif s.row < 0:

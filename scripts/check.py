@@ -296,6 +296,26 @@ def m3():
                     problems.append(f"{host}: the tiles don't show {want}")
     except RuntimeError as e:
         problems.append(str(e))
+    # a formula column a tile reads can't be undone from under it: Undo says what reads it; without the tile it goes
+    c = Client(BUILD / "omxplorer" / "web", env("stats-undo"))
+    try:
+        g21.open_small(c, small)
+        c.call("formula")
+        c.call("a-new-column-its-name-then-its-formula", text="double = amount * 2", submit=True)
+        c.call("tab-1")
+        c.call("tiles-of", option="double")
+        c.call("sum-tile")
+        c.call("undo")
+        if not any("Can't undo the formula column double yet: a Report tile reads it" in t for t in status(c)) or '"Sum of double"' not in g21.screen(c):
+            problems.append(f"Undo of a formula column a tile reads wasn't refused with the reason: {status(c)}")
+        c.call("remove")
+        c.call("undo")
+        if not any("Undid the formula column double" in t for t in status(c)):
+            problems.append(f"without the tile, Undo didn't take the formula column back: {status(c)}")
+    finally:
+        log = c.close()
+    if "Traceback" in log:
+        problems.append("the agent host logged a traceback (undo): " + log[-300:])
     err = g20.mojo_test("tests/test_report_stats.mojo", "REPORT STATS TESTS PASSED", "test_report_stats")
     if err:
         problems.append(err)
