@@ -266,3 +266,12 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - Owner's feedback on the real app: menu rows mixed fonts (submenu rows were GtkMenuButtons getting the skin's bordered `button` rule: fixed in dd4f15e), the import dialog odd, report tiles spread with the ✕ outside, no range selection, "looks like an intern app". Checks only ever proved state; nothing compared screens with the design (lesson added).
 - Design round: `docs/design/liquid/` (liquid.md uploaded to a new Stitch project; 5 screens each from Stitch and Claude; compare.html). Stitch ~2 min for 5 screens in parallel.
 - Test steps added for screenshots of menus: `open:Format`, `open:Format>Text colour`, `pause:ms` (a display grab catches popovers; without a window manager they sit at 0,0).
+- Liquid as a framework design (D-230): `LIQUID` in view.mojo, `liquid_css` (GTK, over skin_css) and `LIQUID_CSS` (web, real backdrop blur and linear() springs). GTK accepts `@keyframes`, `transition`, `transform`, `linear-gradient`, `margin` on boxes; no `linear()` easing, no backdrop blur.
+- Same-specificity CSS: a later rule wins (the dashed Add-a-tile card drew white until `.mui-card.mui-tag-add-tile`); `window.liquid label.title-1` overrode the accent tone until a `.mui-tone-accent` rule followed it.
+- GTK homogeneous Grid vs the web's `repeat(n, auto)`: a tile with a long figure widened its column on the web; the web now uses `minmax(0, 1fr)`.
+- A Text given a width now reads from the leading edge on GTK (it centred: the import column table looked scattered).
+- Pango symbols aren't linked into the GTK host (`pango_context_get_font_description` failed to link): MENUROW reports the label's height instead of its font size.
+- Glide: `Surface.again` (drawing code mid-animation) → GTK keeps the canvas undrawn (drawn = -1) so the tick redraws next frame; web returns `X-Mojoui-Again: 1` and the page fetches another frame on the next animation frame. 12–13 frames per move, ≤ 11 ms each (GTK, headless cairo).
+- Two rebuild traps found by GLIDE counting negative frames: the status bar's item count changed per column (fixed: 8 fixed slots), the inspector differs between number and text columns (still a rebuild; GLIDE counts across rebuilds).
+- Message number clash: COPY = 41 fell inside RECENT (40–49) and silently did nothing; moved to 28.
+- `key:` steps take canvas index and the hosts' key names (`ArrowDown`), not `Down`.

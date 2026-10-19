@@ -24,7 +24,7 @@ def PyInit_mojoui_app() abi("C") -> PythonObject:
         m.def_function[close]("close", docstring="End a session.")
         m.def_function[design]("design", docstring="The app's design language (0 native, 1 Fluent 2, 2 Omarchy).")
         m.def_function[palette]("palette", docstring="The Omarchy palette as 'name=#rrggbb;…' (dark=1 or 0 first).")
-        m.def_function[draw]("draw", docstring="Paint a canvas (node, width, height, scale); JSON with the pixels' address and what changed.")
+        m.def_function[draw]("draw", docstring="Paint a canvas (node, width, height, scale, still: no motion); JSON with the pixels' address and what changed.")
         m.def_function[gesture]("gesture", docstring="A canvas gesture (node, kind, x, y, dx, dy, zoom); returns what changed as JSON.")
         m.def_function[key]("key", docstring="A key on a focused canvas (node, name, modifiers); returns what changed as JSON.")
         m.def_function[cancel]("cancel", docstring="Escape in a field (node, text); returns what changed as JSON.")
@@ -69,8 +69,8 @@ def close(handle: PythonObject) raises -> PythonObject:
     return PythonObject(None)
 
 
-def draw(handle: PythonObject, node: PythonObject, width: PythonObject, height: PythonObject, scale: PythonObject) raises -> PythonObject:
-    return PythonObject(web_draw[Main](Int(py=handle), Int(py=node), Int(py=width), Int(py=height), Float64(py=scale)))
+def draw(handle: PythonObject, node: PythonObject, width: PythonObject, height: PythonObject, scale: PythonObject, still: PythonObject) raises -> PythonObject:
+    return PythonObject(web_draw[Main](Int(py=handle), Int(py=node), Int(py=width), Int(py=height), Float64(py=scale), Int(py=still) != 0))
 
 
 def gesture(handle: PythonObject, node: PythonObject, kind: PythonObject, x: PythonObject, y: PythonObject, dx: PythonObject, dy: PythonObject, zoom: PythonObject) raises -> PythonObject:

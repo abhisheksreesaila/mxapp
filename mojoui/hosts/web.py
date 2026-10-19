@@ -249,6 +249,8 @@ MENU_JS = r"""
     if (!(e.ctrlKey || e.metaKey || e.altKey || fkey)) return;
     const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
     const name = (e.ctrlKey || e.metaKey ? 'Ctrl+' : '') + (e.shiftKey ? 'Shift+' : '') + (e.altKey ? 'Alt+' : '') + key;
+    const typing = e.target.matches && e.target.matches('input, textarea, [contenteditable], [contenteditable] *');
+    if (typing && ['Ctrl+C', 'Ctrl+X', 'Ctrl+V', 'Ctrl+A', 'Ctrl+Z'].includes(name)) return;  // a field's own copy, paste, select all, undo
     const item = [...document.querySelectorAll('[data-kind=item]:not([disabled])')].find(i => i.dataset.shortcut === name);
     if (item) { e.preventDefault(); e.stopPropagation(); menus.closeAll(); item.click(); }
   }, true);
@@ -432,7 +434,8 @@ CANVAS_JS = r"""
           st.want = false;
           const r = div.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
           const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
-          const res = await fetch(`/frame/${sid}/${n}?w=${w}&h=${h}&scale=${dpr}&v=${shape()}&tick=${tick}`);
+          const still = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 0;  // (less motion: animations jump to their end)
+          const res = await fetch(`/frame/${sid}/${n}?w=${w}&h=${h}&scale=${dpr}&v=${shape()}&tick=${tick}&still=${still}`);
           if (res.status !== 200) {
             if (res.headers.get('X-Mojoui-Pending') === '1') update();  // e.g. a frame changed the screen's shape
             if (res.status === 409) await new Promise(ok => setTimeout(ok, 50));
@@ -1353,7 +1356,7 @@ def make_app(module_dir):
             return changes(s, sid, d, n, str(path), 0)
 
     @app.get("/frame/{sid}/{n}")
-    def frame(sid: str, n: int, w: int = 0, h: int = 0, scale: float = 1, v: int = -1, tick: int = 0):
+    def frame(sid: str, n: int, w: int = 0, h: int = 0, scale: float = 1, v: int = -1, tick: int = 0, still: int = 0):
         """One canvas frame as a JPEG, painted by the app at w × h pixels. With tick=1 (the
         canvas asked for frames), a frame event goes to the app first. Changes to the rest of
         the screen wait in the session until the page asks for /pending."""
@@ -1378,7 +1381,7 @@ def make_app(module_dir):
                     return Response(status_code=409, headers={"X-Mojoui-Pending": "1"})
             else:
                 sess.frame_time.pop(n, None)
-            r = json.loads(mod.draw(sess.handle, n, w, h, scale))
+            r = json.loads(mod.draw(sess.handle, n, w, h, scale, still))
             sess.pending = merge(sess.pending, r["diff"])
             sess.nodes = json.loads(mod.view(sess.handle))
             rgba = ctypes.string_at(r["address"], r["width"] * r["height"] * 4)

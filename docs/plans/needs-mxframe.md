@@ -58,3 +58,7 @@ abhisheksreesaila/mxframe labelled `omxplorer`.
 When MX frame's Mojo API is ready, the switch is one layer: `GridSource`, the ops modules
 (`mojoui/orders_ops.mojo`, `orders_report.mojo`) and the Workbook's compute() call the engine; the components
 (DataGrid, PivotTable, ChartView, KpiView, FindingCard) don't change.
+
+**Wanted from goal 24 (2026-10-19):** a standard deviation (and variance) aggregate, CPU and GPU, streamed too: the
+Report's Average tile would show "σ = …" in its footer as Stitch drew it (D-240); until then it reads "of N values".
+Not filed as an issue yet (goal 24 stays inside this repo).

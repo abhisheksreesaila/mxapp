@@ -118,7 +118,7 @@ def web_view[A: App](handle: Int) -> String:
     return view_to_json(session_at[A](handle)[].shown)
 
 
-def web_draw[A: App](handle: Int, node: Int, width: Int, height: Int, scale: Float64) -> String:
+def web_draw[A: App](handle: Int, node: Int, width: Int, height: Int, scale: Float64, still: Bool = False) -> String:
     """Paints canvas node `node` at width × height pixels. Returns
     {"address", "width", "height", "diff"}: where the RGBA pixels are (valid until the next
     call for this tab) and what else changed on screen."""
@@ -128,6 +128,7 @@ def web_draw[A: App](handle: Int, node: Int, width: Int, height: Int, scale: Flo
     if len(tab[].pixels) != w * h:
         tab[].pixels = List[UInt32](length=w * h, fill=0)
     var surface = Surface(Int(tab[].pixels.unsafe_ptr()), w, h, scale if scale > 0 else 1.0)
+    surface.still = still  # (the page asked for reduced motion, or an agent wants the settled picture)
     var d = tab[].rt.draw(node, surface)
     return ('{"address":' + String(Int(tab[].pixels.unsafe_ptr())) + ',"width":' + String(w) + ',"height":' + String(h)
             + ',"again":' + ("true" if surface.again else "false") + ',"diff":' + diff_to_json(d, tab[].rt.shown) + "}")

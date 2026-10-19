@@ -1535,6 +1535,7 @@ struct GtkHost[A: App](Movable):
             self.canvases[ci].pixels = List[UInt32](length=wpx * hpx, fill=0)
         var t0 = perf_counter_ns()
         var surface = Surface(Int(self.canvases[ci].pixels.unsafe_ptr()), wpx, hpx, scale)
+        surface.still = not animations_enabled()  # (GNOME's "reduce animation": animations jump to their end)
         var d = self.rt.draw(node, surface)
         var tex = texture(self.canvases[ci].pixels, wpx, hpx)
         external_call["gtk_picture_set_paintable", NoneType](widget, tex)
@@ -1894,12 +1895,30 @@ def on_shortcut_pressed[A: App](controller: Int, keyval: c_uint, keycode: c_uint
     if name == "":
         return 0
     var host = host_at[A](host_addr)
+    if name == "Ctrl+C" or name == "Ctrl+X" or name == "Ctrl+V" or name == "Ctrl+A" or name == "Ctrl+Z":
+        var focus = external_call["gtk_root_get_focus", Int](host[].window)
+        if focus != 0 and (external_call["g_type_check_instance_is_a", c_int](focus, external_call["gtk_editable_get_type", Int]()) != 0
+                           or external_call["g_type_check_instance_is_a", c_int](focus, external_call["gtk_text_view_get_type", Int]()) != 0):
+            return 0  # a text field's own copy, cut, paste, select all and undo
     for i in range(len(host[].rt.shown.nodes)):
         ref n = host[].rt.shown.nodes[i]
         if n.kind == ITEM and len(n.options) > 0 and n.options[0] == name and n.value & DISABLED == 0 and n.msg != 0:
             host[].send(i, False, "", 0, host_addr)
             return 1
     return 0
+
+
+def animations_enabled() -> Bool:
+    """GtkSettings' gtk-enable-animations (off when the person asked for less motion)."""
+    var settings = external_call["gtk_settings_get_default", Int]()
+    if settings == 0:
+        return True
+    var on = List[c_int](length=1, fill=1)
+    var name = String("gtk-enable-animations")
+    external_call["g_object_get", NoneType, num_fixed_args=2](settings, name.as_c_string_span(), Int(on.unsafe_ptr()), 0)
+    var result = on[0] != 0
+    _ = len(on)
+    return result
 
 
 def mods_of(controller: Int) -> Int:
@@ -2422,7 +2441,11 @@ def run_step[A: App](host_addr: Int, step: String):
             if settled and last > before:
                 break
             sleep(0.002)
-        print("GLIDE: frames " + String(host[].key_draws - before) + " max_ms " + one_decimal(Float32(worst)))
+        var done = True
+        for ref cv in host[].canvases:
+            if cv.keys != 0 and cv.drawn != host[].rt.shown.nodes[cv.node].value:
+                done = False
+        print("GLIDE: frames " + String(host[].key_draws - before) + " max_ms " + one_decimal(Float32(worst)) + " settled " + ("yes" if done else "no"))
     elif verb == "pause":  # pause:3000: keep the main loop running that long (a screen grab of the display can catch popovers)
         var until = perf_counter_ns() + to_int(rest) * 1_000_000
         while perf_counter_ns() < until:

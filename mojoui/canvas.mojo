@@ -12,6 +12,7 @@ struct Surface(Movable):
     var height: Int
     var scale: Float64
     var again: Bool  # set by drawing code that is mid-animation (a gliding selection ring): the host draws again next frame
+    var still: Bool  # set by the host: the person asked for less motion (or a still picture is wanted): animations jump to their end
 
     def __init__(out self, address: Int, width: Int, height: Int, scale: Float64):
         self.address = address
@@ -19,6 +20,7 @@ struct Surface(Movable):
         self.height = height
         self.scale = scale
         self.again = False
+        self.still = False
 
     def pixels(self) -> Pointer[UInt32, MutUntrackedOrigin]:
         return Pointer[UInt32, MutUntrackedOrigin](unsafe_from_address=self.address)

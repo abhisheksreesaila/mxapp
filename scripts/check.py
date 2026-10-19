@@ -190,7 +190,7 @@ def m3():
                 break
         if len(xs) < len(tiles):
             problems.append(f"{host}: {len(tiles)} tiles but {len(xs)} remove buttons")
-        tools = [b for b in boxes(out, "toolbar/*") if b[3] >= 40]  # (icon-over-label tools; not the small toggles or fields)
+        tools = [b for b in boxes(out, "toolbar/*") if b[2] >= 60]  # (icon-over-label tools are the wide ones; the toggles are icon squares)
         if not tools or len({round(t[3]) for t in tools}) > 1:
             problems.append(f"{host}: toolbar tools differ in height: {sorted({round(t[3]) for t in tools})}")
     src = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
@@ -211,9 +211,9 @@ def m4():
         if needle not in css:
             problems.append(f"GTK Liquid skin: no {what}")
     out = gtk(SHEET + ";glide:Down;glide:Right", "glide-GTK")
-    glides = [(int(n), float(ms)) for n, ms in re.findall(r"^GLIDE: frames (\d+) max_ms ([\d.]+)$", out, re.M)]
-    if len(glides) != 2 or any(n < 6 or ms >= 20 for n, ms in glides):
-        problems.append(f"the selection ring doesn't glide (≥6 frames, each <20 ms): {glides}")
+    glides = [(int(n), float(ms), done) for n, ms, done in re.findall(r"^GLIDE: frames (\d+) max_ms ([\d.]+) settled (yes|no)$", out, re.M)]
+    if len(glides) != 2 or any(n < 6 or n > 60 or ms >= 20 or done != "yes" for n, ms, done in glides):
+        problems.append(f"the selection ring doesn't glide and settle (6–60 frames, each <20 ms): {glides}")
     out = web(SHEET + ";style:button.tool=transition-duration;style:.menu-items=animation-name;menu:File>Settings…;style:.dialog=animation-name", "motion-web")
     styles = dict(re.findall(r"^STYLE: (\S+) \S+ (.+)$", out, re.M))
     if not styles.get("button.tool") or styles["button.tool"] in ("0s", ""):
@@ -228,6 +228,9 @@ def m5():
     """A block of cells: Sum, Average, Count (pyarrow's), Bold on every cell, Copy as TSV; GTK, web and the agent host."""
     import pyarrow.parquet as pq
     problems = []
+    err = g20.mojo_test("tests/test_block_style.mojo", "BLOCK STYLE TESTS PASSED", "test_block_style")
+    if err:
+        problems.append(err)
     t = pq.read_table(small()).to_pydict()
     c = Client(BUILD / "omxplorer" / "web", env("range-agent"))
     try:
@@ -248,6 +251,9 @@ def m5():
         want_sum = f"{sum(block):,.2f}"
         if want_sum not in status or f"Count {filled}" not in status or "Cells 12" not in status:
             problems.append(f"agent: the status bar doesn't describe the block (want Sum {want_sum}, Count {filled} non-empty, Cells 12): {status}")
+        want_avg = f"{sum(block) / len(block):,.2f}" if block else None
+        if want_avg and f"Average {want_avg}" not in status:
+            problems.append(f"agent: the block's Average isn't pyarrow's {want_avg}: {status}")
         c.call("bold")  # (the agent's read shows values, not styles: the app says what it formatted, as goal 21's checks read it)
         if not any(t.startswith("12 cells: bold") for t in g20.status_of(c)):
             problems.append(f"agent: Bold didn't reach the block's 12 cells: {g20.status_of(c)}")
@@ -258,8 +264,15 @@ def m5():
         if not re.search(r"^LABEL: Cells 6$", out, re.M):
             problems.append(f"{host}: Shift+arrows don't select a 3×2 block (status: {[l for l in out.splitlines() if 'Cells' in l or 'Count' in l][:3]})")
         clip = re.search(r"^CLIPBOARD: (.*)$", out, re.M)
-        if not clip or clip.group(1).count("\\t") != 3 or clip.group(1).count("\\n") < 2:
-            problems.append(f"{host}: Copy didn't put a tab-separated 3×2 block on the clipboard ({clip.group(1)[:80] if clip else None})")
+        lines = [l.split("\\t") for l in clip.group(1).split("\\n")] if clip else []
+        table = [(f"{a:.2f}" if a is not None else "", r or "") for a, r in zip(t["amount"], t["region"])]
+        run = [tuple(l) for l in lines]
+        if len(run) != 3 or any(len(l) != 2 for l in run) or not any(table[i:i + 3] == run for i in range(len(table) - 2)):
+            problems.append(f"{host}: Copy didn't put 3 consecutive rows of amount and region on the clipboard as pyarrow has them ({clip.group(1)[:90] if clip else None})")
+        if host == "web":  # (GTK's test clicks carry no keyboard state: Shift+click is driven with a real mouse in Chromium)
+            out = fn(SHEET + ";tapat:0=180,200;shifttapat:0=300,330", "shiftclick-web")
+            if not re.search(r"^LABEL: Cells ([2-9]|\d\d+)$", out, re.M):
+                problems.append("web: Shift+click doesn't extend the selection to a block")
         out = fn(SHEET + ";dragat:0=180,200,150,90", f"drag-{host}")
         if not re.search(r"^LABEL: Cells ([2-9]|\d\d+)$", out, re.M):
             problems.append(f"{host}: a drag over cells doesn't select a block")
@@ -290,9 +303,9 @@ def m7():
         if len(boxes(out, "stat-card")) < 4:
             problems.append(f"{host}: the inspector shows {len(boxes(out, 'stat-card'))} stat cards, not 4")
         out = fn(REPORT, f"stitch-report-{host}")
-        for fact in (" matched", "p50 exact", "of ", "% of rows"):
-            if not re.search(rf"^LABEL: .*{re.escape(fact)}", out, re.M) and f"{fact}" not in out:
-                problems.append(f"{host}: no report tile says {fact.strip()!r}")
+        for fact in (r"[\d,]+ matched", r"p50 exact", r"of [\d,]+ values", r"[\d.]+% of rows"):
+            if not re.search(rf"^LABEL: {fact}$", out, re.M):
+                problems.append(f"{host}: no report tile's footer reads {fact!r}")
     rows = "".join(f'<h2>{s}</h2><div class=r><img src="../../docs/design/liquid/img/stitch-{s}.png"><img src="{s}-GTK-gtk.png"><img src="{s}-web-web.png"></div>'
                    for s in ("start", "import", "sheet", "report"))
     (OUT / "compare.html").write_text("<!doctype html><meta charset=utf-8><title>goal 24: Stitch vs GTK vs web</title><style>body{background:#111;color:#ddd;font:14px Inter,sans-serif;padding:20px}"

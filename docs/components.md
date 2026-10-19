@@ -17,7 +17,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `Spacer` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ❌ | analytics, mxstudio, omxplorer |
 | `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | analytics, workbook, mxstudio, omxplorer |
 | `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | todo, omxplorer |
-| `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | kitchen, expenses, omxplorer |
+| `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, kitchen, expenses, lens, analytics, omxplorer |
 | `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, expenses, workbook, mxstudio |
 | `TextArea` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook, mxstudio |
@@ -45,6 +45,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `Toast` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
 | `Popover` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
 | `Checkbox` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
+| `Clipboard` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | omxplorer |
 
 ## Variants, gestures, layout, design languages
 
@@ -98,18 +99,18 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | `Swatch picker` | `mojoui/swatches.mojo` | Canvas, Canvas: pan, zoom, tap, Popover | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ | omxplorer |
 | `Column number formats` | `mojoui/numformat.mojo` | Canvas, Text | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
 | `Sheet objects (charts, pivots)` | `mojoui/sheetpage.mojo` | Board: drag, resize, snap, Canvas, Card, Grid | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 | omxplorer |
-| `Report page (KPI and chart tiles, filters)` | `mojoui/reportpage.mojo` | Grid, Card, Dropdown, Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
+| `Report page (KPI and chart tiles, filters)` | `mojoui/reportpage.mojo` | Grid, Card, Dropdown, Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | omxplorer |
 
 ## Totals
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 76 | 1 | 0 |
-| Web | 77 | 0 | 0 |
-| Android | 19 | 15 | 43 |
-| Mac (AppKit) | 0 | 57 | 20 |
-| iPhone (UIKit) | 0 | 59 | 18 |
-| Agent (MCP) | 30 | 14 | 33 |
+| Linux (GTK) | 77 | 1 | 0 |
+| Web | 78 | 0 | 0 |
+| Android | 19 | 15 | 44 |
+| Mac (AppKit) | 0 | 57 | 21 |
+| iPhone (UIKit) | 0 | 59 | 19 |
+| Agent (MCP) | 28 | 16 | 34 |
 
 ## Inside one app, not components yet (the debt)
 

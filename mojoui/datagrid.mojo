@@ -348,9 +348,18 @@ struct DataGrid(Copyable, Movable):
         if self.cur_row < 0 or self.cur_col < 0:
             return (-1, -1, -1, -1)
         var i1 = self.index_of(self.cur_row, src)
+        if i1 < 0:
+            return (-1, -1, -1, -1)
         var i0 = self.index_of(self.anchor_row, src) if self.has_block() else i1
+        if i0 < 0:  # (the anchor's row went away: one cell)
+            return (i1, i1, self.cur_col, self.cur_col)
         var c0 = self.anchor_col if self.has_block() else self.cur_col
         return (min(i0, i1), max(i0, i1), min(c0, self.cur_col), max(c0, self.cur_col))
+
+    def block_size[S: GridSource](self, src: S) -> Int:
+        """How many cells the block covers (display rows × columns; removed rows included): cheap, for caps."""
+        var b = self.block(src)
+        return 0 if b[0] < 0 else (b[1] - b[0] + 1) * (b[3] - b[2] + 1)
 
     def cancel_edit(mut self):
         """The editor closed without writing (its Escape, or anything else the app does meanwhile)."""
@@ -376,11 +385,15 @@ struct DataGrid(Copyable, Movable):
         self.sort_col = col
         self.sort_desc = descending
         self.top = 0
+        self.anchor_row = self.cur_row  # (a block's rows are scattered by a sort: it collapses to the cell)
+        self.anchor_col = self.cur_col
         self.redraw()
 
     def clear_order(mut self):
         self.order = List[Int]()
         self.sort_col = -1
+        self.anchor_row = self.cur_row
+        self.anchor_col = self.cur_col
         self.redraw()
 
     def scroll_rows[S: GridSource](mut self, rows: Int, src: S):
@@ -793,12 +806,12 @@ struct DataGrid(Copyable, Movable):
             name = "ƒ " + name
         return self.col_left(c, src) + 8 + font.measure(name, 12.5) + 6
 
-    def glide(mut self, var to: List[Float64]) -> Bool:
+    def glide(mut self, var to: List[Float64], still: Bool = False) -> Bool:
         """Moves the drawn ring toward `to` (points) on a critically damped spring (~140 ms to settle). A scroll or the
         first ring jumps straight there. Returns whether it is still moving (draw again next frame)."""
         var view = (self.top, self.left)
         var now = Int(perf_counter_ns())
-        if len(self.ring) != 4 or view[0] != self.ring_view[0] or view[1] != self.ring_view[1]:
+        if still or len(self.ring) != 4 or view[0] != self.ring_view[0] or view[1] != self.ring_view[1]:  # (less motion asked for: it jumps)
             self.ring = to.copy()
             self.ring_to = to^
             self.ring_view = view
@@ -986,7 +999,7 @@ struct DataGrid(Copyable, Movable):
         if blk[2] >= 0 and ring_top >= 0 and blk[2] < len(lefts):
             var c1 = min(blk[3], len(lefts) - 1)
             var to: List[Float64] = [max(lefts[blk[2]], gut) / k, ring_top / k, (min(lefts[c1] + widths[c1], right) - max(lefts[blk[2]], gut)) / k, (ring_bottom - ring_top) / k]
-            if self.glide(to^):
+            if self.glide(to^, s.still):
                 s.again = True  # mid-glide: the host draws the next frame too
             var rx = self.ring[0] * k
             var ry = self.ring[1] * k

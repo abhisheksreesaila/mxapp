@@ -19,6 +19,12 @@ from mojoui.view import Radio, LEDGER, GRAPHITE, BLUEPRINT, LIQUID
 from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
 from mojoui.numformat import fixed as numfixed, pow10
+
+
+def money2(x: Float64) -> String:
+    """x with two decimal places and thousands separators (rounded half away from zero), a minus when negative."""
+    var a = x if x >= 0 else -x
+    return ("-" if x < 0 else "") + numfixed(Int64(a * 100.0 + 0.5), 2, 2, True)
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
 from mojoui.sheet import Sheet, placeholder_sheet, blank_table, INT, DECIMAL, TEXT, DATE
@@ -64,6 +70,7 @@ comptime THOUSANDS = 14
 comptime NEGATIVES = 15
 comptime SYMBOL = 16
 comptime ADD_ROW = 17
+comptime BLOCK_CAP = 100_000  # a block's cells read one by one (its figures, Copy, a format) at most: larger blocks say so
 comptime COPY = 28  # Edit > Copy (Ctrl+C): the selected cell or block, as tab-separated text
 comptime NEW_FORMULA = 18
 comptime FORMULA_SUBMIT = 19
@@ -157,6 +164,7 @@ struct Main(App):
     var formula_open: Bool  # the formula bar adds a column instead of editing a cell
     var edit_text: String
     var message: String
+    var block_lines: List[String]  # the block's figures for the status bar (computed when the selection changes, not per redraw)
     var stats: List[Tuple[String, String]]  # the selected column's figures for the inspector's cards, and what they're for
     var stats_key: String
     var clip_text: String  # what Copy put on the clipboard last, and its version (the Clipboard view)
@@ -218,6 +226,7 @@ struct Main(App):
         self.clip_text = ""
         self.stats = List[Tuple[String, String]]()
         self.stats_key = ""
+        self.block_lines = List[String]()
         self.clip_version = 0
         self.milliseconds = 0
         self.recent = read_recent(APP)
@@ -462,7 +471,11 @@ struct Main(App):
 
     def select_cell(mut self, row: Int, col: Int):
         self.edit_text = self.frame.plain_text(col, row) if row >= 0 and col >= 0 else ""
-        self.totals()
+        if self.grid.has_block():  # a block: its own figures (a drag sends one per cell crossed: no column totals)
+            self.block_lines = self.block_status()
+        else:
+            self.block_lines = List[String]()
+            self.totals()
         self.version += 1
 
     def totals(mut self):
@@ -489,9 +502,9 @@ struct Main(App):
         """The inspector's cards for the selected number column: Mean, Median, Empty, Distinct (the engine's, recomputed
         only when the column or its numbers change)."""
         var col = self.grid.cur_col
-        if col < 0 or not self.has_table or self.frame.kind(col) == TEXT or self.frame.kind(col) == DATE:
+        if col < 0 or not self.has_table or self.frame.kind(col) == TEXT or self.frame.kind(col) == DATE or not self.inspector_open:
             self.stats = List[Tuple[String, String]]()
-            self.stats_key = ""
+            self.stats_key = ""  # (the inspector closed: nothing to show; computed again when it opens)
             return
         var key = String(col) + "/" + String(self.frame.rows()) + "/" + String(self.sum) + "/" + String(self.count)
         if key == self.stats_key:
@@ -563,6 +576,10 @@ struct Main(App):
         if at[0] < 0:
             return
         if self.grid.has_block():  # every cell of the block, one Undo step
+            if self.grid.block_size(self.frame) > BLOCK_CAP:
+                self.message = "That block has " + grouped(self.grid.block_size(self.frame)) + " cells: format up to " + grouped(BLOCK_CAP) + " at a time, or a whole column by its header"
+                self.version += 1
+                return
             var cells = self.block_cells()
             self.frame.restyle_cells(cells, mask, value)
             self.message = String(len(cells)) + " cells: " + self.frame.style_of(at[0], at[1]).words()
@@ -588,6 +605,10 @@ struct Main(App):
 
     def copy_block(mut self):
         """Edit > Copy: the cell or block as tab-separated text (cells as shown), onto the clipboard."""
+        if self.grid.block_size(self.frame) > BLOCK_CAP:
+            self.message = "That block has " + grouped(self.grid.block_size(self.frame)) + " cells: copy up to " + grouped(BLOCK_CAP) + " at a time"
+            self.version += 1
+            return
         var b = self.grid.block(self.frame)
         if b[0] < 0:
             self.message = "Select a cell or a block of cells to copy"
@@ -612,13 +633,22 @@ struct Main(App):
         self.version += 1
 
     def block_status(self) -> List[String]:
-        """The block's figures for the status bar: Cells (its size), Count (non-empty), Sum and Average (its numbers)."""
+        """The block's figures for the status bar: Cells (its size), Count (non-empty), Sum and Average (its numbers),
+        each number column totalled exactly at its own scale. Over BLOCK_CAP cells only its size (reading millions of
+        cells one by one would stall the window; a Report tile totals whole columns on the engine)."""
         var out = List[String]()
+        var size = self.grid.block_size(self.frame)
+        if size > BLOCK_CAP:
+            out.append("Cells " + grouped(size))
+            out.append("Too many cells to total here (over " + grouped(BLOCK_CAP) + "): a Report tile totals whole columns")
+            return out^
         var b = self.grid.block(self.frame)
         var cells = 0
         var filled = 0
         var numbers = 0
-        var total = Int64(0)  # exact: every number brought to 4 decimal places
+        var sums = List[Int64]()  # per column of the block, at its own scale
+        for _ in range(b[2], b[3] + 1):
+            sums.append(0)
         for i in range(b[0], b[1] + 1):
             var row = self.grid.shown_row(i, self.frame)
             if row < 0 or not self.frame.grid_alive(row):
@@ -630,15 +660,27 @@ struct Main(App):
                 filled += 1
                 if self.frame.kind(c) == INT or self.frame.kind(c) == DECIMAL:
                     numbers += 1
-                    var sc = self.frame.scale(c)
-                    var v = self.frame.value(c, row)
-                    total += v * pow10(4 - sc) if sc <= 4 else v // pow10(sc - 4)
+                    sums[c - b[2]] += self.frame.value(c, row)
         out.append("Cells " + grouped(cells))
         out.append("Count " + grouped(filled))
         if numbers > 0:
-            var mean = total // Int64(numbers)
-            out.append("Sum " + ("-" if total < 0 else "") + numfixed(total, 4, 2, True))
-            out.append("Average " + ("-" if mean < 0 else "") + numfixed(mean, 4, 2, True))
+            var scale = 0
+            var exact = True  # one scale: the total stays an exact integer
+            var total = 0.0
+            for c in range(b[2], b[3] + 1):
+                if self.frame.kind(c) == INT or self.frame.kind(c) == DECIMAL:
+                    var sc = self.frame.scale(c)
+                    if scale > 0 and sc != scale:
+                        exact = False
+                    scale = max(scale, sc)
+                    total += Float64(sums[c - b[2]]) / Float64(pow10(sc))
+            var one = Int64(0)
+            for c in range(b[2], b[3] + 1):
+                if self.frame.kind(c) == INT or self.frame.kind(c) == DECIMAL:
+                    one += sums[c - b[2]]
+            var sum_text = (("-" if one < 0 else "") + numfixed(one, scale, 2, True)) if exact else money2(total)
+            out.append("Sum " + sum_text)
+            out.append("Average " + money2(total / Float64(numbers)))
         return out^
 
     def after_style(mut self, col: Int, row: Int):
@@ -782,6 +824,7 @@ struct Main(App):
             self.version += 1
         elif m == TOGGLE_INSPECTOR:
             self.inspector_open = not self.inspector_open
+            self.column_stats()
             self.version += 1
         elif m == FORMAT:
             var f = self.column_format()
@@ -1551,7 +1594,7 @@ struct Main(App):
         if self.grid.has_block():
             var b = self.grid.block(self.frame)
             items.append("Selection " + String(b[1] - b[0] + 1) + " rows × " + String(b[3] - b[2] + 1) + " columns")
-            for t in self.block_status():
+            for t in self.block_lines:
                 items.append(t)
             if self.message != "":
                 items.append(self.message)

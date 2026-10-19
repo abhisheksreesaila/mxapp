@@ -432,7 +432,7 @@ class Host:
         n = self.nodes[i]
         w = int(width or n["w"] or 800)
         h = int(height or n["h"] or 500)
-        r = json.loads(self.mod.draw(self.handle, i, w, h, 1.0))
+        r = json.loads(self.mod.draw(self.handle, i, w, h, 1.0, 1))  # (still: an agent gets the settled picture)
         rgba = ctypes.string_at(r["address"], r["width"] * r["height"] * 4)
         picture = Image.frombuffer("RGBA", (r["width"], r["height"]), rgba, "raw", "RGBA", 0, 1).convert("RGB")
         out = io.BytesIO()

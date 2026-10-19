@@ -19,6 +19,23 @@ _spec.loader.exec_module(g15)
 run, BUILD, EXAMPLES, OPEN = g15.run, g15.BUILD, g15.EXAMPLES, g15.OPEN
 both, env_for, has, labels, ensure_csv, CSV_1M = g15.both, g15.env_for, g15.has, g15.labels, g15.ensure_csv, g15.CSV_1M
 
+# Goal 24 made Liquid omxplorer's default (the owner, D-225); these checks were written for the Ledger, so every run
+# without a saved setting starts as a person who picked the Ledger would (settings.txt: skin=ledger; D-239).
+_env_for = g15.g14.env_for  # (both() is goal 14's and calls its own env_for)
+
+
+def _ledger_env(tag, *a, **k):
+    e = _env_for(tag, *a, **k)
+    if "OMX_CONFIG" in e:
+        f = Path(e["OMX_CONFIG"]) / "settings.txt"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        if not f.exists():
+            f.write_text("skin=ledger\n")
+    return e
+
+
+g15.g14.env_for = g15.env_for = env_for = _ledger_env
+
 SHOWN = r"^(LABEL|TONE|SEGMENTED|TABS|DROPDOWN|BUTTON|FIELD|TEXTAREA|BOARD|TOGGLE|CHECK|MENU|DIALOG|TOAST|TIP|POPOVER|DESIGN|RADIO): "
 TIMING = re.compile(r"read in [\d.]+ s|[\d.]+ ms on |^LABEL: Saved |^LABEL: Opened |^LABEL: [\d.]+ ms$|^LABEL: ● ")
 FONTS = ROOT / "mojoui/hosts/static/fonts"

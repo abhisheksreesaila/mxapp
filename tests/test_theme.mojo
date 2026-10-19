@@ -2,7 +2,7 @@
 #   pixi run mojo build -I . tests/test_theme.mojo -o build/test_theme && build/test_theme
 from std.testing import assert_equal, assert_true
 from mojoui.theme import Palette, hex_rgba, hex_of, mix, skin_palette, skin_name, skin_of
-from mojoui.view import LEDGER, GRAPHITE, BLUEPRINT, OMARCHY
+from mojoui.view import LEDGER, GRAPHITE, BLUEPRINT, OMARCHY, LIQUID
 from mojoui.text import MONO, MONO_BOLD, REGULAR
 
 
@@ -48,7 +48,11 @@ def main() raises:
     assert_equal(hex_of(blueprint.accent), "#2f6fed")
     assert_equal(hex_of(blueprint.chrome), "#14213d")
     assert_equal(hex_of(blueprint.card), "#ffffff")
-    for skin in [ledger.copy(), graphite.copy(), blueprint.copy()]:
+    var liquid = Palette.liquid()  # the default since goal 24 (D-225)
+    assert_equal(hex_of(liquid.accent), "#0e7c86")
+    assert_equal(hex_of(liquid.card), "#ffffff")
+    assert_true(not liquid.dark)
+    for skin in [ledger.copy(), graphite.copy(), blueprint.copy(), liquid.copy()]:
         assert_true(contrast(skin.ink3, skin.card) >= 4.5, "skin captions: " + String(contrast(skin.ink3, skin.card)))
         assert_true(contrast(skin.ink, skin.card) >= 7.0, "skin text")
         assert_true(contrast(skin.chrome_ink, skin.chrome) >= 7.0, "skin chrome")
@@ -59,5 +63,8 @@ def main() raises:
     assert_equal(skin_palette(OMARCHY).skin, 0)
     assert_equal(skin_name(BLUEPRINT), "blueprint")
     assert_equal(skin_of("graphite"), GRAPHITE)
-    assert_equal(skin_of("nonsense"), LEDGER)
+    assert_equal(skin_of("ledger"), LEDGER)
+    assert_equal(skin_of("liquid"), LIQUID)
+    assert_equal(skin_palette(LIQUID).skin, LIQUID)
+    assert_equal(skin_of("nonsense"), LIQUID)  # (an unknown or missing setting: the default, Liquid since goal 24)
     print("THEME TESTS PASSED")

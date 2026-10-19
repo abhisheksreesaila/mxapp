@@ -194,7 +194,7 @@ def step(page, s):
                 page.wait_for_timeout(30)
             elif part:
                 page.keyboard.type(part.replace("⏎", "\n"), delay=30)
-    elif verb in ("drag", "dragat", "doubletap", "zoom", "frames", "tapat"):  # canvas steps: real mouse input on the canvas
+    elif verb in ("drag", "dragat", "doubletap", "zoom", "frames", "tapat", "shifttapat"):  # canvas steps: real mouse input on the canvas
         k, _, arg = rest.partition("=")
         canvas = page.locator("[data-kind=canvas]").nth(int(k))
         box = canvas.bounding_box()
@@ -202,9 +202,13 @@ def step(page, s):
         if verb == "doubletap":  # a double click at (x, y) thousandths of the canvas
             fx, fy = (int(v) / 1000 for v in arg.split(","))
             page.mouse.dblclick(box["x"] + fx * box["width"], box["y"] + fy * box["height"])
-        elif verb == "tapat":  # a click at (x, y) thousandths of the canvas
+        elif verb == "tapat" or verb == "shifttapat":  # a click at (x, y) thousandths of the canvas (shifttapat: with Shift held)
             fx, fy = (int(v) / 1000 for v in arg.split(","))
+            if verb == "shifttapat":
+                page.keyboard.down("Shift")
             page.mouse.click(box["x"] + fx * box["width"], box["y"] + fy * box["height"])
+            if verb == "shifttapat":
+                page.keyboard.up("Shift")
         elif verb == "dragat":  # start at (fx, fy) thousandths of the canvas, move (dx, dy) points
             fx, fy, dx, dy = (int(v) for v in arg.split(","))
             sx, sy = box["x"] + fx / 1000 * box["width"], box["y"] + fy / 1000 * box["height"]
