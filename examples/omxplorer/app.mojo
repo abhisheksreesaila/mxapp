@@ -27,7 +27,7 @@ def money2(x: Float64) -> String:
     return ("-" if x < 0 else "") + numfixed(Int64(a * 100.0 + 0.5), 2, 2, True)
 from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED,
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
-from mojoui.sheet import Sheet, placeholder_sheet, blank_table, INT, DECIMAL, TEXT, DATE
+from mojoui.sheet import Sheet, placeholder_sheet, blank_table, INT, DECIMAL, TEXT, DATE, BOOL
 from mojoui.shared import environment, make_dir
 from mojoui.files import file_name, file_stem, read_recent, remember, read_setting, write_setting
 from mojoui.csvio import read_table, empty_import, CsvImport, CsvColumn, kind_name
@@ -44,7 +44,7 @@ from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, tile_fact, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
                                TILE_CHART, TILE_DISTINCT, TILE_MEDIAN, TILE_LAST, TILE_NAMES)
 from mojoui.chartview import ChartView
-from mojoui.view import TAP
+from mojoui.view import TAP, PAN, ZOOM
 from mojoui.sample import sample_table
 
 # screens
@@ -130,6 +130,7 @@ comptime TAB = 93  # + 0 (the sheet), 1 (the Report): a bottom tab tapped
 comptime RENAME_TAB = 95  # Sheet > Rename tab…: the current tab's name becomes a field
 comptime RENAME_SUBMIT = 96
 comptime RENAME_CANCEL = 97
+comptime PREVIEW = 98  # the import preview's gestures: it scrolls (it's read-only: taps and keys do nothing)
 comptime SET_INK = 600  # + 0 (automatic) … 8: the Format menu's text colours
 comptime SET_FILL = 610  # + 0 (none) … 8
 comptime SWATCH_CANVAS = 5  # the swatches' canvas id
@@ -488,6 +489,7 @@ struct Main(App):
         self.edit_text = self.frame.plain_text(col, row) if row >= 0 and col >= 0 else ""
         if self.grid.has_block():  # a block: its own figures (a drag sends one per cell crossed: no column totals)
             self.block_lines = self.block_status()
+            self.column_stats()  # (the inspector follows the selected cell's column during a block too)
         else:
             self.block_lines = List[String]()
             self.totals()
@@ -517,16 +519,24 @@ struct Main(App):
         """The inspector's cards for the selected number column: Mean, Median, Empty, Distinct (the engine's, recomputed
         only when the column or its numbers change)."""
         var col = self.grid.cur_col
-        if col < 0 or not self.has_table or self.frame.kind(col) == TEXT or self.frame.kind(col) == DATE or not self.inspector_open:
+        if col < 0 or not self.has_table or self.frame.kind(col) == TEXT or self.frame.kind(col) == DATE or self.frame.kind(col) == BOOL or not self.inspector_open:
             self.stats = List[Tuple[String, String]]()
             self.stats_key = ""  # (the inspector closed: nothing to show; computed again when it opens)
             return
-        var key = String(col) + "/" + String(self.frame.rows()) + "/" + String(self.sum) + "/" + String(self.count)
+        var key = String(col) + "/" + String(self.frame.rows()) + "/" + String(self.frame.edits()) + "/" + String(self.frame.format_of(col).style)
         if key == self.stats_key:
             return
         self.stats_key = key
+        var total = 0  # (the column's own totals: the status bar's may be a block's, goal 25 M4)
+        var present = 0
+        try:
+            var r = self.frame.totals(col)
+            total = r.sums[0]
+            present = r.present[0]
+        except:
+            pass
         var out = List[Tuple[String, String]]()
-        out.append(("Mean", self.frame.format_average(col, self.sum, self.count)))
+        out.append(("Mean", self.frame.format_average(col, total, present)))
         var median = String("—")  # (a streamed file: median and distinct read every row group, so they wait for a tile)
         try:
             if self.frame.scan:
@@ -537,7 +547,7 @@ struct Main(App):
         except:
             pass
         out.append(("Median", median))
-        out.append(("Empty", grouped(self.frame.rows() - self.count)))
+        out.append(("Empty", grouped(self.frame.rows() - present)))
         var distinct = String("—")
         try:
             if self.frame.scan:
@@ -799,6 +809,9 @@ struct Main(App):
             self.toast = ""
             self.message = "Sort undone"
             self.version += 1
+        elif m == PREVIEW:  # (only scrolling: the preview selects and edits nothing)
+            if event.number == PAN or event.number == ZOOM:
+                _ = self.preview.handle(event, self.frame, self.font, self.pal)
         elif m == GRID:
             var action = self.grid.handle(event, self.frame, self.font, self.pal)
             if action == GRID_SELECTED or action == GRID_EDIT or action == GRID_READ_ONLY or action == GRID_COLUMN:
@@ -1323,14 +1336,14 @@ struct Main(App):
                           Text(grouped(self.imp.rows) + " rows · " + String(len(self.imp.columns)) + " columns · "
                                + ("streamed, opened in " if self.imp.streamed() else "read in ") + fixed(self.imp.seconds, 2) + " s", CAPTION).tone(TONE_GOOD), spacing=2).align(START),
                    Spacer(), Text("✓ File   ›   2  Columns   ›   3  Table", CAPTION), spacing=12).fill().align(CENTER),
-            Canvas(1, self.version + self.preview.version, on_gesture=NO_MSG).fill().height(300).tag("import-preview"),
+            Canvas(1, self.version + self.preview.version, on_gesture=PREVIEW).fill().height(300).tag("import-preview"),
             Text("Columns", HEADLINE),
             Scroll(VStack(rows^, spacing=0).fill(), height=250).fill().tag("import-columns"),
             Spacer(),
             HStack(Button("Back", BACK), Text(note, CAPTION).tone(TONE_WARN if self.imp.streamed() or len(self.imp.skipped) > 0 else 0), Spacer(),
                    Button("Create table", CREATE, style=PROMINENT, icon="table"), spacing=14).fill().align(CENTER),
             spacing=14,
-        ).width(1120).fill().grow()
+        ).width(1120).fill().grow().tag("import")
         return VStack(dialog, spacing=0).padding(28, 40).fill().grow().align(CENTER)
 
     def import_row(self, name: View, kind: View, empty: View, distinct: View, first: View) -> View:
@@ -1585,6 +1598,8 @@ struct Main(App):
                 fmt.append(Dropdown(materialize[DATE_STYLES](), 0 if f.style == AUTO else f.style - DATE_LONG + 1, FORMAT).fill())
             elif kind == TEXT:
                 fmt.append(Text("Text", CAPTION))
+            elif kind == BOOL:  # (no decimals or separators: a yes or a no, shown as a pill)
+                fmt.append(Text("Yes / No", CAPTION))
             else:
                 fmt.append(Dropdown(materialize[NUMBER_STYLES](), f.style, FORMAT).fill())
                 var places = f.decimals if f.decimals >= 0 else (self.frame.scale(col) if kind == DECIMAL else 0)
@@ -1663,7 +1678,7 @@ struct Main(App):
         var page = ReportPage(self.report_name, self.sheet_name + " · " + self.filter.words(self.frame), kpis, charts, facts)
         if len(self.tiles) == 0:  # (an empty report says where tiles come from)
             page = VStack(page^, Card(Text("An empty report: add a tile from the toolbar above (Sum, Average, Count or Chart of the column you pick there). Every tile reads the table, so edits show here at once.", CAPTION), spacing=8).fill(), spacing=16).fill().align(START)
-        return Scroll(page^.width(self.sheet_width() - 8).padding(4, 4), height=self.grid_h() + FX_H).fill().grow()  # (full width: the charts span it)
+        return Scroll(page^.width(self.sheet_width() - 8).padding(4, 4), height=self.grid_h() + FX_H).fill().grow().tag("report-page")  # (full width: the charts span it)
 
     def sheet_screen(self) -> View:
         var width = self.sheet_width()

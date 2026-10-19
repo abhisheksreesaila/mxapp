@@ -10,7 +10,7 @@
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M1 | Only what changed is rebuilt (GTK) | moving the selection across every column, opening a menu, opening Settings and adding a report tile each update part of the window (`TRACE: partial`), building at most a tenth of its widgets; the diff's own tests (tests/test_diff_keep.mojo) pass; with **real input** (XTest, `scripts/live.py`) a drag from amount row 2 to day row 8 selects the whole 3×7 block (the status bar says 21 cells) |
+| M1 | Only what changed is rebuilt (GTK) | moving the selection across every column, opening a menu, opening Settings and adding a report tile each update part of the window (`TRACE: partial`), building at most a fifth of its widgets (switching to the Report tab replaces the toolbar and the page: 15 of 149); the diff's own tests (tests/test_diff_keep.mojo) pass; with **real input** (XTest, `scripts/live.py`) a drag from amount row 2 to day row 8 selects the whole 3×7 block (the status bar says 21 cells) |
 | M2 | It fits the window | at 1742×876, 1280×720 and 2560×1400, on GTK and the web, on the sheet and the report: the status bar is inside the window and the grid (or the report) fills the width beside the inspector (a gap of at most 24 pt) |
 | M3 | The toolbar is one straight line | every tool's icon sits on one line (icon centres within 1 pt) and every tool is the same height, on GTK and the web |
 | M4 | The inspector shows the selected column | for each column of small.parquet the inspector names it and its stat cards are that column's (pyarrow); Yes/No, Date and Text columns don't offer decimals or a thousands separator |

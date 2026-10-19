@@ -1863,6 +1863,12 @@ def host_at[A: App](addr: Int) -> Pointer[GtkHost[A], MutUntrackedOrigin]:
 
 # ---------- signal handlers (GTK calls these) ----------
 
+def on_live_report[A: App](host_addr: Int) abi("C") -> c_int:
+    report[A](host_addr)
+    print("LIVE: reported", flush=True)
+    return 1  # G_SOURCE_CONTINUE: again at the next signal
+
+
 def on_idle_partial[A: App](host_addr: Int) abi("C") -> c_int:
     var host = host_at[A](host_addr)
     if host[].has_pending:  # (a full rebuild may have come first)
@@ -3350,11 +3356,11 @@ def liquid_css(p: Palette) -> String:
     var glass = String("background-color: rgba(255,255,255,0.62); box-shadow: inset 0 1px rgba(255,255,255,0.9), 0 0 0 1px rgba(255,255,255,0.75), 0 8px 32px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.06);")
     var solid = String("background-color: #ffffff; box-shadow: 0 0 0 1px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.05);")
     var hover = String("rgba(15,23,42,0.06)")
-    var spring = String("cubic-bezier(0.2, 0.9, 0.3, 1.15)")  # snappy spring: a touch of overshoot, settles in ~430 ms
+    var spring = String("cubic-bezier(0.22, 1, 0.36, 1)")  # calm ease-out, no overshoot (goal 25 M5: macOS settles, it doesn't bounce)
     return (
-        "@keyframes liquid-arrive { 0% { opacity: 0; transform: scale(0.94) translateY(-6px); } 62% { opacity: 1; transform: scale(1.012); } 100% { opacity: 1; transform: none; } }\n"
-        + "@keyframes liquid-rise { 0% { opacity: 0; transform: translateY(16px) scale(0.97); } 60% { opacity: 1; transform: translateY(-2px) scale(1.005); } 100% { opacity: 1; transform: none; } }\n"
-        + "@keyframes liquid-land { 0% { opacity: 0; transform: translateY(10px) scale(0.98); } 65% { opacity: 1; transform: translateY(-1px); } 100% { opacity: 1; transform: none; } }\n"
+        "@keyframes liquid-arrive { from { opacity: 0; transform: scale(0.98) translateY(-4px); } to { opacity: 1; transform: none; } }\n"
+        + "@keyframes liquid-rise { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }\n"
+        + "@keyframes liquid-land { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\n"
         # the backdrop, and type: Inter, one scale
         + w + "{ background-color: #e9eef4; background-image: linear-gradient(180deg, #eef2f7, #e4e9f1); color: " + body + "; font-size: 13px; }\n"
         + w + "label.title-1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; color: " + ink + "; }\n"
@@ -3373,13 +3379,13 @@ def liquid_css(p: Palette) -> String:
         + w + ".mui-tag-add-tile label, " + w + ".mui-tag-add-tile image { color: " + ink2 + "; }\n"
         + w + ".mui-tag-stat-card { background: #ffffff; border-radius: 12px; box-shadow: 0 0 0 1px rgba(15,23,42,0.07); }\n"
         + w + ".mui-tag-stat-value { font-size: 15px; font-weight: 600; color: " + ink + "; }\n"
-        + w + "menubutton.mui-menu > button { font-size: 13px; padding: 3px 10px; border-radius: 8px; color: " + body + "; transition: background 300ms " + spring + "; }\n"
+        + w + "menubutton.mui-menu > button { font-size: 13px; padding: 3px 10px; border-radius: 8px; color: " + body + "; transition: background 150ms " + spring + "; }\n"
         + w + "menubutton.mui-menu > button:hover, " + w + "menubutton.mui-menu > button:checked { background: " + hover + "; color: " + ink + "; }\n"
         # the toolbar: one floating glass island; tools icon over label, a soft fill on hover, press scales
         + w + ".mui-tag-toolbar { margin: 0 10px; border-radius: 18px; border-bottom: none; padding: 6px; " + glass + " }\n"
         + w + "button.mui-tool { min-width: 62px; min-height: 52px; border-radius: 12px; font-size: 11px; font-weight: 500; color: " + body + "; background: transparent; box-shadow: none;"
-        + " transition: background 300ms " + spring + ", transform 300ms " + spring + "; }\n"
-        + w + "button.mui-tool:hover { background: " + hover + "; } " + w + "button.mui-tool:active { transform: scale(0.96); }\n"
+        + " transition: background 150ms " + spring + ", transform 150ms " + spring + "; }\n"
+        + w + "button.mui-tool:hover { background: " + hover + "; } " + w + "button.mui-tool:active { transform: scale(0.97); }\n"
         + w + "button.mui-tool-on, " + w + "button.mui-tool-on:hover { background: rgba(14,124,134,0.10); color: " + accent + "; }\n"
         + w + "label.mui-tool-label { font-size: 11px; }\n"
         # inline tools (TOOL_INLINE): the title beside the icon, one height with the icon-only toggles, one line
@@ -3388,8 +3394,8 @@ def liquid_css(p: Palette) -> String:
         + w + ".mui-tag-toolbar button.image-button { min-width: 34px; min-height: 34px; padding: 0; border-radius: 10px; }\n"
         + w + ".mui-tag-toolbar separator { margin: 10px 8px; background: " + strong + "; min-width: 1px; }\n"
         # every button: pills, springy hover and press
-        + w + "button { border-radius: 999px; font-size: 13px; transition: background 300ms " + spring + ", box-shadow 300ms " + spring + ", transform 300ms " + spring + "; }\n"
-        + w + "button:active { transform: scale(0.96); }\n"
+        + w + "button { border-radius: 999px; font-size: 13px; transition: background 150ms " + spring + ", box-shadow 150ms " + spring + ", transform 150ms " + spring + "; }\n"
+        + w + "button:active { transform: scale(0.97); }\n"
         + w + "button.image-button, " + w + "button.flat.image-button { border-radius: 10px; }\n"
         + w + "button.suggested-action { box-shadow: 0 1px 2px rgba(14,124,134,0.30), inset 0 1px rgba(255,255,255,0.18); }\n"
         # the formula bar: a field on the backdrop
@@ -3399,9 +3405,9 @@ def liquid_css(p: Palette) -> String:
         # content: solid white cards (the table, charts, pivots, report tiles), 16 px corners
         + w + ".mui-card, " + w + ".mui-tag-table, " + w + ".mui-tag-tile { border-radius: 16px; " + solid + " }\n"
         + w + ".mui-tag-table { padding: 10px 12px 12px; }\n"
-        + w + ".mui-tag-tile { padding: 16px 18px; animation: liquid-land 600ms ease-out; transition: box-shadow 300ms " + spring + "; }\n"
+        + w + ".mui-tag-tile { padding: 16px 18px; animation: liquid-land 320ms cubic-bezier(0.22, 1, 0.36, 1); transition: box-shadow 150ms " + spring + "; }\n"
         + w + ".mui-tag-tile:hover { box-shadow: 0 0 0 1px rgba(15,23,42,0.07), 0 10px 30px rgba(15,23,42,0.10); }\n"
-        + w + ".mui-tag-tile button { opacity: 0.35; transition: opacity 300ms " + spring + "; } " + w + ".mui-tag-tile:hover button { opacity: 1; }\n"
+        + w + ".mui-tag-tile button { opacity: 0.35; transition: opacity 150ms " + spring + "; } " + w + ".mui-tag-tile:hover button { opacity: 1; }\n"
         + w + ".mui-tag-tile label.title-1 { font-size: 34px; font-weight: 600; letter-spacing: -0.8px; }\n"
         + w + "label.title-1.mui-tone-accent, " + w + "label.title-4.mui-tone-accent { color: " + accent + "; }\n"
         # the inspector: a glass panel
@@ -3414,12 +3420,12 @@ def liquid_css(p: Palette) -> String:
         + w + ".mui-tag-sheet-tabs button:not(.flat) { background: #ffffff; color: " + ink + "; box-shadow: 0 1px 3px rgba(15,23,42,0.12); }\n"
         # segmented controls: a soft track and a white thumb
         + w + "toggle-group { background: rgba(15,23,42,0.06); border-radius: 999px; padding: 3px; }\n"
-        + w + "toggle-group > toggle { border-radius: 999px; min-height: 24px; padding: 0 12px; font-size: 12px; font-weight: 500; color: " + ink2 + "; transition: background 300ms " + spring + "; }\n"
+        + w + "toggle-group > toggle { border-radius: 999px; min-height: 24px; padding: 0 12px; font-size: 12px; font-weight: 500; color: " + ink2 + "; transition: background 150ms " + spring + "; }\n"
         + w + "toggle-group > toggle:checked { background: #ffffff; color: " + ink + "; font-weight: 500; box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 0 0 1px rgba(15,23,42,0.04); }\n"
         # menus and popovers: one glass panel arriving on a spring; rows one height and one type; a submenu solid
         + "popover.mui-menu-popover > contents, popover.mui-popover-surface > contents { border-radius: 14px; padding: 6px; background-color: rgba(255,255,255,0.94);"
         + " box-shadow: inset 0 1px rgba(255,255,255,0.9), 0 0 0 1px rgba(15,23,42,0.08), 0 12px 40px rgba(15,23,42,0.16); }\n"
-        + "window.liquid popover.mui-menu-popover > contents, window.liquid popover.mui-popover-surface > contents { animation: liquid-arrive 420ms ease-out; }\n"
+        + "window.liquid popover.mui-menu-popover > contents, window.liquid popover.mui-popover-surface > contents { animation: liquid-arrive 200ms cubic-bezier(0.22, 1, 0.36, 1); }\n"
         + "window.liquid popover.mui-menu-popover button.mui-menu-item, window.liquid popover.mui-menu-popover menubutton > button { min-height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 400; color: " + ink + "; }\n"
         + "window.liquid popover.mui-menu-popover button.mui-menu-item:hover, window.liquid popover.mui-menu-popover menubutton > button:hover, window.liquid popover.mui-menu-popover menubutton > button:checked { background: " + accent + "; color: #ffffff; }\n"
         + "window.liquid popover.mui-menu-popover button.mui-menu-item:hover image, window.liquid popover.mui-menu-popover button.mui-menu-item:hover label,"
@@ -3429,11 +3435,11 @@ def liquid_css(p: Palette) -> String:
         + "window.liquid popover.mui-menu-popover separator.mui-menu-sep { margin: 5px 8px; background: " + line + "; }\n"
         # dialogs: a white sheet rising on a spring over a dimmed window
         + "window.liquid dialog > sheet, window.liquid dialog.mui-dialog-surface, .mui-dialog { border-radius: 20px; }\n"
-        + "window.liquid dialog > sheet { animation: liquid-rise 520ms ease-out; box-shadow: 0 40px 100px rgba(15,23,42,0.30), 0 0 0 1px rgba(15,23,42,0.07); }\n"
+        + "window.liquid dialog > sheet { animation: liquid-rise 300ms cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 0 40px 100px rgba(15,23,42,0.30), 0 0 0 1px rgba(15,23,42,0.07); }\n"
         + "window.liquid .mui-dialog-head label { font-size: 17px; font-weight: 600; color: " + ink + "; }\n"
         + "window.liquid dimming { background-color: rgba(15,23,42,0.18); }\n"
         # toasts: a dark pill
-        + "window.liquid toast { border-radius: 999px; animation: liquid-rise 520ms ease-out; }\n"
+        + "window.liquid toast { border-radius: 999px; animation: liquid-rise 300ms cubic-bezier(0.22, 1, 0.36, 1); }\n"
     )
 
 def omarchy_css(p: Palette) -> String:
@@ -3617,6 +3623,8 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     for prop in ["notify::default-width", "notify::default-height", "notify::maximized", "notify::fullscreened"]:
         connect3(host[].window, prop, on_window_resized[A], host_addr)
     connect(host[].window, "realize", on_window_realize[A], host_addr)
+    if getenv("MOJOUI_LIVE_REPORT") != "":  # (scripts/live.py: SIGUSR1 prints the widgets' state, as a test run's end does)
+        _ = external_call["g_unix_signal_add", c_uint](c_int(10), on_live_report[A], host_addr)
     host[].show(host_addr)
     var steps = getenv("MOJOUI_TEST")
     var testing = is_set("MOJOUI_TEST")  # set, even to "": report the widgets' state

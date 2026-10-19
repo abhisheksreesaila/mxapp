@@ -748,17 +748,17 @@ body.skin .menu-label { color: var(--o-ink3); opacity: 1; } body.skin .menu-sep 
 # omxplorer's Liquid skin (design 6, docs/design/liquid.md, D-225): on top of SKIN_CSS. The same rules as liquid_css in
 # gtk.mojo, plus what only a browser can do: a real backdrop blur on the glass and true spring curves (linear()).
 LIQUID_CSS = """
-body.liquid { --sp-snappy: linear(0, 0.02, 0.071, 0.142, 0.226, 0.316, 0.407, 0.494, 0.577, 0.653, 0.72, 0.78, 0.831, 0.875, 0.911, 0.94, 0.964, 0.983, 0.997, 1.007, 1.014, 1.019, 1.021, 1.023, 1.023, 1.022, 1.02, 1.018, 1.017, 1.014, 1.012, 1.01, 1.009, 1.007, 1.006, 1.004, 1.003, 1.002, 1.002, 1.001, 1);
-  --sp-bouncy: linear(0, 0.045, 0.161, 0.317, 0.49, 0.66, 0.814, 0.941, 1.04, 1.108, 1.148, 1.165, 1.163, 1.147, 1.123, 1.095, 1.066, 1.04, 1.017, 0.999, 0.986, 0.977, 0.973, 0.973, 0.974, 0.978, 0.982, 0.987, 0.992, 0.996, 0.999, 1.002, 1.003, 1.004, 1.005, 1.004, 1.004, 1.003, 1.002, 1.002, 1);
+body.liquid { --sp-snappy: cubic-bezier(.22, 1, .36, 1);  /* calm ease-out, no overshoot (goal 25 M5) */
+  --sp-bouncy: cubic-bezier(.22, 1, .36, 1);
   --glass-bg: rgba(255,255,255,.62); --glass-fx: blur(24px) saturate(1.6);
   --glass-shadow: inset 0 1px rgba(255,255,255,.9), 0 0 0 1px rgba(255,255,255,.75), 0 8px 32px rgba(15,23,42,.10), 0 1px 2px rgba(15,23,42,.06);
   --solid-shadow: 0 0 0 1px rgba(15,23,42,.07), 0 1px 3px rgba(15,23,42,.05);
   background: linear-gradient(180deg, #eef2f7, #e4e9f1) fixed; font: 13px/18px Inter, sans-serif; font-feature-settings: "tnum" 1; }
 body.liquid .text.title { font-size: 22px; line-height: 28px; letter-spacing: -.3px; } body.liquid .text.caption { font-size: 12px; }
 body.liquid .board { background: transparent; }
-@keyframes liquid-arrive { from { opacity: 0; transform: scale(.94) translateY(-6px); } to { opacity: 1; transform: none; } }
-@keyframes liquid-rise { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
-@keyframes liquid-land { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes liquid-arrive { from { opacity: 0; transform: scale(.98) translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes liquid-rise { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes liquid-land { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 body.liquid .menubar, body.liquid [data-tag=toolbar], body.liquid [data-tag=inspector], body.liquid [data-tag=sheet-tabs], body.liquid [data-tag=status-bar] {
   background: var(--glass-bg); -webkit-backdrop-filter: var(--glass-fx); backdrop-filter: var(--glass-fx); box-shadow: var(--glass-shadow); border: 0; }
 body.liquid .menubar { margin: 8px 10px 0; border-radius: 12px; min-height: 34px; }
@@ -772,17 +772,17 @@ body.liquid [data-tag=kpi-fact] { font-size: 12px; color: var(--o-ink3); }
 body.liquid [data-tag=add-tile] { background: transparent; border: 2px dashed var(--o-strong); box-shadow: none; border-radius: 16px; min-height: 120px; color: var(--o-ink3); }
 body.liquid [data-tag=stat-card] { background: #fff; border-radius: 12px; box-shadow: 0 0 0 1px rgba(15,23,42,.07); box-sizing: border-box; }
 body.liquid [data-tag=stat-value] { font-size: 15px; font-weight: 600; color: var(--o-ink); }
-body.liquid .menu-title { font-size: 13px; padding: 4px 10px; border-radius: 8px; color: var(--o-ink2); transition: background 430ms var(--sp-snappy); }
+body.liquid .menu-title { font-size: 13px; padding: 4px 10px; border-radius: 8px; color: var(--o-ink2); transition: background 150ms var(--sp-snappy); }
 body.liquid .menu.open > .menu-title, body.liquid .menu-title:hover { background: rgba(15,23,42,.06); color: var(--o-ink); }
 body.liquid [data-tag=toolbar] { margin: 0 10px; border-radius: 18px; padding: 6px; }
 body.liquid button.tool, body.liquid label.picker.tool { min-width: 62px; min-height: 52px; border-radius: 12px; font-size: 11px; font-weight: 500; color: var(--o-ink2);
-  transition: background 430ms var(--sp-snappy), transform 430ms var(--sp-snappy); }
+  transition: background 150ms var(--sp-snappy), transform 150ms var(--sp-snappy); }
 body.liquid button.tool:hover, body.liquid label.picker.tool:hover { background: rgba(15,23,42,.06); }
-body.liquid button.tool:active, body.liquid button:active { transform: scale(.96); }
+body.liquid button.tool:active, body.liquid button:active { transform: scale(.97); }
 body.liquid button.tool.on, body.liquid button.icon-only.on { background: rgba(14,124,134,.10); color: var(--o-accent); }
 body.liquid button.tool.inline, body.liquid label.picker.tool.inline { min-width: 0; min-height: 34px; padding: 0 10px; border-radius: 10px; font-size: 12px; }
 body.liquid [data-tag=toolbar] button.icon-only { border-radius: 10px; }
-body.liquid button { border-radius: 999px; transition: background 430ms var(--sp-snappy), box-shadow 430ms var(--sp-snappy), transform 430ms var(--sp-snappy); }
+body.liquid button { border-radius: 999px; transition: background 150ms var(--sp-snappy), box-shadow 150ms var(--sp-snappy), transform 150ms var(--sp-snappy); }
 body.liquid button.icon-only { border-radius: 10px; }
 body.liquid button.prominent { box-shadow: 0 1px 2px rgba(14,124,134,.3), inset 0 1px rgba(255,255,255,.18); }
 body.liquid [data-tag=formula-bar] { background: transparent; border: 0; margin: 0 10px; }
@@ -790,10 +790,10 @@ body.liquid [data-tag=formula-bar] input[type=text] { font-size: 13px; }
 body.liquid select, body.liquid input[type=text], body.liquid input[type=date], body.liquid textarea { border-radius: 10px; }
 body.liquid .vstack.card, body.liquid [data-tag=table], body.liquid [data-tag=tile] { background: #fff; border-radius: 16px; box-shadow: var(--solid-shadow); }
 body.liquid [data-tag=table] { padding: 10px 12px 12px; box-sizing: border-box; }
-body.liquid [data-tag=tile] { padding: 16px 18px; box-sizing: border-box; animation: liquid-land 790ms var(--sp-bouncy) both;
-  transition: box-shadow 430ms var(--sp-snappy), transform 430ms var(--sp-snappy); }
+body.liquid [data-tag=tile] { padding: 16px 18px; box-sizing: border-box; animation: liquid-land 320ms var(--sp-bouncy) both;
+  transition: box-shadow 150ms var(--sp-snappy), transform 150ms var(--sp-snappy); }
 body.liquid [data-tag=tile]:hover { box-shadow: 0 0 0 1px rgba(15,23,42,.07), 0 10px 30px rgba(15,23,42,.10); transform: translateY(-2px); }
-body.liquid [data-tag=tile] button { opacity: .35; transition: opacity 430ms var(--sp-snappy); } body.liquid [data-tag=tile]:hover button { opacity: 1; }
+body.liquid [data-tag=tile] button { opacity: .35; transition: opacity 150ms var(--sp-snappy); } body.liquid [data-tag=tile]:hover button { opacity: 1; }
 body.liquid [data-tag=tile] .text.title { font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -.8px; }
 body.liquid [data-tag=inspector] { border-radius: 18px; padding: 10px; box-sizing: border-box; }
 body.liquid [data-tag=sheet-tabs] { margin: 0 10px; border-radius: 14px 14px 0 0; }
@@ -801,21 +801,21 @@ body.liquid [data-tag=status-bar] { margin: 0 10px 10px; border-radius: 0 0 14px
 body.liquid [data-tag=status-bar] .text { font-family: Inter, sans-serif; font-size: 12px; }
 body.liquid [data-tag=sheet-tabs] button { border-radius: 999px; padding: 2px 14px; }
 body.liquid .segmented, body.liquid .tabs { background: rgba(15,23,42,.06); border: 0; border-radius: 999px; padding: 3px; overflow: visible; }
-body.liquid .segmented span, body.liquid .tabs span { border-radius: 999px; min-height: 24px; padding: 0 12px; font-weight: 500; transition: background 430ms var(--sp-snappy); }
+body.liquid .segmented span, body.liquid .tabs span { border-radius: 999px; min-height: 24px; padding: 0 12px; font-weight: 500; transition: background 150ms var(--sp-snappy); }
 body.liquid .segmented input:checked + span, body.liquid .tabs input:checked + span { background: #fff; color: var(--o-ink); font-weight: 500;
   box-shadow: 0 1px 3px rgba(15,23,42,.12), 0 0 0 1px rgba(15,23,42,.04); }
 body.liquid .menu > .menu-items, body.liquid .popover { border-radius: 14px; padding: 6px; background: rgba(255,255,255,.84);
   -webkit-backdrop-filter: var(--glass-fx); backdrop-filter: var(--glass-fx); box-shadow: inset 0 1px rgba(255,255,255,.9), 0 0 0 1px rgba(15,23,42,.08), 0 12px 40px rgba(15,23,42,.16);
-  transform-origin: top left; animation: liquid-arrive 790ms var(--sp-bouncy) both; }
+  transform-origin: top left; animation: liquid-arrive 200ms var(--sp-bouncy) both; }
 body.liquid .menu.sub > .menu-items { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
-body.liquid .mi { height: 30px; border-radius: 8px; font-size: 13px; color: var(--o-ink); transition: background 300ms var(--sp-snappy); }
+body.liquid .mi { height: 30px; border-radius: 8px; font-size: 13px; color: var(--o-ink); transition: background 150ms var(--sp-snappy); }
 body.liquid .mi:hover:not([disabled]) { background: var(--o-accent); color: #fff; } body.liquid .mi:hover:not([disabled]) svg, body.liquid .mi:hover:not([disabled]) .mi-key { color: #fff; }
 body.liquid .mi .mi-key { font-family: Inter, sans-serif; font-size: 12px; }
-body.liquid .dialog { border-radius: 20px; box-shadow: 0 40px 100px rgba(15,23,42,.30), 0 0 0 1px rgba(15,23,42,.07); animation: liquid-rise 790ms var(--sp-bouncy) both; }
+body.liquid .dialog { border-radius: 20px; box-shadow: 0 40px 100px rgba(15,23,42,.30), 0 0 0 1px rgba(15,23,42,.07); animation: liquid-rise 300ms var(--sp-bouncy) both; }
 body.liquid .dialog-layer .scrim { background: rgba(15,23,42,.18); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 body.liquid .dialog-head h3 { font-size: 17px; }
-body.liquid .toast { border-radius: 999px; animation: liquid-rise 790ms var(--sp-bouncy) both; }
-@media (prefers-reduced-motion: reduce) { body.liquid *, body.liquid *::before, body.liquid *::after { animation-duration: 150ms !important; transition-duration: 150ms !important; } }
+body.liquid .toast { border-radius: 999px; animation: liquid-rise 300ms var(--sp-bouncy) both; }
+@media (prefers-reduced-motion: reduce) { body.liquid *, body.liquid *::before, body.liquid *::after { animation: none !important; transition-duration: 0.01ms !important; } }
 """
 
 
@@ -900,7 +900,7 @@ def render(s, i, sid):
         css.append(f"max-width:{n['max_w']}px")
     if n["grows"] and not (n["w"] and parent_kind(s, i) == HSTACK) and not (n["h"] and parent_kind(s, i) == VSTACK):
         # (a view with a fixed size along its stack never takes spare room there, as on GTK)
-        css.append("flex:1 1 0;min-width:0")  # grow from zero, so a growing field never pushes its row onto two lines
+        css.append("flex:1 1 0;min-width:0" + (";min-height:0" if n["kind"] == SCROLL else ""))  # grow from zero, so a growing field never pushes its row onto two lines (and a growing scroll scrolls rather than push the page)
     if n["fills"]:
         css.append("align-self:stretch")
         if n["max_w"]:

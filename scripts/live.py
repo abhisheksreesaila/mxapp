@@ -11,6 +11,8 @@ Commands, separated by ';':
   drag:X1,Y1,X2,Y2   press at 1, move in 12 steps over ~200 ms to 2, release
   key:NAME           press and release a key (X keysym names; Shift+Down, Control+c)
   shot:PATH          save the screen (the window's area) as a PNG
+  wheel:X,Y,N        N notches of the scroll wheel down there (negative: up)
+  report             the app prints its widgets' state (as a MOJOUI_TEST run's end does: LABEL:, BOX:, …)
 The app's stdout (TRACE: lines with MOJOUI_TRACE=1) is printed at the end.
 """
 import os
@@ -42,7 +44,7 @@ def main():
         else:
             i += 1
     headless.ensure()
-    env = dict(os.environ, MOJOUI_WINDOW=size, **extra)
+    env = dict(os.environ, MOJOUI_WINDOW=size, MOJOUI_LIVE_REPORT="1", **extra)
     env.pop("MOJOUI_TEST", None)
     log = open(Path("build") / "live.log", "w")
     app = subprocess.Popen([exe], env=env, stdout=log, stderr=subprocess.STDOUT)
@@ -77,7 +79,7 @@ def main():
         if not cmd:
             continue
         verb, _, rest = cmd.partition(":")
-        nums = [float(n) for n in rest.split(",")] if verb in ("move", "click", "shift+click", "drag") else []
+        nums = [float(n) for n in rest.split(",")] if verb in ("move", "click", "shift+click", "drag", "wheel") else []
         if verb == "wait":
             time.sleep(float(rest) / 1000)
         elif verb == "move":
@@ -108,6 +110,20 @@ def main():
         elif verb == "key":
             key(rest)
             time.sleep(0.2)
+        elif verb == "wheel":
+            move(nums[0], nums[1])
+            time.sleep(0.05)
+            b = 5 if nums[2] > 0 else 4
+            for _ in range(abs(int(nums[2]))):
+                xtest.fake_input(d, X.ButtonPress, b)
+                xtest.fake_input(d, X.ButtonRelease, b)
+                d.sync()
+                time.sleep(0.03)
+            time.sleep(0.2)
+        elif verb == "report":
+            import signal
+            app.send_signal(signal.SIGUSR1)
+            time.sleep(1.0)
         elif verb == "shot":
             raw = d.screen().root.get_image(0, 0, w, h, X.ZPixmap, 0xFFFFFFFF)
             Image.frombytes("RGB", (w, h), raw.data, "raw", "BGRX").save(rest)
