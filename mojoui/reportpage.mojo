@@ -3,7 +3,7 @@
 # Every number is a group-by with the filter as a condition, so a filter change recomputes the whole page.
 
 from mojoui.view import (View, Text, Button, Canvas, VStack, HStack, Grid, Spacer, Card, TITLE, HEADLINE, CAPTION, SUBTLE,
-                         ICON_ONLY, CENTER, START, NO_MSG)
+                         ICON_ONLY, CENTER, START, NO_MSG, TONE_GOOD)
 from mxframe import Expr
 from mojoui.sheet import Sheet, TEXT, DECIMAL, INT
 from mojoui.kpi import KpiView
@@ -113,11 +113,11 @@ def kpi_of(t: ReportTile, sheet: Sheet, filter: ReportFilter, accent: Bool) -> K
     return KpiView(tile_label(t, sheet), tile_value(t, sheet), filter.words(sheet), List[Float64](), accent, 0)
 
 
-def ReportPage(title: String, subtitle: String, kpis: List[View], charts: List[View]) -> View:
+def ReportPage(title: String, subtitle: String, kpis: List[View], charts: List[View], facts: String = "") -> View:
     """The page: title, the KPI tiles in a grid of equal widths (three across), the charts (two across, one alone across
     the page). Tiles are added from the app's toolbar."""
     var parts = List[View]()
-    parts.append(HStack(Text(title, TITLE), Text(subtitle, CAPTION), spacing=14).align(CENTER))
+    parts.append(HStack(Text(title, TITLE), Text(subtitle, CAPTION), Text(facts, CAPTION).tone(TONE_GOOD), spacing=14).align(CENTER))  # (facts: rows matched, where it ran)
     if len(kpis) > 0:
         var cells = kpis.copy()
         while len(cells) % 3 != 0:  # (empty cells keep a lone tile a third wide)

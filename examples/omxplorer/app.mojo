@@ -1641,7 +1641,11 @@ struct Main(App):
                 matched = " · " + grouped(t.count) + " of " + grouped(self.frame.rows()) + " rows"
                 break
         var ran = " · " + fixed(self.milliseconds, 1) + " ms on " + ("the GPU" if self.ran_gpu else "the CPU") if self.show_timings else String("")
-        var page = ReportPage(self.report_name, self.sheet_name + " · " + self.filter.words(self.frame) + matched + ran, kpis, charts)
+        var facts = String(matched + ran)
+        if facts.startswith(" · "):
+            var cut = String(facts[byte=5:])  # (" · " is 5 bytes: the dot is two)
+            facts = cut
+        var page = ReportPage(self.report_name, self.sheet_name + " · " + self.filter.words(self.frame), kpis, charts, facts)
         if len(self.tiles) == 0:  # (an empty report says where tiles come from)
             page = VStack(page^, Card(Text("An empty report: add a tile from the toolbar above (Sum, Average, Count or Chart of the column you pick there). Every tile reads the table, so edits show here at once.", CAPTION), spacing=8).fill(), spacing=16).fill().align(START)
         return Scroll(page^.width(self.sheet_width() - 8).padding(4, 4), height=GRID_H + 30).width(self.sheet_width())  # (full width: the charts span it)

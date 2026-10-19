@@ -275,3 +275,4 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - Two rebuild traps found by GLIDE counting negative frames: the status bar's item count changed per column (fixed: 8 fixed slots), the inspector differs between number and text columns (still a rebuild; GLIDE counts across rebuilds).
 - Message number clash: COPY = 41 fell inside RECENT (40–49) and silently did nothing; moved to 28.
 - `key:` steps take canvas index and the hosts' key names (`ArrowDown`), not `Down`.
+- Reviewer: round 1 NEEDS WORK (big blocks would freeze the app, Ctrl+C in fields, weak checks for Bold/Average/footers), round 2 NEEDS WORK (mixed-scale Sum), round 3 PASS. Mac to check on first run: Cmd+C in a text field must copy the field (the AppKit host may route Copy to the app's item, not `copy:` on the focused view).
