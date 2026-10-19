@@ -664,13 +664,13 @@ struct Main(App):
         out.append("Cells " + grouped(cells))
         out.append("Count " + grouped(filled))
         if numbers > 0:
-            var scale = 0
+            var scale = -1  # (none seen yet)
             var exact = True  # one scale: the total stays an exact integer
             var total = 0.0
             for c in range(b[2], b[3] + 1):
                 if self.frame.kind(c) == INT or self.frame.kind(c) == DECIMAL:
                     var sc = self.frame.scale(c)
-                    if scale > 0 and sc != scale:
+                    if scale >= 0 and sc != scale:
                         exact = False
                     scale = max(scale, sc)
                     total += Float64(sums[c - b[2]]) / Float64(pow10(sc))

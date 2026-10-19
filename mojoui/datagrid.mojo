@@ -102,6 +102,7 @@ struct DataGrid(Copyable, Movable):
     var cur_col: Int
     var anchor_row: Int  # a block of cells: from the anchor to (cur_row, cur_col); the anchor is the cell itself when it's one cell
     var anchor_col: Int
+    var anchor_index: Int  # the anchor's display index, found once when a block starts (-1: not known yet)
     var dragging: Bool  # a press on a cell, then a drag: the block follows the pointer
     var ring: List[Float64]  # the selection ring as drawn (x, y, w, h in points), gliding toward `ring_to`
     var ring_from: List[Float64]
@@ -136,6 +137,7 @@ struct DataGrid(Copyable, Movable):
         self.cur_col = -1
         self.anchor_row = -1
         self.anchor_col = -1
+        self.anchor_index = -1
         self.dragging = False
         self.ring = List[Float64]()
         self.ring_from = List[Float64]()
@@ -321,17 +323,20 @@ struct DataGrid(Copyable, Movable):
         self.cur_col = col
         self.anchor_row = row
         self.anchor_col = col
+        self.anchor_index = -1
         self.editing = False
         self.typed = ""
         self.typing = False
         self.then = "Enter"
         self.redraw()
 
-    def extend(mut self, row: Int, col: Int):
-        """Grows (or shrinks) the block to (row, col), keeping its anchor."""
+    def extend[S: GridSource](mut self, row: Int, col: Int, src: S):
+        """Grows (or shrinks) the block to (row, col), keeping its anchor (its display index is found once, here)."""
         if self.anchor_row < 0 or self.anchor_col < 0:
             self.anchor_row = self.cur_row
             self.anchor_col = self.cur_col
+        if self.anchor_index < 0:
+            self.anchor_index = self.index_of(self.anchor_row, src)
         self.cur_row = row
         self.cur_col = col
         self.editing = False
@@ -350,7 +355,9 @@ struct DataGrid(Copyable, Movable):
         var i1 = self.index_of(self.cur_row, src)
         if i1 < 0:
             return (-1, -1, -1, -1)
-        var i0 = self.index_of(self.anchor_row, src) if self.has_block() else i1
+        var i0 = i1
+        if self.has_block():
+            i0 = self.anchor_index if self.anchor_index >= 0 and self.shown_row(self.anchor_index, src) == self.anchor_row else self.index_of(self.anchor_row, src)
         if i0 < 0:  # (the anchor's row went away: one cell)
             return (i1, i1, self.cur_col, self.cur_col)
         var c0 = self.anchor_col if self.has_block() else self.cur_col
@@ -387,6 +394,7 @@ struct DataGrid(Copyable, Movable):
         self.top = 0
         self.anchor_row = self.cur_row  # (a block's rows are scattered by a sort: it collapses to the cell)
         self.anchor_col = self.cur_col
+        self.anchor_index = -1
         self.redraw()
 
     def clear_order(mut self):
@@ -394,6 +402,7 @@ struct DataGrid(Copyable, Movable):
         self.sort_col = -1
         self.anchor_row = self.cur_row
         self.anchor_col = self.cur_col
+        self.anchor_index = -1
         self.redraw()
 
     def scroll_rows[S: GridSource](mut self, rows: Int, src: S):
@@ -594,7 +603,7 @@ struct DataGrid(Copyable, Movable):
             var hit = self.cell_hit(event.x, event.y, src)
             if hit[0] >= 0 and hit[1] >= 0:
                 if Int(event.dx) & SHIFT != 0 and self.cur_row >= 0:  # Shift+click: the block to here
-                    self.extend(hit[0], hit[1])
+                    self.extend(hit[0], hit[1], src)
                 elif not self.has_block() or self.cur_row != hit[0] or self.cur_col != hit[1]:
                     self.select(hit[0], hit[1])
                 return GRID_SELECTED
@@ -603,7 +612,7 @@ struct DataGrid(Copyable, Movable):
             if self.dragging and self.resize_col < 0 and not self.bar_drag:  # a drag over cells: the block follows the pointer
                 var at = self.cell_hit(min(max(event.x, GRID_GUTTER + 1), self.size[0] - GRID_BAR_W - 1), max(event.y, head + 1), src)
                 if at[0] >= 0 and at[1] >= 0 and (at[0] != self.cur_row or at[1] != self.cur_col):
-                    self.extend(at[0], at[1])
+                    self.extend(at[0], at[1], src)
                     return GRID_SELECTED
                 return GRID_NONE
             if self.resize_col >= 0:
@@ -744,7 +753,7 @@ struct DataGrid(Copyable, Movable):
         if shift and (name == "ArrowDown" or name == "ArrowUp" or name == "ArrowLeft" or name == "ArrowRight"):  # Shift+arrows: the block grows
             var r = self.step_row(row, 1 if name == "ArrowDown" else (-1 if name == "ArrowUp" else 0), src) if name == "ArrowDown" or name == "ArrowUp" else row
             var c = min(max(col + (1 if name == "ArrowRight" else (-1 if name == "ArrowLeft" else 0)), 0), src.grid_columns() - 1)
-            self.extend(r, c)
+            self.extend(r, c, src)
             self.keep_in_view(r, c, src)
             return GRID_SELECTED
         if name == "ArrowDown" or (name == "Enter" and not shift):

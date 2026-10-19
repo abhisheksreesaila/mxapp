@@ -254,6 +254,17 @@ def m5():
         want_avg = f"{sum(block) / len(block):,.2f}" if block else None
         if want_avg and f"Average {want_avg}" not in status:
             problems.append(f"agent: the block's Average isn't pyarrow's {want_avg}: {status}")
+        c.call("grid", gesture="tap", x=g21.COLUMN_X, y=g21.HEADER_Y + 60)  # a block over a whole-number column and a decimal one
+        c.call("grid", gesture="key", key="ArrowLeft", modifiers=["shift"])
+        for _ in range(5):
+            c.call("grid", gesture="key", key="ArrowDown", modifiers=["shift"])
+        mixed = sum(t["order"][row0:row0 + 6]) + sum(block)
+        if f"Sum {mixed:,.2f}" not in " ".join(g20.status_of(c)):
+            problems.append(f"agent: a block of order (whole numbers) and amount (decimals) doesn't sum to pyarrow's {mixed:,.2f}: {g20.status_of(c)}")
+        c.call("grid", gesture="tap", x=g21.COLUMN_X, y=g21.HEADER_Y + 60)  # (back to amount and region for Bold)
+        c.call("grid", gesture="key", key="ArrowRight", modifiers=["shift"])
+        for _ in range(5):
+            c.call("grid", gesture="key", key="ArrowDown", modifiers=["shift"])
         c.call("bold")  # (the agent's read shows values, not styles: the app says what it formatted, as goal 21's checks read it)
         if not any(t.startswith("12 cells: bold") for t in g20.status_of(c)):
             problems.append(f"agent: Bold didn't reach the block's 12 cells: {g20.status_of(c)}")

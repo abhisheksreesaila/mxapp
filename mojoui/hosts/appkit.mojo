@@ -13,7 +13,7 @@ from std.memory.alloc import alloc, Layout
 from mojoui.view import (
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY,
-    MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, PAN, ZOOM, TAP, PRESS, RELEASE, DOUBLE, SECONDARY, KEY,
+    MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, CLIPBOARD, PAN, ZOOM, TAP, PRESS, RELEASE, DOUBLE, SECONDARY, KEY,
     START, CENTER, END, STRETCH, BETWEEN, Node,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON,
     TONE_WARN, TONE_GOOD, TONE_STRONG, TONE_ACCENT, CARD, CARD_WARN, CARD_GOOD,
@@ -132,6 +132,7 @@ struct AppKitHost[A: App](Movable):
     var sheet: Int  # the sheet window showing (a Dialog node), and its node
     var sheet_node: Int
     var toast: Int  # the toast view showing, if any
+    var clip_version: Int  # the Clipboard view's version last copied (unverified on hardware)
     var toast_text: String
     var toast_claimed: Bool
     var has_menubar: Bool  # the screen put its own menus in the system menu bar (D-150)
@@ -154,6 +155,7 @@ struct AppKitHost[A: App](Movable):
         self.sheet = 0
         self.sheet_node = -1
         self.toast = 0
+        self.clip_version = 0
         self.toast_text = ""
         self.toast_claimed = False
         self.has_menubar = False
@@ -845,7 +847,17 @@ struct AppKitHost[A: App](Movable):
             _ = msg(self.target, "performSelector:withObject:afterDelay:", sel("focusField:"), self.widgets[self.focus], Float64(0))
         self.focus = -1
 
+    def copy_if_asked(mut self):
+        """A Clipboard view whose version moved on: its text goes on the general pasteboard as plain text."""
+        for ref n in self.rt.shown.nodes:
+            if n.kind == CLIPBOARD and n.value > 0 and n.value != self.clip_version:
+                self.clip_version = n.value
+                var board = msg(cls("NSPasteboard"), "generalPasteboard")
+                _ = msg(board, "clearContents")
+                _ = msg(board, "setString:forType:", ns_string(n.text), ns_string("public.utf8-plain-text"))
+
     def apply(mut self, d: Diff, self_addr: Int):
+        self.copy_if_asked()
         if d.rebuild:
             self.show(self_addr)
             return

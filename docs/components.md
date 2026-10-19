@@ -45,7 +45,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `Toast` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
 | `Popover` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
 | `Checkbox` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
-| `Clipboard` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | omxplorer |
+| `Clipboard` | ✅ | ✅ | ❌ | 🔨 | ❌ | ❌ | omxplorer |
 
 ## Variants, gestures, layout, design languages
 
@@ -108,7 +108,7 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | Linux (GTK) | 77 | 1 | 0 |
 | Web | 78 | 0 | 0 |
 | Android | 19 | 15 | 44 |
-| Mac (AppKit) | 0 | 57 | 21 |
+| Mac (AppKit) | 0 | 58 | 20 |
 | iPhone (UIKit) | 0 | 59 | 19 |
 | Agent (MCP) | 28 | 16 | 34 |
 

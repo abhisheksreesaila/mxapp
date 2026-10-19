@@ -161,7 +161,7 @@ def m4():
     o = oracle(CSV_1M)
     problems = []
     every = both(OPEN + ";tap:Report;tap:Sum tile;tap:Count tile", "report-all")
-    west = both(REPORT + ";tapat:3=500,200", "report-west")
+    west = both(REPORT + ";tapat:0=500,200", "report-west")
     qty = both(OPEN + ";tap:Report;select:0=qty;tap:Average tile;tap:Sum tile;select:1=region;select:2=West", "report-qty")  # (another column)
     for r in (every, west, qty):
         if r[0] is None:
