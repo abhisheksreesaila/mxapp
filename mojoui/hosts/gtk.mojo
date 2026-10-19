@@ -457,6 +457,7 @@ struct GtkHost[A: App](Movable):
     var window_w: Int  # the window's width in points (boards narrower than 720 become lists)
     var board_list: Bool  # the last build showed boards as lists
     var board_scrollers: List[Tuple[Int, Int]]  # (Board node, its GtkScrolledWindow)
+    var board_drags: List[Tuple[Int, Int]]  # (Board node, its drag gesture): a Board whose objects all change keeps it
     var revealed: Int  # the last Board reveal token scrolled to (Board's value)
     var clip_version: Int  # the Clipboard view's version last copied
     var key_draws: Int  # draws of canvases that take keys (the grid), across rebuilds: GLIDE counts them
@@ -504,6 +505,7 @@ struct GtkHost[A: App](Movable):
         self.window_w = 0
         self.board_list = False
         self.board_scrollers = List[Tuple[Int, Int]]()
+        self.board_drags = List[Tuple[Int, Int]]()
         self.revealed = 0
         self.reveal_pending = -1
         self.clip_version = 0
@@ -613,9 +615,9 @@ struct GtkHost[A: App](Movable):
         return built
 
     def board_drag(self, board: Int) -> Bool:
-        """Whether Board node `board` (current numbering) has objects, so its drag gesture is known."""
-        for b in self.boards:
-            if b.board == board:
+        """Whether Board node `board` (current numbering) has its drag gesture on record."""
+        for bd in self.board_drags:
+            if bd[0] == board:
                 return True
         return False
 
@@ -625,9 +627,9 @@ struct GtkHost[A: App](Movable):
         where they say. Returns how many were built."""
         var fixed = self.widgets[j]
         var drag = 0
-        for b in self.boards:
-            if b.board == j:
-                drag = b.drag
+        for bd in self.board_drags:
+            if bd[0] == j:
+                drag = bd[1]
         var children = self.rt.shown.nodes[j].children.copy()
         var want = List[Int]()
         for c in children:
@@ -647,11 +649,15 @@ struct GtkHost[A: App](Movable):
             if child == 0:
                 child = self.build(c, self_addr)
                 external_call["gtk_fixed_put", NoneType](fixed, child, Float64(self.rt.shown.nodes[c].x), Float64(self.rt.shown.nodes[c].y))
+                # (in node order: what draws on top is what a drag picks)
+                external_call["gtk_widget_insert_after", NoneType](child, fixed, mine[len(mine) - 1].widget if len(mine) > 0 else 0)
                 entry.widget = child
+                want[k] = child
                 built += 1
             else:
+                var dragging = drag != 0 and external_call["gtk_gesture_is_active", c_int](drag) != 0
                 for b in self.boards:
-                    if b.board == j and b.node == c:
+                    if b.board == j and b.node == c and dragging:  # (a drag that ended while busy left them set)
                         entry.active = b.active
                         entry.resizing = b.resizing
             mine.append(entry^)
@@ -1268,6 +1274,7 @@ struct GtkHost[A: App](Movable):
                 connect_any(drag, "drag-update", on_board_drag_update[Self.A], self_addr)
                 connect_any(drag, "drag-end", on_board_drag_end[Self.A], self_addr)
                 external_call["gtk_widget_add_controller", NoneType](inner, drag)
+                self.board_drags.append((i, drag))
                 for k in range(len(node.children)):
                     var c = node.children[k]
                     var child = self.build(c, self_addr)
@@ -1345,6 +1352,8 @@ struct GtkHost[A: App](Movable):
         self.canvases = List[GtkCanvas]()
         self.boards = List[BoardChild]()
         self.board_scrollers = List[Tuple[Int, Int]]()
+        self.board_drags = List[Tuple[Int, Int]]()
+        self.release_node = -1  # (a release from the old screen names a canvas that's gone)
         var root = self.build(0, self_addr)
         if self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills:  # the screen fills the window
             external_call["gtk_widget_set_valign", NoneType](root, c_int(0))
@@ -1526,6 +1535,11 @@ struct GtkHost[A: App](Movable):
             if 0 <= bs[0] < old_n and new_of_old[bs[0]] >= 0:
                 scrollers.append((new_of_old[bs[0]], bs[1]))
         self.board_scrollers = scrollers^
+        var drags = List[Tuple[Int, Int]]()
+        for bd in self.board_drags:
+            if 0 <= bd[0] < old_n and new_of_old[bd[0]] >= 0:
+                drags.append((new_of_old[bd[0]], bd[1]))
+        self.board_drags = drags^
         self.focus = new_of_old[self.focus] if 0 <= self.focus < old_n else -1
         self.key_node = new_of_old[self.key_node] if 0 <= self.key_node < old_n else -1
         self.editor_node = new_of_old[self.editor_node] if 0 <= self.editor_node < old_n else -1
@@ -1533,6 +1547,17 @@ struct GtkHost[A: App](Movable):
         self.reveal_pending = new_of_old[self.reveal_pending] if 0 <= self.reveal_pending < old_n else -1
         self.release_node = new_of_old[self.release_node] if 0 <= self.release_node < old_n else -1
         # The stacks whose children changed: build the new children, drop the old, put them in order.
+        var moving = List[Int]()  # kept popovers whose anchor is being built again: held, then moved to the new one
+        for j in range(n):
+            if kept[j] >= 0 and (self.kinds[j] == POPOVER or (self.kinds[j] == MENU and self.rt.shown.nodes[j].style == 1)) and self.widgets[j] != 0:
+                var stays = False
+                for k in range(n):
+                    if self.rt.shown.nodes[k].name == self.rt.shown.nodes[j].text and kept[k] >= 0 and self.widgets[k] != 0:
+                        stays = external_call["gtk_widget_get_parent", Int](self.widgets[j]) == self.widgets[k]
+                if not stays:
+                    _ = external_call["g_object_ref", Int](self.widgets[j])
+                    external_call["gtk_widget_unparent", NoneType](self.widgets[j])
+                    moving.append(j)
         var dialog_before = self.dialog
         var built = 0
         self.toast_claimed = False
@@ -1582,16 +1607,14 @@ struct GtkHost[A: App](Movable):
         self.popups = List[Int]()
         if self.reveal_pending >= 0:
             _ = external_call["gtk_widget_add_tick_callback", c_uint](self.window, on_reveal_tick[Self.A], self_addr, 0)
-        for j in range(n):  # a kept popover whose anchor was built again moves to the new anchor
-            if kept[j] >= 0 and (self.kinds[j] == POPOVER or (self.kinds[j] == MENU and self.rt.shown.nodes[j].style == 1)) and self.widgets[j] != 0:
-                var anchor = self.window
-                for k in range(n):
-                    if self.rt.shown.nodes[k].name == self.rt.shown.nodes[j].text and self.widgets[k] != 0:
-                        anchor = self.widgets[k]
-                if external_call["gtk_widget_get_parent", Int](self.widgets[j]) != anchor:
-                    external_call["gtk_widget_unparent", NoneType](self.widgets[j])
-                    external_call["gtk_widget_set_parent", NoneType](self.widgets[j], anchor)
-                    external_call["gtk_popover_popup", NoneType](self.widgets[j])
+        for j in moving:  # a kept popover whose anchor was built again moves to the new anchor
+            var anchor = self.window
+            for k in range(n):
+                if self.rt.shown.nodes[k].name == self.rt.shown.nodes[j].text and self.widgets[k] != 0:
+                    anchor = self.widgets[k]
+            external_call["gtk_widget_set_parent", NoneType](self.widgets[j], anchor)
+            external_call["g_object_unref", NoneType](self.widgets[j])
+            external_call["gtk_popover_popup", NoneType](self.widgets[j])
         if self.key_node < 0 and key_before >= 0:  # the canvas that had the keyboard was built again: the new one has it
             for c in self.canvases:
                 if c.keys != 0:

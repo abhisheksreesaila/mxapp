@@ -108,6 +108,44 @@ def test_a_failed_sibling_rolls_back_what_its_cousins_recorded() raises:
     assert_equal(len(d.resync), 1, "only the root re-lays its children (the row in place of the old one)")
 
 
+def test_a_grid_gaining_a_tile_keeps_the_others() raises:
+    var a = VStack(Grid([Text("Sum").tag("t0"), Text("Median").tag("t1")], 3).tag("tiles"))
+    var b = VStack(Grid([Text("Sum").tag("t0"), Text("Median").tag("t1"), Text("Count").tag("t2")], 3).tag("tiles"))
+    var d = diff(a, b)
+    assert_true(d.partial)
+    assert_equal(len(d.resync), 1)
+    assert_equal(d.resync[0], find(b, "tiles"), "the grid places its children again")
+    assert_equal(d.kept[find(b, "t0")], find(a, "t0"), "the tiles that were there stay (no second arrival)")
+    assert_equal(d.kept[find(b, "t1")], find(a, "t1"))
+    assert_equal(d.kept[find(b, "t2")], -1)
+
+
+def test_a_grid_with_another_column_count_is_placed_again() raises:
+    var a = VStack(Grid([Text("Sum").tag("t0")], 3).tag("tiles"), Text("x"))
+    var b = VStack(Grid([Text("Sum").tag("t0")], 2).tag("tiles"), Text("x"))
+    var d = diff(a, b)
+    assert_true(d.partial)
+    assert_equal(d.kept[find(b, "tiles")], -1)
+
+
+def test_a_board_gaining_an_editor_keeps_the_table() raises:
+    var a = VStack(Board([Canvas(0, 1, on_gesture=3, keys=True).at(0, 0).tag("grid")], 800, 600).tag("board"))
+    var b = VStack(Board([Canvas(0, 1, on_gesture=3, keys=True).at(0, 0).tag("grid"), TextField("9", on_submit=4).at(40, 60).tag("editor")], 800, 600).tag("board"))
+    var d = diff(a, b)
+    assert_true(d.partial)
+    assert_equal(d.resync[0], find(b, "board"))
+    assert_equal(d.kept[find(b, "grid")], find(a, "grid"), "the grid keeps its canvas (and the keyboard)")
+    assert_equal(d.kept[find(b, "editor")], -1)
+
+
+def test_a_toast_with_new_text_is_a_new_toast() raises:
+    var a = VStack(Text("x"), Toast("Saved").tag("toast"))
+    var b = VStack(Text("x"), Toast("Copied").tag("toast"))
+    var d = diff(a, b)
+    assert_true(d.partial)
+    assert_equal(d.kept[find(b, "toast")], -1)
+
+
 def test_a_new_root_rebuilds_everything() raises:
     var d = diff(VStack(Text("x")), HStack(Text("x")))
     assert_true(d.rebuild)
@@ -122,5 +160,9 @@ def main() raises:
     test_a_size_change_is_a_size_patch()
     test_a_size_set_where_there_was_none_is_a_new_layout()
     test_a_failed_sibling_rolls_back_what_its_cousins_recorded()
+    test_a_grid_gaining_a_tile_keeps_the_others()
+    test_a_grid_with_another_column_count_is_placed_again()
+    test_a_board_gaining_an_editor_keeps_the_table()
+    test_a_toast_with_new_text_is_a_new_toast()
     test_a_new_root_rebuilds_everything()
     print("DIFF KEEP TESTS PASSED")
