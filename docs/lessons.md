@@ -29,3 +29,4 @@ One line per rule that prevents a mistake that happened.
 - 2026-10-19 · Test steps call the host's handlers directly, so they never saw a rebuild kill a GTK drag in progress. Anything gesture-shaped is proven with real input too (scripts/live.py: XTest on the headless display, `report` prints the state).
 - 2026-10-19 · Every check ran at 1440×900, the size the layout's constants were made for, and passed while the owner's 1742×876 window lost its status bar. Layout checks run at several window sizes (goal 25 M2: three).
 - 2026-10-19 · Count bytes with code, not by hand: " · " is 4 bytes in UTF-8 and a hard-coded 5 ate the first digit of "5,000 of 5,000 rows".
+- 2026-10-19 · A new view passed its own check ("the logo is there") while it broke the layout around it (a 100 px SVG stretched the web's menu bar under the toolbar; only goal 24's regression run caught it). A check for something added to a bar also checks it fits the bar.

@@ -334,6 +334,9 @@ def m8():
             problems.append(f"web {name}: accent {acc.group(1) if acc else None}, want {want[name]}")
         if not logo or logo.group(1).strip() in ("none", "0px", "auto"):
             problems.append(f"web {name}: no logo in the menu bar ({logo.group(1) if logo else None})")
+        bar, mark = boxes(out, "menubar"), boxes(out, "app-mark")
+        if not bar or not mark or mark[0][3] > bar[0][3] or mark[0][1] + mark[0][3] > bar[0][1] + bar[0][3] + 1:
+            problems.append(f"web {name}: the logo doesn't fit the menu bar (mark {mark}, bar {bar})")
     out, shot = gtk(SHEET + ";glide:Down", "brand-sheet-gtk")
     if "ICON: app-logo" not in out:
         problems.append("GTK: no app-logo icon in the menu bar")
