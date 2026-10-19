@@ -771,7 +771,9 @@ body.liquid [data-tag=gpu-chip] { font-size: 12px; font-weight: 500; color: var(
 body.liquid [data-tag=kpi-note] { font-size: 12px; color: var(--o-ink2); background: var(--o-raised); border-radius: 999px; padding: 2px 10px; box-shadow: inset 0 0 0 1px var(--o-line); }
 body.liquid [data-tag=kpi-fact] { font-size: 12px; color: var(--o-ink3); }
 body.liquid [data-tag=add-tile] { background: transparent; border: 2px dashed var(--o-strong); box-shadow: none; border-radius: 16px; min-height: 120px; color: var(--o-ink3); }
-body.liquid [data-tag=stat-card] { background: #fff; border-radius: 12px; box-shadow: 0 0 0 1px rgba(15,23,42,.07); box-sizing: border-box; }
+body.liquid [data-tag=stat-card] { background: var(--o-raised); border-radius: 12px; box-shadow: 0 0 0 1px var(--o-strong); box-sizing: border-box; }
+body.liquid [data-tag=inspector] hr { border: 0; border-top: 1px solid var(--o-strong); margin: 2px 0; width: 100%; }
+body.liquid [data-tag=section-title] { font-size: 11px; font-weight: 600; letter-spacing: .5px; color: var(--o-ink2); }
 body.liquid [data-tag=stat-value] { font-size: 15px; font-weight: 600; color: var(--o-ink); }
 body.liquid .menu-title { font-size: 13px; padding: 4px 10px; border-radius: 8px; color: var(--o-ink2); transition: background 150ms var(--sp-snappy); }
 body.liquid .menu.open > .menu-title, body.liquid .menu-title:hover { background: rgba(15,23,42,.06); color: var(--o-ink); }
@@ -794,7 +796,10 @@ body.liquid [data-tag=table] { padding: 10px 12px 12px; box-sizing: border-box; 
 body.liquid [data-tag=tile] { padding: 16px 18px; box-sizing: border-box; animation: liquid-land 320ms var(--sp-bouncy) both;
   transition: box-shadow 150ms var(--sp-snappy), transform 150ms var(--sp-snappy); }
 body.liquid [data-tag=tile]:hover { box-shadow: 0 0 0 1px rgba(15,23,42,.07), 0 10px 30px rgba(15,23,42,.10); transform: translateY(-2px); }
-body.liquid [data-tag=tile] button { opacity: .35; transition: opacity 150ms var(--sp-snappy); } body.liquid [data-tag=tile]:hover button { opacity: 1; }
+body.liquid [data-tag=tile] button, body.liquid [data-tag=chart-tile] button.icon-only, body.liquid .board > .object button.icon-only { opacity: 0; transition: opacity 150ms var(--sp-snappy); }
+body.liquid [data-tag=tile]:hover button, body.liquid [data-tag=chart-tile]:hover button.icon-only, body.liquid .board > .object:hover button.icon-only,
+body.liquid [data-tag=tile] button:focus-visible, body.liquid [data-tag=chart-tile] button:focus-visible, body.liquid .board > .object button:focus-visible { opacity: 1; }
+@media (pointer: coarse) { body.liquid [data-tag=tile] button, body.liquid [data-tag=chart-tile] button.icon-only, body.liquid .board > .object button.icon-only { opacity: .6; } }
 body.liquid [data-tag=tile] .text.title { font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -.8px; }
 body.liquid [data-tag=inspector] { border-radius: 18px; padding: 10px; box-sizing: border-box; }
 body.liquid [data-tag=sheet-tabs] { margin: 0 10px; border-radius: 14px 14px 0 0; }

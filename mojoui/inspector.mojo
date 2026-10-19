@@ -22,7 +22,7 @@ def StatCards(stats: List[Tuple[String, String]]) -> View:
 def Section(title: String, items: List[View]) -> View:
     """A titled group of controls (the title in small caps on the hosts that have them)."""
     var all = List[View]()
-    all.append(Text(title.upper(), CAPTION))
+    all.append(Text(title.upper(), CAPTION).tag("section-title"))
     for v in items:
         all.append(v.copy())
     return VStack(all^, spacing=8).fill().align(START)

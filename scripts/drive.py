@@ -250,7 +250,7 @@ def step(page, s):
         page.mouse.move(sx + dx, sy + dy)
         page.mouse.up()
     elif verb == "style":  # style:selector=property: the first match's computed value (STYLE: selector property value)
-        sel, prop = rest.split("=", 1)
+        sel, prop = rest.rsplit("=", 1)  # (a selector may hold "=": [data-tag=inspector] hr)
         value = page.evaluate("([s, p]) => { const e = document.querySelector(s); return e ? getComputedStyle(e).getPropertyValue(p) : 'none'; }", [sel, prop])
         return f"STYLE: {sel} {prop} {value}"
     elif verb == "wait":  # until a button with this title appears (e.g. after frames change the screen)

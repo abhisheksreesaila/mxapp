@@ -3590,7 +3590,10 @@ def liquid_css(p: Palette) -> String:
         + w + ".mui-tag-kpi-fact { font-size: 12px; color: " + ink2 + "; }\n"
         + w + ".mui-card.mui-tag-add-tile { background: transparent; border: 2px dashed " + strong + "; box-shadow: none; border-radius: 16px; min-height: 120px; }\n"
         + w + ".mui-tag-add-tile label, " + w + ".mui-tag-add-tile image { color: " + ink2 + "; }\n"
-        + w + ".mui-tag-stat-card { background: #ffffff; border-radius: 12px; box-shadow: 0 0 0 1px rgba(15,23,42,0.07); }\n"
+        + w + ".mui-tag-stat-card { background: " + hex_of(p.raised) + "; border-radius: 12px; box-shadow: 0 0 0 1px " + strong + "; }\n"
+        # the inspector's structure: hairlines between sections, small-caps titles (goal 26 M0: "it looked like without borders")
+        + w + ".mui-tag-inspector separator { background: " + strong + "; min-height: 1px; margin: 2px 0; }\n"
+        + w + ".mui-tag-section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: " + body + "; }\n"
         + w + ".mui-tag-stat-value { font-size: 15px; font-weight: 600; color: " + ink + "; }\n"
         + w + "menubutton.mui-menu > button { font-size: 13px; padding: 3px 10px; border-radius: 8px; color: " + body + "; transition: background 150ms " + spring + "; }\n"
         + w + "menubutton.mui-menu > button:hover, " + w + "menubutton.mui-menu > button:checked { background: " + hover + "; color: " + ink + "; }\n"
@@ -3620,7 +3623,10 @@ def liquid_css(p: Palette) -> String:
         + w + ".mui-tag-table { padding: 10px 12px 12px; }\n"
         + w + ".mui-tag-tile { padding: 16px 18px; animation: liquid-land 320ms cubic-bezier(0.22, 1, 0.36, 1); transition: box-shadow 150ms " + spring + "; }\n"
         + w + ".mui-tag-tile:hover { box-shadow: 0 0 0 1px rgba(15,23,42,0.07), 0 10px 30px rgba(15,23,42,0.10); }\n"
-        + w + ".mui-tag-tile button { opacity: 0.35; transition: opacity 150ms " + spring + "; } " + w + ".mui-tag-tile:hover button { opacity: 1; }\n"
+        # a tile's or an object's ✕ shows on hover (or keyboard focus) only: a report reads as a report (goal 26 M0)
+        + w + ".mui-tag-tile button, " + w + ".mui-tag-chart-tile button.image-button, " + w + ".mui-board .mui-card button.image-button { opacity: 0; transition: opacity 150ms " + spring + "; }\n"
+        + w + ".mui-tag-tile:hover button, " + w + ".mui-tag-chart-tile:hover button.image-button, " + w + ".mui-board .mui-card:hover button.image-button, "
+        + w + ".mui-tag-tile button:focus-visible, " + w + ".mui-tag-chart-tile button:focus-visible, " + w + ".mui-board .mui-card button:focus-visible { opacity: 1; }\n"
         + w + ".mui-tag-tile label.title-1 { font-size: 34px; font-weight: 600; letter-spacing: -0.8px; }\n"
         + w + "label.title-1.mui-tone-accent, " + w + "label.title-4.mui-tone-accent { color: " + accent + "; }\n"
         # the inspector: a glass panel

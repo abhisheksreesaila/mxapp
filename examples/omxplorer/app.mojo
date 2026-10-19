@@ -44,7 +44,7 @@ from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, tile_fact, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
                                TILE_CHART, TILE_DISTINCT, TILE_MEDIAN, TILE_LAST, TILE_NAMES)
 from mojoui.chartview import ChartView
-from mojoui.view import TAP, PAN, ZOOM
+from mojoui.view import TAP, PAN, ZOOM, PRESS, RELEASE
 from mojoui.sample import sample_table
 
 # screens
@@ -337,6 +337,7 @@ struct Main(App):
             self.source = path
             self.name = file_stem(path)
             self.preview = DataGrid()
+            self.preview.browse = True
             self.preview.prepare(self.frame, self.font, self.pal)
             if not self.frame.streamed():  # (a histogram reads every row: a streamed file's would take seconds a column)
                 for c in range(self.frame.stored()):
@@ -811,7 +812,7 @@ struct Main(App):
             self.message = "Sort undone"
             self.version += 1
         elif m == PREVIEW:  # (only scrolling: the preview selects and edits nothing)
-            if event.number == PAN or event.number == ZOOM:
+            if event.number == PAN or event.number == ZOOM or event.number == PRESS or event.number == RELEASE:  # (browse: no selecting)
                 _ = self.preview.handle(event, self.frame, self.font, self.pal)
         elif m == GRID:
             var action = self.grid.handle(event, self.frame, self.font, self.pal)
@@ -1659,7 +1660,7 @@ struct Main(App):
                 var cv = chart_view(t.chart, self.frame)
                 charts.append(Card(HStack(Text(cv.title, HEADLINE), Spacer(), Button("Remove", TILE_CLOSE + k, ICON_ONLY, icon="close"), spacing=8).fill().align(CENTER),
                                    Canvas(60 + k, self.version, on_gesture=TILE_TAP + k).fill().height(240),
-                                   Text(readout(t.chart, self.frame), CAPTION), spacing=6).fill())
+                                   Text(readout(t.chart, self.frame), CAPTION), spacing=6).fill().tag("chart-tile"))
             else:
                 kpis.append(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version, TILE_CLOSE + k, tile_fact(t, self.frame)).fill().tag("tile"))
                 first_kpi = False

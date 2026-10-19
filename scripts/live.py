@@ -11,6 +11,9 @@ Commands, separated by ';':
   drag:X1,Y1,X2,Y2   press at 1, move in 12 steps over ~200 ms to 2, release
   key:NAME           press and release a key (X keysym names; Shift+Down, Control+c)
   shot:PATH          save the screen (the window's area) as a PNG
+  press:X,Y          move there and hold button 1 down (until release)
+  glideto:X,Y        move the pointer there in 12 steps over ~200 ms (the button stays as it is)
+  release            let button 1 go
   wheel:X,Y,N        N notches of the scroll wheel down there (negative: up)
   report             the app prints its widgets' state (as a MOJOUI_TEST run's end does: LABEL:, BOX:, …)
 The app's stdout (TRACE: lines with MOJOUI_TRACE=1) is printed at the end.
@@ -75,11 +78,12 @@ def main():
             xtest.fake_input(d, X.KeyRelease, m)
         d.sync()
 
+    pointer = [0.0, 0.0]
     for cmd in commands.split(";"):
         if not cmd:
             continue
         verb, _, rest = cmd.partition(":")
-        nums = [float(n) for n in rest.split(",")] if verb in ("move", "click", "shift+click", "drag", "wheel") else []
+        nums = [float(n) for n in rest.split(",")] if verb in ("move", "click", "shift+click", "drag", "wheel", "press", "glideto") else []
         if verb == "wait":
             time.sleep(float(rest) / 1000)
         elif verb == "move":
@@ -109,6 +113,21 @@ def main():
             time.sleep(0.25)
         elif verb == "key":
             key(rest)
+            time.sleep(0.2)
+        elif verb == "press":
+            move(*nums)
+            time.sleep(0.05)
+            button(True)
+            pointer[0], pointer[1] = nums[0], nums[1]
+            time.sleep(0.05)
+        elif verb == "glideto":
+            x0, y0 = pointer
+            for s_ in range(1, 13):
+                move(x0 + (nums[0] - x0) * s_ / 12, y0 + (nums[1] - y0) * s_ / 12)
+                time.sleep(0.016)
+            pointer[0], pointer[1] = nums[0], nums[1]
+        elif verb == "release":
+            button(False)
             time.sleep(0.2)
         elif verb == "wheel":
             move(nums[0], nums[1])

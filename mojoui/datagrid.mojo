@@ -104,6 +104,7 @@ struct DataGrid(Copyable, Movable):
     var anchor_col: Int
     var anchor_index: Int  # the anchor's display index, found once when a block starts (-1: not known yet)
     var dragging: Bool  # a press on a cell, then a drag: the block follows the pointer
+    var browse: Bool  # read-only browsing (an import's preview): scrolling and its bar work, cells don't select
     var ring: List[Float64]  # the selection ring as drawn (x, y, w, h in points), gliding toward `ring_to`
     var ring_from: List[Float64]
     var ring_to: List[Float64]
@@ -139,6 +140,7 @@ struct DataGrid(Copyable, Movable):
         self.anchor_col = -1
         self.anchor_index = -1
         self.dragging = False
+        self.browse = False
         self.ring = List[Float64]()
         self.ring_from = List[Float64]()
         self.ring_to = List[Float64]()
@@ -545,6 +547,8 @@ struct DataGrid(Copyable, Movable):
             if was:
                 self.redraw()
                 return GRID_REDRAW
+            if self.browse:  # (a preview: the press only scrolls, by the bar above or a drag below)
+                return GRID_NONE
             if event.y >= head and self.in_columns(event.x):  # a press on a cell: a drag from here selects a block
                 var at = self.cell_hit(event.x, event.y, src)
                 if at[0] >= 0 and at[1] >= 0:
@@ -1008,7 +1012,7 @@ struct DataGrid(Copyable, Movable):
         if blk[2] >= 0 and ring_top >= 0 and blk[2] < len(lefts):
             var c1 = min(blk[3], len(lefts) - 1)
             var to: List[Float64] = [max(lefts[blk[2]], gut) / k, ring_top / k, (min(lefts[c1] + widths[c1], right) - max(lefts[blk[2]], gut)) / k, (ring_bottom - ring_top) / k]
-            if self.glide(to^, s.still):
+            if self.glide(to^, s.still or self.dragging):  # (a drag: the ring stays under the pointer; keys glide)
                 s.again = True  # mid-glide: the host draws the next frame too
             var rx = self.ring[0] * k
             var ry = self.ring[1] * k
