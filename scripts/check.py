@@ -130,6 +130,39 @@ def m0():
                                                   "the inspector's sections have hairlines (GTK, web); a tile's ✕ shows only on hover (GTK pixels, web opacity)")
 
 
+BENCH_RE = re.compile(r"^BENCH: (\w+) (\d+) at (\d+)x(\d+) px draws (\d+) paint p50 ([\d.]+) p95 ([\d.]+) upload p50 ([\d.]+) p95 ([\d.]+) "
+                      r"frame-paint p50 ([\d.]+) p95 ([\d.]+)", re.M)
+ORDERS_1M = ROOT / "build/data/orders_1m.csv"
+
+
+def bench(name, **more):
+    """omxplorer on 1M rows in a 2800×1400 window (≈ the owner's 1742×876 at 1.6×): 60 scroll frames, 10 glides."""
+    import os
+    import headless
+    headless.ensure()
+    OUT.mkdir(parents=True, exist_ok=True)
+    env = dict(g25.env(name), MOJOUI_TEST=f"pick:Choose a file={ORDERS_1M};tap:Create table;bench:scroll=60;bench:glide=10",
+               MOJOUI_WINDOW="2800x1400", MOJOUI_TRACE="1", MOJOUI_SHOT=str(OUT / f"{name}.png"), **{k: str(v) for k, v in more.items()})
+    r = run([str(BUILD / "omxplorer" / "linux" / "omxplorer")], env=env, timeout=1200)
+    out = r.stdout + r.stderr
+    found = {m.group(1): m.groups() for m in BENCH_RE.finditer(out)}
+    return found, out
+
+
+def m1():
+    """Today's path measured: paint and upload apart, per scroll frame and per glide frame."""
+    if not ORDERS_1M.exists():
+        return False, f"no {ORDERS_1M} (goal 14's 1M-row file)"
+    found, out = bench("baseline")
+    if "scroll" not in found or "glide" not in found:
+        return False, f"no BENCH lines: {out[-400:]}"
+    lines = [f"{k}: {v[2]}x{v[3]} px, {v[4]} draws, paint p50 {v[5]} ms p95 {v[6]} ms, upload p50 {v[7]} ms p95 {v[8]} ms" for k, v in found.items()]
+    (ROOT / "docs/goals/26").mkdir(parents=True, exist_ok=True)
+    (ROOT / "docs/goals/26/baseline.txt").write_text("Goal 26 baseline: today's path (CPU raster into a texture), omxplorer, 1M rows, 2800×1400 window,\n"
+                                                    "headless (Xvfb, cairo): CPU numbers only.\n" + "\n".join(lines) + "\n")
+    return True, "; ".join(lines) + " (docs/goals/26/baseline.txt)"
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -146,7 +179,7 @@ def m7():
     return not problems, "; ".join(problems) or "goal 25's M1–M7 (goals 3–24 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", todo("today measured")), ("M2", todo("the Scene")), ("M3", todo("the grid as a Scene")),
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", todo("the Scene")), ("M3", todo("the grid as a Scene")),
               ("M4", todo("GTK draws the Scene")), ("M5", todo("the numbers")), ("M6", todo("the owner's GPU run")), ("M7", m7)]
 
 

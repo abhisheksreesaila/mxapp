@@ -381,6 +381,8 @@ struct GtkCanvas(Copyable, Movable):
     var drawn: Int  # the version last drawn (-1: none yet)
     var draws: Int
     var draw_ms: Float64  # how long the last draw took (paint + upload), for GLIDE
+    var paint_ms: Float64  # of which the app's drawing (and the screen catching up)
+    var upload_ms: Float64  # of which handing the pixels to GTK (a texture, a paintable)
     var frames: Int  # frame events sent
     var first_us: Int  # frame-clock time of the first and last frame event (for FRAMES)
     var last_us: Int
@@ -412,6 +414,8 @@ struct GtkCanvas(Copyable, Movable):
         self.drawn = -1
         self.draws = 0
         self.draw_ms = 0
+        self.paint_ms = 0
+        self.upload_ms = 0
         self.frames = 0
         self.first_us = 0
         self.last_us = 0
@@ -460,6 +464,8 @@ struct GtkHost[A: App](Movable):
     var board_drags: List[Tuple[Int, Int]]  # (Board node, its drag gesture): a Board whose objects all change keeps it
     var revealed: Int  # the last Board reveal token scrolled to (Board's value)
     var clip_version: Int  # the Clipboard view's version last copied
+    var paint_t0: Int  # the frame clock's before-paint time (ns), and every frame's paint phase since bench started (ms)
+    var frame_paints: List[Float64]
     var key_draws: Int  # draws of canvases that take keys (the grid), across rebuilds: GLIDE counts them
     var key_draw_ms: Float64
     var clip_text: String  # (tests print it: the clipboard itself is asynchronous)
@@ -514,6 +520,8 @@ struct GtkHost[A: App](Movable):
         self.reveal_pending = -1
         self.clip_version = 0
         self.key_draws = 0
+        self.paint_t0 = 0
+        self.frame_paints = List[Float64]()
         self.key_draw_ms = 0
         self.clip_text = ""
         self.window = 0
@@ -2003,11 +2011,15 @@ struct GtkHost[A: App](Movable):
         var surface = Surface(Int(self.canvases[ci].pixels.unsafe_ptr()), wpx, hpx, scale)
         surface.still = not animations_enabled()  # (GNOME's "reduce animation": animations jump to their end)
         var d = self.rt.draw(node, surface)
+        var t1 = perf_counter_ns()
         self.trace_diff("refresh after draw", t0, d)
         var tex = texture(self.canvases[ci].pixels, wpx, hpx)
         external_call["gtk_picture_set_paintable", NoneType](widget, tex)
         external_call["g_object_unref", NoneType](tex)
-        self.canvases[ci].draw_ms = Float64(Int(perf_counter_ns() - t0)) / 1e6
+        var t2 = perf_counter_ns()
+        self.canvases[ci].paint_ms = Float64(Int(t1 - t0)) / 1e6
+        self.canvases[ci].upload_ms = Float64(Int(t2 - t1)) / 1e6
+        self.canvases[ci].draw_ms = Float64(Int(t2 - t0)) / 1e6
         if self.canvases[ci].keys != 0:
             self.key_draws += 1
             self.key_draw_ms = self.canvases[ci].draw_ms
@@ -2017,7 +2029,8 @@ struct GtkHost[A: App](Movable):
         self.canvases[ci].drawn = version if not surface.again else -1  # mid-animation: draw again next frame
         self.canvases[ci].draws += 1
         if self.rt.trace:
-            print("TRACE: draw canvas " + String(self.rt.shown.nodes[node].style) + " " + String(wpx) + "x" + String(hpx) + " " + String(self.canvases[ci].draw_ms) + " ms")
+            print("TRACE: draw canvas " + String(self.rt.shown.nodes[node].style) + " " + String(wpx) + "x" + String(hpx) + " " + String(self.canvases[ci].draw_ms) + " ms (paint "
+                  + String(self.canvases[ci].paint_ms) + ", upload " + String(self.canvases[ci].upload_ms) + ")")
         self.apply(d, self_addr)
 
     def copy_if_asked(mut self):
@@ -2086,6 +2099,15 @@ def on_idle_rebuild[A: App](host_addr: Int) abi("C") -> c_int:
     return 0  # G_SOURCE_REMOVE: run once
 
 
+def pct(xs: List[Float64], q: Float64) -> Float64:
+    """The q-th quantile of xs (0 when empty)."""
+    if len(xs) == 0:
+        return 0
+    var v = xs.copy()
+    sort(v)
+    return v[min(len(v) - 1, Int(q * Float64(len(v))))]
+
+
 def settle():
     """Runs pending GTK work (such as a deferred rebuild) before the next test step."""
     while external_call["g_main_context_pending", c_int](0) != 0:
@@ -2128,7 +2150,23 @@ def on_idle_resize[A: App](host_addr: Int) abi("C") -> c_int:
     return 0
 
 
+def on_before_paint[A: App](clock: Int, host_addr: Int) abi("C"):
+    host_at[A](host_addr)[].paint_t0 = Int(perf_counter_ns())
+
+
+def on_after_paint[A: App](clock: Int, host_addr: Int) abi("C"):
+    var host = host_at[A](host_addr)
+    if host[].paint_t0 > 0:
+        host[].frame_paints.append(Float64(Int(perf_counter_ns()) - host[].paint_t0) / 1e6)
+        if len(host[].frame_paints) > 4096:
+            host[].frame_paints = List[Float64]()
+
+
 def on_window_realize[A: App](window: Int, host_addr: Int) abi("C"):
+    var clock = external_call["gtk_widget_get_frame_clock", Int](window)
+    if clock != 0 and host_at[A](host_addr)[].rt.trace:  # (MOJOUI_TRACE: the paint phase of every frame, for bench steps)
+        connect(clock, "before-paint", on_before_paint[A], host_addr)
+        connect(clock, "after-paint", on_after_paint[A], host_addr)
     var surface = external_call["gtk_native_get_surface", Int](window)
     if surface != 0:
         connect_any(surface, "layout", on_surface_layout[A], host_addr)
@@ -2965,6 +3003,47 @@ def run_step[A: App](host_addr: Int, step: String):
             if cv.keys != 0 and cv.drawn != host[].rt.shown.nodes[cv.node].value:
                 done = False
         print("GLIDE: frames " + String(host[].key_draws - before) + " max_ms " + one_decimal(Float32(worst)) + " settled " + ("yes" if done else "no"))
+    elif verb == "bench":  # bench:scroll=60 / bench:glide=10: the grid scrolls 3 rows a frame (or moves the selection) that many times; percentiles of the costs
+        var kv = split_at(rest, "=")
+        var count = to_int(kv[1])
+        var gi = -1
+        for k in range(len(host[].canvases)):
+            if host[].canvases[k].keys != 0:
+                gi = k
+        if gi < 0:
+            print("TEST: no canvas takes keys")
+            return
+        var ready_by = perf_counter_ns() + 2_000_000_000
+        while host[].canvases[gi].drawn != host[].rt.shown.nodes[host[].canvases[gi].node].value and perf_counter_ns() < ready_by:
+            _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
+        var paints = List[Float64]()
+        var uploads = List[Float64]()
+        host[].frame_paints = List[Float64]()
+        var draws0 = host[].canvases[gi].draws
+        var t_start = perf_counter_ns()
+        for _ in range(count):
+            var before = host[].canvases[gi].draws
+            if kv[0] == "scroll":
+                var w = Float64(Int(external_call["gtk_widget_get_width", c_int](host[].canvases[gi].widget)))
+                host[].canvas_send(gi, PAN, w / 2, 200, 0, -3 * 26, 1, host_addr)
+            else:
+                host[].canvas_key(gi, "ArrowDown", 0, host_addr)
+            var by = perf_counter_ns() + 1_000_000_000
+            while perf_counter_ns() < by:  # (until it has drawn and settled: a glide draws several frames)
+                _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
+                if host[].canvases[gi].draws != before:
+                    paints.append(host[].canvases[gi].paint_ms)
+                    uploads.append(host[].canvases[gi].upload_ms)
+                    before = host[].canvases[gi].draws
+                if host[].canvases[gi].drawn == host[].rt.shown.nodes[host[].canvases[gi].node].value and not host[].canvases[gi].armed:
+                    break
+        var secs = Float64(Int(perf_counter_ns() - t_start)) / 1e9
+        var c = host[].canvases[gi].copy()
+        print("BENCH: " + kv[0] + " " + String(count) + " at " + String(c.wpx) + "x" + String(c.hpx) + " px draws " + String(c.draws - draws0)
+              + " paint p50 " + one_decimal(Float32(pct(paints, 0.5))) + " p95 " + one_decimal(Float32(pct(paints, 0.95)))
+              + " upload p50 " + one_decimal(Float32(pct(uploads, 0.5))) + " p95 " + one_decimal(Float32(pct(uploads, 0.95)))
+              + " frame-paint p50 " + one_decimal(Float32(pct(host[].frame_paints, 0.5))) + " p95 " + one_decimal(Float32(pct(host[].frame_paints, 0.95)))
+              + " seconds " + one_decimal(Float32(secs)))
     elif verb == "pause":  # pause:3000: keep the main loop running that long (a screen grab of the display can catch popovers)
         var until = perf_counter_ns() + to_int(rest) * 1_000_000
         while perf_counter_ns() < until:
