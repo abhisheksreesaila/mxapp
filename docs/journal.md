@@ -285,3 +285,14 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - App.resize (D-245): first try made the window grow 8 pt per resize (the layout asked for exactly the window's width plus margins); the sheet's column now grows instead of asking.
 - GTK layout bugs exposed once sizes stopped being forced: Spacers expanded vertically inside the toolbar; the inspector's .grow() took half the free width (D-246).
 - Ghost under the import's column table (owner's screenshot): not reproduced with cairo or software GL (Mesa llvmpipe through Xvfb); recorded (D-250). The preview's canvas had no gesture message at all: it now scrolls.
+
+## Goal 26 (2026-10-19): the Scene, the owner's four, the brand
+- Baseline first (M1): the grid's pixel path at 2800×1400 with 1M rows costs 14.2–14.6 ms paint + ~0.9 ms upload a frame on the CPU, every frame, ring move or not. No room at 120 Hz.
+- The Scene (D-252): a `Painter` trait over the grid's drawing; SurfacePainter (pixels, the reference) and Scene (a display list with layers, versions, clips, images, notes). The grid records cells / selection / ring / bar; the GTK host replays it into GskRenderNodes and reuses a layer's node when the layer is the same (D-258).
+- Native text (D-253): Pango layouts in Inter and JetBrains Mono, each built once into a cached node keyed by text, face, size and colour. Needed `-lpango-1.0` (goal 24 found Pango unlinked).
+- Review round 1 moved the selection's tint out of the cells layer into its own translucent layer (D-257): inside the cells, a moving block rebuilt the cells layer.
+- Result (M5, best of three, D-256): scroll 0.8 ms p95 (build 0.2 + replay 0.6), glide 0.2 ms, cells built 0 in 10 glides, 0 textures.
+- M0, real input: the block lagged the cursor because the ring glided toward each new cell mid-drag; while dragging it now jumps (glide only when still). The import preview's grid is browse-only (a press doesn't select) so its scroll bar drags. Hairlines, small-caps section titles and ✕-on-hover are CSS on both hosts.
+- M8 brand (D-254): `App.accent()` per screen, `App.logo()` (an SVG installed as the GTK icon theme's app-logo and the window icon, the web favicon). Full run 3 caught the web drawing the 100×100 SVG at full size: the menu bar grew under the toolbar; the SVG now declares 24×24 and M8 checks the logo fits the bar.
+- Reviewer: round 1 NEEDS WORK (selection layer, strict checks, clips/images/versions, leaks), round 2 NEEDS WORK (M4 wording, ring compare), round 3 PASS.
+- M6 is blocked on the owner's display (60 Hz: proves on-time frames at 60, the per-frame work argues for 120).

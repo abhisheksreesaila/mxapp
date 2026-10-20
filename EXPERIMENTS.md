@@ -4,6 +4,19 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 26 (2026-10-19): the grid on the GPU as a display list; the owner's four; the brand (goal 26)
+- **Setup:** owner: "super fast… liquid… or else Rust guys will win". Bar: 120 fps, ≤ 2 ms main-thread work a frame, no grid repaint when only the ring moves; plan B is our own renderer, never a lower bar.
+- **Worked:**
+  - The Scene (`mojoui/scene.mojo`): one `Painter` interface, pixels or a display list with layers. GTK replays it as GskRenderNodes and reuses unchanged layers; text through Pango, cached.
+  - 2800×1400, 1M rows: scroll 15 ms → 0.8 ms p95 a frame; glide 15.5 ms → 0.2 ms; 0 cells rebuilt while the ring moves; 0 textures uploaded. Pixel-identical to the pixel path (non-text).
+  - The owner's four (drag follows the cursor, preview scroll bar, inspector hairlines, ✕ on hover) and the brand (Logo 1, indigo / green / red per screen).
+  - M0–M5, M7, M8 PASS; reviewer PASS on round 3.
+- **Broke and fixed:** the selection's tint inside the cells layer rebuilt every cell per glide (own layer now); fills blended (OP_FILL); bench windows weren't presented without MOJOUI_SHOT; the web drew the logo SVG at 100 px and hid the File menu (sized SVG, M8 fit check).
+- **Means:** the grid's frame cost is no longer the bottleneck on GTK. The same list maps to Metal/Core Animation and the web canvas; the other drawn views (charts, preview) can move next.
+- **Next:** owner runs scripts/scene-bench.sh (M6); goal 27 chart editing ("the title is the query"); goal 28 the glass-pill island.
+
+---
+
 ## Experiment 25 (2026-10-19): omxplorer feels native: partial rebuilds, the window's size, calm motion (goal 25)
 - **Setup:** the owner used goal 24's build on a 3440×1440 screen at 1.6× (window 1742×876): multi-select unreliable, toolbar not straight, bottom bar off screen, "not smooth", "is it implementation?".
 - **Worked:**

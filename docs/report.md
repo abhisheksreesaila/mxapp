@@ -1,52 +1,75 @@
-# Goal 25 report: omxplorer feels native (only what changed moves, it fits the window, nothing twitches)
+# Goal 26 report: the grid on the GPU (the Scene), your four fixes, the brand
 
-**End goal (owner, 2026-10-19, after using goal 24's build):** "multi select does not work well… the icons on the toolbar are not in a straight line… the bottom bar is outside the screen for sheet… liquid feel more natural… there isn't a smooth feel to it. Is it implementation? Is the UI on a different thread, decoupled?"
+**End goal (owner, 2026-10-19):** "we want a super fast app… it should feel like liquid. This is the whole point of the framework to exist… or else Rust guys will win." Plus four things from using goal 25's build (the drag lagging the cursor, the preview's scroll bar, lines in the inspector, the ✕ only on hover) and the brand you picked (Logo 1, Iris indigo, Ledger green, Signal red).
 
 ## Result
-M1–M7 PASS in one full run (goal 24's checks, and every earlier goal's inside them, as M7). Reviewer: round 3 PASS, then a final pass over the last fixes.
+M0–M5, M7 and M8 PASS. M6 waits for you: it has to run on your screen (one command, below). Reviewer: round 3 PASS.
 ```
-PASS  M1  the diff's tests pass; after the sheet opens every change is partial (10 updates, at most 15 widgets built); a real drag selects the 21-cell block (Sum 44,605.23)
-PASS  M2  the sheet and the report fit 1742×876, 1280×720 and 2560×1400 on GTK and the web (status bar inside, no gap beside the inspector)
-PASS  M3  every tool and toggle on one line, one height (GTK and the web, 1742 and 1280 wide)
-PASS  M4  each column's inspector names it; order's and amount's Mean, Median, Empty and Distinct are pyarrow's; Text, Date and Yes/No offer no number settings
-PASS  M5  hover and press ≤ 150 ms, menus 200 ms, dialogs 300 ms, tiles 320 ms, no overshoot, on GTK and the web; reduced motion turns arrivals off
-PASS  M6  with real input in Liquid and Ledger: the preview scrolls, Back and Create table respond, nothing stray under the column table
-PASS  M7  goal 24's M1–M7 (goals 3–23 inside them) pass  (2529 s)
+PASS  M0  the block follows the pointer mid-drag; the preview's scroll bar drags its rows; the inspector's sections have hairlines (GTK, web); a tile's ✕ shows only on hover (GTK pixels, web opacity)
+PASS  M1  baseline, today's path: paint p50 14.2 ms p95 14.6 ms a frame + upload 0.8 ms (2180×1074 px, 1M rows)
+PASS  M2  a Scene replays to exactly the pixels its calls draw (rect, rounded rect, line, circle, text, image, clip)
+PASS  M3  the grid recorded as a Scene is the grid drawn (every pixel); layers cells, selection, ring, bar; the selection moving leaves the cells layer equal
+PASS  M4  MOJOUI_SCENE=1 draws the grid as GPU render nodes (239 ops a frame); 0.00% of its non-text pixels differ from the pixel path
+PASS  M5  scroll: 0.8 ms p95 a frame (build 0.2 + replay 0.6); glide: 0.2 ms, the cells layer rebuilt 0 times in 10 glides; 0 textures uploaded
+BLOCK M6  120 fps on your display: waits for scripts/scene-bench.sh
+PASS  M8  Logo 1 in the menu bar and window icon (GTK, web favicon); indigo on Start, green on the sheet (the ring too), red on the report's chrome with neutral figures; every accent ≥ 4.5:1 on white
+PASS  M7  goal 25's M1–M7 (goals 3–24 inside them) pass, and its M1–M6 with MOJOUI_SCENE=1
 ```
 
-## Your question: was it the implementation?
-Yes. Measured with a new trace (`MOJOUI_TRACE=1`) and real mouse input:
-- **Every change in the screen's shape rebuilt the whole window**: 150–190 widgets, 10–40 ms. Moving from a number column to a text column was enough (the inspector changes). Each rebuild replayed every arrival animation, reset hover and scroll, and **killed a drag in progress**: that was the broken multi-select.
-- **The layout was made for a 1440×900 window.** On yours (1742×876) the bottom bar fell off.
-- **One thread does everything.** That's normal (GTK and macOS keep the UI on the main thread); the rule is to keep that thread free. The app's own work per event is about 0.1 ms; drawing the grid on the CPU, 4–7 ms; opening a file still runs on it (215 ms for 5,000 rows): moving data work off it is a later goal.
+## The headline number
+Same window (2800×1400, your size at 1.6×), same 1M rows, same machine:
 
-## Before and after (your window, 1742×876)
-| Before | After |
+| Per frame, on the UI thread | Before (pixels) | After (Scene) |
+|---|---|---|
+| Scrolling | 14.2 ms paint + 0.8 ms upload | **0.8 ms** (p95) |
+| The selection gliding | 14.6 ms + 0.9 ms | **0.2 ms** |
+| Grid cells rebuilt while the ring moves | all of them | **0** |
+| Textures sent to the GPU | 1 full-window texture | **0** |
+
+**18× less work a scroll frame, about 75× less a glide frame.** At 120 Hz a frame has 8.3 ms; the old path couldn't fit one, the new one uses a tenth of it.
+
+## How it works (plain version)
+Before, Mojo painted every pixel of the grid on the CPU (2.3 million of them), then GTK copied the picture to the GPU. Every frame. Even when only the selection ring moved.
+
+Now the grid's drawing code writes a **display list** (the Scene): "a rectangle here, the text 9,228.08 there", about 240 short instructions. GTK's GPU renderer (OpenGL or Vulkan on your machine) draws those. The list is cut into **layers**: cells, selection wash, ring, scroll bar. When the ring glides, the cells layer is byte-for-byte the same as last frame, so GTK reuses it untouched and only the ring is new. Text is laid out once by Pango (the system's text engine, Inter and JetBrains Mono) and kept.
+
+It's the same drawing code for both paths (a `Painter` interface): the old pixel path stays as the reference and the fallback, and the tests prove the two draw the same grid pixel for pixel. The list is also readable: each piece of text knows its cell ("cell 0 7"), which an agent or a test can use.
+
+| Pixel path | Scene path (GPU) |
 |---|---|
-| ![](goals/25/before-sheet-1742x876.jpg) | ![](goals/25/after-sheet-1742x876.jpg) |
-| ![](goals/25/before-drag.jpg) | ![](goals/25/after-drag.jpg) |
+| ![](goals/26/grid-pixels.jpg) | ![](goals/26/grid-scene.jpg) |
 
-Before: the status bar is cut off; a real drag from amount stops at row 3 and the inspector shows amount's stats under "region". After: the window fits; the same drag selects the full 7 × 3 block (Cells 21, Sum 44,605.23, pyarrow's). Also in `docs/goals/25/`: the web (`after-sheet-web.jpg`), a 1280×720 report and toolbar.
+## Your four fixes (M0)
+- **The drag follows the cursor.** The block grows on every motion event, measured mid-drag with real mouse input ([mid-drag](goals/26/mid-drag.jpg)).
+- **The import preview's scroll bar works** (drag it, the rows move).
+- **The inspector has hairlines** between its sections and quiet section titles ([inspector](goals/26/inspector-lines.jpg)).
+- **The ✕ on tiles and charts shows only on hover** (or while the tile has the keyboard) ([hover](goals/26/tile-x-hover.jpg)).
 
-## What changed
-- **Only what changed is rebuilt** (framework, GTK). The diff keeps every widget it can and names the stacks, grids and Boards whose children changed. A column change now builds 1 widget in about 1 ms; a new report tile builds only that tile (the others don't arrive again); the cell editor no longer rebuilds the grid. Widgets keep stable ids, so the ones that stay need nothing new. `MOJOUI_NO_PARTIAL=1` turns it off to compare.
-- **Apps know their window's size** (`App.resize`, GTK and the web). Size changes are patches, not rebuilds. omxplorer's sheet and report fill the window at any size; below 1440 pt the toolbar shows only icons.
-- **One straight toolbar.** A new inline tool style (icon beside a short title) sits on one line with the format toggles, all one height.
-- **The inspector follows the selected column**, during a block too, with the column's own numbers; Yes/No, Date and Text no longer offer decimals.
-- **The import preview scrolls** (it ignored the wheel: likely the "stuck" you saw).
-- **Calm motion.** One ease-out curve, no overshoot (the web's spring overshot by 16 % over 790 ms): hover 150 ms, menus 200, dialogs 300, tiles 320. Reduced motion turns arrivals off.
-- **Fields are controlled**: when the app clears or changes a field after Return, the field shows the app's value.
-- Smaller fixes found on the way: a spacer no longer makes a toolbar tall; a fixed-width panel no longer takes spare room; the report's "5,000 of 5,000 rows" lost its first digit (a byte count).
+## The brand (M8)
+Logo 1 (the lens over bars) in the menu bar, as the window icon and the web favicon. Each screen has its colour:
 
-## Tools that came with it
-- `scripts/live.py`: real mouse and keyboard (XTest) on the hidden display, and a report of the app's state on demand. It found the dead drag, which the usual test steps never could.
-- `MOJOUI_TRACE=1`: each change's time and kind; rebuild, partial and draw times.
+| Start: Iris indigo #4f46e5 | Sheet: Ledger green #0e7a43 | Report: Signal red #c8243f |
+|---|---|---|
+| ![](goals/26/start-indigo-web.jpg) | ![](goals/26/sheet-green-gtk.jpg) | ![](goals/26/report-red-web.jpg) |
+
+Figures stay neutral (no red numbers on the report: red reads as "bad"). Query and pipeline screens get a blue when they exist.
+
+## Your test (M6, 2 minutes)
+```
+cd ~/Projects/mxapp/mojo-ui
+MOJOUI_SCENE=1 scripts/omxplorer.sh build/data/orders_1m.csv     # try it: scroll, drag, glide with the arrows
+scripts/scene-bench.sh                                           # the measurement: two windows open for ~1 min each, don't touch them
+```
+The bench writes `docs/goals/26/owner-run.txt`; M6 passes when ≥ 99 % of frames arrive on time. Your monitor runs at 60 Hz, so this proves "every frame on time at 60", not 120; the work per frame (0.2–0.8 ms) is what says 120 will hold. Without `MOJOUI_SCENE=1` you get today's pixel path, to compare.
 
 ## Not proven or not done
-- The faint magnified copy of the preview in your screenshot (GPU renderer at 1.6×) didn't reproduce here (cairo and software GL). If you still see it: `GSK_RENDERER=cairo scripts/omxplorer.sh` and tell me whether it goes.
-- The web, Mac, iPhone and Android hosts still rebuild whole when the shape changes (they accept the same diff and ignore what it kept). The web's resize is a full rebuild too.
-- Moving data work off the UI thread: a later goal.
-- Controlled fields change one behaviour: the Workbook's Value field now goes back to the old value when a commit fails (the error stays on screen). Keeping the typed text there is a one-line app change, left for when the Workbook is next touched.
+- **On a real GPU display:** all numbers above are from the headless test display (software rendering). The UI-thread work is real; how fast your RTX 3090 draws the nodes is M6.
+- **Only the grid** uses the Scene. Charts, the import preview and the report still paint pixels (they're small; next to move).
+- **GTK only.** The web, Mac, iPhone and Android hosts still use the pixel path. The Scene is built to map to Metal/Core Animation layers and the web's canvas the same way.
+- Scrolling rebuilds the cells layer each frame (0.2 ms; the rows did change). Reusing rows that only shifted is a later step if it ever matters.
+- Text edges differ slightly between Pango and our own rasteriser (1.3 % of pixels, all on glyph edges): the Scene's text is the system's, sharper at 1.6×.
 
 ## Next
-Goal 26: the GPU rendering spike (D-252, D-253, `docs/goals/26-draft.md`): the grid as a display list drawn by GTK's GPU renderer, the selection ring as its own layer. The bar: 120 fps on your 2.8k×1.4k window, ≤ 2 ms of main-thread work a frame, no grid repaints when only the ring moves. Then the showcase README. MX frame dc1a722 moves to goal 27.
+- **Goal 27:** chart editing, "the title is the query" (ask, then tap any word), inspector sub-pages; the toolbar only inserts.
+- **Goal 28:** the menu-bar island, option B (the glass pill).
+- Then the showcase README, with these numbers.
