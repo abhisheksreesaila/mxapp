@@ -9,7 +9,7 @@
 
 from mxframe import (read_csv as mx_read_csv, CsvOptions, CsvResult, Table, SharedTable, ColumnKind, read_parquet,
                      scan_parquet, ParquetScan)
-from mojoui.sheet import INT, DECIMAL, TEXT, DATE, BOOL
+from mojoui.sheet import INT, DECIMAL, TEXT, DATE, BOOL, FLOAT, float_cell
 from mojoui.numformat import date_text, decimal_text
 from mojoui.shared import environment, memory_bytes
 from std.time import perf_counter_ns
@@ -20,7 +20,7 @@ struct CsvColumn(Copyable, Movable):
     """What the Import step shows about one column."""
 
     var name: String
-    var kind: Int  # INT, DECIMAL, TEXT, DATE, BOOL
+    var kind: Int  # INT, DECIMAL, TEXT, DATE, BOOL, FLOAT
     var scale: Int
     var empty: Int  # empty cells (nulls); -1: not counted (a streamed file)
     var distinct: Int  # TEXT: values in its dictionary (0 for numbers)
@@ -58,6 +58,8 @@ def kind_name(kind: Int) -> String:
         return "Date"
     if kind == BOOL:
         return "Yes/No"
+    if kind == FLOAT:
+        return "Number"
     return "Text"
 
 
@@ -111,6 +113,8 @@ def cell_text(t: Table, c: Int, row: Int) -> String:
         return decimal_text(v, t.scale(c))
     if kind == BOOL:
         return "true" if v != 0 else "false"
+    if kind == FLOAT:
+        return float_cell(v)
     return String(v)
 
 

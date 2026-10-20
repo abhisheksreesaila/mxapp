@@ -15,6 +15,7 @@
 
 from std.memory import ArcPointer
 from std.collections import Dict
+from mxframe import float_text
 from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of, count_distinct, median,
                      AUTO as MX_AUTO, GPU as MX_GPU, CPU as MX_CPU, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL, DATE as MX_DATE,
                      gpu_available, ParquetScan)
@@ -30,8 +31,14 @@ comptime DECIMAL = 1
 comptime TEXT = 2
 comptime DATE = 3
 comptime BOOL = 4
+comptime FLOAT = 5  # float64 (MX frame 321870f, F-157): the value holds the float's bits; shown, not summed yet
 comptime STYLE_COLS = 1 << 16  # a cell override's key: row * STYLE_COLS + column
 
+
+
+def float_cell(v: Int64) -> String:
+    """A FLOAT value (its float64's bits) as the shortest text that reads back to it."""
+    return float_text(Float64(from_bits=UInt64(v)))
 
 @fieldwise_init
 struct StyleStep(Copyable, Movable):
@@ -304,6 +311,8 @@ struct Sheet(Movable, GridSource):
             return String(v)
         if kind == BOOL:
             return "true" if v != 0 else "false"
+        if kind == FLOAT:
+            return float_cell(v)
         if f.is_auto():
             return decimal_text(v, self.scale(c)) if kind == DECIMAL else String(v)
         return format_number(v, self.scale(c) if kind == DECIMAL else 0, f)
@@ -322,6 +331,8 @@ struct Sheet(Movable, GridSource):
             return decimal_text(v, self.scale(c))
         if kind == BOOL:
             return "true" if v != 0 else "false"
+        if kind == FLOAT:
+            return float_cell(v)
         return String(v)
 
     def format_average(self, c: Int, total: Int, count: Int) -> String:
