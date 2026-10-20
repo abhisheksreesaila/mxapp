@@ -31,15 +31,37 @@ MIXED = ["banana", "Zebra", "apple", "Apple", "cherry", "Banana"]
 ORDER = ["Apple", "apple", "Banana", "banana", "cherry", "Zebra"]
 
 
+
+# D-269 (goal 29): each stable MX frame commit includes the ones before it (STABLE.md); its package doesn't build
+# byte for byte the same twice (two builds of 321870f differ), so "vendored from the archive" is: the stamp names this
+# commit or a later stable one, and build/mxframe-src built that same commit.
+LINEAGE = ["7cbcc04", "1889b7f", "321870f", "23edc59"]
+
+
+def vendored_at_least(pin):
+    commit = (ROOT / "vendor/MXFRAME_COMMIT").read_text().splitlines()[0]
+    later = [c for c in LINEAGE[LINEAGE.index(pin):] if c in commit.split("(")[0]]
+    if pin not in commit and not later:
+        return f"vendor/MXFRAME_COMMIT isn't {pin} or a later stable commit: {commit[:120]}"
+    import subprocess, tempfile
+    want = later[0] if later else pin
+    src = BUILD / "mxframe-src"
+    if not (src / "build" / "mxframe.mojoc").exists():
+        return "build/mxframe-src has no package built from the archive"
+    with tempfile.TemporaryDirectory() as tmp:  # (its sources are exactly the commit's archive)
+        repo = ROOT.parent.parent / "mxframe"
+        subprocess.run(f"git -C {repo} archive {want} mojo kernels_aot scripts/build_mojo_pkg.sh | tar -x -C {tmp}", shell=True, check=True)
+        d = subprocess.run(["diff", "-rq", "-x", "build", "-x", ".mxframe-pkg.lock", "-x", "__pycache__", tmp, str(src)], capture_output=True, text=True)
+        if d.returncode != 0:
+            return f"build/mxframe-src isn't {want}'s archive: {d.stdout[:200]}"
+    return None
+
 def m1():
     """1889b7f vendored; a streamed sheet asks for AUTO; the GPU's answers equal the CPU's; times measured."""
     problems = []
-    commit = (ROOT / "vendor/MXFRAME_COMMIT").read_text().splitlines()[0]
-    if "1889b7f" not in commit:
-        problems.append(f"vendor/MXFRAME_COMMIT isn't 1889b7f: {commit[:100]}")
-    fresh = BUILD / "mxframe-src" / "build" / "mxframe.mojoc"
-    if not fresh.exists() or fresh.read_bytes() != (ROOT / "vendor/mxframe.mojoc").read_bytes():
-        problems.append("vendor/mxframe.mojoc isn't the package built from the archive in build/mxframe-src")
+    err = vendored_at_least("1889b7f")
+    if err:
+        problems.append(err)
     src = (ROOT / "mojoui/sheet.mojo").read_text()
     if "self.mode = MX_AUTO if use_gpu else MX_CPU  # (the package picks per machine and plan" not in src:
         problems.append("a streamed sheet doesn't ask for AUTO")

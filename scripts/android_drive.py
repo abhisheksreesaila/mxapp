@@ -235,7 +235,13 @@ def android_run(example, steps, shot=None, landscape=False, dpi=None):
     if apk is None:
         return SimpleNamespace(returncode=1), f"no APK for {example}"
     pkg = f"dev.mojoui.{example}"
-    adb("install", "-r", str(apk), check=True, timeout=120)
+    try:
+        adb("install", "-r", str(apk), check=True, timeout=120)
+    except RuntimeError as e:  # (another worktree's build signed it with its own debug key: the test app goes, then installs)
+        if "INSTALL_FAILED_UPDATE_INCOMPATIBLE" not in str(e):
+            raise
+        adb("uninstall", pkg, timeout=120)
+        adb("install", str(apk), check=True, timeout=120)
     adb("shell", "settings", "put", "system", "accelerometer_rotation", "0")
     adb("shell", "settings", "put", "system", "user_rotation", "1" if landscape else "0")
     adb("shell", "wm", "density", str(dpi) if dpi else "reset")  # dpi: a "bigger" screen in dp (more fits)
