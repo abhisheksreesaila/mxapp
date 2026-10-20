@@ -161,7 +161,7 @@ def m2():
         problems.append(f"uikit.mojo doesn't build {missing}")
     src = (ROOT / "mojoui/hosts/uikit.mojo").read_text()
     for needle, what in (("SECONDARY", "a right click / long press"), ("DOUBLE", "double taps"), ("PRESS", "press and release"), ("KEY", "hardware keys"),
-                         ("node.tip", "tooltips"), ("skin_palette", "the skins' colours"), ("TOOL", "tool buttons"), ("ICON_ONLY", "icon buttons"),
+                         ("node.tip", "tooltips"), ("paint_native", "the skins' colours"), ("TOOL", "tool buttons"), ("ICON_ONLY", "icon buttons"),
                          ("TONE_WARN", "text tones"), ("sf_symbol", "icons")):
         if needle not in src:
             problems.append(f"uikit.mojo lacks {what} ({needle})")
@@ -218,7 +218,7 @@ def m4():
         problems.append(f"appkit.mojo doesn't build {missing}")
     src = (ROOT / "mojoui/hosts/appkit.mojo").read_text()
     for needle, what in (("setMainMenu:", "the system menu bar"), ("setKeyEquivalent", "⌘ shortcuts"), ("NSPopover", "popovers"), ("setToolTip:", "tooltips"),
-                         ("beginSheet", "dialogs as sheets"), ("SECONDARY", "right clicks"), ("skin_palette", "the skins"), ("CTFontManagerRegisterFontsForURL", "the bundled fonts")):
+                         ("beginSheet", "dialogs as sheets"), ("SECONDARY", "right clicks"), ("paint_native", "the skins"), ("CTFontManagerRegisterFontsForURL", "the bundled fonts")):
         if needle not in src:
             problems.append(f"appkit.mojo lacks {what} ({needle})")
     ok, msg = g05.apple_ok("kit", "mac")

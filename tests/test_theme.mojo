@@ -4,8 +4,8 @@
 from std.testing import assert_equal, assert_true
 from mojoui.theme import Palette, Theme, hex_rgba, hex_of, mix
 from themes.omarchy import omarchy_palette, omarchy
-from themes.skins import ledger_palette, graphite_palette, blueprint_palette, ledger
-from themes.liquid import liquid_palette, liquid
+from themes.skins import ledger_palette, graphite_palette, blueprint_palette, ledger as ledger_theme
+from themes.liquid import liquid_palette, liquid as liquid_theme
 from themes.fluent import fluent
 from mojoui.text import MONO, MONO_BOLD, REGULAR
 
@@ -67,13 +67,16 @@ def main() raises:
     assert_equal(native.id, "")
     assert_equal(native.gtk_css, "")
     assert_equal(native.web_css, "")
-    var l = liquid()
+    var l = liquid_theme()
     assert_equal(l.classes, "skin liquid")
     assert_true("window.liquid" in l.gtk_css, "Liquid's GTK rules")
     assert_true("body.liquid" in l.web_css and "body.skin" in l.web_css, "Liquid's web rules, on the skins'")
-    assert_true(l.key() != liquid(liquid_palette().with_accent(hex_rgba("#0e7a43", 0))).key(), "a new tint is a new key (hosts restyle)")
-    assert_equal(ledger().classes, "skin ledger")
+    assert_true(l.key() != liquid_theme(liquid_palette().with_accent(hex_rgba("#0e7a43", 0))).key(), "a new tint is a new key (hosts restyle)")
+    assert_equal(ledger_theme().classes, "skin ledger")
     assert_equal(omarchy().id, "omarchy")
     assert_equal(fluent().classes, "fluent")
-    assert_true(ledger().paint_native and not fluent().paint_native and not omarchy().paint_native)
+    assert_true(ledger_theme().paint_native and not fluent().paint_native and not omarchy().paint_native)
+    from themes.paper import paper_palette
+    assert_true(paper_palette().data(0) != Palette.plain().data(0) and paper_palette().data(1) != Palette.plain().data(1), "Paper draws charts in its own series (P11)")
+    assert_true(Palette.plain_dark().dark and contrast(Palette.plain_dark().ink3, Palette.plain_dark().card) >= 4.5, "no theme in dark mode: readable captions")
     print("THEME TESTS PASSED")

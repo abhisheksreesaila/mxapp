@@ -153,5 +153,7 @@ struct Theme(Copyable, Movable):
         return Theme("", "", Palette.plain_dark() if dark else Palette.plain(), "", "", rgba(66, 66, 66), rgba(255, 255, 255), False)
 
     def key(self) -> String:
-        """Changes whenever what hosts show would (the theme, or its palette's accent and page): hosts restyle then."""
-        return self.id + hex_of(self.palette.accent) + hex_of(self.palette.page) + hex_of(self.palette.bad)
+        """Changes whenever what hosts show would (the theme, its palette's accent, page, error tone and light or dark, its
+        style sheets): hosts restyle then. (A sheet edited in place to the same length goes unnoticed: change its id too.)"""
+        return (self.id + hex_of(self.palette.accent) + hex_of(self.palette.page) + hex_of(self.palette.bad) + ("d" if self.palette.dark else "l")
+                + String(self.gtk_css.byte_length()) + "/" + String(self.web_css.byte_length()))

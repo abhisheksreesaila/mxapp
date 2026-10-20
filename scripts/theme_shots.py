@@ -48,10 +48,10 @@ def omx_env(out, tag, skin):
     return e
 
 
-def shoot(out: Path):
+def shoot(out: Path, others_only=False):
     out.mkdir(parents=True, exist_ok=True)
     problems = []
-    for skin in SKINS:
+    for skin in ([] if others_only else SKINS):
         for name, steps in OMX:
             tag = f"omx-{skin}-{name}"
             e = omx_env(out, tag, skin)
@@ -83,14 +83,15 @@ def shoot(out: Path):
     return problems
 
 
-def differ(a: Path, b: Path, tol=24):
-    """The share of pixels whose colour moved by more than `tol` in any channel (1.0 when the sizes differ)."""
+def differ(a: Path, b: Path, tol=12):
+    """The share of pixels whose colour moved by more than `tol` in any one channel (1.0 when the sizes differ)."""
     from PIL import Image, ImageChops
     x, y = Image.open(a).convert("RGB"), Image.open(b).convert("RGB")
     if x.size != y.size:
         return 1.0
-    d = ImageChops.difference(x, y).convert("L").point(lambda v: 255 if v > tol else 0)
-    return sum(1 for v in d.getdata() if v) / (x.size[0] * x.size[1])
+    r, g, bl = ImageChops.difference(x, y).split()
+    d = ImageChops.lighter(ImageChops.lighter(r, g), bl).point(lambda v: 255 if v > tol else 0)
+    return d.histogram()[255] / (x.size[0] * x.size[1])
 
 
 def compare(a: Path, b: Path):
@@ -102,10 +103,10 @@ def compare(a: Path, b: Path):
 
 
 if __name__ == "__main__":
-    if sys.argv[1] == "shoot":
+    if sys.argv[1] in ("shoot", "shoot-others"):
         import headless
         headless.ensure()
-        p = shoot(Path(sys.argv[2]))
+        p = shoot(Path(sys.argv[2]), others_only=sys.argv[1] == "shoot-others")
         print("\n".join(p) or "all shot")
     else:
         for name, share in compare(Path(sys.argv[2]), Path(sys.argv[3])):

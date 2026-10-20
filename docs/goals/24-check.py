@@ -193,7 +193,7 @@ def m3():
         tools = [b for b in boxes(out, "toolbar/*") if b[2] >= 60]  # (icon-over-label tools are the wide ones; the toggles are icon squares)
         if not tools or len({round(t[3]) for t in tools}) > 1:
             problems.append(f"{host}: toolbar tools differ in height: {sorted({round(t[3]) for t in tools})}")
-    src = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
+    src = (ROOT / "themes/liquid.mojo").read_text()  # (Liquid is a theme module since goal 27, D-260)
     m = re.search(r"def liquid_css\(.*?\n(?=def |comptime )", src, re.S)
     sizes = {float(v) for v in re.findall(r"font-size: ([\d.]+)px", m.group(0))} if m else set()
     if not m or not sizes or not sizes <= TYPE_SCALE:
@@ -204,7 +204,7 @@ def m3():
 def m4():
     """Hover/press transitions and arrival animations on both hosts; the selection ring glides (GTK, measured)."""
     problems = []
-    src = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
+    src = (ROOT / "themes/liquid.mojo").read_text()  # (Liquid is a theme module since goal 27, D-260)
     m = re.search(r"def liquid_css\(.*?\n(?=def |comptime )", src, re.S)
     css = m.group(0) if m else ""
     for needle, what in (("transition:", "hover and press transitions"), ("@keyframes", "an arrival animation"), ("popover", "menus and popovers"), ("dialog", "dialogs")):

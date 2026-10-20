@@ -30,7 +30,7 @@ shots = load("theme_shots", "scripts/theme_shots.py")
 labels = g25.labels
 import drive  # noqa: E402
 
-THEME_WORDS = re.compile(r"liquid|ledger|graphite|blueprint|fluent|omarchy|4f46e5|0e7a43|c8243f|E5464F|437A0E|3F24C8", re.I)
+THEME_WORDS = re.compile(r"liquid|ledger|graphite|blueprint|fluent|omarchy|paper|4f46e5|0e7a43|c8243f|E5464F|437A0E|3F24C8", re.I)
 
 
 def m0():
@@ -61,23 +61,40 @@ def m1():
     app = (ROOT / "mojoui/app.mojo").read_text()
     if "def theme(self) -> Theme" not in app or "def design(self)" in app or "def accent(self)" in app:
         problems.append("App: theme() replaces design() and accent()")
-    if '"""' in (ROOT / "mojoui/hosts/gtk.mojo").read_text().replace('"""Writes', "").split("comptime G_APPLICATION")[1].split("def ")[0]:
-        problems.append("the GTK host holds a style sheet")
+    gtk = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
+    loads = re.findall(r'"gtk_css_provider_load_from_string", NoneType\]\(self\.(\w+), (\w+(?:\.\w+)?)', gtk)
+    if sorted(loads) != [("css", "rules.as_c_string_span"), ("skin_provider", "theme.gtk_css")]:
+        problems.append(f"the GTK host loads style sheets besides its padding rules and the app's theme: {loads}")
+    scoped = re.findall(r"window\.[a-z][\w-]*", gtk)
+    if scoped:
+        problems.append(f"the GTK host styles a window class: {sorted(set(scoped))[:5]}")
     web = (ROOT / "mojoui/hosts/web.py").read_text()
     sheets = re.findall(r'^([A-Z_]+) = """', web, re.M)
     if [s for s in sheets if s.endswith("CSS") and s != "CSS"]:
         problems.append(f"the web host holds style sheets besides its base: {sheets}")
-    return not problems, "; ".join(problems) or "mojoui/ names no theme, colour or style sheet (0 hits); Liquid, the skins, Fluent and Omarchy are themes/ modules; hosts apply App.theme()"
+    base_css = web.split('CSS = """', 1)[1].split('"""', 1)[0]
+    scoped = re.findall(r"body\.[a-z][\w-]*", base_css)
+    if scoped:
+        problems.append(f"the web host styles a body class: {sorted(set(scoped))[:5]}")
+    return not problems, "; ".join(problems) or ("mojoui/ names no theme, colour or style sheet (0 hits); the GTK host loads only its padding rules and the app's theme, "
+                                                  "neither host styles a theme's class; Liquid, the skins, Fluent and Omarchy are themes/ modules; hosts apply App.theme()")
 
 
 def m2():
     """No theme: each platform's own look (GTK: only padding rules, the system's scheme; the web: the system font)."""
     problems = []
-    r = run([str(BUILD / "hello" / "linux" / "hello")], env={"MOJOUI_TEST": ""}, timeout=300)
+    OUT.mkdir(parents=True, exist_ok=True)
+    r = run([str(BUILD / "hello" / "linux" / "hello")], env={"MOJOUI_TEST": "", "MOJOUI_SHOT": str(OUT / "native-hello.png")}, timeout=300)
     out = r.stdout + r.stderr
     m = re.search(r"^THEME: (.*)$", out, re.M)
-    if not m or m.group(1) != "none":
+    if not m or m.group(1) != "none sheet=none":
         problems.append(f"GTK hello: {m.group(0) if m else 'no THEME line'}")
+    else:
+        from PIL import Image
+        px = Image.open(OUT / "native-hello.png").convert("RGB").getpixel((4, 4))
+        pages = {(233, 238, 244), (238, 240, 243), (22, 22, 24), (243, 245, 249), (244, 239, 230)}  # (Liquid, Ledger, Graphite, Blueprint, Paper)
+        if px in pages or max(px) - min(px) > 4:
+            problems.append(f"GTK hello's window is {px}: a theme's colour, not libadwaita's neutral grey")
     w, log = drive.web_run(BUILD / "hello" / "web", "style:body=font-family;attr:body=class", viewport=(900, 700))
     font = re.search(r"^STYLE: body font-family (.*)$", log, re.M)
     cls = re.search(r"^ATTR: body class(.*)$", log, re.M)
@@ -89,16 +106,29 @@ def m2():
 
 
 def m3():
-    """The same pixels after the move (no more than the noise + 0.2 %)."""
-    a, b = OUT / "before", OUT / "after"
-    if not b.exists():
-        return False, f"no {b} (pixi run python scripts/theme_shots.py shoot {b})"
-    noise = max(share for _, share in shots.compare(a, OUT / "before2"))
-    rows = shots.compare(a, b)
-    bad = [(n, s) for n, s in rows if s is None or s > noise + 0.002]
+    """The move changed no pixel: every M0 screen shot again from a build of the move's own commit (no more than each
+    shot's own noise between M0's two runs + 0.2 %); and at HEAD, the screens the polish didn't set out to change."""
+    a, moved = OUT / "before", OUT / "after-move"
+    if not (moved / "commit.txt").exists():
+        return False, f"no {moved}: build the move's commit (76d715b) in a worktree (git worktree add ../mojo-ui-g27-move 76d715b), then run its scripts/theme_shots.py shoot into {moved} and write the commit to commit.txt"
+    noise = dict(shots.compare(a, OUT / "before2"))
+    rows = shots.compare(a, moved)
+    bad = [(n, s) for n, s in rows if s is None or s > noise.get(n, 0) + 0.002]
+    problems = []
     if bad:
-        return False, "differ: " + ", ".join(f"{n} {'missing' if s is None else f'{s * 100:.2f}%'}" for n, s in bad[:8])
-    return True, f"{len(rows)} screens again after the move: at most {max(s for _, s in rows) * 100:.2f}% of pixels differ (noise {noise * 100:.2f}%)"
+        problems.append("the move changed: " + ", ".join(f"{n} {'missing' if s is None else f'{s * 100:.2f}%'}" for n, s in bad[:8]))
+    head = OUT / "after-head"
+    import shutil
+    shutil.rmtree(head, ignore_errors=True)
+    shots.shoot(head, others_only=True)
+    meant = {"fluent-gtk.png": "P9: bars lost their track", "fluent-web.png": "P9: bars lost their track"}  # (the polish's own changes)
+    drift = [(n, s) for n, s in shots.compare(a, head) if s is not None and n not in meant and s > noise.get(n, 0) + 0.002]
+    missing = [n for n, s in shots.compare(a, head) if s is None and not n.startswith("omx-")]
+    if drift or missing:
+        problems.append("at HEAD: " + ", ".join(f"{n} {s * 100:.2f}%" for n, s in drift) + (f" missing {missing}" if missing else ""))
+    commit = (moved / "commit.txt").read_text().strip()[:7]
+    return not problems, "; ".join(problems) or (f"{len(rows)} screens from a build of the move ({commit}): at most {max(s for _, s in rows) * 100:.2f}% of pixels differ "
+                                                  f"(per channel, each within its own noise); at HEAD, kit, Fluent (but its bars' tracks, P9), Omarchy and native unchanged")
 
 
 def m4():
@@ -159,11 +189,14 @@ def m6():
         problems.append(f"without the flag: scroll {scroll_p95:.1f} ms p95, glide {glide_p50:.1f} ms, cells built {gl[12]}, textures {int(gl[13]) + int(sc[13])}")
     os.environ.pop("MOJOUI_SCENE", None)
     g25.OUT = BUILD / "g25-default"
+    ok, msg = g25.m5()  # (hover and press ≤ 150 ms, menus 200, dialogs 300, no overshoot; GTK and the web)
+    if not ok:
+        problems.append(f"motion: {msg}")
     ok, msg = g25.m7()
     if not ok:
         problems.append(f"goal 25's M7 on the Scene: {msg}")
     return not problems, "; ".join(problems) or (f"no flag: scroll {scroll_p95:.1f} ms p95, glide {glide_p50:.1f} ms, 0 cell rebuilds, 0 uploads; "
-                                                  "goals 3–24 (goal 25's M7) pass on the Scene; MOJOUI_SCENE=0 is the pixel path")
+                                                  "hover and press ≤ 150 ms (goal 25's M5); goals 3–24 (goal 25's M7) pass on the Scene; MOJOUI_SCENE=0 is the pixel path")
 
 
 def m8():
@@ -196,6 +229,8 @@ def m5():
             problems.append(f"{tag} start: the app's name shows {len([l for l in labels(start) if l == 'omxplorer'])} times (P2)")
         if g25.boxes(start, "doc-chip"):
             problems.append(f"{tag} start: a document chip with no document (P3)")
+        g25.gtk(g25.OPEN, f"import-{tag}", size=size)  # (shots for the eye: the import screen and a menu)
+        g25.gtk(g25.SHEET + ";open:Format;pause:300", f"menu-{tag}", size=size)
         sheet, _ = g25.gtk(g25.SHEET, f"sheet-{tag}", size=size)
         chips = [l for l in labels(sheet) if ("ready" in l or l.endswith("CPU")) and " ms on " not in l]  # (the status bar's timing is a measurement, not the state)
         if len(chips) != 1:
@@ -211,16 +246,20 @@ def m5():
             x, y, w, h = tiles[0]
             img = Image.open(shot).convert("RGB")
             sx = img.size[0] / size[0]
-            red = sum(1 for px in img.crop((int(x * sx), int(y * sx), int((x + w) * sx), int((y + h) * sx))).getdata() if px[0] > 150 and px[1] < 90 and px[2] < 110)
-            if red > 50:
-                problems.append(f"{tag} report: {red} red pixels in the chart (P6)")
+            area = list(img.crop((int(x * sx), int(y * sx), int((x + w) * sx), int((y + h) * sx))).getdata())
+            red = sum(1 for px in area if px[0] > 150 and px[1] < 90 and px[2] < 110)
+            teal = sum(1 for px in area if g26.near(px, (14, 124, 134), 20))  # (Liquid's first series colour: the bars are drawn, in it)
+            if red > 50 or teal < 2000:
+                problems.append(f"{tag} report: {red} red and {teal} teal pixels in the chart (P6)")
         else:
             problems.append(f"{tag} report: no chart tile")
     e = g25.env("polish-web")
     saved = {k: os.environ.get(k) for k in e}
     os.environ.update(e)
     try:
-        w, log = drive.web_run(BUILD / "omxplorer" / "web", "style:label.picker.prominent=background-color;menu:File>Settings…;js:document.querySelector('.dialog-layer').offsetWidth === innerWidth",
+        w, log = drive.web_run(BUILD / "omxplorer" / "web", "style:label.picker.prominent=background-color;"
+                               "js:[...document.querySelectorAll('#mojoui-root .card')][0].querySelectorAll('svg').length + ' ' + [...[...document.querySelectorAll('#mojoui-root .card')][0].querySelectorAll('button.with-icon svg, label.picker svg')].map(e => Math.round(e.getBoundingClientRect().left)).join(' ');"
+                               "menu:File>Settings…;js:document.querySelector('.dialog-layer').offsetWidth === innerWidth",
                                shot=str(OUT / "polish" / "settings-web.png"), viewport=(1742, 876))
     finally:
         for k, v in saved.items():
@@ -228,6 +267,10 @@ def m5():
                 os.environ.pop(k, None)
             else:
                 os.environ[k] = v
+    lefts = re.search(r'^JS: "\d+ ([\d ]+)"$', log, re.M)
+    xs = [int(v) for v in lefts.group(1).split()] if lefts else []
+    if len(xs) < 4 or max(xs) - min(xs) > 2:
+        problems.append(f"web start: the sidebar's icons start at {xs}, not one edge (P2)")
     if "JS: true" not in log:
         problems.append("web: the Settings dialog's layer doesn't cover the window (P1)")
     bg = re.search(r"^STYLE: label.picker.prominent background-color (.*)$", log, re.M)
@@ -239,10 +282,13 @@ def m5():
     if series:
         x, y, w, h = series[0]
         px = Image.open(OUT / "polish" / "themes-dark.png").convert("RGB").getpixel((int(x + 2), int(y + 2)))
-        if sum(px) > 200:
-            problems.append(f"native in dark mode: the canvas is {px}, not dark (P10)")
+        if not g26.near(px, (38, 38, 38), 8):  # (Palette.plain_dark().card)
+            problems.append(f"native in dark mode: the canvas is {px}, not the plain dark card (P10)")
     else:
         problems.append("themes: no series canvas")
+    err = g20.mojo_test("tests/test_theme.mojo", "THEME TESTS PASSED", "test_theme", "tests")
+    if err:
+        problems.append(f"theme tests (P11): {err}")
     return not problems, "; ".join(problems) or ("docs/goals/27/polish.md: every finding fixed; at 1742×876 and 1280×720: one name, no empty chip, the GPU's state once, "
                                                   "the report's toolbar the sheet's height, a titled inspector, charts not red; the web's dialog covers the window and "
                                                   "Choose a file is the primary; no theme draws dark with a dark system")

@@ -68,7 +68,8 @@ def m1():
     if r is None or "DESIGN: fluent" not in gout:
         problems.append(f"GTK doesn't apply the Fluent design: {(gout or '')[-200:]}")
     web = (ROOT / "mojoui/hosts/web.py").read_text()
-    if "FLUENT_CSS" not in web or "classList.add('fluent')" not in web or "vstack card" not in web:
+    fluent = (ROOT / "themes/fluent.mojo").read_text()  # (Fluent's sheet is a theme module since goal 27, D-260; the host applies a theme's classes)
+    if "body.fluent" not in fluent or "document.body.className" not in web or "vstack card" not in web + fluent:
         problems.append("the web host has no Fluent stylesheet or cards")
     if '"mui-card"' not in (ROOT / "mojoui/hosts/gtk.mojo").read_text():
         problems.append("GTK draws no cards")

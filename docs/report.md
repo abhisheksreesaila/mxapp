@@ -1,75 +1,51 @@
-# Goal 26 report: the grid on the GPU (the Scene), your four fixes, the brand
+# Goal 27 report: a lean core, themes on top, and polish
 
-**End goal (owner, 2026-10-19):** "we want a super fast app… it should feel like liquid. This is the whole point of the framework to exist… or else Rust guys will win." Plus four things from using goal 25's build (the drag lagging the cursor, the preview's scroll bar, lines in the inspector, the ✕ only on hover) and the brand you picked (Logo 1, Iris indigo, Ledger green, Signal red).
+**End goal (owner, 2026-10-19):** "the best looking, best polished UI; features can be added later. Components native by default; the themes are opinionated, stacked on top… anybody can add their own. I don't want to tightly couple this… the framework stays lean, a language for all platforms; theming, apps are plugins on top. After this polish, super silky smooth UI, make a list of operations you need from mxframe."
 
 ## Result
-M0–M5, M7 and M8 PASS. M6 waits for you: it has to run on your screen (one command, below). Reviewer: round 3 PASS.
-```
-PASS  M0  the block follows the pointer mid-drag; the preview's scroll bar drags its rows; the inspector's sections have hairlines (GTK, web); a tile's ✕ shows only on hover (GTK pixels, web opacity)
-PASS  M1  baseline, today's path: paint p50 14.2 ms p95 14.6 ms a frame + upload 0.8 ms (2180×1074 px, 1M rows)
-PASS  M2  a Scene replays to exactly the pixels its calls draw (rect, rounded rect, line, circle, text, image, clip)
-PASS  M3  the grid recorded as a Scene is the grid drawn (every pixel); layers cells, selection, ring, bar; the selection moving leaves the cells layer equal
-PASS  M4  MOJOUI_SCENE=1 draws the grid as GPU render nodes (239 ops a frame); 0.00% of its non-text pixels differ from the pixel path
-PASS  M5  scroll: 0.8 ms p95 a frame (build 0.2 + replay 0.6); glide: 0.2 ms, the cells layer rebuilt 0 times in 10 glides; 0 textures uploaded
-BLOCK M6  120 fps on your display: waits for scripts/scene-bench.sh
-PASS  M8  Logo 1 in the menu bar and window icon (GTK, web favicon); indigo on Start, green on the sheet (the ring too), red on the report's chrome with neutral figures; every accent ≥ 4.5:1 on white
-PASS  M7  goal 25's M1–M7 (goals 3–24 inside them) pass, and its M1–M6 with MOJOUI_SCENE=1
-```
+RESULT_LINES
 
-## The headline number
-Same window (2800×1400, your size at 1.6×), same 1M rows, same machine:
+## Themes are plugins now
+Before: the GTK host carried ~350 lines of Liquid, Ledger, Fluent and Omarchy CSS, the web host ~300, and the core named every theme (and omxplorer's brand colours). Now:
 
-| Per frame, on the UI thread | Before (pixels) | After (Scene) |
+- **The core knows no theme.** `mojoui/` has zero mentions of any theme, colour or style sheet (a check greps for them). It defines only the vocabulary: a `Palette` (the colours drawn views use) and a `Theme` value (CSS classes, a palette, a GTK style sheet, a web style sheet).
+- **An app hands its hosts a theme**: `def theme(self) -> Theme: return liquid()`. The hosts apply whatever they get, and restyle live when it changes (a skin picked, the sheet's green, the report's red).
+- **No theme = the platform's own look.** libadwaita on Linux (light or dark, as the system is), the system font and colours on the web. Drawn views follow the system's light or dark too (new `App.appearance`).
+- **The themes live in `themes/`**, outside the framework: Liquid, the skins (Ledger, Graphite, Blueprint), Fluent, Omarchy, and **Paper**, a new one written without touching the core (≈100 lines, the one to copy). `examples/themes` switches between them live.
+- **Proof nothing moved:** 42 screens (omxplorer's 4 screens in 4 skins, kit, Fluent, Omarchy, native; GTK and the web) shot before and after, **pixel-identical** (the one difference, 0.05 %, is the noise between two runs of the same build). The comparison caught one real slip on the way: layout rules for tools and the file picker were hiding inside the Omarchy sheet; they're in the core now (D-262).
+
+| No theme (system dark) | Paper on GTK | Paper on the web |
 |---|---|---|
-| Scrolling | 14.2 ms paint + 0.8 ms upload | **0.8 ms** (p95) |
-| The selection gliding | 14.6 ms + 0.9 ms | **0.2 ms** |
-| Grid cells rebuilt while the ring moves | all of them | **0** |
-| Textures sent to the GPU | 1 full-window texture | **0** |
+| ![](goals/27/themes-native-dark.jpg) | ![](goals/27/themes-paper-gtk.jpg) | ![](goals/27/themes-paper-web.jpg) |
 
-**18× less work a scroll frame, about 75× less a glide frame.** At 120 Hz a frame has 8.3 ms; the old path couldn't fit one, the new one uses a tenth of it.
+## Polish (Liquid)
+Every screen looked at again at your window size and at 1280×720; twelve findings, all fixed and checked on the running app (`docs/goals/27/polish.md`):
 
-## How it works (plain version)
-Before, Mojo painted every pixel of the grid on the CPU (2.3 million of them), then GTK copied the picture to the GPU. Every frame. Even when only the selection ring moved.
-
-Now the grid's drawing code writes a **display list** (the Scene): "a rectangle here, the text 9,228.08 there", about 240 short instructions. GTK's GPU renderer (OpenGL or Vulkan on your machine) draws those. The list is cut into **layers**: cells, selection wash, ring, scroll bar. When the ring glides, the cells layer is byte-for-byte the same as last frame, so GTK reuses it untouched and only the ring is new. Text is laid out once by Pango (the system's text engine, Inter and JetBrains Mono) and kept.
-
-It's the same drawing code for both paths (a `Painter` interface): the old pixel path stays as the reference and the fallback, and the tests prove the two draw the same grid pixel for pixel. The list is also readable: each piece of text knows its cell ("cell 0 7"), which an agent or a test can use.
-
-| Pixel path | Scene path (GPU) |
+| Before | After |
 |---|---|
-| ![](goals/26/grid-pixels.jpg) | ![](goals/26/grid-scene.jpg) |
+| ![](goals/27/start-before.jpg) | ![](goals/27/start-after.jpg) |
+| ![](goals/27/report-before.jpg) | ![](goals/27/report-after.jpg) |
+| ![](goals/27/settings-web-before.jpg) | ![](goals/27/settings-web-after.jpg) |
 
-## Your four fixes (M0)
-- **The drag follows the cursor.** The block grows on every motion event, measured mid-drag with real mouse input ([mid-drag](goals/26/mid-drag.jpg)).
-- **The import preview's scroll bar works** (drag it, the rows move).
-- **The inspector has hairlines** between its sections and quiet section titles ([inspector](goals/26/inspector-lines.jpg)).
-- **The ✕ on tiles and charts shows only on hover** (or while the tile has the keyboard) ([hover](goals/26/tile-x-hover.jpg)).
+- **Start:** the sidebar's rows read from their leading edge with one icon set; no repeated name; no empty chip in the menu bar; the web's "Choose a file" is the indigo primary as on Linux.
+- **Report:** charts draw in the skin's teal, not the report's red (red read as a loss); no grey track behind each bar; the toolbar is one line, the sheet's height (switching tabs no longer shifts everything); the inspector's head is a title, not a one-button switch.
+- **Everywhere:** the GPU's state shows once (it was in three places); at 1280 wide the toolbar stays one line.
+- **Web:** the Settings dialog was stuck to the left edge with only a strip dimmed; it's centred over a dimmed window now.
 
-## The brand (M8)
-Logo 1 (the lens over bars) in the menu bar, as the window icon and the web favicon. Each screen has its colour:
+## Silky by default
+The Scene (goal 26: the grid as a display list drawn by GTK's GPU renderer) is now the default on Linux: no flag. `MOJOUI_SCENE=0` brings back the pixel path. Every earlier goal's checks pass on it (M6), and on the pixel path too (M7).
 
-| Start: Iris indigo #4f46e5 | Sheet: Ledger green #0e7a43 | Report: Signal red #c8243f |
-|---|---|---|
-| ![](goals/26/start-indigo-web.jpg) | ![](goals/26/sheet-green-gtk.jpg) | ![](goals/26/report-red-web.jpg) |
+## What we need from MX frame
+`docs/mxframe-needs.md`: 19 operations, ranked. The top four are about smoothness: **run a query off the UI thread** (with progress and cancel), **incremental results after an edit**, **range aggregates in sorted order** (the selection's Sum without reading cells one by one), **a window of rows in one call**. Then the chart ones for goal 28: more aggregates per group (mean, median, σ), sorted and top-N groups, filters as expressions per query, group by month. Not filed on MX frame's GitHub yet: say the word and I'll open the issues.
 
-Figures stay neutral (no red numbers on the report: red reads as "bad"). Query and pipeline screens get a blue when they exist.
-
-## Your test (M6, 2 minutes)
+## Your test
 ```
-cd ~/Projects/mxapp/mojo-ui
-MOJOUI_SCENE=1 scripts/omxplorer.sh build/data/orders_1m.csv     # try it: scroll, drag, glide with the arrows
-scripts/scene-bench.sh                                           # the measurement: two windows open for ~1 min each, don't touch them
+build/themes/linux/themes                            # the theme switcher: Native follows your system's light/dark
+scripts/omxplorer.sh build/data/orders_1m.csv         # the Scene is on by default now
+scripts/scene-bench.sh                                # goal 26's M6, still waiting for your display
 ```
-The bench writes `docs/goals/26/owner-run.txt`; M6 passes when ≥ 99 % of frames arrive on time. Your monitor runs at 60 Hz, so this proves "every frame on time at 60", not 120; the work per frame (0.2–0.8 ms) is what says 120 will hold. Without `MOJOUI_SCENE=1` you get today's pixel path, to compare.
 
-## Not proven or not done
-- **On a real GPU display:** all numbers above are from the headless test display (software rendering). The UI-thread work is real; how fast your RTX 3090 draws the nodes is M6.
-- **Only the grid** uses the Scene. Charts, the import preview and the report still paint pixels (they're small; next to move).
-- **GTK only.** The web, Mac, iPhone and Android hosts still use the pixel path. The Scene is built to map to Metal/Core Animation layers and the web's canvas the same way.
-- Scrolling rebuilds the cells layer each frame (0.2 ms; the rows did change). Reusing rows that only shifted is a later step if it ever matters.
-- Text edges differ slightly between Pango and our own rasteriser (1.3 % of pixels, all on glyph edges): the Scene's text is the system's, sharper at 1.6×.
-
-## Next
-- **Goal 27:** chart editing, "the title is the query" (ask, then tap any word), inspector sub-pages; the toolbar only inserts.
-- **Goal 28:** the menu-bar island, option B (the glass pill).
-- Then the showcase README, with these numbers.
+## Not done
+- Android hosts take no theme yet (their own look only); Mac and iPhone apply a theme's palette but haven't run on hardware. `App.appearance` is GTK and the web only.
+- Charts and the import preview still paint pixels (only the grid is a Scene).
+- Chart editing ("the title is the query") is goal 28 (`docs/goals/28-draft.md`).

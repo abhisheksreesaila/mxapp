@@ -533,6 +533,7 @@ struct GtkHost[A: App](Movable):
     var skin_provider: Int  # the theme's CSS provider (replaced when App.theme() changes: Settings → Appearance, a mode's tint)
     var skin_key: String  # the theme that provider is for (Theme.key)
     var skin_classes: String  # the CSS classes it put on the window
+    var forcing_scheme: Bool  # set while the host itself changes light/dark (a theme forcing one): not the person's change
     var icons_key: String  # the ink the icons were written in
     var fonts: Bool  # the app's own fonts (Inter, JetBrains Mono) were handed to fontconfig
     var css: Int  # one GtkCssProvider for padding classes
@@ -607,6 +608,7 @@ struct GtkHost[A: App](Movable):
         self.skin_provider = 0
         self.skin_key = "?"
         self.skin_classes = ""
+        self.forcing_scheme = False
         self.icons_key = ""
         self.fonts = False
         self.css = 0
@@ -1816,7 +1818,7 @@ struct GtkHost[A: App](Movable):
             if external_call["FcConfigAppFontAddFile", c_int](config, path.as_c_string_span()) != 0:
                 self.fonts = True
 
-    def apply_design(mut self):
+    def apply_design(mut self, self_addr: Int):
         """Styles the window with the app's theme (App.theme()): once at start, and again when it changes (a skin
         picked in Settings, a mode's tint): the old provider goes, the new one loads, so the switch is live (D-156).
         The host knows no theme: no theme is libadwaita as the system has it (D-260)."""
@@ -1835,9 +1837,12 @@ struct GtkHost[A: App](Movable):
             if name != "":
                 external_call["gtk_widget_remove_css_class", NoneType](self.window, name.as_c_string_span())
         self.skin_classes = theme.classes
-        if theme.id != "":  # a theme says light or dark; native follows the system
-            var manager = external_call["adw_style_manager_get_default", Int]()
-            external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if theme.palette.dark else 1))  # FORCE_DARK / FORCE_LIGHT
+        var manager = external_call["adw_style_manager_get_default", Int]()
+        self.forcing_scheme = True  # (the dark/light change this causes is ours, not the person's: on_dark_changed skips it)
+        external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int((4 if theme.palette.dark else 1) if theme.id != "" else 0))  # a theme: FORCE_DARK / FORCE_LIGHT; none: the system's (DEFAULT)
+        self.forcing_scheme = False
+        if theme.id == "":  # (back to the system's: tell the app what that is now, on the next idle turn)
+            _ = external_call["g_idle_add", c_uint](on_idle_appearance[Self.A], self_addr)
         if theme.gtk_css != "":
             self.skin_provider = external_call["gtk_css_provider_new", Int]()
             external_call["gtk_css_provider_load_from_string", NoneType](self.skin_provider, theme.gtk_css.as_c_string_span())
@@ -1855,7 +1860,7 @@ struct GtkHost[A: App](Movable):
                 external_call["gtk_window_set_icon_name", NoneType](self.window, icon.as_c_string_span())  # (the window's icon, where the desktop shows one)
 
     def apply(mut self, d: Diff, self_addr: Int):
-        self.apply_design()
+        self.apply_design(self_addr)
         self.copy_if_asked()
         if d.rebuild and d.partial and self.partial_ok and not self.has_pending and len(self.widgets) > 0 and not busy():
             # Only the parts that changed, on the next idle turn (never inside a signal handler: a widget that goes
@@ -2432,11 +2437,23 @@ def on_window_resized[A: App](window: Int, pspec: Int, host_addr: Int) abi("C"):
 
 
 def on_dark_changed[A: App](styles: Int, pspec: Int, host_addr: Int) abi("C"):
-    """The system went dark or light (or a theme forced one): App.appearance, and the canvases draw again."""
+    """The system went dark or light: App.appearance on the next idle turn (this signal can fire inside apply_design,
+    which the host's own scheme changes cause: those it skips)."""
+    if host_at[A](host_addr)[].forcing_scheme:
+        return
+    _ = external_call["g_idle_add", c_uint](on_idle_appearance[A], host_addr)
+
+
+def on_idle_appearance[A: App](host_addr: Int) abi("C") -> c_int:
+    """Tells the app the system's light or dark (App.appearance); the canvases draw again. Once (G_SOURCE_REMOVE)."""
     var host = host_at[A](host_addr)
+    if busy():  # (a rebuild is under way: try again next idle turn)
+        return 1
+    var styles = external_call["adw_style_manager_get_default", Int]()
     var d = host[].rt.appearance(external_call["adw_style_manager_get_dark", c_int](styles) != 0)
     host[].arm_all(host_addr)
     host[].apply(d, host_addr)
+    return 0
 
 
 def on_surface_layout[A: App](surface: Int, width: c_int, height: c_int, host_addr: Int) abi("C"):
@@ -3707,7 +3724,7 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
         var theme = host[].rt.app.theme()
         if theme.id != "":
             print("DESIGN: " + theme.id)
-        print("THEME: " + (theme.id if theme.id != "" else "none"))
+        print("THEME: " + (theme.id if theme.id != "" else "none") + " sheet=" + ("none" if host[].skin_provider == 0 else String(theme.gtk_css.byte_length()) + " bytes"))  # (what the host loaded, not what it was told)
         if theme.paint_native and host[].fonts:  # (a theme that sets the app's own fonts on native controls)
             print("FONT: Inter, JetBrains Mono (the app's own)")
         if external_call["gtk_widget_get_mapped", c_int](host[].window) != 0:  # laid out, so measurable
@@ -3917,7 +3934,7 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     var title = host[].rt.app.title()
     external_call["gtk_window_set_title", NoneType](host[].window, title.as_c_string_span())
     host[].install_fonts()
-    host[].apply_design()
+    host[].apply_design(host_addr)
     host[].shortcut_keys = external_call["gtk_event_controller_key_new", Int]()  # menu shortcuts, before anything else sees the key
     external_call["gtk_event_controller_set_propagation_phase", NoneType](host[].shortcut_keys, c_int(1))  # GTK_PHASE_CAPTURE
     connect_any(host[].shortcut_keys, "key-pressed", on_shortcut_pressed[A], host_addr)

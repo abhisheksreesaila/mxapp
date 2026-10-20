@@ -145,7 +145,7 @@ def test_card_is_a_padded_vstack_with_the_card_style() raises:
     assert_equal(v.nodes[0].align_items, START)
     assert_equal(v.nodes[0].children, [1, 2])
     var rt = Runtime(Painter())
-    assert_equal(rt.app.design(), NATIVE)  # the default
+    assert_equal(rt.app.theme().id, "")  # the default: no theme, the platform's own look (D-260)
 
 
 def main() raises:

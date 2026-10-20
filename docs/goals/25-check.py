@@ -231,11 +231,11 @@ def m5():
     """Calm motion: short transitions and arrivals, no overshoot; reduced motion turns arrivals off (web) (GTK obeys the
     desktop's own setting); widgets that stay don't replay (M1's partial updates)."""
     problems = []
-    src = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
+    src = (ROOT / "themes/liquid.mojo").read_text()  # (Liquid is a theme module since goal 27, D-260)
     m = re.search(r"def liquid_css\(.*?\n(?=def |comptime )", src, re.S)
     gcss = m.group(0) if m else ""
-    wsrc = (ROOT / "mojoui/hosts/web.py").read_text()
-    m = re.search(r'LIQUID_CSS = """(.*?)"""', wsrc, re.S)
+    wsrc = src
+    m = re.search(r'LIQUID_WEB = """(.*?)"""', wsrc, re.S)
     wcss = m.group(1) if m else ""
     for host, css, trans in (("GTK", gcss, r'(\d+)ms " \+ spring'), ("web", wcss, r"(\d+)ms var\(--sp-snappy\)")):
         t = durations(css, trans)

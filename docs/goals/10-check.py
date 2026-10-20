@@ -46,8 +46,9 @@ def m1():
             problems.append(f"a plain (grey) button is left: Button({call[:40]}…)")
     if "Overlay(" not in src or src.count(".pin(") < 3:
         problems.append("the chrome isn't in floating islands (Overlay + .pin)")
-    gtk_src = (ROOT / "mojoui/hosts/gtk.mojo").read_text()
-    web_src = (ROOT / "mojoui/hosts/web.py").read_text()
+    themes = "".join(t.read_text() for t in sorted((ROOT / "themes").glob("*.mojo")))  # (the themes' style sheets live in themes/ since goal 27, D-260)
+    gtk_src = (ROOT / "mojoui/hosts/gtk.mojo").read_text() + themes
+    web_src = (ROOT / "mojoui/hosts/web.py").read_text() + themes
     for needle, where, src_ in (("mui-island", "GTK", gtk_src), ("radial-gradient", "GTK", gtk_src), ("button.flat", "GTK", gtk_src),
                                 (".island", "web", web_src), ("radial-gradient", "web", web_src), ("button.subtle", "web", web_src)):
         if needle not in src_:
@@ -205,7 +206,7 @@ def m9():
 
 def m10():
     problems = []
-    if "return OMARCHY" not in APP.read_text():
+    if "omarchy()" not in APP.read_text():  # (the Omarchy theme module since goal 27, D-260)
         problems.append("the Workbook doesn't use the Omarchy design")
     b = run(["scripts/mxbuild.sh", "-I", ".", "tests/test_theme.mojo", "-o", str(BUILD / "test_theme")], timeout=900)
     if b.returncode != 0:

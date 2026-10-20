@@ -85,7 +85,7 @@ def m1():
         problems.append("bake_font.py doesn't bake the vendored Inter")
     if "Inter" not in (ROOT / "mojoui/font_data.mojo").read_text()[:400]:
         problems.append("font_data.mojo wasn't baked from Inter")
-    theme = (ROOT / "mojoui/theme.mojo").read_text()
+    theme = "".join(t.read_text() for t in sorted((ROOT / "themes").glob("*.mojo")))  # (the skins' palettes are theme modules since goal 27, D-260)
     for skin in SKINS:
         if f"def {skin}(" not in theme:
             problems.append(f"Palette.{skin}() missing")

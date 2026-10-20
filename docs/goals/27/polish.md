@@ -22,3 +22,8 @@ Found while fixing these: at 1280 wide the Report toolbar's labels wrapped onto 
 "Open" kept its title in the compact toolbar (now icon-only like the rest), the database row wrapped (now "soon"),
 quiet file pickers on the web sat 16 px left of quiet buttons (now padded alike). Proof: `scripts/check M5` and the shots
 in build/g27/polish (GTK at 1742×876 and 1280×720; the web at 1742×876).
+
+Limits (review round 1): P10 is wired on GTK (libadwaita's dark signal) and the web (prefers-color-scheme), but only GTK's
+path is checked (the check forces a dark scheme); the Mac and iPhone hosts don't call App.appearance yet, so a native app
+on a dark Mac still draws the light plain palette. The Apple hosts still choose Inter by name when a theme paints native
+controls (`paint_native`): a theme can't name its own font there yet.

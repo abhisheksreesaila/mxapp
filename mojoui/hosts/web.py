@@ -1003,9 +1003,9 @@ def make_app(module_dir):
         (D-156); the style sheet goes again only when the theme itself changed, not just its palette."""
         tid, classes, css_vars, css = mod.theme(s.handle).split("\x1f")
         parts = (Style(css_vars, id="mojoui-skin"), Script(f"document.body.className = '{classes}'", id="mojoui-skin-js"))
-        if tid != s.theme_id:
+        if (tid, len(css)) != s.theme_id:  # (the sheet itself changed: a new theme, or a theme's new sheet)
             parts += (Style(css, id="mojoui-theme"),)
-            s.theme_id = tid
+            s.theme_id = (tid, len(css))
         if oob:
             for el in parts:
                 el.attrs["hx-swap-oob"] = "true"

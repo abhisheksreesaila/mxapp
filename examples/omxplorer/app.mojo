@@ -311,7 +311,6 @@ struct Main(App):
         self.make_looks()
 
     @staticmethod
-
     def init_shared():
         pass
 
@@ -332,11 +331,16 @@ struct Main(App):
 
     def theme(self) -> Theme:
         """The skin with this mode's tint (kept: one per tint, made when the skin changes)."""
-        var accent = self.accent()
-        for t in self.looks:
-            if t.palette.accent == (accent if accent != 0 else skin_palette(self.skin).accent):
-                return t.copy()
-        return skin_theme(self.skin, accent)
+        var at = self.tint()
+        if at < len(self.looks):
+            return self.looks[at].copy()
+        return skin_theme(self.skin, self.accent())  # (not reached: make_looks keeps one per tint)
+
+    def tint(self) -> Int:
+        """Which of make_looks' themes shows now: Liquid's indigo (0), the sheet's green (1), the report's red (2); other skins: 0."""
+        if self.skin != LIQUID or self.screen != SHEET:
+            return 0
+        return 1 if self.sheet_tab == 0 else 2
 
     def make_looks(mut self):
         """The skin's themes, one per tint it shows (Liquid: indigo, the sheet's green, the report's red; others: their own)."""
