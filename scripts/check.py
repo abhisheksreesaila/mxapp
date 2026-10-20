@@ -124,6 +124,37 @@ def m1():
                                                   "Sum→Average, as in the table→largest first, every region→top 3 change the chart on both hosts; a Report tile's too")
 
 
+ASK = "enter:Ask: top 3, unpaid, as a line="
+
+
+def m2():
+    """Ask: a phrase edits several settings at once; the field says what it took and skipped; nonsense changes nothing;
+    the parser's phrases (tests/test_chartask.mojo)."""
+    problems = []
+    err = g20.mojo_test("tests/test_chartask.mojo", "CHARTASK TESTS PASSED", "test_chartask", "tests")
+    if err:
+        problems.append(err)
+    g25.OUT = OUT
+    steps = g25.SHEET + ";tap:Chart;pause:300;" + ASK + "top 3, unpaid, as a line;pause:400"
+    want = "Sum of amount by region, largest first, top 3, not paid, as a line"
+    for host in ("GTK", "web"):
+        out = g25.gtk(steps, "m2-ask")[0] if host == "GTK" else g25.web(steps, "m2-ask")
+        ls = labels(out)
+        if "Took top 3 · not paid · a line" not in ls:
+            problems.append(f"{host}: the field said {[l for l in ls if l.startswith(('Took', 'Didn'))][-1:]}")
+        sentence = re.findall(r"^(?:BUTTON|LABEL): (.*)$", out, re.M)
+        if not all(t in sentence for t in ("largest first", "top 3", "not paid", "a line")):
+            problems.append(f"{host}: the sentence's words after the ask: {[t for t in sentence if t in ('largest first', 'top 3', 'not paid', 'a line')]}")
+    nonsense = g25.gtk(g25.SHEET + ";tap:Chart;pause:300;" + ASK + "bananas and apples;pause:300", "m2-nonsense")[0]
+    if not any(l.startswith("Didn't understand") for l in labels(nonsense)) or "as in the table" not in re.findall(r"^BUTTON: (.*)$", nonsense, re.M):
+        problems.append("GTK: a phrase it can't use changed something or said nothing")
+    tile = g25.gtk(g25.OPEN + ";tap:Create table;tap:Report;tap:Chart tile;pause:300;" + ASK + "average, smallest first;pause:400", "m2-tile")[0]
+    if not any(l.startswith("Took average · smallest first") for l in labels(tile)):
+        problems.append(f"GTK Report tile: {[l for l in labels(tile) if l.startswith(('Took', 'Didn'))][-1:]}")
+    return not problems, "; ".join(problems) or ("\"top 3, unpaid, as a line\" turns a chart into the top 3 regions' unpaid amounts as a line and says so (GTK, web, a Report tile too); "
+                                                  "nonsense changes nothing and says it; 37 phrases in tests/test_chartask.mojo")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -141,7 +172,7 @@ def m7():
     return not problems, "; ".join(problems) or "goal 27's M0–M8 (goals 3–26 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", m1), ("M2", todo("ask")), ("M3", todo("inspector pages")), ("M4", todo("undo, insert opens the inspector")),
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", todo("inspector pages")), ("M4", todo("undo, insert opens the inspector")),
               ("M5", todo("bars move")), ("M6", todo("real input")), ("M7", m7)]
 
 

@@ -15,7 +15,7 @@ from mojoui.view import (
     CLIPBOARD, View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, SECONDARY, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON, TOKEN, KEY, SHIFT, CTRL, ALT,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON, TOKEN, TOKEN_LIT, KEY, SHIFT, CTRL, ALT,
 )
 from mojoui.diff import Diff, Patch, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE, SET_SIZE
 from mojoui.app import App, Event, Runtime, ms
@@ -875,8 +875,10 @@ struct GtkHost[A: App](Movable):
                 add_class(w, "destructive-action")
             elif node.style == SUBTLE or node.style == ICON_ONLY or node.style == ICON_ON or node.style == TOOL or node.style == TOOL_ON or node.style == TOOL_INLINE or node.style == TOOL_INLINE_ON:
                 add_class(w, "flat")
-            elif node.style == TOKEN:  # a word in a sentence: flat, tight, in the accent (libadwaita's own accent colour)
+            elif node.style == TOKEN or node.style == TOKEN_LIT:  # a word in a sentence: flat, tight, in the accent (libadwaita's own accent colour)
                 add_class(w, "flat")
+                if node.style == TOKEN_LIT:
+                    add_class(w, "mui-token-lit")  # (just changed: a theme marks it for a moment)
                 add_class(w, self.layout_class("mui-token", "padding: 0 3px; min-height: 0; min-width: 0; border-radius: 4px;"))
                 var label = external_call["gtk_button_get_child", Int](w)
                 if label != 0:

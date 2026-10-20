@@ -87,6 +87,8 @@ def skin_css(p: Palette, cls: String) -> String:
         + w + "button.mui-token:hover { background: " + hex_of(mix(p.card, p.accent, 0.12)) + "; }\n"
         + w + "button.mui-token label { color: " + accent + "; font-weight: 600; font-size: 15px; text-decoration-line: underline; text-decoration-color: " + hex_of(mix(p.card, p.accent, 0.45)) + "; }\n"
         + w + ".mui-tag-sentence-line label { color: " + ink + "; font-size: 15px; font-weight: 600; }\n"
+        + "@keyframes mui-token-lit { from { background-color: " + hex_of(mix(p.card, p.accent, 0.30)) + "; } to { background-color: transparent; } }\n"
+        + w + "button.mui-token-lit { animation: mui-token-lit 1400ms ease-out; }\n"
         + w + "button.destructive-action { background: " + hex_of(p.bad) + "; color: #ffffff; box-shadow: none; font-weight: 600; }\n"
         + w + "button.mui-tool { min-width: 64px; min-height: 58px; padding: 4px 6px; border-radius: 6px; font-size: 11px; }\n"
         + w + "button.mui-tool:hover { background: " + hex_of(mix(p.chrome, p.chrome_ink, 0.08)) + "; }\n"
@@ -175,6 +177,8 @@ body.skin button.token { padding: 0 1px; min-height: 0; border: 0; border-radius
   text-decoration: underline dotted color-mix(in srgb, var(--o-accent) 55%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 body.skin button.token:hover { background: color-mix(in srgb, var(--o-accent) 12%, transparent); }
 body.skin [data-tag=sentence-line] > .text { color: var(--o-ink); font-size: 15px; font-weight: 600; }
+@keyframes token-lit { from { background: color-mix(in srgb, var(--o-accent) 30%, transparent); } to { background: transparent; } }
+body.skin button.token.lit { animation: token-lit 1.4s ease-out; }
 body.skin label.picker.subtle:not(.tool):not(.icon-only) { padding: 3px 14px; min-height: 30px; border-radius: 6px; box-sizing: border-box; color: var(--o-ink2); }
 body.skin label.picker.subtle:not(.tool):hover { background: var(--o-raised); color: var(--o-ink); }
 body.skin button.icon-only { padding: 3px 6px; min-width: 30px; justify-content: center; }

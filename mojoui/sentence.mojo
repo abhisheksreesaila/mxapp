@@ -5,7 +5,7 @@
 #
 #   Sentence([Word("Sum", ASK_COMBINE, "word-combine"), Word(" of "), Word("amount", ASK_VALUE, "word-value")], width=46)
 
-from mojoui.view import View, Text, Button, HStack, VStack, HEADLINE, TOKEN, START, CENTER, NO_MSG
+from mojoui.view import View, Text, Button, HStack, VStack, HEADLINE, TOKEN, TOKEN_LIT, START, CENTER, NO_MSG
 
 
 @fieldwise_init
@@ -13,9 +13,13 @@ struct Word(Copyable, Movable):
     var text: String  # what it reads (plain runs carry their own spaces and commas: " of ", ", ")
     var msg: Int  # a token's message (NO_MSG: plain text)
     var tag: String  # a token's tag: where its choices' popover attaches
+    var lit: Bool  # just changed (an ask): hosts mark it for a moment
 
     def __init__(out self, text: String):
-        self = Self(text, NO_MSG, "")
+        self = Self(text, NO_MSG, "", False)
+
+    def __init__(out self, text: String, msg: Int, tag: String):
+        self = Self(text, msg, tag, False)
 
 
 def Sentence(words: List[Word], width: Int = 48, style: Int = HEADLINE, tag: String = "sentence") -> View:
@@ -37,7 +41,7 @@ def Sentence(words: List[Word], width: Int = 48, style: Int = HEADLINE, tag: Str
                     used += trimmed.byte_length()
                 continue
         if w.msg != NO_MSG:
-            line.append(Button(w.text, w.msg, TOKEN).tag(w.tag))
+            line.append(Button(w.text, w.msg, TOKEN_LIT if w.lit else TOKEN).tag(w.tag))
         else:
             line.append(Text(w.text, style))
         used += n

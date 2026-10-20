@@ -330,7 +330,7 @@ def slot_text(obj: SheetObject, sheet: Sheet, slot: Int) -> String:
     return "a line" if obj.style == CHART_LINE else "bars"
 
 
-def chart_words(obj: SheetObject, sheet: Sheet, on_word: Int, cref: Int) -> List[Word]:
+def chart_words(obj: SheetObject, sheet: Sheet, on_word: Int, cref: Int, lit: List[Int] = []) -> List[Word]:
     """The chart's title as a sentence: "Sum of amount by region, largest first, top 5, every row, as bars". Token
     `slot` sends `on_word + slot` and is tagged "word-<cref>-<slot>" (its popover's anchor)."""
     var out = List[Word]()
@@ -338,7 +338,10 @@ def chart_words(obj: SheetObject, sheet: Sheet, on_word: Int, cref: Int) -> List
     for slot in range(SLOTS):
         if glue[slot] != "":
             out.append(Word(glue[slot]))
-        out.append(Word(slot_text(obj, sheet, slot), on_word + slot, "word-" + String(cref) + "-" + String(slot)))
+        var changed = False
+        for s in lit:
+            changed = changed or s == slot
+        out.append(Word(slot_text(obj, sheet, slot), on_word + slot, "word-" + String(cref) + "-" + String(slot), changed))
     return out^
 
 
@@ -508,18 +511,21 @@ def pivot_view(obj: SheetObject, sheet: Sheet, height: Int) -> View:
                       corner=sheet.name(obj.group))
 
 
-def object_card(obj: SheetObject, sheet: Sheet, canvas: Int, version: Int, on_tap: Int, on_close: Int, on_pick: Int, on_word: Int = NO_MSG, cref: Int = 0) -> View:
+def object_card(obj: SheetObject, sheet: Sheet, canvas: Int, version: Int, on_tap: Int, on_close: Int, on_pick: Int, on_word: Int = NO_MSG, cref: Int = 0,
+                lit: List[Int] = [], under: List[View] = [], under_h: Int = 0) -> View:
     """The object as it sits on the sheet: a title bar (its drag handle) with a close button, then the chart (on
     Canvas `canvas`) and its readout, or the pivot. With `on_word`, a chart's title is its sentence (chart_words)."""
-    var title = Sentence(chart_words(obj, sheet, on_word, cref), width=max(24, (obj.w - 130) // 8), tag="sentence-" + String(cref)) if obj.kind == OBJ_CHART and on_word != NO_MSG else Button(object_title(obj, sheet), on_pick, style=SUBTLE)
+    var title = Sentence(chart_words(obj, sheet, on_word, cref, lit), width=max(24, (obj.w - 130) // 8), tag="sentence-" + String(cref)) if obj.kind == OBJ_CHART and on_word != NO_MSG else Button(object_title(obj, sheet), on_pick, style=SUBTLE)
     var head_h = SENTENCE_H if obj.kind == OBJ_CHART and on_word != NO_MSG else HEADER_H - 8  # (a sentence takes two lines)
     var head = HStack(title^, Spacer(),
                       Text(fixed(obj.milliseconds, 1) + " ms", CAPTION),
                       Button("Remove", on_close, ICON_ONLY, icon="close"), spacing=8).fill().align(START if on_word != NO_MSG else CENTER).height(head_h)
     var body: View
     if obj.kind == OBJ_CHART:
-        body = VStack(Canvas(canvas, version, on_gesture=on_tap).fill().height(obj.h - head_h - 48).tag("chart-" + String(canvas - 9)),
-                      Text(readout(obj, sheet), CAPTION).tag("readout"), spacing=4).fill()
+        var parts = under.copy()  # (an ask field under the sentence, when the app gives one: the canvas gives up its height)
+        parts.append(Canvas(canvas, version, on_gesture=on_tap).fill().height(obj.h - head_h - 48 - under_h).tag("chart-" + String(canvas - 9)))
+        parts.append(Text(readout(obj, sheet), CAPTION).tag("readout"))
+        body = VStack(parts^, spacing=4).fill()
     else:
         body = pivot_view(obj, sheet, obj.h - HEADER_H - 24)
     return Card(head, body, spacing=4)

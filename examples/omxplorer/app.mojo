@@ -79,6 +79,7 @@ from mojoui.swatches import SwatchPicker, draw_swatches, swatch_at
 from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_text, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
                               CHART_BAR, CHART_LINE, HEADER_H, chart_words, chart_choices, apply_choice, chosen, chart_sentence, SLOT_NAMES)
 from mojoui.sentence import Sentence
+from mojoui.chartask import ask, ask_reply
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, tile_fact, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
                                TILE_CHART, TILE_DISTINCT, TILE_MEDIAN, TILE_LAST, TILE_NAMES)
 from mojoui.chartview import ChartView
@@ -171,8 +172,11 @@ comptime RENAME_CANCEL = 97
 comptime PREVIEW = 98  # the import preview's gestures: it scrolls (it's read-only: taps and keys do nothing)
 comptime WORD_CLOSE = 99  # a chart word's choices dismissed
 comptime WORD = 1000  # + ref × 10 + slot: a word of a chart's sentence tapped (ref: a sheet chart 0…39, a Report chart tile 40…79)
-comptime CHOICE = 1900  # + k: one of the tapped word's choices picked
+comptime CHOICE = 1900  # + k (k < 100): one of the tapped word's choices picked
 comptime TILE_REF = 40  # (a Report tile's ref: TILE_REF + its index)
+comptime ASK_CHANGE = 2000  # the ask field typed in (past CHOICE's hundred)
+comptime ASK_SUBMIT = 2001  # its Return: the phrase edits the chart
+comptime ASK_H = 66  # the ask field and its reply, under a chart's sentence
 comptime SET_INK = 600  # + 0 (automatic) … 8: the Format menu's text colours
 comptime SET_FILL = 610  # + 0 (none) … 8
 comptime SWATCH_CANVAS = 5  # the swatches' canvas id
@@ -251,6 +255,10 @@ struct Main(App):
     var renaming: Int  # the tab being renamed (0 the sheet, 1 the Report), -1 none
     var picking: Int  # the swatches open: PICK_INK or PICK_FILL, 0 none
     var word_ref: Int  # a chart word whose choices are open: its chart (a ref) and slot; -1 none
+    var asking: Int  # the chart whose ask field shows (the last one tapped, inserted or asked): a ref, -1 none
+    var ask_text: String  # what's typed in it
+    var ask_said: String  # what it said back last
+    var lit: List[Int]  # the slots the last ask changed (marked once), on chart `asking`
     var word_slot: Int
 
     def __init__(out self):
@@ -313,6 +321,10 @@ struct Main(App):
         self.picking = 0
         self.word_ref = -1
         self.word_slot = 0
+        self.asking = -1
+        self.ask_text = ""
+        self.ask_said = ""
+        self.lit = List[Int]()
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -554,6 +566,13 @@ struct Main(App):
             self.message = "Couldn't compute: " + String(e)
         self.version += 1
 
+    def ask_views(self) -> List[View]:
+        """The ask field and what it said last (under the chart being asked about)."""
+        var out = List[View]()
+        out.append(TextField(self.ask_text, "Ask: top 3, unpaid, as a line", on_change=ASK_CHANGE, on_submit=ASK_SUBMIT).fill().tag("ask"))
+        out.append(Text(self.ask_said if self.ask_said != "" else "Or tap any coloured word", CAPTION).tag("ask-said"))
+        return out^
+
     def has_chart(self, cref: Int) -> Bool:
         """Whether `cref` names a chart: a sheet chart (0…39) or a Report chart tile (TILE_REF + k)."""
         if cref >= TILE_REF:
@@ -580,6 +599,14 @@ struct Main(App):
         except e:
             self.message = "Couldn't compute: " + String(e)
         self.version += 1
+
+    def ask_here(mut self, cref: Int):
+        """The ask field moves to chart `cref` (its last reply and marks go with the old one)."""
+        if cref != self.asking:
+            self.asking = cref
+            self.ask_said = ""
+            self.ask_text = ""
+            self.lit = List[Int]()
 
     def table_h(self) -> Int:
         if self.table_h_set > 0:
@@ -1104,6 +1131,8 @@ struct Main(App):
                     problem = String(e)
                 self.objects.append(obj^)
                 self.active = len(self.objects) - 1
+                if m == INSERT_CHART:
+                    self.ask_here(self.active)
                 self.insp_tab = 2
                 self.reveal = self.active + 1  # (child 0 is the table)
                 self.reveal_count += 1
@@ -1138,6 +1167,9 @@ struct Main(App):
                     self.objects[k].selected = cv.selected
                     self.active = k
                     self.version += 1
+            if k < len(self.objects) and event.number == TAP and self.objects[k].kind == OBJ_CHART:
+                self.ask_here(k)
+                self.version += 1
         elif m >= OBJ_CLOSE and m < OBJ_CLOSE + 100:
             var k = m - OBJ_CLOSE
             if k < len(self.objects):
@@ -1197,7 +1229,10 @@ struct Main(App):
                     compute_tile(t, self.frame, self.filter)
                 except e:
                     self.message = "Couldn't compute: " + String(e)
+                var chart_tile = t.kind == TILE_CHART
                 self.tiles.append(t^)
+                if chart_tile:
+                    self.ask_here(TILE_REF + len(self.tiles) - 1)
             self.version += 1
         elif m >= TILE_CLOSE and m < TILE_CLOSE + 100:
             if m - TILE_CLOSE < len(self.tiles):
@@ -1211,11 +1246,15 @@ struct Main(App):
                 if cv.tap(event.x, event.y, self.font, self.pal):
                     self.tiles[k].chart.selected = cv.selected
                     self.version += 1
+            if k < len(self.tiles) and event.number == TAP and self.tiles[k].kind == TILE_CHART:
+                self.ask_here(TILE_REF + k)
+                self.version += 1
         elif m >= WORD and m < WORD + (TILE_REF + MAX_OBJECTS) * 10:  # a chart's word: its choices open on it
             var cref = (m - WORD) // 10
             if self.has_chart(cref):
                 self.word_ref = cref
                 self.word_slot = (m - WORD) % 10
+                self.ask_here(cref)
                 if cref < TILE_REF:
                     self.active = cref  # (the inspector follows the chart being edited)
                     self.insp_tab = 2
@@ -1229,6 +1268,20 @@ struct Main(App):
             self.version += 1
         elif m == WORD_CLOSE:
             self.word_ref = -1
+            self.version += 1
+        elif m == ASK_CHANGE:
+            self.ask_text = event.text
+            self.lit = List[Int]()
+        elif m == ASK_SUBMIT:
+            if self.asking >= 0 and self.has_chart(self.asking) and event.text != "":
+                var c = self.chart_of(self.asking)
+                var said = ask(c, self.frame, event.text)
+                if len(said.understood) > 0:
+                    self.set_chart(self.asking, c^)
+                    self.lit = said.changed.copy()
+                self.ask_said = ask_reply(said)
+                self.message = self.ask_said
+                self.ask_text = ""
             self.version += 1
         elif m == FILTER_COL:
             var texts = self.texts()
@@ -1811,10 +1864,17 @@ struct Main(App):
             ref t = self.tiles[k]
             if t.kind == TILE_CHART:
                 var cv = chart_view(t.chart, self.frame)
-                charts.append(Card(HStack(Sentence(chart_words(t.chart, self.frame, WORD + (TILE_REF + k) * 10, TILE_REF + k), width=max(30, (self.sheet_width() - 120) // 9),
-                                                   tag="sentence-" + String(TILE_REF + k)), Spacer(), Button("Remove", TILE_CLOSE + k, ICON_ONLY, icon="close"), spacing=8).fill().align(START),
-                                   Canvas(60 + k, self.version, on_gesture=TILE_TAP + k).fill().height(240),
-                                   Text(readout(t.chart, self.frame), CAPTION), spacing=6).fill().tag("chart-tile"))
+                var asked = self.asking == TILE_REF + k
+                var parts = List[View]()
+                parts.append(HStack(Sentence(chart_words(t.chart, self.frame, WORD + (TILE_REF + k) * 10, TILE_REF + k, self.lit.copy() if asked else List[Int]()),
+                                             width=max(30, (self.sheet_width() - 120) // 9), tag="sentence-" + String(TILE_REF + k)),
+                                    Spacer(), Button("Remove", TILE_CLOSE + k, ICON_ONLY, icon="close"), spacing=8).fill().align(START))
+                if asked:
+                    for v in self.ask_views():
+                        parts.append(v.copy())
+                parts.append(Canvas(60 + k, self.version, on_gesture=TILE_TAP + k).fill().height(240))
+                parts.append(Text(readout(t.chart, self.frame), CAPTION))
+                charts.append(Card(parts^, spacing=6).fill().tag("chart-tile"))
             else:
                 kpis.append(kpi_of(t, self.frame, self.filter, first_kpi).view(120 + k, self.version, TILE_CLOSE + k, tile_fact(t, self.frame)).fill().tag("tile"))
                 first_kpi = False
@@ -1850,7 +1910,9 @@ struct Main(App):
         var bottom = self.table_y + th
         for k in range(len(self.objects)):
             ref o = self.objects[k]
-            items.append(object_card(o, self.frame, 10 + k, self.version, OBJ_TAP + k, OBJ_CLOSE + k, OBJ_PICK + k, WORD + k * 10, k)
+            var asked = self.asking == k
+            items.append(object_card(o, self.frame, 10 + k, self.version, OBJ_TAP + k, OBJ_CLOSE + k, OBJ_PICK + k, WORD + k * 10, k,
+                                     self.lit.copy() if asked else List[Int](), self.ask_views() if asked else List[View](), ASK_H if asked else 0)
                          .at(o.x, o.y).width(o.w).height(o.h).tag("chart" + String(k) if o.kind == OBJ_CHART else "pivot" + String(k)))
             bottom = max(bottom, o.y + o.h)
         var ed = self.grid.editor_place(self.frame)
