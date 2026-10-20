@@ -99,6 +99,16 @@ def tap(n):
     adb("shell", "input", "tap", str(x), str(y))
 
 
+def landed(before, wait=2.0):
+    """After a tap, wait (up to `wait` s) for the screen's texts to change, as a person waits to see a tap land
+    before the next one: on a loaded emulator, taps sent back to back went missing (goal 29's full runs)."""
+    deadline = time.time() + wait
+    while time.time() < deadline:
+        if [n["text"] for n in nodes(dump())] != before:
+            return
+        time.sleep(0.2)
+
+
 def field_text(n):
     """An EditText's text ("" when it only shows its hint)."""
     return "" if n["hint"] and n["text"] == n["hint"] else n["text"]
@@ -125,7 +135,10 @@ def step(s, scale):
     verb, _, rest = s.partition(":")
     if verb == "tap":
         title, _, nth = rest.partition("@")
-        tap(find("Button", lambda n: n["text"] == title, int(nth or 0)))
+        button = find("Button", lambda n: n["text"] == title, int(nth or 0))  # (waits for a late screen)
+        before = [n["text"] for n in nodes(dump())]
+        tap(button)
+        landed(before)
     elif verb in ("type", "submit", "enter"):
         hint, _, text = rest.partition("=")
         f = find("EditText", lambda n: n["hint"] == hint or (n["text"] == hint and not n["hint"]))
