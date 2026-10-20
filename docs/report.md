@@ -3,7 +3,10 @@
 **End goal (owner):** one language for every platform; omxplorer is the showcase: the best-performing dashboard, with macOS polish, Linux speed and Windows usability. MX frame's session called **321870f** stable (SQL, expressions, FLOAT64, median and quantiles per group); goal 29 puts it under the chart sentence.
 
 ## Result
-RESULTS
+- **M0–M4 PASS** (the last full run, 2026-10-20): the engine is 321870f and every example builds; median and p90, eight number conditions and four calendar charts equal pyarrow's; at 1M rows every chart fits one frame (sum 0.5 ms, median 6.4 ms, month 5.8 ms).
+- **M5 (every earlier goal's checks): all pass but one flaky step.** In three full runs, goal 7's Android check counted "click 2" after 3 taps on hello's Greet; on its own it read "click 3" 8 times out of 8 on the same code. Only the full run loads the machine (GTK, the web and GPU checks around the emulator), so the lost tap is put down to the emulator, not the app. The driver now waits for each tap to land, and never re-taps. Owner's call (2026-10-20): stop at this point and publish; not chased further.
+- Reviewer: round 1 NEEDS WORK, rounds 2 and 3 PASS; every should-fix is in. The archived engine checks (goals 22, 23) prove the sources against MX frame's archive instead of byte-equal packages (D-269).
+- Merged into main locally, not pushed (CLAUDE.md).
 
 ## What a chart can say now
 The sentence from goal 28 (tap a word, or ask) gained three things people ask a dashboard first:
