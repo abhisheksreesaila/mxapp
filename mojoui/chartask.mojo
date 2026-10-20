@@ -262,9 +262,12 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
         var one = w[i]
         var two = joined(w, i, 2)
         var three = joined(w, i, 3)
-        var table = table_word(spec, sheet, w, i, said)
         var before_num = (spec.num_col, spec.num_op, spec.num_lo, spec.num_hi)
+        var table = table_word(spec, sheet, w, i, said)
         var cmp = number_condition(spec, sheet, spec.value, w, i) if table[0] == 0 else 0  # ("over 1,000": on the chart's value)
+        if table[0] > 0 and spec.num_op != 0 and table[1] == number_words(spec, sheet):
+            cmp = table[0]  # ("qty under 3": a condition on its own column counts as the phrase's one too)
+            table = (0, String(""))
         if cmp > 0 and number_said:  # (one number condition a chart: a second in the same phrase is skipped, said so)
             spec.num_col = before_num[0]
             spec.num_op = before_num[1]

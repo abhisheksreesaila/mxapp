@@ -85,7 +85,7 @@ def read_spec(j: Json, node: Int, mut o: SheetObject, sheet: Sheet):
     o.order = order if ORDER_TABLE <= order <= ORDER_AZ else ORDER_TABLE
     o.top = max(j.number(j.get(node, "top"), 0), 0)
     var part = j.number(j.get(node, "part"), 0)
-    o.part = part if 0 <= part <= 3 and (part == 0 or sheet.kind(o.group) == DATE) else 0
+    o.part = part if 0 <= part <= 3 and (part == 0 or (0 <= o.group < sheet.columns() and sheet.kind(o.group) == DATE)) else 0
     var only = j.number(j.get(node, "only_col"), -1)
     o.only_col = -1  # (every row, unless the file names a filter it still can)
     var nc = j.number(j.get(node, "num_col"), -1)

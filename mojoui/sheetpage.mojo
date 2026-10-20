@@ -218,8 +218,9 @@ def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) r
             obj.sums.append(all.sums[0] - total_of(by_row.sums))
             obj.counts.append(all.counts[0] - total_of(by_row.counts))
             obj.present.append(all.present[0] - total_of(by_row.present))
-            obj.stats.append(0)  # ("(blank)": its rows have no group key to gather by: no median for it yet)
-            obj.has_stat.append(False)
+            if obj.combine == COMBINE_MEDIAN or obj.combine == COMBINE_P90:  # ("(blank)": its rows have no group key to gather by: no median for it yet)
+                obj.stats.append(0)
+                obj.has_stat.append(False)
         obj.milliseconds = all.milliseconds + by_row.milliseconds
         shape(obj, sheet)
         obj.selected = -1

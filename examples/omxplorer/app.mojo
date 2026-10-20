@@ -1231,6 +1231,8 @@ struct Main(App):
                     o.style = CHART_LINE if event.number == 1 else CHART_BAR
                 elif m == OBJ_VALUE and 0 <= event.number < len(nums):
                     o.value = nums[event.number]
+                elif m == OBJ_GROUP and o.kind == OBJ_CHART:
+                    _ = apply_choice(o, self.frame, SLOT_GROUP, event.number)
                 elif m == OBJ_GROUP and 0 <= event.number < len(texts):
                     o.group = texts[event.number]
                     o.part = PART_NONE  # (a text column's values, not a date's months)
@@ -1918,7 +1920,7 @@ struct Main(App):
             var styles: List[String] = ["Bar", "Line"]
             data.append(Row("Type", Segmented(styles, 1 if o.style == CHART_LINE else 0, CHART_STYLE)))
             data.append(Row("Value", Dropdown(self.names_of(nums), self.index_in(nums, o.value), OBJ_VALUE)))
-            data.append(Row("Group by", Dropdown(self.names_of(texts), self.index_in(texts, o.group), OBJ_GROUP)))
+            data.append(Row("Group by", Dropdown(chart_choices(o, self.frame, SLOT_GROUP), max(chosen(o, self.frame, SLOT_GROUP), 0), OBJ_GROUP)))  # (the sentence's choices: a date's month too)
         else:
             var across = List[String]()
             across.append("None")
