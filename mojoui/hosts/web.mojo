@@ -184,6 +184,13 @@ def web_resize[A: App](handle: Int, width: Int, height: Int) -> String:
     return diff_to_json(d, rt[].shown)
 
 
+def web_appearance[A: App](handle: Int, dark: Bool) -> String:
+    """The browser's colour scheme (prefers-color-scheme), on load and when it changes: App.appearance."""
+    var rt = session_at[A](handle)
+    var d = rt[].appearance(dark)
+    return diff_to_json(d, rt[].shown)
+
+
 def web_frame[A: App](handle: Int, node: Int, microseconds: Int) -> String:
     var rt = session_at[A](handle)
     var d = rt[].frame(node, microseconds)

@@ -112,6 +112,13 @@ struct Palette(Copyable, Movable):
                        rgba(199, 224, 244), rgba(235, 243, 252), rgba(17, 94, 163), rgba(16, 124, 16), rgba(197, 15, 31),
                        rgba(234, 88, 12), REGULAR, MEDIUM)
 
+    @staticmethod
+    def plain_dark() -> Palette:
+        """The plain palette for a system in dark mode (the platform's own dark greys, a lighter blue)."""
+        return Palette(True, hx("#1e1e1e"), hx("#262626"), hx("#303030"), hx("#ffffff"), hx("#deddda"), hx("#a8a6a2"),
+                       hx("#363636"), hx("#4a4a4a"), hx("#78aeed"), hx("#1e1e1e"), mix(hx("#262626"), hx("#78aeed"), 0.40),
+                       mix(hx("#262626"), hx("#78aeed"), 0.16), hx("#dc8add"), hx("#8ff0a4"), hx("#ff7b63"), hx("#f8e45c"), REGULAR, MEDIUM)
+
     def with_accent(self, accent: UInt32) -> Palette:
         """The same palette with another accent (0: unchanged): a mode's tint (an app's sheet green, its report red)."""
         if accent == 0:
@@ -140,9 +147,10 @@ struct Theme(Copyable, Movable):
     var paint_native: Bool  # Apple hosts: colour their native controls with the palette and set Inter (a skin), else system colours
 
     @staticmethod
-    def native() -> Theme:
-        """No theme: each platform's own look (libadwaita, the system's web font and colours, AppKit, UIKit)."""
-        return Theme("", "", Palette.plain(), "", "", rgba(66, 66, 66), rgba(255, 255, 255), False)
+    def native(dark: Bool = False) -> Theme:
+        """No theme: each platform's own look (libadwaita, the system's web font and colours, AppKit, UIKit); drawn views
+        take the plain palette, dark when the system is (App.appearance)."""
+        return Theme("", "", Palette.plain_dark() if dark else Palette.plain(), "", "", rgba(66, 66, 66), rgba(255, 255, 255), False)
 
     def key(self) -> String:
         """Changes whenever what hosts show would (the theme, or its palette's accent and page): hosts restyle then."""

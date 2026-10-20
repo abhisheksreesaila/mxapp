@@ -13,9 +13,11 @@ from mojoui.theme import Palette, Theme, hx, mix, hex_of
 
 
 def paper_palette() -> Palette:
-    return Palette(False, hx("#f4efe6"), hx("#fffcf6"), hx("#f8f3ea"), hx("#1d1a16"), hx("#46403a"), hx("#6f675d"),
+    var p = Palette(False, hx("#f4efe6"), hx("#fffcf6"), hx("#f8f3ea"), hx("#1d1a16"), hx("#46403a"), hx("#6f675d"),
                    hx("#e6dccd"), hx("#cfc3b1"), hx("#a8461f"), hx("#fffcf6"), mix(hx("#fffcf6"), hx("#a8461f"), 0.40), hx("#f6e6dc"),
                    hx("#5b4a9e"), hx("#2f7d4f"), hx("#b3261e"), hx("#a36a00"), REGULAR, MEDIUM)
+    p.series = [hx("#a8461f"), hx("#3f6f8f"), hx("#c49a3c"), hx("#5e7d4a"), hx("#7d5a8c"), hx("#b7745a"), hx("#6d6a63"), hx("#3d8a80")]  # (inks, not neons)
+    return p^
 
 
 def paper_gtk(p: Palette) -> String:

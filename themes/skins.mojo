@@ -166,9 +166,11 @@ body.skin button.prominent:hover { background: color-mix(in srgb, var(--o-accent
 body.skin button.destructive { background: var(--o-bad); border-color: transparent; color: #fff; font-weight: 600; }
 body.skin button.subtle { background: transparent; border-color: transparent; color: var(--o-ink2); }
 body.skin button.subtle:hover { background: var(--o-raised); color: var(--o-ink); }
+body.skin label.picker.subtle:not(.tool):not(.icon-only) { padding: 3px 14px; min-height: 30px; border-radius: 6px; box-sizing: border-box; color: var(--o-ink2); }
+body.skin label.picker.subtle:not(.tool):hover { background: var(--o-raised); color: var(--o-ink); }
 body.skin button.icon-only { padding: 3px 6px; min-width: 30px; justify-content: center; }
 body.skin label.picker:not(.tool):not(.subtle) { border: 1px solid var(--o-strong); border-radius: 6px; padding: 3px 14px; min-height: 30px; box-sizing: border-box; color: var(--o-ink); background: var(--o-card); }
-body.skin label.picker.prominent { background: var(--o-accent); color: var(--o-on-accent); border-color: transparent; font-weight: 600; }
+body.skin label.picker.prominent:not(.tool):not(.subtle) { background: var(--o-accent); color: var(--o-on-accent); border-color: transparent; font-weight: 600; }
 body.skin button.tool, body.skin label.picker.tool { min-width: 64px; min-height: 58px; border-radius: 6px; font-size: 11px; color: var(--o-chrome-ink); }
 body.skin button.tool:hover, body.skin label.picker.tool:hover { background: color-mix(in srgb, var(--o-chrome-ink) 8%, var(--o-chrome)); }
 body.skin button.tool.on, body.skin button.icon-only.on { background: var(--o-wash); color: var(--o-accent); }

@@ -286,6 +286,14 @@ MENU_JS = r"""
     htmx.ajax('POST', `/resize/${root.dataset.sid}`, { values: { w, h }, swap: 'none', source: document.body });
   };
   addEventListener('load', tellSize);
+  // The browser's colour scheme (App.appearance): on load and when the person switches.
+  const scheme = matchMedia('(prefers-color-scheme: dark)');
+  const tellScheme = () => {
+    const root = document.getElementById('mojoui-root');
+    if (root && root.dataset.sid) htmx.ajax('POST', `/appearance/${root.dataset.sid}`, { values: { dark: scheme.matches ? 1 : 0 }, swap: 'none', source: document.body });
+  };
+  addEventListener('load', tellScheme);
+  scheme.addEventListener('change', tellScheme);
   addEventListener('resize', () => { clearTimeout(sizeTimer); sizeTimer = setTimeout(tellSize, 120); });
 })();
 """
@@ -648,6 +656,8 @@ def render(s, i, sid):
     (a direct mapping: the browser's own layout does the work)."""
     el = render_node(s, i, sid)
     n = s.nodes[i]
+    if n["kind"] == DIALOG:  # (its width is its panel's: the layer itself covers the window)
+        return el
     css = []
     if n["pad_v"] or n["pad_h"]:
         css.append(f"padding:{n['pad_v']}px {n['pad_h']}px")
@@ -666,7 +676,10 @@ def render(s, i, sid):
         css.append("align-self:stretch")
         if n["max_w"]:
             css.append("width:100%;margin-inline:auto")  # min(max, available), centred, as GTK's clamp does
-    if n["align_items"] in ALIGN_CSS:
+    if n["kind"] == BUTTON:  # (on a button, START puts its icon and title at the leading edge: a sidebar row)
+        if n["align_items"] == 1:
+            css.append("justify-content:flex-start;text-align:left")
+    elif n["align_items"] in ALIGN_CSS:
         css.append(f"align-items:{ALIGN_CSS[n['align_items']]}")
     if n["justify_items"] in JUSTIFY_CSS:
         css.append(f"justify-content:{JUSTIFY_CSS[n['justify_items']]}")
@@ -705,7 +718,8 @@ def render_node(s, i, sid):
             picker = Input(type="file", name="file", accept=accept or None, cls="picker-input", data_kind="picker", data_title=n["text"],
                            hx_post=f"/upload/{sid}", hx_encoding="multipart/form-data", hx_trigger="change", hx_swap="none",
                            hx_vals=json.dumps({"n": i}), hx_include="#mojoui-v")
-            kids = [svg, Span(n["text"]), picker] if svg else [Span(n["text"]), picker]
+            title = Span(n["text"], cls="sr-only") if n["style"] in (ICON_ONLY, ICON_ON) and svg else Span(n["text"])  # (icon-only: the title is for screen readers)
+            kids = [svg, title, picker] if svg else [Span(n["text"]), picker]
             return Label(*kids, id=nid, cls=f"button picker {cls}" + (" with-icon" if svg and n["style"] not in (TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON) else ""), data_kind="button", tabindex="0")
         if n["style"] in (TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON):  # the icon above (or beside) a small title
             svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"'))
@@ -1129,6 +1143,18 @@ def make_app(module_dir):
             if s.closed:
                 return ""
             d = json.loads(mod.resize(s.handle, w, h))
+            s.nodes = json.loads(mod.view(s.handle))
+            return changes(s, sid, d)
+
+    @app.post("/appearance/{sid}")
+    def appearance(sid: str, dark: int = 0):
+        s = sessions.get(sid)
+        if s is None or not hasattr(mod, "appearance"):
+            return ""
+        with s.lock:
+            if s.closed:
+                return ""
+            d = json.loads(mod.appearance(s.handle, dark))
             s.nodes = json.loads(mod.view(s.handle))
             return changes(s, sid, d)
 

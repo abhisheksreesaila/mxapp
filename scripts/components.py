@@ -37,8 +37,8 @@ COMPONENTS = [
 # Which examples each platform's checks actually run (docs/goals/*-check.py): GTK and the web run every
 # example; the Android checks (goal 7) drive these on the emulator; Mac and iPhone only build and sign.
 RUN_ON = {
-    "Linux (GTK)": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer"],
-    "Web": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer"],
+    "Linux (GTK)": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer", "themes"],
+    "Web": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer", "themes"],
     "Android": ["hello", "gallery", "layout", "lens", "todo"],
     "Mac (AppKit)": [],
     "iPhone (UIKit)": [],
@@ -65,12 +65,11 @@ FEATURES = [
     ("Board: scrolls, reveals a child", "Board(reveal=, reveal_count=)", r"reveal", "workbook"),
     ("Board: phone-width list", "(automatic under 720 pt)", r"board_list|max-width: 719px", "workbook"),
     ("Overlay islands", "Overlay(base, *islands) + .pin(h, v)", r"\bOVERLAY\b", "workbook"),
-    ("Design: Fluent 2", "design() = FLUENT", r"\bFLUENT\b|fluent", "analytics"),
-    ("Design: Omarchy (your theme)", "design() = OMARCHY", r"\bOMARCHY\b|omarchy", "workbook"),
+    ("Themes on top (themes/, or yours)", "def theme(self) -> Theme", r"gtk_css|web_css|theme_key|paint_native|mod\.theme", "themes"),
+    ("Light and dark from the system", "def appearance(mut self, dark)", r"rt\.appearance\(|/appearance/|mod\.appearance", "themes"),
     ("Shared data per process", "App.init_shared()", r"init_shared", "workbook"),
     ("Toolbar button (icon over label)", "Button(style=TOOL / TOOL_ON)", r"mui-tool|button\.tool", "omxplorer"),
     ("File picker", "FilePicker(title, on_pick)", r"gtk_file_dialog_open|/upload/", "omxplorer"),  # (GTK: built, but checks use the pick: step, not the dialog: UNPROVEN)
-    ("Design: Ledger, Graphite, Blueprint (omxplorer's skins)", "design() = LEDGER / GRAPHITE / BLUEPRINT", r"skin_css|SKIN_CSS", "omxplorer"),
     ("Keyboard shortcuts (menu items)", "Item(shortcut=\"Ctrl+S\")", r"shortcut", "omxplorer"),
     ("Canvas: right-click", "on_gesture: SECONDARY (event.x, y)", r"\bSECONDARY\b", "omxplorer"),
     ("Submenus, checked, disabled and danger items", "Submenu(…), Item(checked=, disabled=, danger=)", r"mui-danger|mi-danger|danger", "omxplorer"),

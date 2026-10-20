@@ -37,6 +37,7 @@ def theme_at(i: Int) -> Theme:
 
 struct Main(App):
     var at: Int
+    var dark: Bool  # the system's mode (App.appearance): what Native draws its canvas in
     var look: Theme
     var name: String
     var notify: Bool
@@ -47,6 +48,7 @@ struct Main(App):
 
     def __init__(out self):
         self.at = 0
+        self.dark = False
         self.look = Theme.native()
         self.name = "Ada"
         self.notify = True
@@ -64,11 +66,17 @@ struct Main(App):
     def theme(self) -> Theme:
         return self.look.copy()
 
+    def appearance(mut self, dark: Bool):
+        self.dark = dark
+        if self.at == 0:
+            self.look = Theme.native(dark)
+            self.version += 1
+
     def update(mut self, event: Event):
         var m = event.message
         if m == PICK and 0 <= event.number < len(materialize[NAMES]()):
             self.at = event.number
-            self.look = theme_at(self.at)
+            self.look = theme_at(self.at) if self.at != 0 else Theme.native(self.dark)
             self.version += 1
         elif m == NAME:
             self.name = event.text

@@ -89,10 +89,15 @@ def remove_class(widget: Int, name: String):
 def set_tone(widget: Int, tone: Int):
     """A label's tone class (Text(…).tone()): one of mui-tone-warn/good/strong/accent, or none."""
     var names: List[String] = ["", "mui-tone-warn", "mui-tone-good", "mui-tone-strong", "mui-tone-accent"]
+    var native: List[String] = ["", "warning", "success", "", "accent"]  # (libadwaita's own colours: the look with no theme)
     for k in range(1, 5):
         remove_class(widget, names[k])
+        if native[k] != "":
+            remove_class(widget, native[k])
     if 1 <= tone <= 4:
         add_class(widget, names[tone])
+        if native[tone] != "":
+            add_class(widget, native[tone])
 
 
 def tone_of(widget: Int) -> String:
@@ -499,7 +504,7 @@ struct GtkHost[A: App](Movable):
     var pending: Diff  # a partial rebuild waiting for the next idle turn
     var has_pending: Bool
     var partial_ok: Bool
-    var scene_mode: Bool  # MOJOUI_SCENE=1: canvases that record a display list are drawn by GTK's renderer (goal 26)
+    var scene_mode: Bool  # (MOJOUI_SCENE=0 turns it off) canvases that record a display list are drawn by GTK's renderer (goal 26)
     var layouts: Dict[String, Int]  # PangoLayouts by text, face and size (an index into the lists below), kept across frames
     var layout_w: List[Float64]  # each layout's width and baseline (pixels), measured once
     var layout_base: List[Float64]
@@ -543,7 +548,7 @@ struct GtkHost[A: App](Movable):
         self.rt = Runtime(app^)
         self.rt.trace = getenv("MOJOUI_TRACE") != ""
         self.partial_ok = getenv("MOJOUI_NO_PARTIAL") == ""
-        self.scene_mode = getenv("MOJOUI_SCENE") != ""
+        self.scene_mode = getenv("MOJOUI_SCENE") != "0"  # (the default since goal 27, D-261; 0: the pixel path)
         self.layouts = Dict[String, Int]()
         self.layout_w = List[Float64]()
         self.layout_base = List[Float64]()
@@ -851,6 +856,10 @@ struct GtkHost[A: App](Movable):
                 external_call["gtk_button_set_child", NoneType](w, content)
             else:
                 w = external_call["gtk_button_new_with_label", Int](t.as_c_string_span())
+            if node.align_items == START and node.style != ICON_ONLY and node.style != ICON_ON:  # its content at the leading edge (a sidebar row)
+                var child = external_call["gtk_button_get_child", Int](w)
+                if child != 0:
+                    external_call["gtk_widget_set_halign", NoneType](child, c_int(1))  # GTK_ALIGN_START
             if node.style == PROMINENT:
                 add_class(w, "suggested-action")
                 if node.hint == "":
@@ -2422,6 +2431,14 @@ def on_window_resized[A: App](window: Int, pspec: Int, host_addr: Int) abi("C"):
     queue_resize[A](host_addr)
 
 
+def on_dark_changed[A: App](styles: Int, pspec: Int, host_addr: Int) abi("C"):
+    """The system went dark or light (or a theme forced one): App.appearance, and the canvases draw again."""
+    var host = host_at[A](host_addr)
+    var d = host[].rt.appearance(external_call["adw_style_manager_get_dark", c_int](styles) != 0)
+    host[].arm_all(host_addr)
+    host[].apply(d, host_addr)
+
+
 def on_surface_layout[A: App](surface: Int, width: c_int, height: c_int, host_addr: Int) abi("C"):
     host_at[A](host_addr)[].arm_all(host_addr)  # the compositor resized the window (e.g. tiling)
     queue_resize[A](host_addr)
@@ -3913,6 +3930,9 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     external_call["gtk_window_set_default_size", NoneType](host[].window, c_int(size[0]), c_int(size[1]))
     host[].window_w = size[0]
     host[].rt.app.resize(size[0], size[1])  # (its real size follows once the window is laid out: App.resize again)
+    var styles = external_call["adw_style_manager_get_default", Int]()
+    host[].rt.app.appearance(external_call["adw_style_manager_get_dark", c_int](styles) != 0)  # (and again when the person switches)
+    connect3(styles, "notify::dark", on_dark_changed[A], host_addr)
     host[].rt.shown = host[].rt.app.view()
     for prop in ["notify::default-width", "notify::default-height", "notify::maximized", "notify::fullscreened"]:
         connect3(host[].window, prop, on_window_resized[A], host_addr)

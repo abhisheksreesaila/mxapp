@@ -1304,6 +1304,11 @@ struct Main(App):
         self.grid.draw_scene(scene, self.frame, self.font, self.pal)
         return True
 
+    def chart_palette(self) -> Palette:
+        """Charts draw in the skin's first series colour, not the mode's tint: the report's red would read as a loss (D-254)."""
+        var base = skin_palette(self.skin)
+        return self.pal.with_accent(base.data(0))
+
     def draw(mut self, canvas: Int, mut surface: Surface):
         self.pal = skin_palette(self.skin, self.accent())  # (the mode's tint, as the chrome has it)
         if 0 <= canvas < len(self.chart_sizes):
@@ -1318,10 +1323,10 @@ struct Main(App):
             draw_swatches(surface, st.fill() if self.picking == PICK_FILL else st.ink(), self.picking == PICK_FILL, self.font, self.pal)
         elif 10 <= canvas < 10 + len(self.objects):
             var cv = chart_view(self.objects[canvas - 10], self.frame)
-            cv.draw(surface, self.font, self.pal)
+            cv.draw(surface, self.font, self.chart_palette())
         elif 60 <= canvas < 60 + len(self.tiles):
             var cv = chart_view(self.tiles[canvas - 60].chart, self.frame)
-            cv.draw(surface, self.font, self.pal)
+            cv.draw(surface, self.font, self.chart_palette())
         else:
             surface.fill(self.pal.card)  # (a KPI tile's sparkline: none yet)
 
@@ -1342,13 +1347,12 @@ struct Main(App):
     def start_screen(self) -> View:
         """The Start screen (docs/design/universal/kit.html, 7): a side column of actions, a drop zone, recent files, samples."""
         var side = List[View]()
-        side.append(Text("omxplorer", HEADLINE).tone(TONE_ACCENT))
-        side.append(Button("Start", NO_MSG, SUBTLE, icon="file").fill())
-        side.append(Button("New blank sheet", BLANK, SUBTLE, icon="grid").fill())
-        side.append(FilePicker("Open file…", PICK, style=SUBTLE, icon="open", accept=".csv,.tsv,.txt,.parquet,.omx").fill())
-        side.append(Text("Connect a database · with MX frame, next", CAPTION))
+        side.append(Button("Start", NO_MSG, SUBTLE, icon="file").fill().align(START))  # (rows read from their leading edge, one icon set)
+        side.append(Button("New blank sheet", BLANK, SUBTLE, icon="grid").fill().align(START))
+        side.append(FilePicker("Open file…", PICK, style=SUBTLE, icon="open", accept=".csv,.tsv,.txt,.parquet,.omx").fill().align(START))
+        side.append(HStack(Icon("database", 16), Text("Connect a database", CAPTION), Spacer(), Text("soon", CAPTION).tone(TONE_ACCENT), spacing=10).fill().align(CENTER).padding(6, 12).tag("soon").tooltip("With MX frame, next"))
         side.append(Divider().fill())
-        side.append(Button("Settings…", SETTINGS, SUBTLE, icon="gear").fill())
+        side.append(Button("Settings…", SETTINGS, SUBTLE, icon="settings").fill().align(START))
         side.append(Spacer())
         side.append(Card(Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD), Text("Parquet files bigger than memory open too: streamed from disk, and you can still edit and save them.", CAPTION), spacing=4, tone=CARD_GOOD).fill())
         var sidebar = Card(VStack(side^, spacing=6).fill().grow().align(START), spacing=0).width(300).fill()
@@ -1477,8 +1481,11 @@ struct Main(App):
             Menu("Help", [Item("About omxplorer", ABOUT, icon="file")]),
         ])
         var doc = (self.sheet_name + " · " + grouped(self.frame.rows()) + " rows") if on_sheet else String("")
-        return HStack(HStack(Icon("app-logo", 18), Text("omxplorer", HEADLINE), spacing=6).align(CENTER).tag("app-mark"), bar^, Spacer(), Text(doc, CAPTION).tag("doc-chip"),
-                      Text(self.gpu_chip(), CAPTION).tag("gpu-chip"), spacing=10).fill().align(CENTER).height(38).padding(2, 10).tag("menubar")
+        var row: List[View] = [HStack(Icon("app-logo", 18), Text("omxplorer", HEADLINE), spacing=6).align(CENTER).tag("app-mark"), bar^, Spacer()]
+        if doc != "":  # (no empty chip before there's a document)
+            row.append(Text(doc, CAPTION).tag("doc-chip"))
+        row.append(Text(self.gpu_chip(), CAPTION).tag("gpu-chip"))  # (the one place the GPU's state shows)
+        return HStack(row^, spacing=10).fill().align(CENTER).height(38).padding(2, 10).tag("menubar")
 
     def context_menu(self) -> View:
         """The column's menu, open over the grid where the right click was."""
@@ -1536,7 +1543,7 @@ struct Main(App):
         var extra = List[View]()
         if streamed:
             extra.append(Text("Streamed from disk", CAPTION).tone(TONE_ACCENT).tooltip("This file is bigger than memory: its rows are read from disk as they're shown, and your edits are kept beside it until you save").tag("streamed"))
-        extra.append(FilePicker("Open", PICK, style=TOOL_INLINE, icon="import", accept=".csv,.tsv,.txt,.parquet,.omx").tooltip("Open a CSV, Parquet or .omx file"))
+        extra.append(FilePicker("Open", PICK, style=ICON_ONLY if self.win_w < COMPACT_W else TOOL_INLINE, icon="import", accept=".csv,.tsv,.txt,.parquet,.omx").tooltip("Open a CSV, Parquet or .omx file"))
         if self.sheet_tab == 1:
             return Toolbar(left, self.report_tools(), right, extra, before=self.report_controls(), after=self.filter_controls(), inline=True)  # (its tile tools share one icon: their titles stay)
         var middle = List[Tool]()
@@ -1583,7 +1590,8 @@ struct Main(App):
         for c in range(self.frame.columns()):
             every.append(c)
         var out = List[View]()
-        out.append(VStack(Text("Tiles of", CAPTION), Dropdown(self.names_of(every), max(self.report_col, 0), REPORT_COL).tag("tiles-of").tooltip("The column new tiles add up, average or count"), spacing=2).align(START))
+        var compact = self.win_w < COMPACT_W  # (a narrow toolbar: short labels, never two lines)
+        out.append(HStack(Text("Of" if compact else "Tiles of", CAPTION), Dropdown(self.names_of(every), max(self.report_col, 0), REPORT_COL).tag("tiles-of").tooltip("The column new tiles add up, average or count"), spacing=6).align(CENTER))
         return out^
 
     def filter_controls(self) -> List[View]:
@@ -1597,12 +1605,12 @@ struct Main(App):
             if texts[k] == self.filter.col:
                 at_col = k + 1
         var out = List[View]()
-        out.append(VStack(Text("Filter · every tile", CAPTION), Dropdown(cols, at_col, FILTER_COL).tag("filter-column"), spacing=2).align(START))
+        out.append(HStack(Text("Filter" if self.win_w < COMPACT_W else "Filter · every tile", CAPTION), Dropdown(cols, at_col, FILTER_COL).tag("filter-column").tooltip("The rows every tile reads"), spacing=6).align(CENTER))
         if self.filter.col >= 0:
             var values = List[String]()
             for code in range(groups_of(self.frame, self.filter.col)):
                 values.append(self.frame.text_of(self.filter.col, Int64(code)))
-            out.append(VStack(Text("is", CAPTION), Dropdown(values, self.filter.code, FILTER_VALUE).tag("filter-value"), spacing=2).align(START))
+            out.append(HStack(Text("is", CAPTION), Dropdown(values, self.filter.code, FILTER_VALUE).tag("filter-value"), spacing=6).align(CENTER))
         return out^
 
     def report_inspector(self) -> View:
@@ -1786,7 +1794,7 @@ struct Main(App):
         var main = (VStack(fx, area^, spacing=6) if self.sheet_tab == 0 else VStack(area^, spacing=6)).grow().align(STRETCH)
         var row = (HStack(main, self.inspector(), spacing=16) if self.inspector_open else HStack(main, spacing=0)).align(STRETCH)
         var tabs: List[Tab] = [Tab(self.sheet_name, "sheet"), Tab(self.report_name, "chart-bar")]
-        var chip: List[View] = [Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD)]
+        var chip = List[View]()  # (the GPU's state shows once, in the menu bar)
         var parts = List[View]()
         parts.append(self.menu_bar())
         parts.append(self.toolbar())

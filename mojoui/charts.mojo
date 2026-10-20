@@ -240,7 +240,6 @@ struct BarChart(Movable):
             var on = self.selected < 0 or self.selected == i
             var bar_w = (x1 - x0) * (self.values[i] / top if top > 0 else 0)
             var bh = min(rh * 0.62, 26 * k)
-            rect(s, x0, cy - bh / 2, x1 - x0, bh, self.pal.raised, 3 * k)  # the track
             rect(s, x0, cy - bh / 2, max(bar_w, 2 * k), bh, self.pal.accent if on else self.pal.accent_tint, 3 * k)
             var base = cy + 4.5 * k
             font.draw(s, self.names[i], x0 - 12 * k, base, 13 * k, self.pal.ink if on else self.pal.ink3, self.pal.medium if self.selected == i else self.pal.regular, RIGHT)

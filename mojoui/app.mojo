@@ -93,6 +93,11 @@ trait App(Movable, Deinitable):
         it; size changes reach the screen as patches, not rebuilds. The default ignores it."""
         pass
 
+    def appearance(mut self, dark: Bool):
+        """The system is in dark (or light) mode: hosts say so when the window opens and whenever the person switches.
+        An app with no theme of its own draws its canvases to match (Theme.native(dark)). The default ignores it."""
+        pass
+
     def logo(self) -> String:
         """The app's mark as SVG ("": none): hosts install it as the icon "app-logo" (Icon("app-logo", 18))."""
         return ""
@@ -144,6 +149,11 @@ struct Runtime[A: App](Movable):
     def resize(mut self, width: Int, height: Int) -> Diff:
         """The window's content area changed size: the app hears it, then the screen catches up."""
         self.app.resize(width, height)
+        return self.refresh()
+
+    def appearance(mut self, dark: Bool) -> Diff:
+        """The system's light or dark mode: the app hears it, then the screen catches up."""
+        self.app.appearance(dark)
         return self.refresh()
 
     def draw_scene(mut self, node: Int, mut scene: Scene) -> Tuple[Bool, Diff]:

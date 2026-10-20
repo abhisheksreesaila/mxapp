@@ -10,31 +10,31 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 
 | Component | Linux (GTK) | Web | Android | Mac (AppKit) | iPhone (UIKit) | Agent (MCP) | Proven by |
 |---|---|---|---|---|---|---|---|
-| `Text` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
-| `Button` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
-| `VStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, mxstudio, omxplorer |
-| `HStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer |
-| `Spacer` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ❌ | analytics, mxstudio, omxplorer |
-| `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | analytics, workbook, mxstudio, omxplorer |
+| `Text` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer, themes |
+| `Button` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer, themes |
+| `VStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | hello, gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, mxstudio, omxplorer, themes |
+| `HStack` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, gpu, kitchen, expenses, layout, lens, analytics, workbook, mxstudio, omxplorer, themes |
+| `Spacer` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ❌ | analytics, mxstudio, omxplorer, themes |
+| `Card` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | analytics, workbook, mxstudio, omxplorer, themes |
 | `Scroll` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | todo, omxplorer |
 | `Grid` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses |
-| `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, kitchen, expenses, lens, analytics, omxplorer |
-| `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, expenses, workbook, mxstudio |
+| `Divider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, kitchen, expenses, lens, analytics, omxplorer, themes |
+| `TextField` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, expenses, workbook, mxstudio, themes |
 | `TextArea` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses, workbook, mxstudio |
-| `Toggle` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, lens, omxplorer |
-| `Dropdown` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, gpu, analytics, workbook, mxstudio, omxplorer |
+| `Toggle` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, lens, omxplorer, themes |
+| `Dropdown` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | gallery, todo, gpu, analytics, workbook, mxstudio, omxplorer, themes |
 | `Slider` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | gallery, gpu, lens |
-| `Segmented` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | kitchen, expenses, lens, analytics, mxstudio, omxplorer |
+| `Segmented` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | kitchen, expenses, lens, analytics, mxstudio, omxplorer, themes |
 | `Radio` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | kitchen, omxplorer |
 | `DatePicker` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses |
-| `ProgressBar` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | gallery, todo, expenses |
+| `ProgressBar` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | gallery, todo, expenses, themes |
 | `Image` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | gallery, gpu |
 | `Icon` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | kitchen, expenses, omxplorer |
 | `Alert` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `Tabs` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, layout, mxstudio |
 | `NavBar` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 | kitchen, expenses |
 | `LazyList` | ✅ | ✅ | ✅ | 🔨 | 🔨 | 🔨 | kitchen, expenses, layout |
-| `Canvas` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | lens, analytics, workbook, mxstudio, omxplorer |
+| `Canvas` | ✅ | ✅ | ✅ | 🔨 | 🔨 | ✅ | lens, analytics, workbook, mxstudio, omxplorer, themes |
 | `Board` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | workbook, mxstudio, omxplorer |
 | `Overlay` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | workbook, mxstudio |
 | `MenuBar` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
@@ -44,7 +44,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `Dialog` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
 | `Toast` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
 | `Popover` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
-| `Checkbox` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
+| `Checkbox` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer, themes |
 | `Clipboard` | ✅ | ✅ | ❌ | 🔨 | ❌ | ❌ | omxplorer |
 
 ## Variants, gestures, layout, design languages
@@ -68,12 +68,11 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | Board: scrolls, reveals a child | `Board(reveal=, reveal_count=)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Board: phone-width list | `(automatic under 720 pt)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Overlay islands | `Overlay(base, *islands) + .pin(h, v)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 |
-| Design: Fluent 2 | `design() = FLUENT` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Design: Omarchy (your theme) | `design() = OMARCHY` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Themes on top (themes/, or yours) | `def theme(self) -> Theme` | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 |
+| Light and dark from the system | `def appearance(mut self, dark)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Shared data per process | `App.init_shared()` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 |
 | Toolbar button (icon over label) | `Button(style=TOOL / TOOL_ON)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | File picker | `FilePicker(title, on_pick)` | 🔨 | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Design: Ledger, Graphite, Blueprint (omxplorer's skins) | `design() = LEDGER / GRAPHITE / BLUEPRINT` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Keyboard shortcuts (menu items) | `Item(shortcut="Ctrl+S")` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
 | Canvas: right-click | `on_gesture: SECONDARY (event.x, y)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
 | Submenus, checked, disabled and danger items | `Submenu(…), Item(checked=, disabled=, danger=)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ |
@@ -105,12 +104,12 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 77 | 1 | 0 |
-| Web | 78 | 0 | 0 |
-| Android | 19 | 15 | 44 |
-| Mac (AppKit) | 0 | 58 | 20 |
-| iPhone (UIKit) | 0 | 59 | 19 |
-| Agent (MCP) | 28 | 16 | 34 |
+| Linux (GTK) | 76 | 1 | 0 |
+| Web | 77 | 0 | 0 |
+| Android | 19 | 15 | 43 |
+| Mac (AppKit) | 0 | 59 | 18 |
+| iPhone (UIKit) | 0 | 60 | 17 |
+| Agent (MCP) | 28 | 17 | 32 |
 
 ## Inside one app, not components yet (the debt)
 

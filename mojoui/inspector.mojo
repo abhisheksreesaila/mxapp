@@ -47,6 +47,9 @@ def Inspector(tabs: List[String], selected: Int, on_tab: Int, sections: List[Vie
             body.append(Divider())
         body.append(sections[k].copy())
     var all = List[View]()
-    all.append(Segmented(tabs, selected, on_tab).fill())
+    if len(tabs) == 1:  # (one page: its name as a title, not a switch with one choice)
+        all.append(Text(tabs[0], HEADLINE).tag("inspector-title"))
+    else:
+        all.append(Segmented(tabs, selected, on_tab).fill())
     all.append(Scroll(VStack(body^, spacing=14).fill(), height=height).fill().grow())  # (it takes the card's room, and scrolls when that's less)
     return Card(all^, spacing=14).width(width).grow().tag("inspector")

@@ -27,6 +27,7 @@ g20 = g25.g20
 run, BUILD = g20.run, g20.BUILD
 OUT = BUILD / "g27"
 shots = load("theme_shots", "scripts/theme_shots.py")
+labels = g25.labels
 import drive  # noqa: E402
 
 THEME_WORDS = re.compile(r"liquid|ledger|graphite|blueprint|fluent|omarchy|4f46e5|0e7a43|c8243f|E5464F|437A0E|3F24C8", re.I)
@@ -178,6 +179,75 @@ def m8():
     return True, f"docs/mxframe-needs.md: {len(rows)} operations, each with why, what the app does meanwhile and how much it matters; the order to ask in"
 
 
+def m5():
+    """The polish pass: every finding in docs/goals/27/polish.md fixed, each proven on the running app where a check can."""
+    import os
+    from PIL import Image
+    problems = []
+    rows = (ROOT / "docs/goals/27/polish.md").read_text()
+    still = re.findall(r"^\| (P\d+) \|.*\| open \|$", rows, re.M)
+    if still:
+        problems.append("still open: " + ", ".join(still))
+    g25.OUT = OUT / "polish"
+    for size in ((1742, 876), (1280, 720)):
+        tag = f"{size[0]}x{size[1]}"
+        start, _ = g25.gtk("", f"start-{tag}", size=size)
+        if len([l for l in labels(start) if l == "omxplorer"]) != 1:
+            problems.append(f"{tag} start: the app's name shows {len([l for l in labels(start) if l == 'omxplorer'])} times (P2)")
+        if g25.boxes(start, "doc-chip"):
+            problems.append(f"{tag} start: a document chip with no document (P3)")
+        sheet, _ = g25.gtk(g25.SHEET, f"sheet-{tag}", size=size)
+        chips = [l for l in labels(sheet) if ("ready" in l or l.endswith("CPU")) and " ms on " not in l]  # (the status bar's timing is a measurement, not the state)
+        if len(chips) != 1:
+            problems.append(f"{tag} sheet: the GPU's state shows {len(chips)} times: {chips} (P5)")
+        report, shot = g25.gtk(g25.REPORT + ";tap:Chart tile;pause:400", f"report-{tag}", size=size)
+        th_sheet, th_report = g25.boxes(sheet, "toolbar"), g25.boxes(report, "toolbar")
+        if not th_sheet or not th_report or abs(th_sheet[0][3] - th_report[0][3]) > 1:
+            problems.append(f"{tag}: the toolbar is {th_sheet[0][3] if th_sheet else '?'} pt on the sheet, {th_report[0][3] if th_report else '?'} on the report (P7)")
+        if not g25.boxes(report, "inspector-title"):
+            problems.append(f"{tag} report: the inspector's head isn't a title (P8)")
+        tiles = g25.boxes(report, "chart-tile")
+        if tiles:
+            x, y, w, h = tiles[0]
+            img = Image.open(shot).convert("RGB")
+            sx = img.size[0] / size[0]
+            red = sum(1 for px in img.crop((int(x * sx), int(y * sx), int((x + w) * sx), int((y + h) * sx))).getdata() if px[0] > 150 and px[1] < 90 and px[2] < 110)
+            if red > 50:
+                problems.append(f"{tag} report: {red} red pixels in the chart (P6)")
+        else:
+            problems.append(f"{tag} report: no chart tile")
+    e = g25.env("polish-web")
+    saved = {k: os.environ.get(k) for k in e}
+    os.environ.update(e)
+    try:
+        w, log = drive.web_run(BUILD / "omxplorer" / "web", "style:label.picker.prominent=background-color;menu:File>Settings…;js:document.querySelector('.dialog-layer').offsetWidth === innerWidth",
+                               shot=str(OUT / "polish" / "settings-web.png"), viewport=(1742, 876))
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    if "JS: true" not in log:
+        problems.append("web: the Settings dialog's layer doesn't cover the window (P1)")
+    bg = re.search(r"^STYLE: label.picker.prominent background-color (.*)$", log, re.M)
+    if not bg or bg.group(1).strip() != "rgb(79, 70, 229)":
+        problems.append(f"web start: Choose a file is {bg.group(1) if bg else 'missing'}, not the indigo primary (P4)")
+    dark = run([str(BUILD / "themes" / "linux" / "themes")], env={"MOJOUI_TEST": "", "MOJOUI_WINDOW": "900x760", "ADW_DEBUG_COLOR_SCHEME": "force-dark",
+                                                            "MOJOUI_SHOT": str(OUT / "polish" / "themes-dark.png")}, timeout=300)
+    series = g25.boxes(dark.stdout, "series")
+    if series:
+        x, y, w, h = series[0]
+        px = Image.open(OUT / "polish" / "themes-dark.png").convert("RGB").getpixel((int(x + 2), int(y + 2)))
+        if sum(px) > 200:
+            problems.append(f"native in dark mode: the canvas is {px}, not dark (P10)")
+    else:
+        problems.append("themes: no series canvas")
+    return not problems, "; ".join(problems) or ("docs/goals/27/polish.md: every finding fixed; at 1742×876 and 1280×720: one name, no empty chip, the GPU's state once, "
+                                                  "the report's toolbar the sheet's height, a titled inspector, charts not red; the web's dialog covers the window and "
+                                                  "Choose a file is the primary; no theme draws dark with a dark system")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -195,7 +265,7 @@ def m7():
 
 
 MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4),
-              ("M5", todo("the polish pass")), ("M6", m6), ("M8", m8), ("M7", m7)]
+              ("M5", m5), ("M6", m6), ("M8", m8), ("M7", m7)]
 
 
 def main():
