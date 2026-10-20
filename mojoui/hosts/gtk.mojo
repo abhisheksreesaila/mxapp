@@ -1202,6 +1202,10 @@ struct GtkHost[A: App](Movable):
             external_call["gtk_popover_set_child", NoneType](popover, box)
             external_call["gtk_popover_set_position", NoneType](popover, c_int(3))  # GTK_POS_BOTTOM
             add_class(popover, "mui-popover-surface")
+            connect(popover, "map", on_popover_map, 0)  # (once it shows, the keyboard goes in: arrows and Return pick)
+            var arrows = external_call["gtk_event_controller_key_new", Int]()
+            connect_any(arrows, "key-pressed", on_popover_key, popover)
+            external_call["gtk_widget_add_controller", NoneType](popover, arrows)
             var anchor = self.window
             for k in range(len(self.rt.shown.nodes)):
                 if self.rt.shown.nodes[k].name == node.text and k < len(self.widgets) and self.widgets[k] != 0:
@@ -1499,7 +1503,7 @@ struct GtkHost[A: App](Movable):
                     external_call["gtk_editable_set_position", NoneType](self.widgets[k], c_int(-1))  # (a click goes on from the end)
                     for c in self.canvases:
                         if c.node == self.key_node:
-                            _ = external_call["gtk_widget_grab_focus", c_int](c.widget)
+                            self.grab_quietly(c.widget)
                 self.focus = -1
         if not editor:
             self.editor_keys = 0
@@ -1507,7 +1511,7 @@ struct GtkHost[A: App](Movable):
                 self.focus = -1  # by someone typing in another field): the keyboard goes back to the canvas it came from
                 for c in self.canvases:
                     if c.node == self.key_node:
-                        _ = external_call["gtk_widget_grab_focus", c_int](c.widget)
+                        self.grab_quietly(c.widget)
         self.editor_open = editor
         if not editor and self.focus < 0:  # no text field has the keyboard: a canvas that takes keys gets it (arrows work at once)
             var root_focus = external_call["gtk_root_get_focus", Int](self.window) if self.window != 0 else 0
@@ -1515,12 +1519,25 @@ struct GtkHost[A: App](Movable):
             if not typing:
                 for c in self.canvases:
                     if c.keys != 0:
-                        _ = external_call["gtk_widget_grab_focus", c_int](c.widget)
+                        self.grab_quietly(c.widget)
                         self.key_node = c.node
                         break
         if 0 <= self.focus < len(self.widgets) and self.rt.shown.nodes[self.focus].kind == FIELD:
             _ = external_call["gtk_entry_grab_focus_without_selecting", c_int](self.widgets[self.focus])  # keep typing
         self.focus = -1
+
+    def grab_quietly(self, widget: Int):
+        """Gives `widget` the keyboard without scrolling a board to it: the host's own focus moves (the keyboard back to
+        the grid after a popover) mustn't move the page under the person; their Tab still scrolls as GTK does."""
+        var viewports = List[Int]()
+        for bs in self.board_scrollers:
+            var child = external_call["gtk_scrolled_window_get_child", Int](bs[1])
+            if child != 0 and Int(external_call["g_type_check_instance_is_a", c_int](child, external_call["gtk_viewport_get_type", Int]())) != 0:
+                external_call["gtk_viewport_set_scroll_to_focus", NoneType](child, c_int(0))
+                viewports.append(child)
+        _ = external_call["gtk_widget_grab_focus", c_int](widget)
+        for v in viewports:
+            external_call["gtk_viewport_set_scroll_to_focus", NoneType](v, c_int(1))
 
     def publish_ids(self):
         """Hands set_node()/get_node() the id tables (kept on the GApplication: they're free functions)."""
@@ -2448,6 +2465,29 @@ def on_tick[A: App](widget: Int, clock: Int, host_addr: Int) abi("C") -> c_int:
 def on_window_resized[A: App](window: Int, pspec: Int, host_addr: Int) abi("C"):
     host_at[A](host_addr)[].arm_all(host_addr)  # canvases redraw at their new size
     queue_resize[A](host_addr)
+
+
+def on_popover_map(popover: Int, data: Int) abi("C"):
+    """A popover just showed: on the next idle turn (it can't take focus while it's still mapping) its first control
+    takes the keyboard, so arrows move through its choices and Return picks one, as in a native menu."""
+    _ = external_call["g_idle_add", c_uint](on_popover_focus, popover)
+
+
+def on_popover_focus(popover: Int) abi("C") -> c_int:
+    if external_call["gtk_widget_get_mapped", c_int](popover) != 0:
+        _ = external_call["gtk_widget_child_focus", c_int](popover, c_int(0))  # GTK_DIR_TAB_FORWARD
+    return 0
+
+
+def on_popover_key(controller: Int, keyval: c_uint, keycode: c_uint, state: c_uint, popover: Int) abi("C") -> c_int:
+    """Up and Down move between a popover's controls (a popover isn't a window: GTK gives it no arrow keys)."""
+    if keyval == 0xff54:  # Down
+        _ = external_call["gtk_widget_child_focus", c_int](popover, c_int(0))  # GTK_DIR_TAB_FORWARD
+        return 1
+    if keyval == 0xff52:  # Up
+        _ = external_call["gtk_widget_child_focus", c_int](popover, c_int(1))  # GTK_DIR_TAB_BACKWARD
+        return 1
+    return 0
 
 
 def on_dark_changed[A: App](styles: Int, pspec: Int, host_addr: Int) abi("C"):

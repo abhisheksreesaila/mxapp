@@ -228,6 +228,59 @@ def m5():
                                                   "the first frame is the old chart, the last exactly the new (tests/test_chartmove.mojo)")
 
 
+KEYSYMS = {" ": "space", ",": "comma", ".": "period", "-": "minus"}
+
+
+def typed(text):
+    """live.py key commands that type `text` (letters, digits, spaces, commas)."""
+    return ";".join("key:" + KEYSYMS.get(ch, ch) for ch in text)
+
+
+def m6():
+    """With real input (XTest, scripts/live.py): click a word, pick with the keyboard, read a bar; ask by typing;
+    Ctrl+Z twice brings the first chart back."""
+    import pyarrow.parquet as pq
+    problems = []
+    g25.OUT = OUT
+    where = g25.live("wait:1500;click:1350,818;wait:1500;report", "m6-where")
+    chart_tool = g25.boxes(where, "toolbar/Chart")
+    if not chart_tool:
+        return False, "no Chart tool on the sheet's toolbar"
+    cx, cy = g26.centre(chart_tool[0])
+    start = f"wait:1500;click:1350,818;wait:1500;click:{cx},{cy};wait:1200"
+    out = g25.live(start + ";report", "m6-chart")
+    word, ask_box, canvas = g25.boxes(out, "word-0-0"), g25.boxes(out, "ask"), g25.boxes(out, "chart-1")
+    if not word or not ask_box or not canvas:
+        return False, f"the new chart's sentence, ask field or canvas isn't on screen: {word} {ask_box} {canvas}"
+    wx, wy = g26.centre(word[0])
+    bx, by = int(canvas[0][0] + canvas[0][2] * 0.4), int(canvas[0][1] + canvas[0][3] / 12)  # (the first of six bars)
+    out = g25.live(start + f";click:{wx},{wy};wait:600;key:Down;wait:150;key:Return;wait:900;click:{bx},{by};wait:500;report", "m6-average")
+    sentence = [l for l in labels(out) if l.startswith("Average of amount by region")]
+    readout = [l for l in labels(out) if " · " in l and l.split(" · ")[0] in ("North", "South", "East", "West", "Central")]
+    rows = pq.read_table(g25.small()).to_pylist()
+    if not sentence:
+        problems.append(f"a click on Sum, Down, Return didn't make it Average: {[l for l in labels(out) if ' as ' in l][-1:]}")
+    elif not readout:
+        problems.append("a click on the first bar read nothing")
+    else:
+        region, figure = readout[-1].split(" · ")
+        vals = [float(r["amount"]) for r in rows if r["region"] == region and r["amount"] is not None]
+        if abs(float(figure.replace(",", "")) - sum(vals) / len(vals)) > 0.006:
+            problems.append(f"{region}'s bar reads {figure}; pyarrow's mean is {sum(vals) / len(vals):.2f}")
+    ax, ay = g26.centre(ask_box[0])
+    asked = start + f";click:{wx},{wy};wait:600;key:Down;wait:150;key:Return;wait:900;click:{ax},{ay};wait:300;" + typed("top 3, as a line") + ";key:Return;wait:900"
+    out = g25.live(asked + ";report", "m6-ask")
+    if not any(l.startswith("Average of amount by region, largest first, top 3, every row, as a line") for l in labels(out)):
+        problems.append(f"typing the ask: {[l for l in labels(out) if ' as ' in l][-1:]}")
+    grid = g25.boxes(out, "grid")
+    gx, gy = g26.centre(grid[0]) if grid else (300, 250)
+    out = g25.live(asked + f";click:{gx},{gy};wait:300;key:Control+z;wait:500;key:Control+z;wait:800;report", "m6-undo")  # (a cell has the keyboard: Ctrl+Z is the app's)
+    if not any(l.startswith("Sum of amount by region, as in the table, every region, every row, as bars") for l in labels(out)):
+        problems.append(f"Ctrl+Z twice: {[l for l in labels(out) if ' as ' in l or l.startswith('Undid')][-2:]}")
+    return not problems, "; ".join(problems) or ("real input: a click on Sum, Down and Return make it Average, the first bar reads pyarrow's mean; "
+                                                  "typing \"top 3, as a line\" and Return changes it; Ctrl+Z twice brings back the first chart")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -246,7 +299,7 @@ def m7():
 
 
 MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4),
-              ("M5", m5), ("M6", todo("real input")), ("M7", m7)]
+              ("M5", m5), ("M6", m6), ("M7", m7)]
 
 
 def main():
