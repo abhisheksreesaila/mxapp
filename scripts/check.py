@@ -211,6 +211,23 @@ def m4():
                                                   "a new chart opens its inspector; the toolbars only insert")
 
 
+def m5():
+    """Bars move: a spec change animates over ~20 frames, each ≤ 3 ms; the first frame is the old chart, the last the new."""
+    problems = []
+    err = g20.mojo_test("tests/test_chartmove.mojo", "CHARTMOVE TESTS PASSED", "test_chartmove", "tests")
+    if err:
+        problems.append(err)
+    g25.OUT = OUT
+    out = g25.gtk(g25.SHEET + ";tap:Chart;pause:600;tap:as in the table;pause:150;tap:largest first;pause:900", "m5-move", MOJOUI_TRACE="1")[0]
+    draws = [float(d) for d in re.findall(r"^TRACE: draw canvas 10 \S+ ([\d.]+) ms", out, re.M)]
+    if len(draws) < 18:
+        problems.append(f"the chart drew {len(draws)} times: the change was a cut, not a move")
+    elif max(draws) > 3.0:
+        problems.append(f"a frame of the move took {max(draws):.2f} ms")
+    return not problems, "; ".join(problems) or (f"a re-order moves the bars over {len(draws) - 2} frames, each ≤ {max(draws):.1f} ms; "
+                                                  "the first frame is the old chart, the last exactly the new (tests/test_chartmove.mojo)")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -229,7 +246,7 @@ def m7():
 
 
 MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4),
-              ("M5", todo("bars move")), ("M6", todo("real input")), ("M7", m7)]
+              ("M5", m5), ("M6", todo("real input")), ("M7", m7)]
 
 
 def main():

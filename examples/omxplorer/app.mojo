@@ -79,7 +79,7 @@ from mojoui.swatches import SwatchPicker, draw_swatches, swatch_at
 from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_text, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
                               CHART_BAR, CHART_LINE, HEADER_H, chart_words, chart_choices, apply_choice, chosen, chart_sentence, SLOT_NAMES, slot_text,
                               number_columns, text_columns, COMBINES, ORDERS, TOPS, SLOT_COMBINE, SLOT_VALUE, SLOT_GROUP, SLOT_ORDER, SLOT_TOP,
-                              SLOT_FILTER, SLOT_MARK, COMBINE_COUNT)
+                              SLOT_FILTER, SLOT_MARK, COMBINE_COUNT, start_move, MOVE_FRAMES)
 from mojoui.sentence import Sentence
 from mojoui.chartask import ask, ask_reply
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, tile_fact, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
@@ -596,6 +596,7 @@ struct Main(App):
         if logged:
             self.chart_undo.append((self.frame.undo_depth(), cref, self.chart_of(cref)))
         self.lit = List[Int]()  # (an ask sets its own marks after this)
+        start_move(c, self.chart_of(cref))  # (the bars move from what they showed)
         try:
             if cref >= TILE_REF:
                 ref t = self.tiles[cref - TILE_REF]
@@ -1474,9 +1475,15 @@ struct Main(App):
         elif 10 <= canvas < 10 + len(self.objects):
             var cv = chart_view(self.objects[canvas - 10], self.frame)
             cv.draw(surface, self.font, self.chart_palette())
+            if self.objects[canvas - 10].moved < MOVE_FRAMES:  # (mid-move: the next frame draws it further along)
+                self.objects[canvas - 10].moved += 1
+                surface.again = True
         elif 60 <= canvas < 60 + len(self.tiles):
             var cv = chart_view(self.tiles[canvas - 60].chart, self.frame)
             cv.draw(surface, self.font, self.chart_palette())
+            if self.tiles[canvas - 60].chart.moved < MOVE_FRAMES:
+                self.tiles[canvas - 60].chart.moved += 1
+                surface.again = True
         else:
             surface.fill(self.pal.card)  # (a KPI tile's sparkline: none yet)
 

@@ -195,6 +195,7 @@ struct BarChart(Movable):
     var labels: List[String]  # the value text for each bar
     var selected: Int
     var table: Bool  # a table: names left, values right, a slim data bar under each row
+    var places: List[Float64]  # each bar's row, fractional while bars move to new places (empty: row i)
 
     var pal: Palette  # the colours and canvas font it draws with
 
@@ -205,11 +206,17 @@ struct BarChart(Movable):
         self.labels = labels^
         self.selected = selected
         self.table = table
+        self.places = List[Float64]()
         self.pal = Palette.plain()
 
     def themed(var self, pal: Palette) -> Self:
         """The same chart in another palette (a theme's palette)."""
         self.pal = pal.copy()
+        return self^
+
+    def moving(var self, var places: List[Float64]) -> Self:
+        """The bars at fractional rows (bars sliding to their new order)."""
+        self.places = places^
         return self^
 
     def row_height(self, s_height: Float64) -> Float64:
@@ -236,7 +243,7 @@ struct BarChart(Movable):
             top = max(top, v)
         var rh = self.row_height(Float64(s.height))
         for i in range(n):
-            var cy = rh * (Float64(i) + 0.5)
+            var cy = rh * ((self.places[i] if i < len(self.places) else Float64(i)) + 0.5)
             var on = self.selected < 0 or self.selected == i
             var bar_w = (x1 - x0) * (self.values[i] / top if top > 0 else 0)
             var bh = min(rh * 0.62, 26 * k)

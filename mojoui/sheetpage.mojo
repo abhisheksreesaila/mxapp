@@ -29,6 +29,7 @@ comptime ORDER_SMALLEST = 2
 comptime ORDER_AZ = 3
 comptime ORDERS: List[String] = ["as in the table", "largest first", "smallest first", "A to Z"]
 comptime TOPS: List[Int] = [0, 3, 5, 10]  # (0: every group)
+comptime MOVE_FRAMES = 20  # a spec change moves the bars over this many frames (~330 ms at 60 Hz), on the calm curve
 
 
 @fieldwise_init
@@ -55,16 +56,21 @@ struct SheetObject(Copyable, Movable):
     var present: List[Int]  # (computed) charts: how many of them have a value (an average divides by this)
     var values: List[Float64]  # (computed) charts: what each bar shows, in the column's own units (a count: rows)
     var milliseconds: Float64
+    var was_labels: List[String]  # charts: what it showed before its last change, and how many frames it has moved since
+    var was_values: List[Float64]
+    var moved: Int
 
     @staticmethod
     def chart(value: Int, group: Int, x: Int, y: Int, w: Int = 520, h: Int = 320) -> SheetObject:
         return SheetObject(OBJ_CHART, x, y, w, h, value, group, -1, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0,
-                           List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), 0)
+                           List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), 0,
+                           List[String](), List[Float64](), MOVE_FRAMES)
 
     @staticmethod
     def pivot(value: Int, rows: Int, across: Int, x: Int, y: Int, w: Int = 640, h: Int = 320) -> SheetObject:
         return SheetObject(OBJ_PIVOT, x, y, w, h, value, rows, across, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0,
-                           List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), 0)
+                           List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), 0,
+                           List[String](), List[Float64](), MOVE_FRAMES)
 
 
 def groups_of(sheet: Sheet, c: Int) -> Int:
@@ -445,6 +451,19 @@ def object_title(obj: SheetObject, sheet: Sheet) -> String:
     return ("average " if obj.combine == COMBINE_AVERAGE else "") + sheet.name(obj.value) + " by " + sheet.name(obj.group)
 
 
+def start_move(mut obj: SheetObject, before: SheetObject):
+    """The chart will move from what `before` showed (call before computing its new numbers' view)."""
+    obj.was_labels = before.labels.copy()
+    obj.was_values = before.values.copy()
+    obj.moved = 0
+
+
+def ease(t: Float64) -> Float64:
+    """The calm curve: fast out of the start, settling without overshoot (a cubic ease-out)."""
+    var u = 1.0 - min(max(t, 0.0), 1.0)
+    return 1.0 - u * u * u
+
+
 def chart_view(obj: SheetObject, sheet: Sheet) -> ChartView:
     """The chart, drawn by mojoui.charts: values in the column's units (money as cents when it's Currency)."""
     var scale = sheet.scale(obj.value) if sheet.kind(obj.value) == DECIMAL else 0
@@ -457,6 +476,11 @@ def chart_view(obj: SheetObject, sheet: Sheet) -> ChartView:
         for s in obj.sums:  # (money: cents, whatever the column's own scale)
             values.append(Float64(s) * (10.0 ** Float64(2 - scale)) if money else Float64(s) / Float64(10 ** scale))
     var cv = ChartView(object_title(obj, sheet), obj.labels.copy(), values^, "rows" if obj.combine == COMBINE_COUNT else sheet.name(obj.value), money, obj.selected)
+    if obj.kind == OBJ_CHART and obj.moved < MOVE_FRAMES:  # (mid-move: from the old bars, in the same units)
+        var was = List[Float64]()
+        for v in obj.was_values:
+            was.append(v * 100.0 if money else v)
+        cv.moving_from(obj.was_labels.copy(), was^, ease(Float64(obj.moved) / Float64(MOVE_FRAMES)))
     if obj.style == CHART_LINE:
         cv.kind = "Line Chart"
     return cv^
