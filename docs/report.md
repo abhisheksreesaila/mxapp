@@ -3,7 +3,17 @@
 **End goal (owner, 2026-10-19):** "charts can be on the inspector and a sub-inspector can have settings… be creative with UI… can't ship an Excel clone"; on the prototypes: "The title is the query: ask, then tap any word is the genius!!" And the standing bar: one language, every platform; the showcase dashboard with macOS polish, Linux speed and Windows usability.
 
 ## Result
-RESULT_LINES
+M0–M7 PASS. Reviewer: round 2 PASS.
+```
+PASS  M0  12 specs (sum, average, count; in data order, largest, smallest, A to Z; top 2/3/5; paid or unpaid) equal pyarrow's; a document keeps a chart's spec and an older one opens as it was (tests/test_chartspec.mojo)
+PASS  M1  a chart's title is its sentence, every setting a token (GTK, web); a token's choices open on it; Sum→Average, in data order→largest first, every region→top 3 change the chart on both hosts; a Report tile's too
+PASS  M2  "top 3, unpaid, as a line" turns a chart into the top 3 regions' unpaid amounts as a line and says so (GTK, web, a Report tile too); nonsense changes nothing and says it; 37 phrases in tests/test_chartask.mojo
+PASS  M3  a chart's inspector: its sentence and four rows saying what's set (Data, Order, Rows, Style); Order → Top 5 changes the chart, Back returns (GTK, web); a Report tile's Style page makes a line
+PASS  M4  Undo takes back an ask (top 3), then the added row, then the earlier ask (average), each one step; a new chart opens its inspector; the toolbars only insert
+PASS  M5  a re-order moves the bars over 21 frames after the pick (GTK), each ≤ 0.9 ms; the first frame is the old chart, the last exactly the new (tests/test_chartmove.mojo)
+PASS  M6  real input: a click on Sum, Down and Return make it Average, the first bar reads pyarrow's mean; typing "top 3, as a line" and Return changes it; Ctrl+Z twice brings back the first chart
+PASS  M7  goal 27's M0–M8 (goals 3–26 inside them, on the Scene and on pixels): every check passed in the full run but goal 15's M5, which read the chart's old title; it now reads the title's words (D-267) and passes on the same build
+```
 
 ## What you can do with a chart now
 A chart's title **is** its settings, as a sentence:
