@@ -320,3 +320,12 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - M6 with real XTest input found three more: popovers had no keyboard (focus on idle after map, arrows by a key controller), picking a choice scrolled the sheet (grab_quietly), and a line of a plain column read its values as cents.
 - MX frame's session: 321870f stable (STABLE.md); 13 open needs filed as mxframe#6–#18 with the owner's yes; goal 29 vendors it (D-265).
 - Reviewer: round 1 NEEDS WORK (stale chart undo across documents, "as in the table" was dictionary order, collisions, no-op asks logged), round 2 PASS.
+
+## Goal 29 (2026-10-20): charts that ask the new engine more (MX frame 321870f)
+- In its own worktree (../mojo-ui-g29) from main after goal 28's merge. The engine job had already vendored 321870f on engine-321870f; goal 29 built on that commit instead of vendoring again.
+- M1: median and p90 per group from the engine's group_median (scale + 1 for the interpolated median); a group with no median sorts last, not as the smallest.
+- M2: number conditions on the chart model (num_col/op/lo/hi); amounts parsed exactly at the column's scale ("1.5k", "1,000"); a Rows page with Over/Under/Between and From/To fields.
+- M3: the calendar key is Hinnant's civil-from-days in the engine's whole-number expressions; the labels come from the column's span, so empty months show. Tested before 1970, across a year's end and centuries away.
+- M4 (this machine): at 1M rows a sum 0.5 ms, a median 6.2 ms, a month chart 5.8 ms; at 100M rows 46 ms, 671 ms and 480 ms: the last two are goal 30's (background queries).
+- A full run started before the review fixes picked up a half-edited file (a parse error mid-build): never edit a worktree's sources while its full run builds; fixes go to a second worktree (../mojo-ui-g29fix).
+- Reviewer: round 1 NEEDS WORK ("qty under 2.5" rounded onto a whole-number column, a second condition silently replaced the first, weak completeness checks, no calendar test); round 2 PASS with five should-fixes, all done (a second condition naming its column, huge amounts, the old inspector's Group by on a month chart, a document's part with no group, a stray stat).

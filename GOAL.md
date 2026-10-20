@@ -20,4 +20,4 @@ Background queries and range aggregates (MX frame 23edc59, goal 30); a "(blank)"
 key: the engine's NULL group via SQL, later); joins and a second table; an LLM behind the ask.
 
 ## Done means
-PASS for M0–M5, the reviewer passes it, a short `docs/report.md`; pushed to `origin` (main).
+PASS for M0–M5, the reviewer passes it, a short `docs/report.md`; merged into main locally (CLAUDE.md: never push).

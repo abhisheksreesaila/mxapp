@@ -4,6 +4,18 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 29 (2026-10-20): charts that ask the new engine more (goal 29)
+- **Setup:** MX frame 321870f (STABLE.md: SQL, expressions, median and quantiles per group), vendored by the engine job.
+- **Worked:**
+  - The sentence says Median and p90 ("median by region", "p90", "90th percentile"); number conditions ("only paid and over 5,000", "qty between 2 and 4", "at most 10") from the ask and the Rows page; a date's month, quarter or weekday ("by month of day"), every month of the span in calendar order.
+  - 6 + 8 + 4 specs equal pyarrow's; dates before 1970 and centuries away read right; documents keep it all and refuse what they can't use.
+  - At 1M rows every chart kind fits a 60 Hz frame (≤ 6.2 ms); at 100M a median takes 0.67 s and a month chart 0.48 s.
+- **Broke and fixed:** a fraction on a whole-number column was rounded; a second number condition replaced the first quietly; a full run built a half-edited file.
+- **Means:** the chart sentence now covers what people ask a dashboard first; the slow cases at 100M rows need the engine's background queries.
+- **Next:** goal 30: MX frame 23edc59 (background queries, range aggregates, block reads): a UI thread that never waits.
+
+---
+
 ## Experiment 28 (2026-10-19): editing a chart by its sentence (goal 28)
 - **Setup:** the owner's pick from the chart prototypes: "the title is the query: ask, then tap any word".
 - **Worked:**
