@@ -41,25 +41,9 @@ It opens as a real app on Linux, in the browser, on Android, on a Mac and on an 
 
 That's **omxapp**. Its showcase, **omxplorer**, is a data app in the spirit of Numbers and Power BI, and the app itself is about 2,100 lines of Mojo, built from the framework's components.
 
-## A week
+## ✨ What it feels like
 
-This started on **14 October 2026** as a question: could an app developer, someone from Python and the web rather than systems programming, write native apps for every platform in [Mojo](https://www.modular.com/mojo)?
-
-One week in:
-
-| | |
-|---|---|
-| **29** goals | each with a written contract and acceptance checks a script runs |
-| **260** commits | one passing milestone at a time |
-| **270** decisions | each written down with its reason and whether it can be undone ([docs/decisions.md](docs/decisions.md)) |
-| **~21,000** lines | of Mojo in the framework and its themes (`mojoui/`, `themes/`), plus a small Python web host, the agent host and one 78-line Java file |
-| **6** hosts | GTK, the web, Android, AppKit, UIKit, and an agent over MCP |
-
-It was built in the open, by one app developer working with an AI pair programmer (Claude Code) on autopilot. Every number on this page comes from a script that measures it: `scripts/check` rebuilds everything and re-proves every goal since the first. When something only builds and hasn't run, this page says so.
-
-## What it feels like
-
-### The sentence is the interface
+### 🗣️ The sentence is the interface
 
 In omxplorer a chart's title isn't a label. It *is* the chart:
 
@@ -72,15 +56,15 @@ Every coloured word is a setting: tap it and pick another. Or type into the ask 
   <br><sub>1,000,000 rows. The chart answered "revenue by product, largest first, top 5" in 0.7 ms on an RTX 3090. The inspector on the right shows the same sentence as four pages: Data, Order, Rows, Style.</sub>
 </p>
 
-### It shows its work
+### 🔍 It shows its work
 
 Every answer says how long it took and where it ran ("0.7 ms on NVIDIA GeForce RTX 3090"). A tile says what it's made of ("p50 exact", "of 1,000,000 values"). And when you ask for something it can't do, it tells you what it skipped instead of quietly guessing. For example, "under 2.5" on a whole-number column, or a second number condition, is left out and named.
 
-### It's quiet
+### 🌙 It's quiet
 
 The toolbar only inserts things; the inspector sets them up, and shows only the settings that apply. One accent colour per mode (green for the sheet, red for the report). Motion is short and springy: hover and press in 150 ms or less, tiles in 320 ms, and nothing overshoots.
 
-## Agent native, from the first line
+## 🤖 Agent native, from the first line
 
 Most apps meet AI agents through the screen: screenshots, pixel coordinates, an accessibility tree written for screen readers, or an API someone added later. omxapp takes a different route. **The agent is a host**, the same way GTK and the browser are.
 
@@ -117,11 +101,28 @@ scripts/agent.sh omxplorer     # prints: claude mcp add omxplorer -- pixi run py
 
 The charts speak an agent's language too. They are [Flint](https://microsoft.github.io/flint-chart/) specs, the chart format Microsoft designed for AI agents. omxapp draws them natively, and the same specs run through Flint's own renderer as a cross-check.
 
-**What the agent can't do yet:** read a chart's figures as text (it reads the sentence and can `render` the picture), read a drawn grid's cells in apps other than omxplorer, drag objects on a page, or generate new UI. Generated UI over AG-UI is next, built on the same operations log.
+> [!NOTE]
+> **What the agent can't do yet:** read a chart's figures as text (it reads the sentence and can `render` the picture), read a drawn grid's cells in apps other than omxplorer, drag objects on a page, or generate new UI. Generated UI over AG-UI is next, built on the same operations log.
 
-## Under the hood
+## ⚙️ Under the hood
 
 The choices, and why each was made.
+
+```mermaid
+flowchart TB
+    A["📄 <b>app.mojo</b><br/>view() · update()"]:::app
+    A --> L["🐧 GTK 4"]:::host
+    A --> W["🌐 Web · FastHTML"]:::host
+    A --> D["🤖 Android views"]:::host
+    A --> M["🍎 AppKit"]:::host
+    A --> I["📱 UIKit"]:::host
+    A --> G["🧠 Agent · MCP tools"]:::agent
+    A -. "same language" .-> K["⚡ GPU · MX frame"]:::gpu
+    classDef app fill:#4f46e5,stroke:#3730a3,color:#ffffff
+    classDef host fill:#eef2ff,stroke:#a5b4fc,color:#1e1b4b
+    classDef agent fill:#0e7a43,stroke:#065f46,color:#ffffff
+    classDef gpu fill:#c8243f,stroke:#9f1239,color:#ffffff
+```
 
 | Layer | Choice | Why |
 |---|---|---|
@@ -136,7 +137,14 @@ The choices, and why each was made.
 | **Looks** | Themes are plugins on top (`themes/`): Liquid, Ledger, Graphite, Blueprint, Fluent, Omarchy, Paper | The framework names no theme (a check proves it). With no theme, an app looks like its platform. |
 | **Proof** | `scripts/check`: every goal's acceptance checks, re-run on GTK, in Chromium and on the Android emulator | Results are compared with pyarrow, pixels are diffed, and real input is used. A goal isn't done until the reviewer passes it. |
 
-### Measured
+### ⚡ Measured
+
+<p>
+  <img alt="1M-row chart 0.6 ms" src="https://img.shields.io/badge/1M--row%20chart-0.6%20ms-4f46e5?style=for-the-badge">
+  <img alt="grid scroll 0.8 ms a frame" src="https://img.shields.io/badge/grid%20scroll-0.8%20ms%20a%20frame-0e7a43?style=for-the-badge">
+  <img alt="20M points 1.5 ms" src="https://img.shields.io/badge/20M%20points-1.5%20ms-c8243f?style=for-the-badge">
+  <img alt="100M rows open in 0.2 s" src="https://img.shields.io/badge/100M%20rows-open%20in%200.2%20s-0f6cbd?style=for-the-badge">
+</p>
 
 All on one Linux machine with an RTX 3090, and all from the checks or their benchmarks.
 
@@ -150,9 +158,10 @@ All on one Linux machine with an RTX 3090, and all from the checks or their benc
 | A Power BI-style dashboard re-aggregating 20M rows per click | **6–9 ms** |
 | Opening a 100M-row file, streamed | **0.2 s** |
 
-The honest edge: at 100M rows in memory a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the UI thread is next.
+> [!NOTE]
+> **The honest edge:** at 100M rows in memory a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the UI thread is next.
 
-## Where it stands
+## 📍 Where it stands
 
 `✅` means a script runs it on that platform. `🔨` means it builds but no check runs it there yet. The full matrix is generated from the code: [docs/components.md](docs/components.md).
 
@@ -169,7 +178,7 @@ The GPU path is NVIDIA today. Apple and phone GPUs use the CPU path, which runs 
 
 **Why Mojo, honestly.** Mojo is young (1.1). It has a small ecosystem, no official iPhone, Android or WebAssembly target (omxapp cross-compiles with two hand-written runtime functions), and no Windows release yet. Flutter, React Native and the Rust kits are far ahead on maturity, tooling and production users. What none of them has is one readable language from the button to the GPU kernel, with native controls on every platform and an agent built in as a host.
 
-## Try it
+## 🚀 Try it
 
 You need x86-64 Linux with GTK 4 and libadwaita 1.7+, [pixi](https://pixi.sh), and an NVIDIA GPU for the GPU path (without one, the CPU path runs the same code).
 
@@ -180,7 +189,8 @@ scripts/omxplorer.sh web                       # the same app at http://127.0.0.
 scripts/check                                  # rebuild everything and re-prove every goal
 ```
 
-Then Insert → Chart, and in its ask field try *median*, *by month of day, as a line*, or *only paid and over 5,000*.
+> [!TIP]
+> Insert → Chart, then type into its ask field: *median*, *by month of day, as a line*, or *only paid and over 5,000*. Or tap any coloured word in the chart's title.
 
 The smallest app is one file (trimmed from `examples/hello/app.mojo`):
 
@@ -201,7 +211,7 @@ struct Main(App):
 
 `scripts/build.sh hello all` turns it into a GTK app, a web app, a Mac app and an iPhone app; `scripts/build.sh hello android` makes the APK.
 
-## Read more
+## 📚 Read more
 
 - **[Reference](docs/reference.md):** the app model, every component, layout, the GPU canvas, the examples.
 - **[How it works](docs/architecture.md):** the view tree, the update loop, how each platform is reached.
@@ -212,6 +222,6 @@ struct Main(App):
 - **[The long view](ROADMAP.md):** the original vision.
 - **[Gallery](https://abhisheksreesaila.github.io/mxapp/gallery/):** the earlier showcases (analytics, the Workbook, the Data Lens).
 
-## License
+## ⚖️ License
 
 MIT: see [LICENSE](LICENSE). Vendored third-party files keep their own licences: HTMX (BSD 0-Clause) and Lucide icons (ISC), in `mojoui/hosts/static/`.
