@@ -12,7 +12,7 @@
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/licence-MIT-2ea44f"></a>
   <img alt="Mojo 1.1" src="https://img.shields.io/badge/Mojo-1.1-ff5f1f">
   <img alt="Linux · Web · Android · Mac · iPhone · Agent" src="https://img.shields.io/badge/hosts-Linux%20%C2%B7%20Web%20%C2%B7%20Android%20%C2%B7%20Mac%20%C2%B7%20iPhone%20%C2%B7%20Agent-4f46e5">
-  <img alt="Experiment" src="https://img.shields.io/badge/status-public%20alpha-c8243f">
+  <img alt="Public alpha" src="https://img.shields.io/badge/status-public%20alpha-c8243f">
 </p>
 
 <p align="center">
@@ -45,17 +45,17 @@ That's **omxapp**. Its showcase, **omxplorer**, is a data app in the spirit of N
 
 This started on **14 October 2026** as a question: could an app developer, someone from Python and the web rather than systems programming, write native apps for every platform in [Mojo](https://www.modular.com/mojo)?
 
-Seven days later:
+One week in:
 
 | | |
 |---|---|
-| **29** goals | each with a written contract, acceptance checks and a report |
-| **260+** commits | one passing milestone at a time |
+| **29** goals | each with a written contract and acceptance checks a script runs |
+| **260** commits | one passing milestone at a time |
 | **270** decisions | each written down with its reason and whether it can be undone ([docs/decisions.md](docs/decisions.md)) |
 | **~21,000** lines | of Mojo in the framework and its themes (`mojoui/`, `themes/`), plus a small Python web host, the agent host and one 78-line Java file |
 | **6** hosts | GTK, the web, Android, AppKit, UIKit, and an agent over MCP |
 
-It was built in the open, by one app developer working with an AI pair programmer (Claude Code) on autopilot. Every claim on this page comes from a script that checks it: `scripts/check` rebuilds everything and re-proves every goal since the first. When something only builds and hasn't run, this page says so.
+It was built in the open, by one app developer working with an AI pair programmer (Claude Code) on autopilot. Every number on this page comes from a script that measures it: `scripts/check` rebuilds everything and re-proves every goal since the first. When something only builds and hasn't run, this page says so.
 
 ## What it feels like
 
@@ -86,7 +86,7 @@ Most apps meet AI agents through the screen: screenshots, pixel coordinates, an 
 
 The view tree that GTK turns into widgets and the web turns into HTML, the agent host turns into **tools** ([docs/agent.md](docs/agent.md)):
 
-- **No per-app work.** A button's tag names its tool, its tooltip describes it, and tapping it is calling it. A menu item becomes `file-save`. A text field becomes a tool that takes `text`. Every app built with omxapp is an MCP server already.
+- **No per-app work.** A button's tag names its tool, its tooltip describes it, and tapping it is calling it. A menu item becomes `file-save`. A text field becomes a tool that takes `text`. Every app built with omxapp is an MCP server already (29 components are proven through the agent so far; the matrix below has the rest).
 - **An agent can do nothing a person couldn't.** A disabled button is no tool. A dialog's buttons are tools only while it is open. The screen is the permission model.
 - **It gets back what changed, in words.** It doesn't have to compare two screenshots. Each call returns the new texts, what opened or closed, and the tools that appeared or went.
 - **It reads, not just clicks.** `read` gives the screen's text grouped by area, or a grid's rows as tab-separated text. `render` gives a drawn view as a PNG for agents that can see.
@@ -117,7 +117,7 @@ scripts/agent.sh omxplorer     # prints: claude mcp add omxplorer -- pixi run py
 
 The charts speak an agent's language too. They are [Flint](https://microsoft.github.io/flint-chart/) specs, the chart format Microsoft designed for AI agents. omxapp draws them natively, and the same specs run through Flint's own renderer as a cross-check.
 
-**What the agent can't do yet:** read a chart's figures as text (it reads the sentence and can `render` the picture), drag objects on a page, or generate new UI. Generated UI over AG-UI is next, built on the same operations log.
+**What the agent can't do yet:** read a chart's figures as text (it reads the sentence and can `render` the picture), read a drawn grid's cells in apps other than omxplorer, drag objects on a page, or generate new UI. Generated UI over AG-UI is next, built on the same operations log.
 
 ## Under the hood
 
@@ -129,7 +129,7 @@ The choices, and why each was made.
 | **The app model** | `view()` describes the screen from state; `update(event)` changes the state | The model of Elm, SwiftUI and React. Hosts compare trees and patch only what changed: after a sheet opens, an edit rebuilds at most 15 widgets. |
 | **Native controls** | GTK 4, HTML, Android views (JNI), AppKit, UIKit (via the Objective-C runtime) | The platform's own look, keyboard, text input and screen reader. Mojo calls C and Objective-C directly, with no binding generator. |
 | **Drawn views** | A **Scene**: a display list in keyed layers, replayed by each host's GPU path (GTK render nodes today) | A 1M-row grid at 2180×1074 px scrolls at **0.8 ms p95 a frame**, against 14.2 ms for painting pixels. That's 18–75× cheaper, with 0 texture uploads. Text is drawn by each platform's own engine. |
-| **Data engine** | **MX frame**, a Mojo dataframe engine on the GPU | Sum, median and p90 per group, number conditions, calendar groups. 100M rows stream from disk and open in 0.2 s at 0.27 GB peak memory. |
+| **Data engine** | **MX frame**, a Mojo dataframe engine on the GPU | Sum, median and p90 per group, number conditions, calendar groups. 100M rows (a 4 GB table) stream from disk and open in 0.2 s, never loaded whole. |
 | **Web** | The Mojo app runs in a **FastHTML** server; HTMX patches the page | One app state per tab, shared GPU data per process, and no app JavaScript. |
 | **Agent** | A hand-written **MCP** server over the same module the web serves | The view tree becomes tools; see above. |
 | **Charts** | **Flint** specs, drawn natively | One chart language for people, agents and every host. |
@@ -148,9 +148,9 @@ All on one Linux machine with an RTX 3090, and all from the checks or their benc
 | Scrolling the 1M-row grid, per frame (p95) | **0.8 ms** |
 | The Data Lens: 20M points counted and coloured, one 1080p frame | **1.5 ms** (130 ms on the CPU, same pixels) |
 | A Power BI-style dashboard re-aggregating 20M rows per click | **6–9 ms** |
-| Opening a 100M-row file, streamed | **0.2 s**, 0.27 GB peak |
+| Opening a 100M-row file, streamed | **0.2 s** |
 
-The honest edge: at 100M rows a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the UI thread is next.
+The honest edge: at 100M rows in memory a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the UI thread is next.
 
 ## Where it stands
 
