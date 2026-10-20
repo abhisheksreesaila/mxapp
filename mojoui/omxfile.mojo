@@ -13,7 +13,7 @@ from mojoui.csvio import streams
 from mojoui.json import Json, json_string
 from mojoui.numformat import ColumnFormat
 from mojoui.cellstyle import ALL_PARTS
-from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT, COMBINE_SUM, COMBINE_COUNT, ORDER_TABLE, ORDER_AZ
+from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT, COMBINE_SUM, COMBINE_COUNT, COMBINE_P90, ORDER_TABLE, ORDER_AZ
 from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_COUNT, TILE_CHART, TILE_DISTINCT, TILE_LAST
 
 comptime FORMAT = 2
@@ -77,7 +77,7 @@ def spec_json(o: SheetObject, sheet: Sheet) -> String:
 def read_spec(j: Json, node: Int, mut o: SheetObject, sheet: Sheet):
     """The keys spec_json wrote, each checked (an unknown value keeps the default)."""
     var combine = j.number(j.get(node, "combine"), COMBINE_SUM)
-    o.combine = combine if COMBINE_SUM <= combine <= COMBINE_COUNT else COMBINE_SUM
+    o.combine = combine if COMBINE_SUM <= combine <= COMBINE_P90 else COMBINE_SUM
     var order = j.number(j.get(node, "order"), ORDER_TABLE)
     o.order = order if ORDER_TABLE <= order <= ORDER_AZ else ORDER_TABLE
     o.top = max(j.number(j.get(node, "top"), 0), 0)

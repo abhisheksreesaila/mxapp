@@ -16,7 +16,7 @@
 from std.memory import ArcPointer
 from std.collections import Dict
 from mxframe import float_text
-from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of, count_distinct, median,
+from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of, count_distinct, median, percentile,
                      AUTO as MX_AUTO, GPU as MX_GPU, CPU as MX_CPU, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL, DATE as MX_DATE,
                      gpu_available, ParquetScan)
 from mojoui.datagrid import GridSource
@@ -620,6 +620,23 @@ struct Sheet(Movable, GridSource):
             q = q^.where(filter.value().copy())
         var r = q^.agg(median(col(self.name(c)))).compute(MX_CPU)  # (CPU only in the package)
         return (Int64(r.values(0)[0]), r.present(0, 0))
+
+    def group_median(self, c: Int, key: Expr, groups: Int, p: Float64 = -1.0, filter: Optional[Expr] = None) raises -> Tuple[List[Int], List[Bool]]:
+        """Per group of `key` (0 … groups-1): the median of number column c (p < 0: interpolated, at the column's scale
+        plus one place, as `median`) or its value at fraction p (0–1: DuckDB's quantile_disc, a value of the column, at
+        its scale); and whether the group has a value. Exact, on the CPU (the engine's holistic aggregates)."""
+        if self.scan:
+            self.fits(self.rows() * MEDIAN_BYTES, "the median of " + self.name(c))
+        var q = self.query()
+        if filter:
+            q = q^.where(filter.value().copy())
+        q = q^.group_by(key.copy(), groups)
+        var r = q^.agg(median(col(self.name(c))) if p < 0 else percentile(col(self.name(c)), p)).compute(MX_CPU)
+        var vals = r.values(0)
+        var present = List[Bool]()
+        for g in range(groups):
+            present.append(r.present(0, g))
+        return (vals^, present^)
 
     def format_median(self, c: Int, m: Int64) -> String:
         """A median (one place finer than the column) as the column shows its values: its own places, rounded half away

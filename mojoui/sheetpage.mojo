@@ -22,7 +22,9 @@ comptime SENTENCE_H = 52  # a chart's title bar when its title is its sentence (
 comptime COMBINE_SUM = 0
 comptime COMBINE_AVERAGE = 1
 comptime COMBINE_COUNT = 2  # (rows: the value column doesn't matter)
-comptime COMBINES: List[String] = ["Sum", "Average", "Count"]
+comptime COMBINE_MEDIAN = 3  # (the engine's interpolated median, one place finer than the column)
+comptime COMBINE_P90 = 4  # (the 90th percentile: a value of the column, quantile_disc)
+comptime COMBINES: List[String] = ["Sum", "Average", "Count", "Median", "p90"]
 comptime ORDER_TABLE = 0  # (the groups in the data's own order: how its dictionary stores them)
 comptime ORDER_LARGEST = 1
 comptime ORDER_SMALLEST = 2
@@ -55,6 +57,8 @@ struct SheetObject(Copyable, Movable):
     var counts: List[Int]  # (computed) how many rows fell in each
     var present: List[Int]  # (computed) charts: how many of them have a value (an average divides by this)
     var values: List[Float64]  # (computed) charts: what each bar shows, in the column's own units (a count: rows)
+    var stats: List[Int]  # (computed) charts: a median or percentile per group (stored units; a median one place finer), and whether it has one
+    var has_stat: List[Bool]
     var milliseconds: Float64
     var was_labels: List[String]  # charts: what it showed before its last change, and how many frames it has moved since
     var was_values: List[Float64]
@@ -63,13 +67,13 @@ struct SheetObject(Copyable, Movable):
     @staticmethod
     def chart(value: Int, group: Int, x: Int, y: Int, w: Int = 520, h: Int = 320) -> SheetObject:
         return SheetObject(OBJ_CHART, x, y, w, h, value, group, -1, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0,
-                           List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), 0,
+                           List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), List[Int](), List[Bool](), 0,
                            List[String](), List[Float64](), MOVE_FRAMES)
 
     @staticmethod
     def pivot(value: Int, rows: Int, across: Int, x: Int, y: Int, w: Int = 640, h: Int = 320) -> SheetObject:
         return SheetObject(OBJ_PIVOT, x, y, w, h, value, rows, across, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0,
-                           List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), 0,
+                           List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), List[Int](), List[Bool](), 0,
                            List[String](), List[Float64](), MOVE_FRAMES)
 
 
@@ -137,11 +141,19 @@ def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) r
         obj.sums = by_row.sums.copy()
         obj.counts = by_row.counts.copy()
         obj.present = by_row.present.copy()
+        obj.stats = List[Int]()
+        obj.has_stat = List[Bool]()
+        if obj.combine == COMBINE_MEDIAN or obj.combine == COMBINE_P90:
+            var st = sheet.group_median(obj.value, col(sheet.name(obj.group)), ng, -1.0 if obj.combine == COMBINE_MEDIAN else 0.9, cond)
+            obj.stats = st[0].copy()
+            obj.has_stat = st[1].copy()
         if blank_row:
             obj.labels.append(BLANK)
             obj.sums.append(all.sums[0] - total_of(by_row.sums))
             obj.counts.append(all.counts[0] - total_of(by_row.counts))
             obj.present.append(all.present[0] - total_of(by_row.present))
+            obj.stats.append(0)  # ("(blank)": its rows have no group key to gather by: no median for it yet)
+            obj.has_stat.append(False)
         obj.milliseconds = all.milliseconds + by_row.milliseconds
         shape(obj, sheet)
         obj.selected = -1
@@ -174,11 +186,27 @@ def shown_value(obj: SheetObject, sheet: Sheet, k: Int) -> Float64:
     if obj.combine == COMBINE_AVERAGE:
         var n = obj.present[k] if k < len(obj.present) else 0
         return Float64(obj.sums[k]) / Float64(n) / scale if n > 0 else 0.0
+    if obj.combine == COMBINE_MEDIAN or obj.combine == COMBINE_P90:
+        if k >= len(obj.has_stat) or not obj.has_stat[k]:
+            return 0.0
+        return Float64(obj.stats[k]) / (scale * 10.0 if obj.combine == COMBINE_MEDIAN else scale)
     return Float64(obj.sums[k]) / scale
 
 
+def has_value(obj: SheetObject, k: Int) -> Bool:
+    """Whether group k has a figure at all (an average or a median of no values hasn't: "—")."""
+    if obj.combine == COMBINE_MEDIAN or obj.combine == COMBINE_P90:
+        return k < len(obj.has_stat) and obj.has_stat[k]
+    if obj.combine == COMBINE_AVERAGE:
+        return k < len(obj.present) and obj.present[k] > 0
+    return True
+
+
 def before(obj: SheetObject, a: Int, b: Int) -> Bool:
-    """Whether group a comes before group b in the chart's order (ties: in data order)."""
+    """Whether group a comes before group b in the chart's order (ties: in data order); a group with no figure goes
+    last in every sorted order (it isn't the smallest: it has none)."""
+    if obj.order != ORDER_TABLE and has_value(obj, a) != has_value(obj, b):
+        return has_value(obj, a)
     if obj.order == ORDER_LARGEST and obj.values[a] != obj.values[b]:
         return obj.values[a] > obj.values[b]
     if obj.order == ORDER_SMALLEST and obj.values[a] != obj.values[b]:
@@ -239,8 +267,13 @@ def shape(mut obj: SheetObject, sheet: Sheet):
     var counts = List[Int]()
     var present = List[Int]()
     var values = List[Float64]()
+    var stats = List[Int]()
+    var has_stat = List[Bool]()
     for k in range(keep):
         var g = idx[k]
+        if g < len(obj.stats):
+            stats.append(obj.stats[g])
+            has_stat.append(obj.has_stat[g])
         labels.append(obj.labels[g])
         sums.append(obj.sums[g])
         counts.append(obj.counts[g])
@@ -251,6 +284,8 @@ def shape(mut obj: SheetObject, sheet: Sheet):
     obj.counts = counts^
     obj.present = present^
     obj.values = values^
+    obj.stats = stats^
+    obj.has_stat = has_stat^
 
 
 def value_text(obj: SheetObject, sheet: Sheet, k: Int) -> String:
@@ -261,6 +296,10 @@ def value_text(obj: SheetObject, sheet: Sheet, k: Int) -> String:
     if obj.combine == COMBINE_AVERAGE:
         var n = obj.present[k] if k < len(obj.present) else 0
         return sheet.format_average(obj.value, obj.sums[k], n) if n > 0 else String("—")  # (no values: no average, not 0)
+    if obj.combine == COMBINE_MEDIAN or obj.combine == COMBINE_P90:
+        if k >= len(obj.has_stat) or not obj.has_stat[k]:
+            return String("—")
+        return sheet.format_median(obj.value, Int64(obj.stats[k])) if obj.combine == COMBINE_MEDIAN else sheet.format_value(obj.value, Int64(obj.stats[k]), total=True)
     return sheet.format_value(obj.value, Int64(obj.sums[k]), total=True)
 
 
@@ -459,7 +498,8 @@ def object_title(obj: SheetObject, sheet: Sheet) -> String:
         return sheet.name(obj.value) + " · " + sheet.name(obj.group) + (" × " + sheet.name(obj.across) if obj.across >= 0 else "")
     if obj.combine == COMBINE_COUNT:
         return "rows by " + sheet.name(obj.group)
-    return ("average " if obj.combine == COMBINE_AVERAGE else "") + sheet.name(obj.value) + " by " + sheet.name(obj.group)
+    var how = "average " if obj.combine == COMBINE_AVERAGE else ("median " if obj.combine == COMBINE_MEDIAN else ("p90 " if obj.combine == COMBINE_P90 else ""))
+    return how + sheet.name(obj.value) + " by " + sheet.name(obj.group)
 
 
 def start_move(mut obj: SheetObject, before: SheetObject):
@@ -500,7 +540,8 @@ def chart_view(obj: SheetObject, sheet: Sheet) -> ChartView:
 def chart_text(obj: SheetObject, sheet: Sheet) -> String:
     """The chart's numbers as tab-separated text (its group column, the value column; a line per bar or point, in
     the value column's format): what an agent reads (App.describe, D-163)."""
-    var out = sheet.name(obj.group) + "\t" + (sheet.name(obj.value) if obj.combine == COMBINE_SUM else (("average " + sheet.name(obj.value)) if obj.combine == COMBINE_AVERAGE else "rows"))
+    var how = ["", "average ", "", "median ", "p90 "]
+    var out = sheet.name(obj.group) + "\t" + ("rows" if obj.combine == COMBINE_COUNT else how[obj.combine] + sheet.name(obj.value))
     for k in range(min(len(obj.labels), len(obj.sums))):
         out += "\n" + obj.labels[k] + "\t" + value_text(obj, sheet, k)
     return out

@@ -7,7 +7,7 @@
 #   var said = ask(chart, sheet, "top 3, unpaid, as a line")   # said.understood, said.skipped, said.changed (slots)
 
 from mojoui.sheet import Sheet, TEXT, BOOL
-from mojoui.sheetpage import (SheetObject, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT, ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ,
+from mojoui.sheetpage import (SheetObject, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT, COMBINE_MEDIAN, COMBINE_P90, ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ,
                               CHART_BAR, CHART_LINE, SLOT_COMBINE, SLOT_VALUE, SLOT_GROUP, SLOT_ORDER, SLOT_TOP, SLOT_FILTER, SLOT_MARK,
                               FILTER_WORDS, SLOTS, number_columns, text_columns, slot_text)
 
@@ -224,6 +224,14 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
             took = 1
             what = "average"
             mark(said, SLOT_COMBINE)
+        elif one == "median" or one == "middle":
+            spec.combine = COMBINE_MEDIAN
+            took = 1
+            what = "median"
+        elif one == "p90" or three == "90th percentile" or one == "percentile" or two == "90th percentile":
+            spec.combine = COMBINE_P90
+            took = 3 if three == "90th percentile" else (2 if two == "90th percentile" else 1)
+            what = "p90"
         elif one == "count" or two == "how many" or two == "number of" or one == "rows":
             spec.combine = COMBINE_COUNT
             took = 2 if two == "how many" or two == "number of" else 1
