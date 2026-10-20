@@ -119,32 +119,32 @@ flowchart TB
     A --> I["📱 UIKit"]:::host
     A --> G["🧠 Agent · MCP tools"]:::agent
     A -. "same language" .-> K["⚡ GPU · MX frame"]:::gpu
-    classDef app fill:#4f46e5,stroke:#3730a3,color:#ffffff
-    classDef host fill:#eef2ff,stroke:#a5b4fc,color:#1e1b4b
-    classDef agent fill:#0e7a43,stroke:#065f46,color:#ffffff
-    classDef gpu fill:#c8243f,stroke:#9f1239,color:#ffffff
+    classDef app fill:#0e7c86,stroke:#0b6870,color:#ffffff
+    classDef host fill:#f6f8fb,stroke:#c9ced6,color:#1b1f24
+    classDef agent fill:#f6f8fb,stroke:#0e7c86,color:#0e7c86
+    classDef gpu fill:#f6f8fb,stroke:#c9ced6,color:#1b1f24
 ```
 
 | Layer | Choice | Why |
 |---|---|---|
-| 🔥 **Language** | <img alt="Mojo" src="https://img.shields.io/badge/Mojo-ff5f1f?style=flat-square"> for the app, the UI framework and the GPU code | Reads like **Python**, compiles to **native code**, and runs the **same functions on the GPU**. One language from button to kernel. |
-| 🔁 **App model** | <img alt="view()" src="https://img.shields.io/badge/view%28%29-4f46e5?style=flat-square"> <img alt="update(event)" src="https://img.shields.io/badge/update%28event%29-4f46e5?style=flat-square"> | The model of Elm, SwiftUI and React. Hosts compare trees and patch only what changed: after a sheet opens, an edit rebuilds **at most 15 widgets**. |
-| 🧩 **Native controls** | <img alt="GTK 4" src="https://img.shields.io/badge/GTK%204-4a86cf?style=flat-square&logo=gtk&logoColor=white"> <img alt="HTML" src="https://img.shields.io/badge/HTML-e34f26?style=flat-square&logo=html5&logoColor=white"> <img alt="Android views" src="https://img.shields.io/badge/Android%20views-3ddc84?style=flat-square&logo=android&logoColor=white"> <img alt="AppKit" src="https://img.shields.io/badge/AppKit-000000?style=flat-square&logo=apple&logoColor=white"> <img alt="UIKit" src="https://img.shields.io/badge/UIKit-000000?style=flat-square&logo=apple&logoColor=white"> | The platform's **own look, keyboard, text input and screen reader**. Mojo calls C and Objective-C directly, with no binding generator. |
-| 🎨 **Drawn views** | <img alt="Scene" src="https://img.shields.io/badge/Scene-0e7a43?style=flat-square"> a display list in keyed layers, replayed as GPU render nodes (GTK today) | <img alt="scroll 0.8 ms p95" src="https://img.shields.io/badge/scroll-0.8%20ms%20p95-0e7a43?style=flat-square"> <img alt="vs pixels 14.2 ms" src="https://img.shields.io/badge/vs%20pixels-14.2%20ms-64748b?style=flat-square"> <img alt="cheaper 18–75×" src="https://img.shields.io/badge/cheaper-18%E2%80%9375%C3%97-0e7a43?style=flat-square"><br>A 1M-row grid at 2180×1074 px, **0 texture uploads**; text drawn by each platform's own engine. |
-| 🗄️ **Data engine** | <img alt="MX frame" src="https://img.shields.io/badge/MX%20frame-c8243f?style=flat-square"> a Mojo dataframe engine on the GPU | <img alt="100M rows open in 0.2 s" src="https://img.shields.io/badge/100M%20rows-open%20in%200.2%20s-c8243f?style=flat-square"><br>Sum, **median and p90** per group, number conditions, calendar groups; a 4 GB table streams from disk, never loaded whole. |
-| 🌐 **Web** | <img alt="FastHTML" src="https://img.shields.io/badge/FastHTML-0f6cbd?style=flat-square&logo=python&logoColor=white"> <img alt="HTMX" src="https://img.shields.io/badge/HTMX-3366cc?style=flat-square"> | The Mojo app runs in the server; **one app state per tab**, shared GPU data per process, and **no app JavaScript**. |
-| 🤖 **Agent** | <img alt="MCP" src="https://img.shields.io/badge/MCP-0e7a43?style=flat-square"> over the same module the web serves | The view tree **becomes tools**: no per-app work; see above. |
-| 📊 **Charts** | <img alt="Flint" src="https://img.shields.io/badge/Flint-4f46e5?style=flat-square"> specs, drawn natively | **One chart language** for people, agents and every host. |
-| 🖌️ **Looks** | <img alt="Liquid" src="https://img.shields.io/badge/Liquid-4f46e5?style=flat-square"> <img alt="Ledger" src="https://img.shields.io/badge/Ledger-0e7a43?style=flat-square"> <img alt="Graphite" src="https://img.shields.io/badge/Graphite-475569?style=flat-square"> <img alt="Blueprint" src="https://img.shields.io/badge/Blueprint-0f6cbd?style=flat-square"> <img alt="Fluent" src="https://img.shields.io/badge/Fluent-0078d4?style=flat-square"> <img alt="Omarchy" src="https://img.shields.io/badge/Omarchy-7c3aed?style=flat-square"> <img alt="Paper" src="https://img.shields.io/badge/Paper-a16207?style=flat-square"> | Themes are **plugins on top** (`themes/`); the framework names no theme (a check proves it). With no theme, an app looks like its platform. |
-| ✅ **Proof** | <img alt="scripts/check" src="https://img.shields.io/badge/scripts/check-0e7a43?style=flat-square"> every goal, re-run on GTK, Chromium and the Android emulator | Results **compared with pyarrow**, pixels diffed, **real input** used. A goal isn't done until the reviewer passes it. |
+| 🔥 **Language** | **Mojo** for the app, the UI framework and the GPU code | Reads like Python, compiles to native code, and runs the same functions on the GPU. One language from button to kernel. |
+| 🔁 **App model** | `view()` describes the screen from state; `update(event)` changes it | The model of Elm, SwiftUI and React. Hosts patch only what changed: after a sheet opens, an edit rebuilds **at most 15 widgets**. |
+| 🧩 **Native controls** | GTK 4 · HTML · Android views · AppKit · UIKit | The platform's own look, keyboard, text input and screen reader. Mojo calls C and Objective-C directly, with no binding generator. |
+| 🎨 **Drawn views** | A **Scene**: a display list in keyed layers, replayed as GPU render nodes (GTK today) | A 1M-row grid at 2180×1074 px scrolls at **0.8 ms p95 a frame**, against 14.2 ms for painted pixels: 18–75× cheaper, 0 texture uploads. |
+| 🗄️ **Data engine** | **MX frame**, a Mojo dataframe engine on the GPU | Sum, median and p90 per group, number conditions, calendar groups. **100M rows** (a 4 GB table) stream from disk and **open in 0.2 s**. |
+| 🌐 **Web** | **FastHTML** server; HTMX patches the page | One app state per tab, shared GPU data per process, no app JavaScript. |
+| 🤖 **Agent** | A hand-written **MCP** server over the same module the web serves | The view tree becomes tools; see above. |
+| 📊 **Charts** | **Flint** specs, drawn natively | One chart language for people, agents and every host. |
+| 🖌️ **Looks** | Themes as plugins (`themes/`): Liquid, Ledger, Graphite, Blueprint, Fluent, Omarchy, Paper | The framework names no theme (a check proves it). With no theme, an app looks like its platform. |
+| ✅ **Proof** | `scripts/check`: every goal, re-run on GTK, in Chromium and on the Android emulator | Results compared with pyarrow, pixels diffed, real input used. A goal isn't done until the reviewer passes it. |
 
 ### ⚡ Measured
 
 <p>
-  <img alt="1M-row chart 0.6 ms" src="https://img.shields.io/badge/1M--row%20chart-0.6%20ms-4f46e5?style=for-the-badge">
-  <img alt="grid scroll 0.8 ms a frame" src="https://img.shields.io/badge/grid%20scroll-0.8%20ms%20a%20frame-0e7a43?style=for-the-badge">
-  <img alt="20M points 1.5 ms" src="https://img.shields.io/badge/20M%20points-1.5%20ms-c8243f?style=for-the-badge">
-  <img alt="100M rows open in 0.2 s" src="https://img.shields.io/badge/100M%20rows-open%20in%200.2%20s-0f6cbd?style=for-the-badge">
+  <img alt="1M-row chart 0.6 ms" src="https://img.shields.io/badge/1M--row%20chart-0.6%20ms-0e7c86?style=for-the-badge">
+  <img alt="grid scroll 0.8 ms a frame" src="https://img.shields.io/badge/grid%20scroll-0.8%20ms%20a%20frame-0e7c86?style=for-the-badge">
+  <img alt="20M points 1.5 ms" src="https://img.shields.io/badge/20M%20points-1.5%20ms-0e7c86?style=for-the-badge">
+  <img alt="100M rows open in 0.2 s" src="https://img.shields.io/badge/100M%20rows-open%20in%200.2%20s-0e7c86?style=for-the-badge">
 </p>
 
 All on one Linux machine with an RTX 3090, and all from the checks or their benchmarks.
