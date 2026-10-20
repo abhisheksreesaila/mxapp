@@ -250,7 +250,7 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         var value = j.number(j.get(o, "value"), -1)
         var group = j.number(j.get(o, "group"), -1)
         var across = j.number(j.get(o, "across"), -1)
-        var dated = kind == OBJ_CHART and 0 <= group < sheet.columns() and sheet.kind(group) == DATE and j.number(j.get(o, "part"), 0) > 0  # (a chart of a date's months)
+        var dated = kind == OBJ_CHART and 0 <= group < sheet.columns() and sheet.kind(group) == DATE and 1 <= j.number(j.get(o, "part"), 0) <= 3  # (a chart of a date's months)
         if (kind != OBJ_CHART and kind != OBJ_PIVOT) or not is_number(sheet, value) or not (is_text(sheet, group) or dated) or not (across == -1 or is_text(sheet, across)):
             continue
         var obj = SheetObject.chart(value, group, j.number(j.get(o, "x")), j.number(j.get(o, "y")), j.number(j.get(o, "w"), 520), j.number(j.get(o, "h"), 340))
@@ -268,7 +268,7 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         var col = j.number(j.get(t, "col"), -1)
         var group = j.number(j.get(t, "group"), -1)
         var column_ok = (0 <= col < sheet.columns()) if (kind == TILE_DISTINCT or kind == TILE_COUNT) else is_number(sheet, col)  # (distinct and count: any column)
-        var dated = kind == TILE_CHART and 0 <= group < sheet.columns() and sheet.kind(group) == DATE and j.number(j.get(t, "part"), 0) > 0
+        var dated = kind == TILE_CHART and 0 <= group < sheet.columns() and sheet.kind(group) == DATE and 1 <= j.number(j.get(t, "part"), 0) <= 3
         if not (TILE_SUM <= kind <= TILE_LAST) or not column_ok or (kind == TILE_CHART and not (is_text(sheet, group) or dated)):
             continue
         var tile = new_tile(kind, col, group)

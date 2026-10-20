@@ -1,3 +1,3 @@
 Goal 29: what a chart costs (best of three, engine 321870f, this machine)
-1,000,000 rows (in memory): sum by region 0.5 ms, median by region 6.6 ms, sum by month 5.8 ms
-100,000,000 rows (in memory): sum by region 45.6 ms, median by region 662.9 ms, sum by month 481.5 ms
+1,000,000 rows (in memory): sum by region 0.5 ms, median by region 6.2 ms, sum by month 5.8 ms
+100,000,000 rows (in memory): sum by region 45.7 ms, median by region 670.7 ms, sum by month 480.2 ms

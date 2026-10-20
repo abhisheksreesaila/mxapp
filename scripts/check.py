@@ -92,6 +92,10 @@ def m1():
             if abs(float(text.replace(",", "")) - want[name]) > 0.006:
                 problems.append(f"spec {k} ({how}, {order}): {name} {text} vs pyarrow {want[name]:.3f}")
         named = [n for n, _ in got if n != "(blank)"]
+        if len(named) != (min(top, len(want)) if top else len(want)) or not set(named) <= set(want):
+            problems.append(f"spec {k}: {len(named)} groups shown, want {min(top, len(want)) if top else len(want)}: {named}")
+        if order == "az" and named != sorted(named):
+            problems.append(f"spec {k}: not A to Z: {named}")
         if order == "largest" and named != sorted(named, key=lambda n: -want[n])[:len(named)]:
             problems.append(f"spec {k}: not largest first: {named}")
         if order == "smallest" and named != sorted(want, key=lambda n: want[n])[:top]:
@@ -104,8 +108,9 @@ def m1():
                                                       "in every order and with a filter; \"median\" and \"p90\" asked on GTK")
 
 
-NUMS = [("sum", ">", 5000, None, None), ("count", "<", None, 1000, None), ("mean", "between", 2000, 4000, None), ("sum", ">", 5000, None, True),
-        ("median", ">=", 5000, None, None)]
+NUMS = [("sum", ">", 5000, None, None, "amount"), ("count", "<", None, 1000, None, "amount"), ("mean", "between", 2000, 4000, None, "amount"),
+        ("sum", ">", 5000, None, True, "amount"), ("median", ">=", 5000, None, None, "amount"),
+        ("count", ">", 2500, None, None, "order"), ("count", ">=", 2500, None, None, "order"), ("sum", "<=", None, 10, None, "order")]
 
 
 def m2():
@@ -120,19 +125,23 @@ def m2():
     blocks = re.split(r"^SPEC \d+\n", out.split("END")[0], flags=re.M)[1:]
     if len(blocks) != len(NUMS):
         return False, f"{len(blocks)} charts printed: {out[-300:]}"
-    for k, (block, (how, op, lo, hi, paid)) in enumerate(zip(blocks, NUMS)):
-        keep = lambda a: a is not None and ((op == ">" and a > lo) or (op == "<" and a < hi) or (op == "between" and lo <= a <= hi) or (op == ">=" and a >= lo))
+    for k, (block, (how, op, lo, hi, paid, on)) in enumerate(zip(blocks, NUMS)):
+        keep = lambda a: a is not None and ((op == ">" and a > lo) or (op == "<" and a < hi) or (op == "between" and lo <= a <= hi) or (op == ">=" and a >= lo)
+                                            or (op == "<=" and a <= hi))
         groups = {}
         for r in rows:
             if paid is not None and r["paid"] is not paid:
                 continue
-            a = float(r["amount"]) if r["amount"] is not None else None
-            if not keep(a):
+            if not keep(float(r[on]) if r[on] is not None else None):
                 continue
-            groups.setdefault(r["region"] if r["region"] is not None else "(blank)", []).append(a)
-        for line in block.strip().split("\n")[1:]:
+            groups.setdefault(r["region"] if r["region"] is not None else "(blank)", []).append(float(r["amount"]) if r["amount"] is not None else None)
+        lines = block.strip().split("\n")[1:]
+        shown = {l.split("\t")[0] for l in lines}
+        if set(g for g in groups if g != "(blank)") - shown:
+            problems.append(f"spec {k}: groups missing {sorted(set(groups) - shown)}")
+        for line in lines:
             name, text = line.split("\t")
-            vals = groups.get(name, [])
+            vals = [v for v in groups.get(name, []) if v is not None] if how != "count" else groups.get(name, [])
             want = (sum(vals) if how == "sum" else len(vals) if how == "count" else (sum(vals) / len(vals) if vals else None) if how == "mean"
                     else stat(vals, "median"))
             if text == "—":
@@ -147,7 +156,8 @@ def m2():
     page = g25.gtk(g25.SHEET + ";tap:Chart;pause:300;tap:Rows;pause:300;select:1=Over;pause:300;enter:From=2,500;pause:400", "m2-page")[0]
     if "amount over 2,500.00" not in re.findall(r"^BUTTON: (.*)$", page, re.M):
         problems.append(f"GTK Rows page: {[b for b in re.findall(r'^BUTTON: (.*)$', page, re.M) if 'amount' in b]}")
-    return not problems, "; ".join(problems[:6]) or ("five number conditions (over, under, between, at least; with a Yes/No filter too) equal pyarrow's; "
+    return not problems, "; ".join(problems[:6]) or ("eight number conditions (over, under, between, at least, at most; on a decimal and a whole-number "
+                                                      "column, at an exact value; with a Yes/No filter too) equal pyarrow's, every group; "
                                                       "\"only paid and over 5,000\" sets both; the Rows page's Over 2,500 filters the chart (GTK)")
 
 
@@ -192,13 +202,26 @@ def m3():
         dated = [n for n in names if n != "(blank)"]
         if part == "weekday" and dated != WEEKDAYS:
             problems.append(f"spec {k}: weekdays in order {dated}")
-        if part == "month" and dated != sorted(dated, key=lambda n: (int(n.split()[1]), MONTHS.index(n.split()[0]))):
-            problems.append(f"spec {k}: months not in calendar order")
+        days = [r["day"] for r in rows if r["day"] is not None]
+        lo, hi = min(days), max(days)
+        if part == "month":
+            span = [f"{MONTHS[(lo.month - 1 + i) % 12]} {lo.year + (lo.month - 1 + i) // 12}" for i in range((hi.year - lo.year) * 12 + hi.month - lo.month + 1)]
+            if dated != span:
+                problems.append(f"spec {k}: months {dated[:3]}… not the span's {span[:3]}… ({len(dated)} vs {len(span)})")
+        if part == "quarter":
+            q0 = (lo.month - 1) // 3
+            span = [f"Q{(q0 + i) % 4 + 1} {lo.year + (q0 + i) // 4}" for i in range((hi.year - lo.year) * 4 + (hi.month - 1) // 3 - q0 + 1)]
+            if dated != span:
+                problems.append(f"spec {k}: quarters {dated} not the span's {span}")
+    err = g20.mojo_test("tests/test_calendar.mojo", "PASSED", "test_calendar", "tests")
+    if err:
+        problems.append(err)
     asked = g25.gtk(g25.SHEET + ";tap:Chart;pause:300;" + g28.ASK + "by month of day, as a line;pause:400", "m3-ask")[0]
     if not {"month of day", "a line"} <= set(re.findall(r"^BUTTON: (.*)$", asked, re.M)):
         problems.append("GTK: asking \"by month of day, as a line\" didn't group by month")
     return not problems, "; ".join(problems[:6]) or ("sum by month, count by quarter, average by weekday and median by month (paid) equal pyarrow's, "
-                                                      "in calendar order; \"by month of day, as a line\" asked on GTK")
+                                                      "every month and quarter of the span, in calendar order; before 1970, across a year's end and centuries away "
+                                                      "(tests/test_calendar.mojo); \"by month of day, as a line\" asked on GTK")
 
 
 def m4():
@@ -224,8 +247,8 @@ def m4():
             problems.append(f"at {rows:,} rows a chart took {max(s, med, mon):.1f} ms (want ≤ 16: one frame)")
     (ROOT / "docs/goals/29").mkdir(parents=True, exist_ok=True)
     (ROOT / "docs/goals/29/bench.txt").write_text("Goal 29: what a chart costs (best of three, engine 321870f, this machine)\n" + "\n".join(lines) + "\n")
-    if not lines:
-        problems.append("no bench ran")
+    if not any(l.startswith("1,000,000 rows") for l in lines):
+        problems.append("the 1M-row bench didn't run (build/data/orders_1m.csv)")
     return not problems, "; ".join(problems) or "; ".join(lines) + " (docs/goals/29/bench.txt)"
 
 

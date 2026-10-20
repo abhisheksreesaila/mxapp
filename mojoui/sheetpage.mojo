@@ -271,7 +271,7 @@ def has_value(obj: SheetObject, k: Int) -> Bool:
 def before(obj: SheetObject, a: Int, b: Int) -> Bool:
     """Whether group a comes before group b in the chart's order (ties: in data order); a group with no figure goes
     last in every sorted order (it isn't the smallest: it has none)."""
-    if obj.order != ORDER_TABLE and has_value(obj, a) != has_value(obj, b):
+    if (obj.order == ORDER_LARGEST or obj.order == ORDER_SMALLEST) and has_value(obj, a) != has_value(obj, b):  # (A to Z reads names, not figures)
         return has_value(obj, a)
     if obj.order == ORDER_LARGEST and obj.values[a] != obj.values[b]:
         return obj.values[a] > obj.values[b]

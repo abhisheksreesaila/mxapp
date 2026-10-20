@@ -55,20 +55,30 @@ def is_digit(c: String) -> Bool:
 
 
 def amount_of(word: String, sheet: Sheet, c: Int) -> Optional[Int]:
-    """A number the person typed ("1,000", "$1,000", "2.5", "1k", "2m") in column c's stored units; none if it isn't one."""
+    """A number the person typed ("1,000", "$1,000", "2.5", "1k", "1.5m") in column c's stored units, exactly; none if it
+    isn't one, or if it has more places than the column keeps (2.5 on a whole-number column: not rounded behind
+    their back)."""
     var t = word
-    var times = 1
+    var extra = 0
     if t.endswith("k") or t.endswith("m"):
-        times = 1000 if t.endswith("k") else 1000000
+        extra = 3 if t.endswith("k") else 6
         var digits = String(t[byte = : t.byte_length() - 1])
         t = digits
     if t == "" or not (is_digit(String(t[byte=0:1])) or t.startswith("$") or t.startswith("-")):
         return None
+    var scale = sheet.scale(c) if sheet.kind(c) == DECIMAL else 0
     try:
-        var v = parse_decimal(t, sheet.scale(c) if sheet.kind(c) == DECIMAL else 0)
-        return Int(v) * times
+        var fine = parse_decimal(t, scale + extra + 6)  # (six more places than needed: a fraction the column can't keep shows)
+        var unit = Int64(10) ** Int64(6)
+        if fine % unit != 0:
+            return None
+        return Int(fine // unit)
     except:
         return None
+
+
+def is_comparison(w: String) -> Bool:
+    return w == "over" or w == "above" or w == "under" or w == "below" or w == "between" or w == ">" or w == "<" or w == ">=" or w == "<="
 
 
 def number_condition(mut spec: SheetObject, sheet: Sheet, c: Int, w: List[String], i: Int) -> Int:
@@ -184,6 +194,11 @@ def table_word(mut spec: SheetObject, sheet: Sheet, w: List[String], i: Int, mut
                     what = number_words(spec, sheet)
                     matched = True
                     break
+                if at + n < len(w) and is_comparison(w[at + n]):  # ("qty under 2.5" on whole numbers: the whole condition is skipped)
+                    took = n + 2 if at + n + 1 < len(w) else n + 1
+                    what = ""
+                    matched = True
+                    break
                 spec.value = c
                 if spec.combine == COMBINE_COUNT:
                     spec.combine = COMBINE_SUM
@@ -239,6 +254,7 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
     var spec = obj.copy()
     var i = 0
     var top_said = False
+    var number_said = False
     var order_said = False
     while i < len(w):
         var took = 0
@@ -247,7 +263,24 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
         var two = joined(w, i, 2)
         var three = joined(w, i, 3)
         var table = table_word(spec, sheet, w, i, said)
+        var before_num = (spec.num_col, spec.num_op, spec.num_lo, spec.num_hi)
         var cmp = number_condition(spec, sheet, spec.value, w, i) if table[0] == 0 else 0  # ("over 1,000": on the chart's value)
+        if cmp > 0 and number_said:  # (one number condition a chart: a second in the same phrase is skipped, said so)
+            spec.num_col = before_num[0]
+            spec.num_op = before_num[1]
+            spec.num_lo = before_num[2]
+            spec.num_hi = before_num[3]
+            for k in range(cmp):
+                said.skipped.append(w[i + k])
+            i += cmp
+            continue
+        if cmp > 0:
+            number_said = True
+        if table[0] > 0 and table[1] == "":  # (words it recognised but couldn't use: said as skipped)
+            for k in range(table[0]):
+                said.skipped.append(w[i + k])
+            i += table[0]
+            continue
         if table[0] > 0:
             took = table[0]
             what = table[1]
@@ -317,9 +350,9 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
             spec.combine = COMBINE_MEDIAN
             took = 1
             what = "median"
-        elif one == "p90" or three == "90th percentile" or one == "percentile" or two == "90th percentile":
+        elif one == "p90" or two == "90th percentile":
             spec.combine = COMBINE_P90
-            took = 3 if three == "90th percentile" else (2 if two == "90th percentile" else 1)
+            took = 2 if two == "90th percentile" else 1
             what = "p90"
         elif one == "count" or two == "how many" or two == "number of" or one == "rows":
             spec.combine = COMBINE_COUNT

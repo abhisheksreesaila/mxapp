@@ -145,4 +145,37 @@ def main() raises:
     assert_equal(chart_sentence(months, s), base, "by region after by month: the region's values again")
     check("median", s, "Median of amount by region, in data order, every region, every row, as bars")
     check("90th percentile", s, "p90 of amount by region, in data order, every region, every row, as bars")
+    # review round 1 (goal 29): exact amounts, strict words, one number condition, the choice lists
+    check("qty under 2.5", s, base)  # (2.5 on a whole-number column: skipped, not rounded)
+    var frac = fresh()
+    var rf = ask(frac, s, "qty under 2.5")
+    assert_true(len(rf.skipped) > 0, "a fraction on a whole-number column is skipped")
+    check("over 1.5k", s, "Sum of amount by region, in data order, every region, amount over 1,500.00, as bars")
+    check("p95", s, base)  # (only p90 is offered: p95 isn't silently p90)
+    var two = fresh()
+    var r5 = ask(two, s, "over 5, under 10")
+    assert_equal(slot_text(two, s, SLOT_FILTER), "amount over 5.00")
+    assert_true("under" in r5.skipped, "a second number condition is skipped and said")
+    from mojoui.sheetpage import SLOT_GROUP, SLOT_TOP, PART_WEEKDAY
+    var g = fresh()
+    var groups = chart_choices(g, s, SLOT_GROUP)  # (text columns, then each date column's month, quarter, weekday)
+    var at = -1
+    for k in range(len(groups)):
+        if groups[k] == "weekday of day":
+            at = k
+    assert_true(at >= 0, "the group choices offer the date's weekday")
+    _ = apply_choice(g, s, SLOT_GROUP, at)
+    assert_true(g.part == PART_WEEKDAY and s.name(g.group) == "day")
+    assert_equal(groups[chosen(g, s, SLOT_GROUP)], "weekday of day")
+    assert_equal(chart_choices(g, s, SLOT_TOP)[0], "every weekday")
+    var anyc = fresh()
+    _ = ask(anyc, s, "only bolt, over 9")
+    var rows = chart_choices(anyc, s, SLOT_FILTER)
+    assert_equal(rows[chosen(anyc, s, SLOT_FILTER)], "only Bolt, amount over 9.00", "the combined filter is listed and marked")
+    var any_at = -1
+    for k in range(len(rows)):
+        if rows[k] == "any amount":
+            any_at = k
+    _ = apply_choice(anyc, s, SLOT_FILTER, any_at)
+    assert_equal(slot_text(anyc, s, SLOT_FILTER), "only Bolt", "any amount clears the number condition only")
     print("CHARTASK TESTS PASSED")

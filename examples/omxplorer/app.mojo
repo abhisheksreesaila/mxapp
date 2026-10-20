@@ -80,7 +80,7 @@ from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_
                               CHART_BAR, CHART_LINE, HEADER_H, chart_words, chart_choices, apply_choice, chosen, chart_sentence, SLOT_NAMES, slot_text,
                               number_columns, text_columns, COMBINES, ORDERS, TOPS, SLOT_COMBINE, SLOT_VALUE, SLOT_GROUP, SLOT_ORDER, SLOT_TOP,
                               SLOT_FILTER, SLOT_MARK, COMBINE_COUNT, start_move, MOVE_FRAMES, NUM_ANY, NUM_OVER, NUM_UNDER, NUM_BETWEEN,
-                              NUM_AT_LEAST, NUM_AT_MOST, number_words)
+                              NUM_AT_LEAST, NUM_AT_MOST, number_words, PART_NONE)
 from mojoui.numformat import parse_decimal
 from mojoui.sentence import Sentence
 from mojoui.chartask import ask, ask_reply
@@ -742,10 +742,10 @@ struct Main(App):
         if c < 0:
             return ""
         for o in self.objects:
-            if o.value == c or o.group == c or o.across == c:
+            if o.value == c or o.group == c or o.across == c or (o.kind == OBJ_CHART and (o.only_col == c or o.num_col == c)):
                 return "a chart" if o.kind == OBJ_CHART else "a pivot"
         for t in self.tiles:
-            if t.col == c or (t.kind == TILE_CHART and t.group == c):
+            if t.col == c or (t.kind == TILE_CHART and (t.group == c or t.chart.only_col == c or t.chart.num_col == c)):
                 return "a Report tile"
         if self.filter.col == c:
             return "the Report's filter"
@@ -1233,6 +1233,7 @@ struct Main(App):
                     o.value = nums[event.number]
                 elif m == OBJ_GROUP and 0 <= event.number < len(texts):
                     o.group = texts[event.number]
+                    o.part = PART_NONE  # (a text column's values, not a date's months)
                 elif m == OBJ_ACROSS and 0 <= event.number <= len(texts):
                     o.across = texts[event.number - 1] if event.number > 0 else -1
                 o.selected = -1
@@ -1323,9 +1324,13 @@ struct Main(App):
                 var c = self.chart_of(self.asking)
                 var ncol = c.num_col if c.num_col >= 0 else c.value
                 var was = chart_sentence(c, self.frame)
-                if m == NUM_PICK and 0 <= event.number <= NUM_AT_MOST:
-                    c.num_op = event.number
-                    c.num_col = ncol if event.number != NUM_ANY else -1
+                if m == NUM_PICK:
+                    if 0 <= event.number <= NUM_AT_MOST:
+                        if c.num_col != ncol:  # (bounds are in their column's units: a new column starts from zero)
+                            c.num_lo = 0
+                            c.num_hi = 0
+                        c.num_op = event.number
+                        c.num_col = ncol if event.number != NUM_ANY else -1
                 else:
                     try:
                         var v = Int(parse_decimal(event.text, self.frame.scale(ncol) if self.frame.kind(ncol) == DECIMAL else 0))
@@ -1333,6 +1338,10 @@ struct Main(App):
                             c.num_lo = v
                         else:
                             c.num_hi = v
+                        if c.num_op == NUM_BETWEEN and c.num_lo > c.num_hi:  # (typed the wrong way round: between still means between)
+                            var lo = c.num_hi
+                            c.num_hi = c.num_lo
+                            c.num_lo = lo
                         c.num_col = ncol
                     except:
                         self.message = "Not a number: " + event.text
@@ -1845,15 +1854,13 @@ struct Main(App):
             for k in range(len(nums)):
                 if nums[k] == c.value:
                     at_value = k
-            var at_group = 0
-            for k in range(len(texts)):
-                if texts[k] == c.group:
-                    at_group = k
+            var groups = chart_choices(c, f, SLOT_GROUP)
+            var at_group = max(chosen(c, f, SLOT_GROUP), 0)
             return InspectorPage("Data", PAGE, [
                 Section("Combine", [Segmented(materialize[COMBINES](), c.combine, INSP_SET + SLOT_COMBINE).fill()]),
                 Section("Value", [Dropdown(self.names_of(nums), at_value, INSP_SET + SLOT_VALUE).fill(),
                                   Text("Count reads rows: the value doesn't matter to it" if c.combine == COMBINE_COUNT else "Numbers and formula columns", CAPTION)]),
-                Section("Group by", [Dropdown(self.names_of(texts), at_group, INSP_SET + SLOT_GROUP).fill()])])
+                Section("Group by", [Dropdown(groups, at_group, INSP_SET + SLOT_GROUP).fill()])])
         if self.insp_page == 2:
             var tops = materialize[TOPS]()
             var at_top = 0

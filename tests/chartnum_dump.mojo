@@ -18,8 +18,8 @@ def spec(combine: Int, order: Int, top: Int, only_col: Int = -1, only_code: Int 
     return o^
 
 
-def num(var o: SheetObject, op: Int, lo: Int, hi: Int) -> SheetObject:
-    o.num_col = 1  # (amount, in cents)
+def num(var o: SheetObject, op: Int, lo: Int, hi: Int, c: Int = 1) -> SheetObject:
+    o.num_col = c  # (1 amount, in cents; 0 order, a whole number)
     o.num_op = op
     o.num_lo = lo
     o.num_hi = hi
@@ -33,6 +33,8 @@ def main() raises:
         num(spec(COMBINE_SUM, ORDER_TABLE, 0), NUM_OVER, 500000, 0), num(spec(COMBINE_COUNT, ORDER_TABLE, 0), NUM_UNDER, 0, 100000),
         num(spec(COMBINE_AVERAGE, ORDER_TABLE, 0), NUM_BETWEEN, 200000, 400000), num(spec(COMBINE_SUM, ORDER_TABLE, 0, 4, 1), NUM_OVER, 500000, 0),
         num(spec(COMBINE_MEDIAN, ORDER_TABLE, 0), NUM_AT_LEAST, 500000, 0),
+        num(spec(COMBINE_COUNT, ORDER_TABLE, 0), NUM_OVER, 2500, 0, 0), num(spec(COMBINE_COUNT, ORDER_TABLE, 0), NUM_AT_LEAST, 2500, 0, 0),
+        num(spec(COMBINE_SUM, ORDER_TABLE, 0), NUM_AT_MOST, 0, 10, 0),
     ]
     for k in range(len(specs)):
         compute(specs[k], sheet)

@@ -1,21 +1,23 @@
-# GOAL 28: editing a chart, the title is the query
+# GOAL 29: charts that ask the new engine more (MX frame 321870f)
 
-**End goal (owner, 2026-10-19):** "for reports, charts can be on the inspector and a sub-inspector can have settings… we need to be creative with UI… can't ship an Excel clone, it will be rejected"; on the prototypes (docs/design/charts/): "The title is the query: ask, then tap any word is the genius!!" Decided (D-255): the chart's title is a sentence whose words are its settings (tap one, pick another); an ask field rewrites several at once; the inspector's pages hold the details; the toolbar only inserts. The ask field is a keyword matcher now; an agent (AG-UI) plugs into the same sentence later. After goal 27 (owner: "looks beautiful… I can see it's an app… continue").
+**Why:** the engine job vendored MX frame **321870f** (STABLE.md: SQL, joins, a planner, expressions, FLOAT64, median and
+quantiles per group, NULL as its own group). The chart sentence (goal 28) can now say what people ask next: "median by
+region", "p90", "by month", "amount over 1,000". Owner's bar: the best-performing dashboard, macOS polish, Linux speed,
+Windows usability; MX frame's later work (23edc59: background queries, range aggregates) folds in at a stopping point.
 
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M0 | One chart model | a chart (on the sheet or a Report tile) has: combine (sum, average, count), value, group by, order (in data order, largest first, smallest first, A to Z: D-266), top N (all, or 3, 5, 10), one filter (a text or Yes/No column's value, or every row), mark (bars, line); its numbers equal pyarrow's for 12 specs over small.parquet; a document saved with them reopens with them (and an older .omx opens unchanged) |
-| M1 | The title is a sentence | every chart's title reads its spec ("**Sum** of **amount** by **region**, **largest first**, **top 5**, **every row**, as **bars**"); each setting word is a token: tap it, a popover lists its choices (the current one marked), pick one, the chart changes; GTK and the web; a framework `Sentence` (text runs and tokens, wrapping to lines), its test |
-| M2 | Ask | a field under the selected chart's sentence takes a phrase ("top 3, unpaid, as a line"; "average by region"; "only West") and changes those settings at once; it says what it understood and what it skipped; the words that changed are marked for a moment; a phrase it can't use changes nothing; the parser is plain Mojo with ≥ 30 phrases tested |
-| M3 | Inspector pages | selecting a chart shows its inspector: the sentence, then rows that say what's set (Data, Order, Filter, Style), each opening a page with a back button; framework `InspectorPage` and `NavRow` on GTK and the web; Report chart tiles get it too |
-| M4 | Undo, and the toolbar only inserts | Undo takes back a chart change (a token, an ask: one step each), in order with table edits; Insert Chart (sheet) and Chart tile (Report) open the chart's inspector; no chart settings in any toolbar |
-| M5 | Bars move | a spec change animates the bars to their new lengths and places over ~320 ms (bars keyed by their group, the calm curve) instead of a cut; every frame in between is drawn; ≤ 3 ms a frame for a 6-bar chart |
-| M6 | With real input | scripts/live.py on GTK: click "Sum" in a chart's title, pick Average, the bars read pyarrow's means; type "top 3, as a line" and Return: the title and the line match; Undo twice brings back the first chart |
-| M7 | Nothing regressed | goal 27's checks (M0–M8; every earlier goal inside them) pass |
+| M0 | The new engine, everywhere | omxplorer and every example build for Linux, the web, Mac and iPhone on 321870f (the full check rebuilds them); its API changes hold: a FLOAT column shows its numbers; the Median tile and the inspector's median read the interpolated median right (goal 22's checks, inside M5); vendor/MXFRAME_COMMIT says 321870f |
+| M1 | Median and percentiles per group | the sentence's combine offers Median and p90 (and the ask reads "median", "p90", "90th percentile"); every group's value equals pyarrow's (median: interpolated; p90: quantile_disc) for 6 specs, in their order, with top N |
+| M2 | Numbers as filters | "amount over 1,000", "under 500", "at least", "at most", "between 100 and 200" (the ask, and the Rows page) filter a chart, on a decimal or a whole-number column; with a text or Yes/No filter too; each equals pyarrow's |
+| M3 | By month, quarter or weekday | a chart grouped by a date column's month, quarter or weekday ("by month of day"), every month of the span in calendar order, across years and before 1970 too; equals pyarrow's |
+| M4 | What a chart costs | at 1M rows a sum, a median and a month chart each fit one 60 Hz frame (16 ms); at 100M rows the times are recorded (the slow ones wait for MX frame's background queries: goal 30) |
+| M5 | Nothing regressed | goal 28's checks (M0–M7; every earlier goal inside them) |
 
-## Out of bounds (waiting on MX frame: docs/mxframe-needs.md)
-Median or percentiles per group, grouping by month or week, filters on ranges or several conditions (goal 29: MX frame 321870f has them, D-265); dragging columns onto a chart (direction 2's wells); an LLM behind the ask field; the menu-bar island (goal 30).
+## Out of bounds
+Background queries and range aggregates (MX frame 23edc59, goal 30); a "(blank)" group's median (rows without a group
+key: the engine's NULL group via SQL, later); joins and a second table; an LLM behind the ask.
 
 ## Done means
-`scripts/check` prints PASS for M0–M7; the reviewer passes it; `docs/report.md` is short with shots of a sentence being edited; pushed to `origin`.
+PASS for M0–M5, the reviewer passes it, a short `docs/report.md`; pushed to `origin` (main).

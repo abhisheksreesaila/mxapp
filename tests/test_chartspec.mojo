@@ -7,7 +7,7 @@ from mojoui.sheet import Sheet
 from mojoui.omxfile import save_omx, open_document, read_spec
 from mojoui.json import Json
 from mojoui.sheetpage import (SheetObject, compute, chart_text, readout, object_title, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT,
-                              ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ)
+                              COMBINE_MEDIAN, NUM_OVER, NUM_BETWEEN, ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ)
 from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_CHART
 from mojoui.shared import make_dir
 
@@ -90,7 +90,11 @@ def main() raises:
     var dir = String("build/test-chartspec")
     make_dir(dir)
     var path = dir + "/spec.omx"
-    var objects: List[SheetObject] = [chart(COMBINE_AVERAGE, ORDER_AZ, 3, 1, 1)]
+    var objects: List[SheetObject] = [chart(COMBINE_AVERAGE, ORDER_AZ, 3, 1, 1), chart(COMBINE_MEDIAN)]
+    objects[1].num_col = 2  # (goal 29: amount between 1.50 and 9.00)
+    objects[1].num_op = NUM_BETWEEN
+    objects[1].num_lo = 150
+    objects[1].num_hi = 900
     var tile = new_tile(TILE_CHART, 2, 0)
     tile.chart.combine = COMBINE_COUNT
     tile.chart.order = ORDER_LARGEST
@@ -101,7 +105,9 @@ def main() raises:
     var back_tiles = List[ReportTile]()
     var back_filter = ReportFilter(-1, 0)
     _ = open_document(path, back_objects, back_tiles, back_filter)
-    assert_equal(len(back_objects), 1)
+    assert_equal(len(back_objects), 2)
+    assert_true(back_objects[1].combine == COMBINE_MEDIAN and back_objects[1].num_col == 2 and back_objects[1].num_op == NUM_BETWEEN
+                and back_objects[1].num_lo == 150 and back_objects[1].num_hi == 900, "a median and a number condition kept")
     assert_equal(back_objects[0].combine, COMBINE_AVERAGE)
     assert_equal(back_objects[0].order, ORDER_AZ)
     assert_equal(back_objects[0].top, 3)
@@ -126,4 +132,16 @@ def main() raises:
     var o2 = SheetObject.chart(2, 0, 0, 0)
     read_spec(gone, 0, o2, sheet)
     assert_true(o2.combine == COMBINE_AVERAGE and o2.order == ORDER_LARGEST and o2.top == 5 and o2.only_col == -1)
+    # goal 29's keys, each checked: a combine, a month on a text column, a condition on a text column or with no such
+    # comparison: each falls back to its default, not to what the file says
+    var bad = Json.parse('{"combine": 9, "part": 1, "num_col": 0, "num_op": 2, "num_lo": 5}')
+    var o3 = SheetObject.chart(2, 0, 0, 0)
+    read_spec(bad, 0, o3, sheet)
+    assert_true(o3.combine == COMBINE_SUM and o3.part == 0 and o3.num_col == -1 and o3.num_op == 0, "bad goal 29 keys refused")
+    var bad_op = Json.parse('{"num_col": 2, "num_op": 6, "num_lo": 5}')
+    read_spec(bad_op, 0, o3, sheet)
+    assert_true(o3.num_col == -1 and o3.num_op == 0, "an unknown comparison refused")
+    var good = Json.parse('{"num_col": 2, "num_op": 1, "num_lo": 500}')
+    read_spec(good, 0, o3, sheet)
+    assert_true(o3.num_col == 2 and o3.num_op == NUM_OVER and o3.num_lo == 500)
     print("CHARTSPEC TESTS PASSED")
