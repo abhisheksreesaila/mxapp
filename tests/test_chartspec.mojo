@@ -150,4 +150,14 @@ def main() raises:
     var cv = chart_view(med, sheet)
     for k in range(len(med.labels)):
         assert_equal(cv.missing[k], med.labels[k] == "Beta" or med.labels[k] == "(blank)", med.labels[k])
+    # a part on a group that isn't a column (a corrupt or hand-edited file) is refused, not read past the columns
+    for g in [-1, 3, 99]:
+        var odd = SheetObject.chart(2, 0, 0, 0)
+        odd.group = g
+        read_spec(Json.parse('{"part": 1}'), 0, odd, sheet)
+        assert_equal(odd.part, 0, "group " + String(g))
+    # only a median or p90 keeps a stat per group; a sum with a "(blank)" group keeps none
+    var plain = chart(COMBINE_SUM)
+    compute(plain, sheet)
+    assert_true(len(plain.stats) == 0 and len(plain.has_stat) == 0 and "(blank)" in plain.labels)
     print("CHARTSPEC TESTS PASSED")

@@ -61,6 +61,21 @@ def main() raises:
     assert_true(abs(Float64(lengths[0]) / Float64(lengths[1]) - 2.0) < 0.1, "bar 0 is twice bar 1")
     save(px, w, h, "bars")
 
+    # a bar with no figure ("—") draws nothing; a zero still draws its sliver (goal 29: a median of no values)
+    var sliver = List[Int]()
+    for text in ["0", "—"]:
+        px = List[UInt32](length=w * h, fill=0)
+        s = Surface(Int(px.unsafe_ptr()), w, h, k)
+        BarChart(["Electronics", "Home", "Outdoor", "Toys"], [400.0, 0.0, 100.0, 50.0], ["$400M", String(text), "$100M", "$50M"]).draw(s, font)
+        var colour = s.get(w // 2, Int(Float64(h) * 0.5 / 4.0))  # (bar 0's own colour, mid-bar)
+        var n = 0
+        var y1 = Int(Float64(h) * 1.5 / 4.0 - 6 * k)  # (inside the bar's height, above the figure's dash)
+        for x in range(w):
+            if s.get(x, y1) == colour:
+                n += 1
+        sliver.append(n)
+    assert_true(sliver[0] > 0 and sliver[1] == 0, "a zero's sliver: " + String(sliver[0]) + ", no figure's: " + String(sliver[1]))
+
     # line: hit-test nearest month
     w = Int(560 * k)
     h = Int(240 * k)

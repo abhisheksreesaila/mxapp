@@ -89,6 +89,15 @@ struct ChartView(Copyable, Movable):
         self.was_values = values^
         self.t = t
 
+    def bar_texts(self, pal: Palette) -> List[String]:
+        """Each bar's figure as the chart's Flint spec writes it (where the bars are going, mid-move); "—" for a group
+        with no figure at all (BarChart then draws no bar for it). Lines plot such a point at 0 for now."""
+        var f = self.flint(pal)
+        var texts = List[String]()
+        for i in range(len(self.values)):
+            texts.append("—" if i < len(self.missing) and self.missing[i] else f.label("x", self.values[i]))
+        return texts^
+
     def draw(mut self, mut s: Surface, font: Font, pal: Palette):
         self.size = (s.points_width(), s.points_height())
         if self.t < 1.0 and self.kind != "Heatmap":
@@ -110,11 +119,7 @@ struct ChartView(Copyable, Movable):
                 LineChart(self.labels.copy(), now^, self.selected).with_second(self.second.copy()).with_marker(
                     self.marker, self.marker_text).numbers(self.money).themed(pal).draw(s, font)
                 return
-            var f = self.flint(pal)
-            var texts = List[String]()
-            for i in range(len(self.values)):  # (the figures say where the bars are going)
-                texts.append("—" if i < len(self.missing) and self.missing[i] else f.label("x", self.values[i]))
-            BarChart(self.labels.copy(), now^, texts^, self.selected).themed(pal).moving(places^).draw(s, font)
+            BarChart(self.labels.copy(), now^, self.bar_texts(pal), self.selected).themed(pal).moving(places^).draw(s, font)
             return
         if self.kind == "Heatmap":
             Heatmap(self.rows.copy(), self.labels.copy(), self.values.copy(), True, self.selected).themed(pal).draw(s, font)
@@ -122,11 +127,7 @@ struct ChartView(Copyable, Movable):
             LineChart(self.labels.copy(), self.values.copy(), self.selected).with_second(self.second.copy()).with_marker(
                 self.marker, self.marker_text).numbers(self.money).themed(pal).draw(s, font)
         elif True in self.missing:  # (a group with no figure: "—" and no bar, which Flint's spec can't say)
-            var f = self.flint(pal)
-            var texts = List[String]()
-            for i in range(len(self.values)):
-                texts.append("—" if i < len(self.missing) and self.missing[i] else f.label("x", self.values[i]))
-            BarChart(self.labels.copy(), self.values.copy(), texts^, self.selected).themed(pal).draw(s, font)
+            BarChart(self.labels.copy(), self.values.copy(), self.bar_texts(pal), self.selected).themed(pal).draw(s, font)
         else:
             self.flint(pal).draw(s, font, self.selected)
 

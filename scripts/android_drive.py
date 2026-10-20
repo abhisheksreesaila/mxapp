@@ -101,12 +101,17 @@ def tap(n):
 
 def landed(before, wait=2.0):
     """After a tap, wait (up to `wait` s) for the screen's texts to change, as a person waits to see a tap land
-    before the next one: on a loaded emulator, taps sent back to back went missing (goal 29's full runs)."""
+    before the next one. Why: in two of goal 29's full runs, 3 taps on hello's Greet read "click 2"; the same APK
+    gave "click 3" in every run on its own (5 of 5) and in the other chain positions of the same runs, and only the
+    full runs load the machine (GTK, web, GPU checks around it), so the lost tap is put down to the emulator, not
+    the app. It never retries a tap: a tap the app drops still fails the check. A tap that changes no text costs
+    `wait` and says so on stderr."""
     deadline = time.time() + wait
     while time.time() < deadline:
         if [n["text"] for n in nodes(dump())] != before:
             return
         time.sleep(0.2)
+    print(f"android_drive: no text changed {wait:.0f} s after a tap", file=sys.stderr)
 
 
 def field_text(n):
