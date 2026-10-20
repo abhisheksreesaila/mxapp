@@ -7,11 +7,12 @@
 #   chart.draw(surface, font, palette)                 # in draw()
 #   if chart.tap(event.x, event.y, font, palette): …   # in update(): True when the selection changed
 
+from std.collections import Dict
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
 from mojoui.flint import FlintChart
-from mojoui.charts import LineChart, Heatmap
+from mojoui.charts import LineChart, Heatmap, BarChart
 
 
 struct ChartView(Copyable, Movable):
@@ -27,6 +28,9 @@ struct ChartView(Copyable, Movable):
     var second: List[Float64]  # lines: a second series (shares 0–1)
     var marker: Int  # lines: an event's index, or -1
     var marker_text: String
+    var was_labels: List[String]  # the chart before a change, and how far it has moved to this one (1: there)
+    var was_values: List[Float64]
+    var t: Float64
 
     def __init__(out self, title: String, var labels: List[String], var values: List[Float64], value_name: String = "value",
                  money: Bool = True, selected: Int = -1):
@@ -42,6 +46,9 @@ struct ChartView(Copyable, Movable):
         self.second = List[Float64]()
         self.marker = -1
         self.marker_text = ""
+        self.was_labels = List[String]()
+        self.was_values = List[Float64]()
+        self.t = 1.0
 
     @staticmethod
     def line(title: String, var labels: List[String], var values: List[Float64], var second: List[Float64] = [],
@@ -73,13 +80,45 @@ struct ChartView(Copyable, Movable):
                 .encode("x", self.value_name).encode("y", "name").size(Int(self.size[0]), Int(self.size[1]))
                 .themed(pal))
 
+    def moving_from(mut self, var labels: List[String], var values: List[Float64], t: Float64):
+        """Draw the chart `t` of the way (0–1, already eased) from what it showed before: each bar from its group's old
+        value and row (a new group grows from nothing; a group that left is gone); a line's points from theirs."""
+        self.was_labels = labels^
+        self.was_values = values^
+        self.t = t
+
     def draw(mut self, mut s: Surface, font: Font, pal: Palette):
         self.size = (s.points_width(), s.points_height())
+        if self.t < 1.0 and self.kind != "Heatmap":
+            var now = List[Float64]()
+            var places = List[Float64]()
+            var was = Dict[String, Int]()  # (each group's old row: one look-up a bar, thousands of groups too)
+            for j in range(len(self.was_labels)):
+                was[self.was_labels[j]] = j
+            for i in range(len(self.labels)):
+                var old_v = 0.0
+                var old_i = Float64(i)
+                var j = was.get(self.labels[i], -1)
+                if j >= 0:
+                    old_v = self.was_values[j] if j < len(self.was_values) else 0.0
+                    old_i = Float64(j)
+                now.append(old_v + (self.values[i] - old_v) * self.t)
+                places.append(old_i + (Float64(i) - old_i) * self.t)
+            if self.kind == "Line Chart":
+                LineChart(self.labels.copy(), now^, self.selected).with_second(self.second.copy()).with_marker(
+                    self.marker, self.marker_text).numbers(self.money).themed(pal).draw(s, font)
+                return
+            var f = self.flint(pal)
+            var texts = List[String]()
+            for v in self.values:  # (the figures say where the bars are going)
+                texts.append(f.label("x", v))
+            BarChart(self.labels.copy(), now^, texts^, self.selected).themed(pal).moving(places^).draw(s, font)
+            return
         if self.kind == "Heatmap":
             Heatmap(self.rows.copy(), self.labels.copy(), self.values.copy(), True, self.selected).themed(pal).draw(s, font)
         elif self.kind == "Line Chart":
             LineChart(self.labels.copy(), self.values.copy(), self.selected).with_second(self.second.copy()).with_marker(
-                self.marker, self.marker_text).themed(pal).draw(s, font)
+                self.marker, self.marker_text).numbers(self.money).themed(pal).draw(s, font)
         else:
             self.flint(pal).draw(s, font, self.selected)
 
@@ -90,7 +129,7 @@ struct ChartView(Copyable, Movable):
             hit = Heatmap(self.rows.copy(), self.labels.copy(), self.values.copy()).themed(pal).hit(self.size[0], self.size[1], font, x, y)
         elif self.kind == "Line Chart":
             hit = LineChart(self.labels.copy(), self.values.copy()).with_second(self.second.copy()).with_marker(
-                self.marker, self.marker_text).themed(pal).hit(self.size[0] * 2, self.size[1] * 2, 2.0, font, x)
+                self.marker, self.marker_text).numbers(self.money).themed(pal).hit(self.size[0] * 2, self.size[1] * 2, 2.0, font, x)
         else:
             hit = self.flint(pal).hit(self.size[0], self.size[1], font, x, y)
         if hit < 0:

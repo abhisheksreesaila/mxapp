@@ -8,12 +8,12 @@
 # Format 1 (the pyarrow shim's files) is refused with a message that says so.
 
 from mxframe import write_parquet, read_parquet, scan_parquet, ParquetScan, Table, UNCOMPRESSED
-from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT
+from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT, BOOL
 from mojoui.csvio import streams
 from mojoui.json import Json, json_string
 from mojoui.numformat import ColumnFormat
 from mojoui.cellstyle import ALL_PARTS
-from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT
+from mojoui.sheetpage import SheetObject, OBJ_CHART, OBJ_PIVOT, COMBINE_SUM, COMBINE_COUNT, ORDER_TABLE, ORDER_AZ
 from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_SUM, TILE_COUNT, TILE_CHART, TILE_DISTINCT, TILE_LAST
 
 comptime FORMAT = 2
@@ -56,13 +56,43 @@ def metadata(sheet: Sheet, objects: List[SheetObject], tiles: List[ReportTile], 
         ref o = objects[k]
         meta += ("," if k > 0 else "") + ('{"kind": ' + String(o.kind) + ', "x": ' + String(o.x) + ', "y": ' + String(o.y) + ', "w": ' + String(o.w)
                                           + ', "h": ' + String(o.h) + ', "value": ' + String(o.value) + ', "group": ' + String(o.group)
-                                          + ', "across": ' + String(o.across) + ', "style": ' + String(o.style) + "}")
+                                          + ', "across": ' + String(o.across) + ', "style": ' + String(o.style) + spec_json(o, sheet) + "}")
     meta += '], "report": {"tiles": ['
     for k in range(len(tiles)):
-        meta += ("," if k > 0 else "") + '{"kind": ' + String(tiles[k].kind) + ', "col": ' + String(tiles[k].col) + ', "group": ' + String(tiles[k].group) + "}"
+        meta += ("," if k > 0 else "") + '{"kind": ' + String(tiles[k].kind) + ', "col": ' + String(tiles[k].col) + ', "group": ' + String(tiles[k].group) + spec_json(tiles[k].chart, sheet) + "}"
     meta += '], "filter": {"col": ' + String(filter.col) + ', "word": '
     meta += json_string(sheet.text_of(filter.col, Int64(filter.code)) if filter.col >= 0 else "") + "}}}"
     return meta
+
+
+def spec_json(o: SheetObject, sheet: Sheet) -> String:
+    """A chart's spec as JSON keys (goal 28; all optional: an older file has none and opens as it was). The filter keeps
+    its value as text, like the Report's, so it survives the column's codes changing."""
+    var only = String("")
+    if o.only_col >= 0:
+        only = ', "only_col": ' + String(o.only_col) + ', "only_word": ' + json_string(sheet.text_of(o.only_col, Int64(o.only_code)) if sheet.kind(o.only_col) == TEXT else String(o.only_code))
+    return ', "combine": ' + String(o.combine) + ', "order": ' + String(o.order) + ', "top": ' + String(o.top) + only
+
+
+def read_spec(j: Json, node: Int, mut o: SheetObject, sheet: Sheet):
+    """The keys spec_json wrote, each checked (an unknown value keeps the default)."""
+    var combine = j.number(j.get(node, "combine"), COMBINE_SUM)
+    o.combine = combine if COMBINE_SUM <= combine <= COMBINE_COUNT else COMBINE_SUM
+    var order = j.number(j.get(node, "order"), ORDER_TABLE)
+    o.order = order if ORDER_TABLE <= order <= ORDER_AZ else ORDER_TABLE
+    o.top = max(j.number(j.get(node, "top"), 0), 0)
+    var only = j.number(j.get(node, "only_col"), -1)
+    o.only_col = -1  # (every row, unless the file names a filter it still can)
+    if 0 <= only < sheet.columns() and (sheet.kind(only) == TEXT or sheet.kind(only) == BOOL):
+        var word = j.text(j.get(node, "only_word"))
+        if sheet.kind(only) == BOOL:
+            o.only_col = only
+            o.only_code = 1 if word == "1" else 0
+        else:
+            for code in range(sheet.word_count(only)):
+                if sheet.text_of(only, Int64(code)) == word:
+                    o.only_col = only
+                    o.only_code = code
 
 
 def save_omx(path: String, sheet: Sheet, objects: List[SheetObject] = [], tiles: List[ReportTile] = [],
@@ -212,6 +242,7 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         obj.kind = kind
         obj.across = across
         obj.style = j.number(j.get(o, "style"))
+        read_spec(j, o, obj, sheet)
         objects.append(obj^)
     tiles = List[ReportTile]()
     var report = j.get(0, "report")
@@ -224,7 +255,9 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         var column_ok = (0 <= col < sheet.columns()) if (kind == TILE_DISTINCT or kind == TILE_COUNT) else is_number(sheet, col)  # (distinct and count: any column)
         if not (TILE_SUM <= kind <= TILE_LAST) or not column_ok or (kind == TILE_CHART and not is_text(sheet, group)):
             continue
-        tiles.append(new_tile(kind, col, group))
+        var tile = new_tile(kind, col, group)
+        read_spec(j, t, tile.chart, sheet)
+        tiles.append(tile^)
     var f = j.get(report, "filter")
     var fcol = j.number(j.get(f, "col"), -1)
     filter = ReportFilter(-1, 0)

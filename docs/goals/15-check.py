@@ -94,9 +94,10 @@ def m2():
         return False, msg
     o = oracle(CSV_1M)
     problems = []
-    bars = both(OPEN + ";tap:Chart;tapat:1=500,200", "chart")
-    regions = both(OPEN + ";tap:Chart;select:1=region;tapat:1=500,200", "chart-region")
-    line = both(OPEN + ";tap:Chart;segment:1=Line", "chart-line")
+    # (goal 28, D-267: the chart's settings are on its inspector's pages, and its ask field sits above a shorter canvas)
+    bars = both(OPEN + ";tap:Chart;tapat:1=300,40", "chart")
+    regions = both(OPEN + ";tap:Chart;tap:Data;select:1=region;tapat:1=300,40", "chart-region")
+    line = both(OPEN + ";tap:Chart;tap:Style;segment:1=Line", "chart-line")
     for r in (bars, regions, line):
         if r[0] is None:
             return False, r[1]
@@ -215,7 +216,8 @@ def m5():
                 problems.append(f"{where}: the chart and the pivot didn't come back where they were")
             if kpi(report[k], "Sum of revenue") != money(o["west_sum"], "$") or not has(report[k], "orders_1m · region = West"):
                 problems.append(f"{where}: the Report's tiles or its West filter didn't come back")
-            if "BUTTON: revenue by carrier" not in sheet[k] or "BUTTON: revenue · carrier × region" not in sheet[k] or not has(report[k], "revenue by carrier"):  # (an object's title is the button that selects it)
+            words = lambda out: set(re.findall(r"^BUTTON: (.*)$", out, re.M))  # (goal 28, D-267: a chart's title is its sentence: its value and grouping are its words)
+            if not {"revenue", "carrier"} <= words(sheet[k]) or "BUTTON: revenue · carrier × region" not in sheet[k] or not {"revenue", "carrier"} <= words(report[k]):
                 problems.append(f"{where}: the objects' value, grouping or the chart tile didn't come back")
     return not problems, "; ".join(problems) or "an .omx document keeps the sheet's chart and pivot (where they were) and the Report's tiles and West filter; both hosts' files reopen on both hosts"
 

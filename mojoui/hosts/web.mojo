@@ -131,7 +131,7 @@ def palette_css(p: Palette) -> String:
             + ";--o-strong: " + hex_of(p.line_strong) + ";--o-accent: " + hex_of(p.accent) + ";--o-on-accent: " + hex_of(p.accent_ink)
             + ";--o-wash: " + hex_of(p.accent_wash) + ";--o-bad: " + hex_of(p.bad) + ";--o-good: " + hex_of(p.good) + ";--o-warn: " + hex_of(p.warn)
             + ";--o-formula: " + hex_of(p.formula) + ";--o-chrome: " + hex_of(p.chrome) + ";--o-chrome-ink: " + hex_of(p.chrome_ink)
-            + ";--o-chrome-line: " + hex_of(p.chrome_line) + ";--o-tint: " + hex_of(p.accent_tint) + ";--o-shadow: " + shadow + ";"
+            + ";--o-chrome-line: " + hex_of(p.chrome_line) + ";--o-tint: " + hex_of(p.accent_tint) + ";--o-data: " + hex_of(p.data(0)) + ";--o-shadow: " + shadow + ";"
             + ("color-scheme: dark;" if p.dark else "color-scheme: light;") + "}")
 
 

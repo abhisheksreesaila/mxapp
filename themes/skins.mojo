@@ -82,6 +82,13 @@ def skin_css(p: Palette, cls: String) -> String:
         + w + "button label, " + w + "button image { color: inherit; }\n"
         + w + "button.suggested-action { background: " + accent + "; color: " + on_accent + "; box-shadow: none; font-weight: 600; }\n"
         + w + "button.suggested-action:hover { background: " + hex_of(mix(p.accent, rgba(0, 0, 0), 0.14)) + "; }\n"
+        # a sentence's words (mojoui.sentence): inline, in the accent, a dotted underline, a wash on hover; the glue between them in the ink
+        + w + "button.mui-token { padding: 0 1px; min-height: 0; min-width: 0; margin: 0; border-radius: 5px; background: transparent; box-shadow: none; }\n"
+        + w + "button.mui-token:hover { background: " + hex_of(mix(p.card, p.data(0), 0.12)) + "; }\n"  # (the words wear the chart's colour, not the mode's tint: a red word reads as an error)
+        + w + "button.mui-token label { color: " + hex_of(p.data(0)) + "; font-weight: 600; font-size: 15px; text-decoration-line: underline; text-decoration-color: " + hex_of(mix(p.card, p.data(0), 0.45)) + "; }\n"
+        + w + ".mui-tag-sentence-line label { color: " + ink + "; font-size: 15px; font-weight: 600; }\n"
+        + "@keyframes mui-token-lit { from { background-color: " + hex_of(mix(p.card, p.data(0), 0.30)) + "; } to { background-color: transparent; } }\n"
+        + w + "button.mui-token-lit { animation: mui-token-lit 1400ms ease-out; }\n"
         + w + "button.destructive-action { background: " + hex_of(p.bad) + "; color: #ffffff; box-shadow: none; font-weight: 600; }\n"
         + w + "button.mui-tool { min-width: 64px; min-height: 58px; padding: 4px 6px; border-radius: 6px; font-size: 11px; }\n"
         + w + "button.mui-tool:hover { background: " + hex_of(mix(p.chrome, p.chrome_ink, 0.08)) + "; }\n"
@@ -166,6 +173,12 @@ body.skin button.prominent:hover { background: color-mix(in srgb, var(--o-accent
 body.skin button.destructive { background: var(--o-bad); border-color: transparent; color: #fff; font-weight: 600; }
 body.skin button.subtle { background: transparent; border-color: transparent; color: var(--o-ink2); }
 body.skin button.subtle:hover { background: var(--o-raised); color: var(--o-ink); }
+body.skin button.token { padding: 0 1px; min-height: 0; border: 0; border-radius: 5px; background: transparent; color: var(--o-data); font-size: 15px; font-weight: 600;
+  text-decoration: underline dotted color-mix(in srgb, var(--o-data) 55%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+body.skin button.token:hover { background: color-mix(in srgb, var(--o-data) 12%, transparent); }
+body.skin [data-tag=sentence-line] > .text { color: var(--o-ink); font-size: 15px; font-weight: 600; }
+@keyframes token-lit { from { background: color-mix(in srgb, var(--o-data) 30%, transparent); } to { background: transparent; } }
+body.skin button.token.lit { animation: token-lit 1.4s ease-out; }
 body.skin label.picker.subtle:not(.tool):not(.icon-only) { padding: 3px 14px; min-height: 30px; border-radius: 6px; box-sizing: border-box; color: var(--o-ink2); }
 body.skin label.picker.subtle:not(.tool):hover { background: var(--o-raised); color: var(--o-ink); }
 body.skin button.icon-only { padding: 3px 6px; min-width: 30px; justify-content: center; }

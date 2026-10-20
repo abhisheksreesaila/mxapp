@@ -308,3 +308,15 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - The Scene is the default on GTK (D-261); goal 26's archived checks ask for pixels by name.
 - Review round 1 NEEDS WORK: a test and five archived checks still used the old names (D-263), native never reset a forced scheme, the dark signal re-entered apply(), M1/M2/M3/M5 weaker than claimed (M3's "after" predated the commit: re-proven from a build of the move commit in its own worktree). Round 2 PASS.
 - Full run: M7 caught goal 5's "apps import only mojoui" (now "and themes", D-264) and a web compact toolbar's 18 px icon-only picker.
+
+## Goal 28 (2026-10-19): editing a chart, the title is the query
+- Started in its own worktree (../mojo-ui-g28, branch goal-28) while goal 27's long regression ran in the main checkout: separate build folders, no collisions.
+- M0: a chart's spec lives on SheetObject (combine, order, top, a filter of its own); the engine still groups (sum, count, present per group), order and top N shape the small result; `where` twice and `&` both AND filters (probed). 12 specs equal pyarrow's.
+- M1: mojoui.sentence (runs and TOKEN buttons); GTK draws tokens with libadwaita's accent class and a layout-only class (the host loads no colours); the skins style them. `ref` is a Mojo keyword (renamed cref).
+- M2: mojoui.chartask, 37+ phrases. Lost an hour to a message-range overlap (CHOICE 1900+k swallowed ASK 1990) and to typing that cleared the marks, which rebuilt the sentence and dropped Return (lessons).
+- M3: NavRow/InspectorPage; Liquid slides pages in.
+- M4: Undo of chart changes ordered with table edits through Sheet.undo_depth. Found: Undo right after Add row crashed in every build since the grid could select the new row (the selection stayed past the end).
+- M5: bars move over 20 frames (~1 ms each).
+- M6 with real XTest input found three more: popovers had no keyboard (focus on idle after map, arrows by a key controller), picking a choice scrolled the sheet (grab_quietly), and a line of a plain column read its values as cents.
+- MX frame's session: 321870f stable (STABLE.md); 13 open needs filed as mxframe#6–#18 with the owner's yes; goal 29 vendors it (D-265).
+- Reviewer: round 1 NEEDS WORK (stale chart undo across documents, "as in the table" was dictionary order, collisions, no-op asks logged), round 2 PASS.
