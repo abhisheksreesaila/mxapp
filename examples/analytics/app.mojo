@@ -9,10 +9,12 @@
 # The data is made up (a seeded generator below): three years of order lines with growth,
 # weekends, holiday peaks, summer for outdoor gear and a shift to online.
 
+from mojoui.theme import Theme
+from themes.fluent import fluent
 from mojoui.maths import sqrt, log, sin, cos
 from mojoui import (
     App, Event, View, Surface, rgba, VStack, HStack, Text, Button, Segmented, Dropdown, Divider, Canvas, Card, Spacer,
-    TITLE, HEADLINE, CAPTION, PROMINENT, START, CENTER, BETWEEN, TAP, FLUENT, NO_MSG,
+    TITLE, HEADLINE, CAPTION, PROMINENT, START, CENTER, BETWEEN, TAP, NO_MSG,
 )
 from mojoui.gpu import Table, Row, Filter, gpu_present
 from mojoui.text import Font
@@ -304,8 +306,8 @@ struct Main(App):
     def window_size(self) -> Tuple[Int, Int]:
         return (1440, 900)
 
-    def design(self) -> Int:
-        return FLUENT
+    def theme(self) -> Theme:
+        return fluent()
 
     def filter(self) -> Filter:
         var first = 0

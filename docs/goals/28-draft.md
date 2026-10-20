@@ -1,4 +1,4 @@
-# GOAL 27 (draft): editing a chart, the title is the query
+# GOAL 28 (draft; was 27 until the owner put polish first, D-260): editing a chart, the title is the query
 
 **End goal (owner, 2026-10-19):** "for reports, charts can be on the inspector and a sub-inspector can have settings… but we need to be creative with UI… can't ship an Excel clone, it will be rejected"; then, on the prototypes (docs/design/charts/): "The title is the query: ask, then tap any word is the genius!!" Decided (D-255): direction 3 at the core (the chart's title is a sentence whose words are its settings; an ask field rewrites it), direction 1's inspector pages behind it for the details, the toolbar only inserts. The ask field is a keyword matcher now; the agent (AG-UI) plugs into the same sentence later.
 

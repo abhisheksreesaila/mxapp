@@ -9,6 +9,7 @@ from mojoui.canvas import Surface
 from mojoui.draw import rect, line, circle
 from mojoui.text import Font, REGULAR, MEDIUM, LEFT, RIGHT
 from mojoui.theme import Palette
+from themes.liquid import liquid_palette
 from mojoui.scene import Scene, SurfacePainter, OP_TEXT
 from mojoui.datagrid import DataGrid
 from tests.test_datagrid import People
@@ -47,7 +48,7 @@ def test_a_scene_replays_to_the_same_pixels() raises:
 
 def test_the_grid_as_a_scene_is_the_grid() raises:
     var font = Font()
-    var pal = Palette.liquid()
+    var pal = liquid_palette()
     var src = People(0)
     var w = 900
     var h = 500
@@ -87,7 +88,7 @@ def test_the_grid_as_a_scene_is_the_grid() raises:
 
 def test_only_the_ring_changes_when_the_selection_glides() raises:
     var font = Font()
-    var pal = Palette.liquid()
+    var pal = liquid_palette()
     var src = People(0)
     var g = DataGrid()
     g.select(4, 1)
@@ -111,7 +112,7 @@ def test_only_the_ring_changes_when_the_selection_glides() raises:
 
 def test_a_browse_grid_never_selects() raises:
     var font = Font()
-    var pal = Palette.liquid()
+    var pal = liquid_palette()
     var src = People(0)
     var g = DataGrid()
     g.browse = True

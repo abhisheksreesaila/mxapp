@@ -4,6 +4,7 @@ from mojoui.view import View, CANVAS, BOARD, FIELD, PAN, ZOOM, KEY
 from mojoui.diff import Diff, diff
 from mojoui.canvas import Surface
 from mojoui.scene import Scene
+from mojoui.theme import Theme
 
 
 struct Event(Copyable, Movable):
@@ -92,17 +93,15 @@ trait App(Movable, Deinitable):
         it; size changes reach the screen as patches, not rebuilds. The default ignores it."""
         pass
 
-    def accent(self) -> UInt32:
-        """A tint over the design's accent (0: the design's own): hosts restyle when it changes (a mode's colour)."""
-        return 0
-
     def logo(self) -> String:
         """The app's mark as SVG ("": none): hosts install it as the icon "app-logo" (Icon("app-logo", 18))."""
         return ""
 
-    def design(self) -> Int:
-        """The design language hosts style native controls with: NATIVE (default), FLUENT or OMARCHY."""
-        return 0
+    def theme(self) -> Theme:
+        """How the app looks (mojoui.theme.Theme: CSS classes, a palette, a GTK and a web style sheet), built by a theme
+        module outside the framework (this repo's themes/, or yours); hosts restyle whenever its key changes (a skin
+        picked, a mode's tint). The default is no theme: each platform's own look. Called often: return a kept value."""
+        return Theme.native()
 
 
 def ms(ns: Int) -> String:

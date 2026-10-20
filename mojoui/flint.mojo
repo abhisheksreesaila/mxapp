@@ -71,7 +71,7 @@ struct FlintChart(Movable):
         self.properties = List[String]()
         self.width = 400
         self.height = 320
-        self.pal = Palette.fluent()
+        self.pal = Palette.plain()
 
     def text(var self, name: String, values: List[String]) -> FlintChart:
         self.names.append(name)
@@ -103,7 +103,7 @@ struct FlintChart(Movable):
         return self^
 
     def themed(var self, pal: Palette) -> FlintChart:
-        """Draw it in another palette (Palette.omarchy()); the Flint spec is unchanged."""
+        """Draw it in another palette (a theme's palette); the Flint spec is unchanged."""
         self.pal = pal.copy()
         return self^
 

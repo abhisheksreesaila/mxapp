@@ -8,16 +8,51 @@
 
 from mojoui.view import (View, Text, Button, FilePicker, TextField, Canvas, Board, VStack, HStack, Card, Spacer, Divider,
                          Dropdown, Segmented, Toggle, Tabs, Grid, Scroll, Icon, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, START, CENTER, END,
-                         BETWEEN, STRETCH, OMARCHY, CARD, CARD_WARN, CARD_GOOD, TONE_ACCENT, TONE_GOOD, TONE_WARN, TONE_STRONG, NO_MSG, TOOL, TOOL_INLINE, ICON_ONLY)
+                         BETWEEN, STRETCH, CARD, CARD_WARN, CARD_GOOD, TONE_ACCENT, TONE_GOOD, TONE_WARN, TONE_STRONG, NO_MSG, TOOL, TOOL_INLINE, ICON_ONLY)
 from mojoui.app import App, Event
 from mojoui.scene import Scene
 from mojoui.canvas import Surface
 from mojoui.text import Font
-from mojoui.theme import Palette, skin_palette, skin_name, skin_of
+from mojoui.theme import Palette, Theme, hx
+from themes.liquid import liquid, liquid_palette
+from themes.skins import skin, ledger_palette, graphite_palette, blueprint_palette
 from mojoui.menus import MenuBar, Menu, Item, Separator, Submenu, ContextMenu
 from mojoui.overlays import Dialog, Toast, Popover, Checkbox, Clipboard
-from mojoui.view import Radio, LEDGER, GRAPHITE, BLUEPRINT, LIQUID
-from mojoui.theme import BRAND_INDIGO, SHEET_GREEN, REPORT_RED
+from mojoui.view import Radio
+
+# omxplorer's skins (themes/: the framework knows none of them, D-260) and its brand (owner, D-254): indigo for the app
+# itself, a tint per mode
+comptime LEDGER = 3
+comptime GRAPHITE = 4
+comptime BLUEPRINT = 5
+comptime LIQUID = 6  # the default (D-225)
+comptime BRAND_INDIGO: UInt32 = 0xFFE5464F  # #4f46e5 (R in the low byte)
+comptime SHEET_GREEN: UInt32 = 0xFF437A0E  # #0e7a43
+comptime REPORT_RED: UInt32 = 0xFF3F24C8  # #c8243f
+
+
+def skin_name(design: Int) -> String:
+    """The skin's name in settings.txt and CSS classes ("ledger")."""
+    return "ledger" if design == LEDGER else ("graphite" if design == GRAPHITE else ("blueprint" if design == BLUEPRINT else "liquid"))
+
+
+def skin_of(name: String) -> Int:
+    """A settings.txt skin name back to its skin (Liquid when unknown: the default, D-225)."""
+    return LEDGER if name == "ledger" else (GRAPHITE if name == "graphite" else (BLUEPRINT if name == "blueprint" else LIQUID))
+
+
+def skin_palette(design: Int, accent: UInt32 = 0) -> Palette:
+    """The skin's colours with a mode's tint over them (in a report, red only means "a report": false and errors take
+    other tones, D-254)."""
+    var p = (ledger_palette() if design == LEDGER else (graphite_palette() if design == GRAPHITE else (blueprint_palette() if design == BLUEPRINT else liquid_palette()))).with_accent(accent)
+    if accent == REPORT_RED:
+        p.bad = hx("#9f6b75")
+    return p^
+
+
+def skin_theme(design: Int, accent: UInt32) -> Theme:
+    var pal = skin_palette(design, accent)
+    return liquid(pal) if design == LIQUID else skin(skin_name(design), pal)
 from mojoui.view import SECONDARY
 from mojoui.charts import grouped, fixed
 from mojoui.numformat import fixed as numfixed, pow10
@@ -165,6 +200,7 @@ struct Main(App):
     var pal: Palette
     var win_w: Int  # the window's content area in points (App.resize; W × 900 until the host says)
     var win_h: Int
+    var looks: List[Theme]  # the skin's themes, one per tint (make_looks)
     var skin: Int  # the design (LIQUID by default, D-225; Settings → Appearance writes settings.txt, D-156)
     var import_col: Int
     var insp_tab: Int  # 0 Table, 1 Cell
@@ -221,6 +257,7 @@ struct Main(App):
         self.grid = DataGrid()
         self.preview = DataGrid()
         self.font = Font()
+        self.looks = List[Theme]()
         self.skin = skin_of(read_setting(APP, "skin", "liquid"))
         self.win_w = W
         self.win_h = 900
@@ -271,8 +308,10 @@ struct Main(App):
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
             self.open_path(auto_open)
+        self.make_looks()
 
     @staticmethod
+
     def init_shared():
         pass
 
@@ -291,8 +330,22 @@ struct Main(App):
         """The sheet's height: the window less the menu bar, toolbar, formula bar, tabs and status bar."""
         return max(240, self.win_h - CHROME_H)
 
-    def design(self) -> Int:
-        return self.skin
+    def theme(self) -> Theme:
+        """The skin with this mode's tint (kept: one per tint, made when the skin changes)."""
+        var accent = self.accent()
+        for t in self.looks:
+            if t.palette.accent == (accent if accent != 0 else skin_palette(self.skin).accent):
+                return t.copy()
+        return skin_theme(self.skin, accent)
+
+    def make_looks(mut self):
+        """The skin's themes, one per tint it shows (Liquid: indigo, the sheet's green, the report's red; others: their own)."""
+        self.looks = List[Theme]()
+        if self.skin == LIQUID:
+            for a in [BRAND_INDIGO, SHEET_GREEN, REPORT_RED]:
+                self.looks.append(skin_theme(self.skin, a))
+        else:
+            self.looks.append(skin_theme(self.skin, 0))
 
     def accent(self) -> UInt32:
         """Liquid's tint per mode (D-254): the sheet green, the report red, the rest the brand's indigo; other skins keep theirs."""
@@ -805,6 +858,7 @@ struct Main(App):
                 var all: List[Int] = [LIQUID, LEDGER, GRAPHITE, BLUEPRINT]
                 self.skin = all[event.number]
                 self.pal = skin_palette(self.skin)
+                self.make_looks()
                 write_setting(APP, "skin", skin_name(self.skin))
                 self.grid.redraw()
                 self.preview.redraw()
@@ -1246,12 +1300,12 @@ struct Main(App):
         """The grid as a display list (goal 26; hosts that can draw one: GTK with MOJOUI_SCENE=1)."""
         if canvas != 0:
             return False
-        self.pal = skin_palette(self.skin).with_accent(self.accent())
+        self.pal = skin_palette(self.skin, self.accent())
         self.grid.draw_scene(scene, self.frame, self.font, self.pal)
         return True
 
     def draw(mut self, canvas: Int, mut surface: Surface):
-        self.pal = skin_palette(self.skin).with_accent(self.accent())  # (the mode's tint, as the chrome has it)
+        self.pal = skin_palette(self.skin, self.accent())  # (the mode's tint, as the chrome has it)
         if 0 <= canvas < len(self.chart_sizes):
             self.chart_sizes[canvas] = (surface.points_width(), surface.points_height())
         if canvas == 0:

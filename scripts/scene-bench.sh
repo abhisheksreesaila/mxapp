@@ -15,7 +15,7 @@ CFG="$(mktemp -d)"
   echo "Goal 26 owner run, $(date -Iseconds), $(hyprctl monitors 2>/dev/null | grep -m1 -E '@' | xargs || echo 'display: unknown')"
   echo "GSK_RENDERER=${GSK_RENDERER:-default (Vulkan on Wayland)}"
   for mode in pixels scene; do
-    extra=()
+    extra=(MOJOUI_SCENE=0)
     [[ $mode == scene ]] && extra=(MOJOUI_SCENE=1)
     echo "== $mode"
     env "${extra[@]}" MOJOUI_TRACE=1 OMX_CONFIG="$CFG" OMX_DOCUMENTS="$CFG" MOJOUI_SHOT="$CFG/shot-$mode.png" \

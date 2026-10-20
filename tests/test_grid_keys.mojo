@@ -7,6 +7,7 @@ from mojoui import Event, TAP, DOUBLE, KEY, SHIFT, CTRL
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
+from themes.omarchy import omarchy_palette
 from mojoui.datagrid import (DataGrid, GridSource, GRID_NONE, GRID_SELECTED, GRID_EDIT, GRID_READ_ONLY, GRID_TYPED, GRID_CLEAR,
                              GRID_CANCEL, GRID_COMMIT, GRID_HEADER_H, GRID_ROW_H)
 
@@ -63,7 +64,7 @@ def key(name: String, mods: Int = 0) -> Event:
 def main() raises:
     var src = People(0)
     var font = Font()
-    var pal = Palette.omarchy()
+    var pal = omarchy_palette()
     var g = DataGrid()
     var w = 600
     var h = 290  # 30 header + 10 rows of 26

@@ -6,6 +6,7 @@ from mojoui import Event, TAP, PAN, PRESS, RELEASE, DOUBLE, ZOOM
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
+from themes.omarchy import omarchy_palette
 from mojoui.datagrid import (DataGrid, GridSource, GRID_NONE, GRID_REDRAW, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY,
                              GRID_FITTED, GRID_RESIZED, GRID_HEADER_H, GRID_HISTOGRAM_H, GRID_ROW_H, GRID_GUTTER, GRID_BAR_W)
 
@@ -62,7 +63,7 @@ def ev(kind: Int, x: Float64, y: Float64, dx: Float64 = 0, dy: Float64 = 0) -> E
 def main() raises:
     var src = People(0)
     var font = Font()
-    var pal = Palette.omarchy()
+    var pal = omarchy_palette()
     var g = DataGrid()
     var w = 600
     var h = 290  # 30 header + 10 rows of 26

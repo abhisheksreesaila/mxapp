@@ -1,5 +1,5 @@
 # Charts drawn by Mojo on a Canvas: KPI tiles, horizontal bars, line/area, columns and histograms,
-# in Fluent 2's colours, with axes, gridlines, labels, a highlighted selection and hit-testing.
+# in the plain palette's colours (mojoui.theme.Palette.plain), with axes, gridlines, labels, a highlighted selection and hit-testing.
 # The same pixels on every platform.
 #
 #   var bars = BarChart(names, values, selected=2)
@@ -12,7 +12,7 @@ from mojoui.text import Font, REGULAR, MEDIUM, LEFT, CENTRE, RIGHT
 from mojoui.draw import rect, line, circle, hline, area, with_alpha
 from mojoui.theme import Palette
 
-# Fluent 2 tokens (light theme)
+# the plain palette's tokens (light)
 comptime PAGE = rgba(245, 245, 245)  # neutral background 3
 comptime CARD_BG = rgba(255, 255, 255)
 comptime INK = rgba(36, 36, 36)  # neutral foreground 1
@@ -26,7 +26,7 @@ comptime BRAND_TINT = rgba(199, 224, 244)
 comptime BRAND_WASH = rgba(235, 243, 252)
 comptime GOOD = rgba(16, 124, 16)
 comptime BAD = rgba(197, 15, 31)
-# Fluent's qualitative data palette
+# the plain palette's series (qualitative)
 comptime DATA: List[UInt32] = [
     rgba(15, 108, 189), rgba(42, 160, 164), rgba(147, 115, 192), rgba(202, 80, 16), rgba(87, 129, 27),
     rgba(227, 0, 140), rgba(58, 150, 221), rgba(174, 140, 0),
@@ -141,10 +141,10 @@ struct KpiTile(Movable):
         self.note = note
         self.spark = spark^
         self.accent = accent
-        self.pal = Palette.fluent()
+        self.pal = Palette.plain()
 
     def themed(var self, pal: Palette) -> Self:
-        """The same chart in another palette (Palette.omarchy())."""
+        """The same chart in another palette (a theme's palette)."""
         self.pal = pal.copy()
         return self^
 
@@ -156,7 +156,7 @@ struct KpiTile(Movable):
         var ink2 = with_alpha(self.pal.card, 0.82) if self.accent else self.pal.ink2
         var w = Float64(s.width)
         var h = Float64(s.height)
-        # Fluent "shadow4": a soft drop under the tile
+        # a soft drop under the tile
         rect(s, 1 * k, 2.5 * k, w - 2 * k, h - 3.5 * k, rgba(0, 0, 0, 22), 8 * k)
         rect(s, 0.5 * k, 0.5 * k, w - 1 * k, h - 2 * k, rgba(0, 0, 0, 18), 8 * k)
         rect(s, 1 * k, 1 * k, w - 2 * k, h - 3 * k, bg, 8 * k)
@@ -205,10 +205,10 @@ struct BarChart(Movable):
         self.labels = labels^
         self.selected = selected
         self.table = table
-        self.pal = Palette.fluent()
+        self.pal = Palette.plain()
 
     def themed(var self, pal: Palette) -> Self:
-        """The same chart in another palette (Palette.omarchy())."""
+        """The same chart in another palette (a theme's palette)."""
         self.pal = pal.copy()
         return self^
 
@@ -294,7 +294,7 @@ struct LineChart(Movable):
         self.second = List[Float64]()
         self.marker = -1
         self.marker_text = ""
-        self.pal = Palette.fluent()
+        self.pal = Palette.plain()
 
     def with_second(var self, var values: List[Float64]) -> Self:
         """A second line (a share 0–1, e.g. margin) on its own percent axis at the right."""
@@ -308,7 +308,7 @@ struct LineChart(Movable):
         return self^
 
     def themed(var self, pal: Palette) -> Self:
-        """The same chart in another palette (Palette.omarchy())."""
+        """The same chart in another palette (a theme's palette)."""
         self.pal = pal.copy()
         return self^
 
@@ -432,10 +432,10 @@ struct ColumnChart(Movable):
         self.selected = selected
         self.gap = gap
         self.color = color
-        self.pal = Palette.fluent()
+        self.pal = Palette.plain()
 
     def themed(var self, pal: Palette) -> Self:
-        """The same chart in another palette (Palette.omarchy())."""
+        """The same chart in another palette (a theme's palette)."""
         self.pal = pal.copy()
         return self^
 
@@ -498,7 +498,7 @@ struct Heatmap(Movable):
         self.values = values^
         self.percent = percent
         self.selected = selected
-        self.pal = Palette.fluent()
+        self.pal = Palette.plain()
 
     def themed(var self, pal: Palette) -> Self:
         self.pal = pal.copy()

@@ -31,7 +31,6 @@ from PIL import Image
 CHECKED, DISABLED = 1, 2  # menu item flags (mojoui/menus.mojo)
 GESTURES = {"pan": 1, "zoom": 2, "tap": 3, "press": 4, "release": 5, "double": 6, "key": 7, "secondary": 8}
 MODIFIERS = {"shift": 1, "ctrl": 2, "alt": 4}
-DESIGNS = {0: "Native", 1: "Fluent", 2: "Omarchy", 3: "Ledger", 4: "Graphite", 5: "Blueprint", 6: "Liquid"}
 PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18")
 CORE = ("screen", "act", "read", "render")
 NO_ARGS = {"type": "object", "properties": {}}
@@ -75,7 +74,7 @@ class Host:
 
     def reload(self):
         self.nodes = json.loads(self.mod.view(self.handle))
-        self.design = self.mod.design(self.handle)
+        self.design = (self.mod.theme(self.handle).split("\x1f")[0] or "native").capitalize()  # the theme's id (D-260)
         self.actions = []
         self.names = set(CORE)
         self.walk(0, "")
@@ -307,7 +306,7 @@ class Host:
         return "\n".join(out)
 
     def screen(self):
-        head = f"{self.title} · design: {DESIGNS.get(self.design, self.design)} · {len(self.actions)} tools on this screen"
+        head = f"{self.title} · design: {self.design} · {len(self.actions)} tools on this screen"
         tools = "\n".join(f"  {a.name} — {a.description}" for a in self.actions)
         return f"{head}\n\n{self.outline()}\n\nTools (call them by name, or act with name + value):\n{tools}"
 
@@ -392,7 +391,7 @@ class Host:
             if (kind, text) not in self.overlays():
                 out.append(f"Closed: \"{text}\"")
         if self.design != before_design:
-            out.append(f"Design: {DESIGNS.get(self.design, self.design)}")
+            out.append(f"Design: {self.design}")
         names = {x.name for x in self.actions}
         if names != before_names:
             added, removed = sorted(names - before_names), sorted(before_names - names)

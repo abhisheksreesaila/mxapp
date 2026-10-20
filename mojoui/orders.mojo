@@ -1,4 +1,4 @@
-# The planted-story orders ledger (docs/mx-studio/SCREENS.md, "The story every screen shares"), as typed
+# The planted-story order book (docs/mx-studio/SCREENS.md, "The story every screen shares"), as typed
 # columns. Deterministic: the same rows every run, at any size. The planted problems:
 #   1. Acme's orders under three spellings: "Acme Corp", "Acme Corp." and "ACME Corporation" (merged, Acme is
 #      the top customer).

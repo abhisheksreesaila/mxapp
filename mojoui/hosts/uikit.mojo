@@ -20,7 +20,7 @@ from mojoui.view import (
     TONE_WARN, TONE_GOOD, TONE_STRONG, TONE_ACCENT, CARD, CARD_WARN, CARD_GOOD,
 )
 from mojoui.menus import CHECKED, DISABLED, DANGER
-from mojoui.theme import Palette, skin_palette, skin_name, mix
+from mojoui.theme import Palette, Theme, mix
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
@@ -140,7 +140,7 @@ struct UIKitHost[A: App](Movable):
     var link: Int  # CADisplayLink: one tick per display frame, for every canvas
     var last_frame: Float64
     var pick: Int  # the block every menu item's UIAction calls
-    var design: Int  # the app's design(); a skin's colours and fonts when it's one (D-149)
+    var theme_key: String  # the app's theme (Theme.key); its palette's colours and Inter when it paints native controls (a skin, D-149, D-260)
     var pal: Palette
     var skinned: Bool
     var floating: Int  # the presented popover / context menu / dialog controller, if any, and its node
@@ -165,9 +165,10 @@ struct UIKitHost[A: App](Movable):
         self.extras = List[Int]()
         self.focus = -1
         self.pick = 0
-        self.design = self.rt.app.design()
-        self.pal = skin_palette(self.design)
-        self.skinned = skin_name(self.design) != ""
+        var theme = self.rt.app.theme()
+        self.theme_key = theme.key()
+        self.pal = theme.palette.copy()
+        self.skinned = theme.paint_native
         self.floating = 0
         self.floating_node = -1
         self.toast = 0
@@ -799,11 +800,11 @@ struct UIKitHost[A: App](Movable):
                 _ = msg(old, "dismissViewControllerAnimated:completion:", 1, 0)
         self.widgets = List[Int](length=len(self.rt.shown.nodes), fill=0)  # 0 = nil: patches become no-ops
         self.extras = List[Int](length=len(self.rt.shown.nodes), fill=0)
-        var design = self.rt.app.design()
-        if design != self.design:  # Settings → Appearance: the skin switches live (D-156)
-            self.design = design
-            self.pal = skin_palette(design)
-            self.skinned = skin_name(design) != ""
+        var theme = self.rt.app.theme()
+        if theme.key() != self.theme_key:  # Settings → Appearance: the skin switches live (D-156)
+            self.theme_key = theme.key()
+            self.pal = theme.palette.copy()
+            self.skinned = theme.paint_native
         if self.skinned:
             _ = msg(self.view, "setBackgroundColor:", ui_color(self.pal.page))
             _ = msg(self.window, "setOverrideUserInterfaceStyle:", 2 if self.pal.dark else 1)
@@ -1024,8 +1025,8 @@ def label(text: String, style: Int) -> Int:
     return l
 
 
-def make_button(title: String, style: Int, icon: String = "", skinned: Bool = False, pal: Palette = Palette.ledger()) -> Int:
-    """Liquid Glass on iOS 26+, filled/gray buttons before that; a skin draws flat buttons in its own colours.
+def make_button(title: String, style: Int, icon: String = "", skinned: Bool = False, pal: Palette = Palette.plain()) -> Int:
+    """iOS 26's glass buttons, filled/gray buttons before that; a skin draws flat buttons in its own colours.
     SUBTLE and ICON_ONLY are plain; TOOL puts the icon above a small title."""
     var config_cls = cls("UIButtonConfiguration")
     var glass = msg[Int8](config_cls, "respondsToSelector:", sel("prominentGlassButtonConfiguration")) != 0

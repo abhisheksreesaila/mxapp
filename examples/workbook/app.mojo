@@ -8,7 +8,7 @@
 
 from mojoui.view import (View, Text, Button, TextField, Dropdown, TextArea, Canvas, Board, Overlay, VStack, HStack, Card, Grid, Spacer,
                          Divider, Scroll, TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, START, CENTER, END,
-                         BETWEEN, TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE, FLUENT, OMARCHY, NO_MSG)
+                         BETWEEN, TAP, PAN, ZOOM, PRESS, RELEASE, DOUBLE, NO_MSG)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface, rgba
 from mojoui.text import Font, REGULAR, MEDIUM, MONO, LEFT, RIGHT, CENTRE
@@ -24,7 +24,8 @@ from mojoui.gpu import gpu_present, GroupSums
 from mojoui.shared import put_shared, get_shared, keep, at, count_load, environment
 from mojoui.workbook import save_workbook, open_workbook, read_widths, ObjectSpec
 from mojoui.maths import log2
-from mojoui.theme import Palette
+from mojoui.theme import Palette, Theme
+from themes.omarchy import omarchy
 from mojoui.datagrid import (DataGrid, GRID_NONE, GRID_REDRAW, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY,
                              GRID_FITTED, GRID_RESIZED, GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT, GRID_HEADER_H, GRID_ROW_H, GRID_GUTTER, GRID_BAR_W)
 
@@ -97,6 +98,7 @@ struct Main(App):
     var gf_addr: Int
     var font: Font
     var pal: Palette  # the person's Omarchy theme: the grid and the charts draw in it
+    var look: Theme  # Omarchy (themes/omarchy.mojo)
     var objects: List[Obj]
     var edit_text: String
     var message: String  # the last error or confirmation
@@ -135,7 +137,8 @@ struct Main(App):
         self.frame = Frame(get_shared(0))
         self.gf_addr = get_shared(1)
         self.font = Font()
-        self.pal = Palette.omarchy()
+        self.look = omarchy()  # (read once: the person's Omarchy colours)
+        self.pal = self.look.palette.copy()
         self.objects = List[Obj]()
         self.objects.append(obj(TABLE, "Order lines", 0, 0, 1232, 380))
         self.objects.append(obj(PIVOT, "Revenue by region and channel", 0, 396, 480, 300, a=1, b=2, c=1))
@@ -194,8 +197,8 @@ struct Main(App):
     def window_size(self) -> Tuple[Int, Int]:
         return (1440, 900)
 
-    def design(self) -> Int:
-        return OMARCHY
+    def theme(self) -> Theme:
+        return self.look.copy()
 
     def gf(self) -> Pointer[GpuFrame, MutUntrackedOrigin]:
         return at[GpuFrame](self.gf_addr)

@@ -1,4 +1,4 @@
-# MX Studio's Report operations: the dashboard's numbers as GPU group-bys over the same ledger the Sheet
+# MX Studio's Report operations: the dashboard's numbers as GPU group-bys over the same order book the Sheet
 # edits (the session's edits and merges included), each with the time it took.
 
 from mojoui.frame import Frame, Range, OP_COL, OP_CONST, OP_SUB, OP_ADD, OP_MUL, OP_FLOORDIV, OP_MIN, OP_MAX
@@ -42,7 +42,7 @@ def quarter_range(q: Int, days: Int = 1000) -> Range:
 
 
 def quarter_days(q: Int) -> Int:
-    """How many days of quarter q the ledger has (Q4 is to date: Oct 1 … Oct 16)."""
+    """How many days of quarter q the order book has (Q4 is to date: Oct 1 … Oct 16)."""
     var start = materialize[QUARTER_START]()
     return min(start[q + 1], DAYS) - start[q]
 

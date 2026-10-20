@@ -1,8 +1,12 @@
-# mojoui.theme: the Omarchy palette is read from the person's theme file (Tokyo Night without one).
+# Themes (themes/, D-260): the Omarchy palette is read from the person's theme file (Tokyo Night without one); the skins'
+# tokens; the framework's own plain palette; Theme.native() is no theme at all.
 #   pixi run mojo build -I . tests/test_theme.mojo -o build/test_theme && build/test_theme
 from std.testing import assert_equal, assert_true
-from mojoui.theme import Palette, hex_rgba, hex_of, mix, skin_palette, skin_name, skin_of
-from mojoui.view import LEDGER, GRAPHITE, BLUEPRINT, OMARCHY, LIQUID
+from mojoui.theme import Palette, Theme, hex_rgba, hex_of, mix
+from themes.omarchy import omarchy_palette, omarchy
+from themes.skins import ledger_palette, graphite_palette, blueprint_palette, ledger
+from themes.liquid import liquid_palette, liquid
+from themes.fluent import fluent
 from mojoui.text import MONO, MONO_BOLD, REGULAR
 
 
@@ -22,16 +26,16 @@ def main() raises:
     assert_equal(hex_of(hex_rgba("7AA2F7", 0)), "#7aa2f7")
     assert_equal(hex_rgba("#zzzzzz", 5), UInt32(5))
     assert_equal(hex_of(mix(hex_rgba("#000000", 0), hex_rgba("#ffffff", 0), 0.5)), "#808080")
-    var p = Palette.omarchy()
+    var p = omarchy_palette()
     print("OMARCHY: dark=" + String(p.dark) + " accent=" + hex_of(p.accent) + " card=" + hex_of(p.card) + " ink=" + hex_of(p.ink))
     assert_equal(p.regular, MONO)
     assert_equal(p.medium, MONO_BOLD)
-    assert_equal(Palette.fluent().regular, REGULAR)
+    assert_equal(Palette.plain().regular, REGULAR)
     # contrast: captions on the card must be readable (WCAG 4.5:1)
     assert_true(contrast(p.ink3, p.card) >= 4.5, "captions: " + String(contrast(p.ink3, p.card)))
     assert_true(contrast(p.ink, p.card) >= 7.0, "text")
     # omxplorer's skins: the kit's exact tokens (docs/design/universal/omx.css), readable, and picked by design
-    var ledger = Palette.ledger()
+    var ledger = ledger_palette()
     assert_equal(hex_of(ledger.accent), "#0e7c86")
     assert_equal(hex_of(ledger.page), "#eef0f3")
     assert_equal(hex_of(ledger.card), "#ffffff")
@@ -39,16 +43,16 @@ def main() raises:
     assert_equal(hex_of(ledger.formula), "#6a4fd6")
     assert_equal(ledger.regular, REGULAR)
     assert_true(not ledger.dark)
-    var graphite = Palette.graphite()
+    var graphite = graphite_palette()
     assert_equal(hex_of(graphite.accent), "#f5a524")
     assert_equal(hex_of(graphite.card), "#1d1e21")
     assert_equal(hex_of(graphite.chrome), "#121214")
     assert_true(graphite.dark)
-    var blueprint = Palette.blueprint()
+    var blueprint = blueprint_palette()
     assert_equal(hex_of(blueprint.accent), "#2f6fed")
     assert_equal(hex_of(blueprint.chrome), "#14213d")
     assert_equal(hex_of(blueprint.card), "#ffffff")
-    var liquid = Palette.liquid()  # the default since goal 24 (D-225)
+    var liquid = liquid_palette()  # the default since goal 24 (D-225)
     assert_equal(hex_of(liquid.accent), "#0e7c86")
     assert_equal(hex_of(liquid.card), "#ffffff")
     assert_true(not liquid.dark)
@@ -58,13 +62,18 @@ def main() raises:
         assert_true(contrast(skin.chrome_ink, skin.chrome) >= 7.0, "skin chrome")
         assert_true(contrast(skin.accent_ink, skin.accent) >= 3.0, "text on the accent")
         assert_true(skin.data(0) != skin.data(1) and skin.data(1) != skin.data(2), "series differ")
-    assert_equal(skin_palette(GRAPHITE).skin, GRAPHITE)
-    assert_equal(skin_palette(LEDGER).skin, LEDGER)
-    assert_equal(skin_palette(OMARCHY).skin, 0)
-    assert_equal(skin_name(BLUEPRINT), "blueprint")
-    assert_equal(skin_of("graphite"), GRAPHITE)
-    assert_equal(skin_of("ledger"), LEDGER)
-    assert_equal(skin_of("liquid"), LIQUID)
-    assert_equal(skin_palette(LIQUID).skin, LIQUID)
-    assert_equal(skin_of("nonsense"), LIQUID)  # (an unknown or missing setting: the default, Liquid since goal 24)
+    # a theme is a value hosts apply as given: no theme is the platform's own look
+    var native = Theme.native()
+    assert_equal(native.id, "")
+    assert_equal(native.gtk_css, "")
+    assert_equal(native.web_css, "")
+    var l = liquid()
+    assert_equal(l.classes, "skin liquid")
+    assert_true("window.liquid" in l.gtk_css, "Liquid's GTK rules")
+    assert_true("body.liquid" in l.web_css and "body.skin" in l.web_css, "Liquid's web rules, on the skins'")
+    assert_true(l.key() != liquid(liquid_palette().with_accent(hex_rgba("#0e7a43", 0))).key(), "a new tint is a new key (hosts restyle)")
+    assert_equal(ledger().classes, "skin ledger")
+    assert_equal(omarchy().id, "omarchy")
+    assert_equal(fluent().classes, "fluent")
+    assert_true(ledger().paint_native and not fluent().paint_native and not omarchy().paint_native)
     print("THEME TESTS PASSED")

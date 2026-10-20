@@ -12,9 +12,9 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.menus import items_text, CHECKED, DISABLED, DANGER
 from mojoui.view import (
-    LIQUID, CLIPBOARD, View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
+    CLIPBOARD, View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, SECONDARY, PAN, ZOOM, TAP,
-    START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD, FLUENT, OMARCHY,
+    START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON, KEY, SHIFT, CTRL, ALT,
 )
 from mojoui.diff import Diff, Patch, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE, SET_SIZE
@@ -23,7 +23,7 @@ from mojoui.canvas import Surface, rgba
 from mojoui.scene import Scene, OP_RECT, OP_CIRCLE, OP_LINE, OP_TEXT, OP_FILL, OP_CLIP, OP_UNCLIP, OP_IMAGE
 from std.collections import Dict
 from mojoui.icons_data import LUCIDE_NAMES, lucide_svg
-from mojoui.theme import Palette, hex_of, mix, skin_palette, skin_name
+from mojoui.theme import Palette, Theme, hex_of, mix
 from std.math import log2
 from std.time import perf_counter_ns, sleep
 
@@ -222,15 +222,13 @@ def gtk_icon(name: String) -> String:
     return "image-missing-symbolic"
 
 
-def install_icons(design: Int, pal: Palette, logo: String):
-    """Writes the Lucide icons as SVG files in the design's ink (Fluent's neutral grey, a theme's secondary ink; and
-    the on-accent colour for filled buttons) to a cache folder and adds it to the display's icon theme: icons named
-    "mojoui-<name>" and "mojoui-<name>-light"."""
-    var themed = design == OMARCHY or skin_name(design) != ""
-    var base = c_str(external_call["g_get_user_cache_dir", Int]()) + "/mojoui/icons-" + (skin_name(design) if skin_name(design) != "" else ("omarchy" if themed else "1"))
+def install_icons(theme: Theme, logo: String):
+    """Writes the Lucide icons as SVG files in the theme's ink (and its ink on filled, accent buttons) to a cache folder
+    and adds it to the display's icon theme: icons named "mojoui-<name>" and "mojoui-<name>-light"."""
+    var ink = hex_of(theme.icon_ink)
+    var on_accent = hex_of(theme.icon_on_accent)
+    var base = c_str(external_call["g_get_user_cache_dir", Int]()) + "/mojoui/icons-" + (theme.id if theme.id != "" else "1") + "-" + String(ink[byte=1:]) + String(on_accent[byte=1:])
     _ = external_call["g_mkdir_with_parents", c_int](base.as_c_string_span(), c_int(0o755))
-    var ink = hex_of(pal.ink2) if themed else String("#424242")
-    var on_accent = hex_of(pal.accent_ink) if themed else String("#ffffff")
     for n in materialize[LUCIDE_NAMES]():
         var svg = lucide_svg(n)
         for variant in [("", ink), ("-light", on_accent)]:
@@ -247,8 +245,8 @@ def install_icons(design: Int, pal: Palette, logo: String):
         except:
             pass
     var display = external_call["gdk_display_get_default", Int]()
-    var theme = external_call["gtk_icon_theme_get_for_display", Int](display)
-    external_call["gtk_icon_theme_add_search_path", NoneType](theme, base.as_c_string_span())
+    var icon_theme = external_call["gtk_icon_theme_get_for_display", Int](display)
+    external_call["gtk_icon_theme_add_search_path", NoneType](icon_theme, base.as_c_string_span())
 
 
 def mojo_icon(gtk_name: String) -> String:
@@ -527,10 +525,10 @@ struct GtkHost[A: App](Movable):
     var toast: Int  # the toast showing, if any (kept across rebuilds while its node stays)
     var toast_text: String
     var toast_claimed: Bool  # the new screen still has the toast's node
-    var skin_provider: Int  # the design's CSS provider (replaced when design() changes: Settings → Appearance)
-    var skin_design: Int  # the design that provider is for
-    var skin_accent: UInt32  # and the accent (App.accent)
-    var icons_design: Int  # the design the icons were written for
+    var skin_provider: Int  # the theme's CSS provider (replaced when App.theme() changes: Settings → Appearance, a mode's tint)
+    var skin_key: String  # the theme that provider is for (Theme.key)
+    var skin_classes: String  # the CSS classes it put on the window
+    var icons_key: String  # the ink the icons were written in
     var fonts: Bool  # the app's own fonts (Inter, JetBrains Mono) were handed to fontconfig
     var css: Int  # one GtkCssProvider for padding classes
     var css_rules: String
@@ -602,9 +600,9 @@ struct GtkHost[A: App](Movable):
         self.toast_text = ""
         self.toast_claimed = False
         self.skin_provider = 0
-        self.skin_design = -1
-        self.skin_accent = 0
-        self.icons_design = -1
+        self.skin_key = "?"
+        self.skin_classes = ""
+        self.icons_key = ""
         self.fonts = False
         self.css = 0
         self.css_rules = ""
@@ -1810,49 +1808,39 @@ struct GtkHost[A: App](Movable):
                 self.fonts = True
 
     def apply_design(mut self):
-        """Styles the window for the app's design(): once at start, and again when it changes (a skin picked in
-        Settings): the old provider goes, the new one loads, so the switch is live (D-156)."""
-        var design = self.rt.app.design()
-        var accent = self.rt.app.accent()
-        if design == self.skin_design and accent == self.skin_accent:
+        """Styles the window with the app's theme (App.theme()): once at start, and again when it changes (a skin
+        picked in Settings, a mode's tint): the old provider goes, the new one loads, so the switch is live (D-156).
+        The host knows no theme: no theme is libadwaita as the system has it (D-260)."""
+        var theme = self.rt.app.theme()
+        var key = theme.key()
+        if key == self.skin_key:
             return
-        self.skin_accent = accent
+        self.skin_key = key
         var display = external_call["gdk_display_get_default", Int]()
         if self.skin_provider != 0:
             external_call["gtk_style_context_remove_provider_for_display", NoneType](display, self.skin_provider)
             external_call["g_object_unref", NoneType](self.skin_provider)
             self.skin_provider = 0
-        for old in ["fluent", "omarchy", "ledger", "graphite", "blueprint", "liquid"]:
+        for old in self.skin_classes.split(" "):
             var name = String(old)
-            external_call["gtk_widget_remove_css_class", NoneType](self.window, name.as_c_string_span())
-        self.skin_design = design
-        var manager = external_call["adw_style_manager_get_default", Int]()
-        var rules = String("")
-        var cls = String("")
-        if design == FLUENT:  # Fluent 2 tokens on top of libadwaita (a light design)
-            external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(1))  # ADW_COLOR_SCHEME_FORCE_LIGHT
-            rules = String(FLUENT_CSS)
-            cls = "fluent"
-        elif design == OMARCHY:  # the person's Omarchy theme: its colours, JetBrains Mono, flat
-            var pal = Palette.omarchy()
-            external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if pal.dark else 1))  # FORCE_DARK / FORCE_LIGHT
-            rules = omarchy_css(pal)
-            cls = "omarchy"
-        elif skin_name(design) != "":  # omxplorer's skins: the same tokens as the web's CSS
-            var pal = skin_palette(design).with_accent(accent)  # (a mode's tint over the skin: App.accent)
-            external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if pal.dark else 1))
-            rules = skin_css(pal, skin_name(design))
-            if design == LIQUID:  # the showcase skin: Liquid's islands, type scale and motion over the shared skin rules
-                rules += liquid_css(pal)
-            cls = skin_name(design)
-        if rules != "":
+            if name != "":
+                external_call["gtk_widget_remove_css_class", NoneType](self.window, name.as_c_string_span())
+        self.skin_classes = theme.classes
+        if theme.id != "":  # a theme says light or dark; native follows the system
+            var manager = external_call["adw_style_manager_get_default", Int]()
+            external_call["adw_style_manager_set_color_scheme", NoneType](manager, c_int(4 if theme.palette.dark else 1))  # FORCE_DARK / FORCE_LIGHT
+        if theme.gtk_css != "":
             self.skin_provider = external_call["gtk_css_provider_new", Int]()
-            external_call["gtk_css_provider_load_from_string", NoneType](self.skin_provider, rules.as_c_string_span())
+            external_call["gtk_css_provider_load_from_string", NoneType](self.skin_provider, theme.gtk_css.as_c_string_span())
             external_call["gtk_style_context_add_provider_for_display", NoneType](display, self.skin_provider, c_uint(801))
-            add_class(self.window, cls)
-        if design != self.icons_design:  # (the icons' ink doesn't depend on the accent: a tab switch doesn't rewrite them)
-            self.icons_design = design
-            install_icons(design, skin_palette(design), self.rt.app.logo())
+        for c in theme.classes.split(" "):
+            var name = String(c)
+            if name != "":
+                add_class(self.window, name)
+        var ink = theme.id + hex_of(theme.icon_ink) + hex_of(theme.icon_on_accent)
+        if ink != self.icons_key:  # (the icons' ink doesn't follow the accent: a tab switch doesn't rewrite them)
+            self.icons_key = ink
+            install_icons(theme, self.rt.app.logo())
             if self.rt.app.logo() != "" and self.window != 0:
                 var icon = String("mojoui-app-logo")
                 external_call["gtk_window_set_icon_name", NoneType](self.window, icon.as_c_string_span())  # (the window's icon, where the desktop shows one)
@@ -3699,12 +3687,12 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
         print("NATIVE: GTK " + String(external_call["gtk_get_major_version", c_int]()) + "." + String(external_call["gtk_get_minor_version", c_int]()))
         if host[].window != 0 and external_call["gtk_window_get_icon_name", Int](host[].window) != 0:
             print("WINDOW-ICON: " + c_str(external_call["gtk_window_get_icon_name", Int](host[].window)))
-        if host[].rt.app.design() == FLUENT:
-            print("DESIGN: fluent")
-        elif skin_name(host[].rt.app.design()) != "":
-            print("DESIGN: " + skin_name(host[].rt.app.design()))
-            if host[].fonts:
-                print("FONT: Inter, JetBrains Mono (the app's own)")
+        var theme = host[].rt.app.theme()
+        if theme.id != "":
+            print("DESIGN: " + theme.id)
+        print("THEME: " + (theme.id if theme.id != "" else "none"))
+        if theme.paint_native and host[].fonts:  # (a theme that sets the app's own fonts on native controls)
+            print("FONT: Inter, JetBrains Mono (the app's own)")
         if external_call["gtk_widget_get_mapped", c_int](host[].window) != 0:  # laid out, so measurable
             for i in range(len(host[].rt.shown.nodes)):
                 if host[].rt.shown.nodes[i].name != "":
@@ -3904,315 +3892,6 @@ def save_png(window: Int, path: String):
     var p = path
     var ok = external_call["gdk_texture_save_to_png", c_int](texture, p.as_c_string_span())
     print("SHOT:", path if ok != 0 else "failed")
-
-
-# Fluent 2 tokens for GTK (apps whose design() is FLUENT): neutral greys, the brand blue as the accent,
-# 4/8 px corners. Light theme. (Colours GTK can't take from CSS stay libadwaita's.)
-comptime FLUENT_CSS = """
-:root { --accent-bg-color: #0F6CBD; --accent-color: #0F6CBD; --accent-fg-color: #ffffff; }
-window.fluent { background-color: #F7F7F8; color: #242424; font-size: 14px; }
-window.fluent label.title-1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
-window.fluent label.title-4 { font-size: 14px; font-weight: 600; }
-window.fluent label.caption { font-size: 12px; }
-/* cards: white panels with a hairline and a soft lift */
-window.fluent .mui-card { background-color: #ffffff; border-radius: 8px; padding: 12px 14px;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
-/* islands: the chrome floating over the page */
-window.fluent label.mui-tone-warn { color: #EA580C; } window.fluent label.mui-tone-good { color: #0F766E; }
-window.fluent label.mui-tone-strong { font-weight: 700; } window.fluent label.mui-tone-accent { color: #0F6CBD; }
-window.fluent .mui-card.mui-warn { background-color: #FFF7ED; box-shadow: inset 0 0 0 1px #FED7AA; }
-window.fluent .mui-card.mui-good { background-color: #F0FDF4; box-shadow: inset 0 0 0 1px #BBF7D0; }
-window.fluent .mui-island { background-color: #ffffff; border-radius: 10px; padding: 6px 10px; min-height: 32px;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.07), 0 6px 20px rgba(0,0,0,.10); }
-/* the page: a quiet dotted canvas */
-window.fluent .mui-board { background-color: #F7F7F8;
-  background-image: radial-gradient(circle, #D6D6DA 1px, transparent 1.5px); background-size: 24px 24px; }
-/* buttons: white with a hairline, semibold, 32 px; quiet ones have no fill until hovered */
-window.fluent button { border-radius: 6px; min-height: 30px; padding: 2px 12px; font-weight: 600;
-  background: #ffffff; color: #242424; box-shadow: inset 0 0 0 1px #D1D1D1; }
-window.fluent button:hover { background: #F5F5F5; }
-window.fluent button:active { background: #E0E0E0; }
-window.fluent button.flat { background: transparent; box-shadow: none; font-weight: 500; color: #424242; }
-window.fluent button.flat:hover { background: rgba(0,0,0,.05); }
-window.fluent button.flat:active { background: rgba(0,0,0,.09); }
-window.fluent button.image-button { min-width: 30px; padding: 2px 6px; }
-window.fluent button.suggested-action { background: #0F6CBD; color: #ffffff; box-shadow: none; }
-window.fluent button.suggested-action:hover { background: #115EA3; }
-/* fields: white, hairline, Fluent's underline that turns blue on focus */
-window.fluent entry, window.fluent textview, window.fluent dropdown > button { border-radius: 6px; background: #ffffff;
-  box-shadow: inset 0 0 0 1px #D1D1D1, inset 0 -1px 0 0 #8A8A8A; font-weight: 400; }
-window.fluent entry:focus-within { box-shadow: inset 0 0 0 1px #D1D1D1, inset 0 -2px 0 0 #0F6CBD; outline: none; }
-window.fluent textview text { background: #ffffff; }
-window.fluent dropdown > button { min-height: 30px; padding: 2px 10px; }
-window.fluent dropdown > button:hover { background: #FAFAFA; }
-window.fluent scrollbar slider { min-width: 8px; min-height: 8px; background-color: rgba(0,0,0,.28); }
-"""
-
-
-
-def liquid_css(p: Palette) -> String:
-    """omxplorer's Liquid skin for GTK (docs/design/liquid.md, D-225, D-227), on top of skin_css: the controls float on
-    glass islands over a soft backdrop, the content is solid white, one type scale (11 12 13 15 17 22 34 px), springs.
-    GTK can't blur what is behind a widget: glass is translucent white with a rim, a top highlight and a soft shadow.
-    GTK CSS has no linear() easing: arrivals are keyframes with an overshoot, hover and press a springy cubic-bezier."""
-    var ink = hex_of(p.ink)
-    var body = hex_of(p.ink2)
-    var ink2 = hex_of(p.ink3)
-    var accent = hex_of(p.accent)
-    var line = hex_of(p.line)
-    var strong = hex_of(p.line_strong)
-    var w = String("window.liquid ")
-    var glass = String("background-color: rgba(255,255,255,0.62); box-shadow: inset 0 1px rgba(255,255,255,0.9), 0 0 0 1px rgba(255,255,255,0.75), 0 8px 32px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.06);")
-    var solid = String("background-color: #ffffff; box-shadow: 0 0 0 1px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.05);")
-    var hover = String("rgba(15,23,42,0.06)")
-    var spring = String("cubic-bezier(0.22, 1, 0.36, 1)")  # calm ease-out, no overshoot (goal 25 M5: macOS settles, it doesn't bounce)
-    return (
-        "@keyframes liquid-arrive { from { opacity: 0; transform: scale(0.98) translateY(-4px); } to { opacity: 1; transform: none; } }\n"
-        + "@keyframes liquid-rise { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }\n"
-        + "@keyframes liquid-land { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\n"
-        # the backdrop, and type: Inter, one scale
-        + w + "{ background-color: #e9eef4; background-image: linear-gradient(180deg, #eef2f7, #e4e9f1); color: " + body + "; font-size: 13px; }\n"
-        + w + "label.title-1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; color: " + ink + "; }\n"
-        + w + "label.title-4 { font-size: 15px; font-weight: 600; color: " + ink + "; }\n"
-        + w + "label.caption { font-size: 12px; color: " + ink2 + "; }\n"
-        + w + ".mui-board { background-color: transparent; }\n"
-        # the menu bar: one glass strip, one type
-        + w + ".mui-tag-menubar { margin: 8px 10px 0; border-radius: 12px; min-height: 34px; " + glass + " }\n"
-        + w + ".mui-tag-menubar .mui-menubar { background: transparent; }\n"
-        + w + ".mui-tag-app-mark { font-size: 15px; font-weight: 700; color: " + ink + "; letter-spacing: -0.3px; margin-right: 4px; }\n"
-        + w + ".mui-tag-doc-chip { font-size: 12px; color: " + body + "; background: rgba(15,23,42,0.05); border-radius: 999px; padding: 2px 10px; }\n"
-        + w + ".mui-tag-gpu-chip { font-size: 12px; font-weight: 500; color: " + hex_of(p.good) + "; background: rgba(22,163,74,0.10); border-radius: 999px; padding: 2px 10px; box-shadow: inset 0 0 0 1px rgba(22,163,74,0.25); }\n"
-        + w + ".mui-tag-kpi-note { font-size: 12px; color: " + body + "; background: " + hex_of(p.raised) + "; border-radius: 999px; padding: 2px 10px; box-shadow: inset 0 0 0 1px " + line + "; }\n"
-        + w + ".mui-tag-kpi-fact { font-size: 12px; color: " + ink2 + "; }\n"
-        + w + ".mui-card.mui-tag-add-tile { background: transparent; border: 2px dashed " + strong + "; box-shadow: none; border-radius: 16px; min-height: 120px; }\n"
-        + w + ".mui-tag-add-tile label, " + w + ".mui-tag-add-tile image { color: " + ink2 + "; }\n"
-        + w + ".mui-tag-stat-card { background: " + hex_of(p.raised) + "; border-radius: 12px; box-shadow: 0 0 0 1px " + strong + "; }\n"
-        # the inspector's structure: hairlines between sections, small-caps titles (goal 26 M0: "it looked like without borders")
-        + w + ".mui-tag-inspector separator { background: " + strong + "; min-height: 1px; margin: 2px 0; }\n"
-        + w + ".mui-tag-section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: " + body + "; }\n"
-        + w + ".mui-tag-stat-value { font-size: 15px; font-weight: 600; color: " + ink + "; }\n"
-        + w + "menubutton.mui-menu > button { font-size: 13px; padding: 3px 10px; border-radius: 8px; color: " + body + "; transition: background 150ms " + spring + "; }\n"
-        + w + "menubutton.mui-menu > button:hover, " + w + "menubutton.mui-menu > button:checked { background: " + hover + "; color: " + ink + "; }\n"
-        # the toolbar: one floating glass island; tools icon over label, a soft fill on hover, press scales
-        + w + ".mui-tag-toolbar { margin: 0 10px; border-radius: 18px; border-bottom: none; padding: 6px; " + glass + " }\n"
-        + w + "button.mui-tool { min-width: 62px; min-height: 52px; border-radius: 12px; font-size: 11px; font-weight: 500; color: " + body + "; background: transparent; box-shadow: none;"
-        + " transition: background 150ms " + spring + ", transform 150ms " + spring + "; }\n"
-        + w + "button.mui-tool:hover { background: " + hover + "; } " + w + "button.mui-tool:active { transform: scale(0.97); }\n"
-        + w + "button.mui-tool-on, " + w + "button.mui-tool-on:hover { background: " + hex_of(p.accent_wash) + "; color: " + accent + "; }\n"
-        + w + "label.mui-tool-label { font-size: 11px; }\n"
-        # inline tools (TOOL_INLINE): the title beside the icon, one height with the icon-only toggles, one line
-        + w + "button.mui-tool.mui-tool-inline { min-width: 0; min-height: 34px; padding: 0 10px; border-radius: 10px; }\n"
-        + w + "button.mui-tool-inline label.mui-tool-label { font-size: 12px; }\n"
-        + w + ".mui-tag-toolbar button.image-button { min-width: 34px; min-height: 34px; padding: 0; border-radius: 10px; }\n"
-        + w + ".mui-tag-toolbar separator { margin: 10px 8px; background: " + strong + "; min-width: 1px; }\n"
-        # every button: pills, springy hover and press
-        + w + "button { border-radius: 999px; font-size: 13px; transition: background 150ms " + spring + ", box-shadow 150ms " + spring + ", transform 150ms " + spring + "; }\n"
-        + w + "button:active { transform: scale(0.97); }\n"
-        + w + "button.image-button, " + w + "button.flat.image-button { border-radius: 10px; }\n"
-        + w + "button.suggested-action { box-shadow: 0 1px 2px " + hex_of(p.accent_tint) + ", inset 0 1px rgba(255,255,255,0.18); }\n"
-        # the formula bar: a field on the backdrop
-        + w + ".mui-tag-formula-bar { background: transparent; border-bottom: none; margin: 0 10px; }\n"
-        + w + ".mui-tag-formula-bar entry { font-size: 13px; }\n"
-        + w + "entry, " + w + "dropdown > button { border-radius: 10px; font-size: 13px; }\n"
-        # content: solid white cards (the table, charts, pivots, report tiles), 16 px corners
-        + w + ".mui-card, " + w + ".mui-tag-table, " + w + ".mui-tag-tile { border-radius: 16px; " + solid + " }\n"
-        + w + ".mui-tag-table { padding: 10px 12px 12px; }\n"
-        + w + ".mui-tag-tile { padding: 16px 18px; animation: liquid-land 320ms cubic-bezier(0.22, 1, 0.36, 1); transition: box-shadow 150ms " + spring + "; }\n"
-        + w + ".mui-tag-tile:hover { box-shadow: 0 0 0 1px rgba(15,23,42,0.07), 0 10px 30px rgba(15,23,42,0.10); }\n"
-        # a tile's or an object's ✕ shows on hover (or keyboard focus) only: a report reads as a report (goal 26 M0)
-        + w + ".mui-tag-tile button, " + w + ".mui-tag-chart-tile button.image-button, " + w + ".mui-board .mui-card button.image-button { opacity: 0; transition: opacity 150ms " + spring + "; }\n"
-        + w + ".mui-tag-tile:hover button, " + w + ".mui-tag-chart-tile:hover button.image-button, " + w + ".mui-board .mui-card:hover button.image-button, "
-        + w + ".mui-tag-tile:focus-within button, " + w + ".mui-tag-chart-tile:focus-within button.image-button, " + w + ".mui-tag-tile button:focus-visible, " + w + ".mui-tag-chart-tile button:focus-visible, " + w + ".mui-board .mui-card button:focus-visible { opacity: 1; }\n"
-        + w + ".mui-tag-tile label.title-1 { font-size: 34px; font-weight: 600; letter-spacing: -0.8px; }\n"
-        + w + "label.title-1.mui-tone-accent, " + w + "label.title-4.mui-tone-accent { color: " + accent + "; }\n"
-        # the inspector: a glass panel
-        + w + ".mui-tag-inspector { border-radius: 18px; padding: 10px; " + glass + " }\n"
-        # the bottom strip: tabs as pills, live figures
-        + w + ".mui-tag-sheet-tabs { margin: 0 10px; border-radius: 14px 14px 0 0; background: rgba(255,255,255,0.62); }\n"
-        + w + ".mui-tag-status-bar { margin: 0 10px 10px; border-radius: 0 0 14px 14px; border-top: 1px solid rgba(255,255,255,0.75); background: rgba(255,255,255,0.62); box-shadow: 0 8px 20px rgba(15,23,42,0.06); }\n"
-        + w + ".mui-tag-status-bar label { font-family: 'Inter', sans-serif; font-size: 12px; color: " + ink2 + "; }\n"
-        + w + ".mui-tag-sheet-tabs button { border-radius: 999px; padding: 2px 14px; font-weight: 500; }\n"
-        + w + ".mui-tag-sheet-tabs button:not(.flat) { background: #ffffff; color: " + ink + "; box-shadow: 0 1px 3px rgba(15,23,42,0.12); }\n"
-        # segmented controls: a soft track and a white thumb
-        + w + "toggle-group { background: rgba(15,23,42,0.06); border-radius: 999px; padding: 3px; }\n"
-        + w + "toggle-group > toggle { border-radius: 999px; min-height: 24px; padding: 0 12px; font-size: 12px; font-weight: 500; color: " + ink2 + "; transition: background 150ms " + spring + "; }\n"
-        + w + "toggle-group > toggle:checked { background: #ffffff; color: " + ink + "; font-weight: 500; box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 0 0 1px rgba(15,23,42,0.04); }\n"
-        # menus and popovers: one glass panel arriving on a spring; rows one height and one type; a submenu solid
-        + "popover.mui-menu-popover > contents, popover.mui-popover-surface > contents { border-radius: 14px; padding: 6px; background-color: rgba(255,255,255,0.94);"
-        + " box-shadow: inset 0 1px rgba(255,255,255,0.9), 0 0 0 1px rgba(15,23,42,0.08), 0 12px 40px rgba(15,23,42,0.16); }\n"
-        + "window.liquid popover.mui-menu-popover > contents, window.liquid popover.mui-popover-surface > contents { animation: liquid-arrive 200ms cubic-bezier(0.22, 1, 0.36, 1); }\n"
-        + "window.liquid popover.mui-menu-popover button.mui-menu-item, window.liquid popover.mui-menu-popover menubutton > button { min-height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 400; color: " + ink + "; }\n"
-        + "window.liquid popover.mui-menu-popover button.mui-menu-item:hover, window.liquid popover.mui-menu-popover menubutton > button:hover, window.liquid popover.mui-menu-popover menubutton > button:checked { background: " + accent + "; color: #ffffff; }\n"
-        + "window.liquid popover.mui-menu-popover button.mui-menu-item:hover image, window.liquid popover.mui-menu-popover button.mui-menu-item:hover label,"
-        + " window.liquid popover.mui-menu-popover menubutton > button:hover image, window.liquid popover.mui-menu-popover menubutton > button:hover label { color: #ffffff; }\n"
-        + "window.liquid popover.mui-menu-popover label.mui-menu-key { font-family: 'Inter', sans-serif; font-size: 12px; color: " + hex_of(mix(p.ink3, rgba(255, 255, 255), 0.3)) + "; }\n"
-        + "window.liquid popover.mui-menu-popover label.mui-menu-label { font-size: 11px; }\n"
-        + "window.liquid popover.mui-menu-popover separator.mui-menu-sep { margin: 5px 8px; background: " + line + "; }\n"
-        # dialogs: a white sheet rising on a spring over a dimmed window
-        + "window.liquid dialog > sheet, window.liquid dialog.mui-dialog-surface, .mui-dialog { border-radius: 20px; }\n"
-        + "window.liquid dialog > sheet { animation: liquid-rise 300ms cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 0 40px 100px rgba(15,23,42,0.30), 0 0 0 1px rgba(15,23,42,0.07); }\n"
-        + "window.liquid .mui-dialog-head label { font-size: 17px; font-weight: 600; color: " + ink + "; }\n"
-        + "window.liquid dimming { background-color: rgba(15,23,42,0.18); }\n"
-        # toasts: a dark pill
-        + "window.liquid toast { border-radius: 999px; animation: liquid-rise 300ms cubic-bezier(0.22, 1, 0.36, 1); }\n"
-    )
-
-def omarchy_css(p: Palette) -> String:
-    """The Omarchy skin for GTK, from the person's theme colours: flat, hairline borders, JetBrains Mono."""
-    var page = hex_of(p.page)
-    var card = hex_of(p.card)
-    var raised = hex_of(p.raised)
-    var ink = hex_of(p.ink)
-    var ink2 = hex_of(p.ink2)
-    var ink3 = hex_of(p.ink3)
-    var line = hex_of(p.line)
-    var strong = hex_of(p.line_strong)
-    var accent = hex_of(p.accent)
-    var wash = hex_of(p.accent_wash)
-    var on_accent = hex_of(p.accent_ink)
-    return (
-        ":root { --accent-bg-color: " + accent + "; --accent-color: " + accent + "; --accent-fg-color: " + on_accent + "; }\n"
-        + "window.omarchy { background-color: " + page + "; color: " + ink2 + "; font-family: 'JetBrainsMono Nerd Font', 'JetBrains Mono', monospace; font-size: 13px; }\n"
-        + "window.omarchy label { color: " + ink2 + "; }\n"
-        + "window.omarchy label.title-1, window.omarchy label.title-4 { color: " + ink + "; font-weight: 700; }\n"
-        + "window.omarchy label.title-1 { font-size: 18px; } window.omarchy label.title-4 { font-size: 13px; }\n"
-        + "window.omarchy label.caption { font-size: 11px; color: " + ink3 + "; }\n"
-        + "window.omarchy .dim-label { opacity: 1; }\n"
-        + "window.omarchy .mui-card { background-color: " + card + "; border-radius: 4px; padding: 12px 14px; box-shadow: inset 0 0 0 1px " + line + "; }\n"
-        + "window.omarchy label.mui-tone-warn { color: " + hex_of(p.warn) + "; } window.omarchy label.mui-tone-good { color: " + hex_of(p.good) + "; }\n"
-        + "window.omarchy label.mui-tone-strong { color: " + ink + "; font-weight: 700; } window.omarchy label.mui-tone-accent { color: " + accent + "; }\n"
-        + "window.omarchy .mui-card.mui-warn { background-color: " + hex_of(mix(p.card, p.warn, 0.12)) + "; box-shadow: inset 0 0 0 1px " + hex_of(mix(p.card, p.warn, 0.55)) + "; }\n"
-        + "window.omarchy .mui-card.mui-good { background-color: " + hex_of(mix(p.card, p.good, 0.10)) + "; box-shadow: inset 0 0 0 1px " + hex_of(mix(p.card, p.good, 0.50)) + "; }\n"
-        + "window.omarchy .mui-island { background-color: " + card + "; border-radius: 4px; padding: 6px 10px; min-height: 32px; box-shadow: inset 0 0 0 1px " + strong + ", 0 6px 18px rgba(0,0,0,.35); }\n"
-        + "window.omarchy .mui-board { background-color: " + page + "; background-image: radial-gradient(circle, " + line + " 1px, transparent 1.5px); background-size: 24px 24px; }\n"
-        + "window.omarchy button { border-radius: 3px; min-height: 28px; padding: 2px 10px; font-weight: 500; background: transparent; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"
-        + "window.omarchy button:hover { background: " + raised + "; }\n"
-        + "window.omarchy button:active { background: " + wash + "; }\n"
-        + "window.omarchy button.flat { box-shadow: none; color: " + ink2 + "; }\n"
-        + "window.omarchy button.flat:hover { background: " + raised + "; color: " + ink + "; }\n"
-        + "window.omarchy button.image-button { min-width: 28px; padding: 2px 6px; }\n"
-        + "window.omarchy button label, window.omarchy button image { color: inherit; }\n"
-        + "window.omarchy button.suggested-action { background: " + accent + "; color: " + on_accent + "; box-shadow: none; font-weight: 700; }\n"
-        + "window.omarchy button.suggested-action:hover { background: " + hex_of(mix(p.accent, p.ink, 0.2)) + "; }\n"
-        + "window.omarchy entry, window.omarchy textview, window.omarchy dropdown > button { border-radius: 3px; background: " + page + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"
-        + "window.omarchy entry:focus-within { box-shadow: inset 0 0 0 1px " + accent + "; outline: none; }\n"
-        + "window.omarchy textview text { background: " + page + "; color: " + ink + "; }\n"
-        + "window.omarchy dropdown > button { min-height: 28px; padding: 2px 8px; }\n"
-        + "window.omarchy popover > contents { background: " + card + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"
-        + "window.omarchy scrollbar slider { min-width: 6px; min-height: 6px; background-color: " + strong + "; border-radius: 3px; }\n"
-        + "window.omarchy entry.mui-cell-editor { border-radius: 0; box-shadow: inset 0 0 0 2px " + accent + "; background: " + card + "; }\n"
-        + "window.omarchy button.mui-tool { min-width: 58px; min-height: 48px; padding: 4px 6px; border-radius: 6px; }\n"
-        + "window.omarchy button.mui-tool-on { background: " + raised + "; color: " + accent + "; }\n"
-        + "window.omarchy label.mui-tool-label { font-size: 11px; }\n"
-    )
-
-
-def skin_css(p: Palette, cls: String) -> String:
-    """omxplorer's skins for GTK (D-149): one look from the palette's tokens (the same values as the web's CSS),
-    Inter for words, JetBrains Mono for figures, flat controls, a chrome band for the toolbar and bars."""
-    var page = hex_of(p.page)
-    var card = hex_of(p.card)
-    var raised = hex_of(p.raised)
-    var ink = hex_of(p.ink)
-    var ink2 = hex_of(p.ink2)
-    var ink3 = hex_of(p.ink3)
-    var line = hex_of(p.line)
-    var strong = hex_of(p.line_strong)
-    var accent = hex_of(p.accent)
-    var wash = hex_of(p.accent_wash)
-    var on_accent = hex_of(p.accent_ink)
-    var chrome = hex_of(p.chrome)
-    var chrome_ink = hex_of(p.chrome_ink)
-    var chrome_line = hex_of(p.chrome_line)
-    var w = "window." + cls + " "
-    var shadow = String("0 4px 16px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08)") if not p.dark else String("0 6px 20px rgba(0,0,0,.55), 0 0 0 1px #34363b")
-    return (
-        ":root { --accent-bg-color: " + accent + "; --accent-color: " + accent + "; --accent-fg-color: " + on_accent + "; }\n"
-        + w + "{ background-color: " + page + "; color: " + ink2 + "; font-family: 'Inter', sans-serif; font-size: 13px; }\n"
-        + w + "label { color: " + ink2 + "; }\n"
-        + w + "label.title-1, " + w + "label.title-4 { color: " + ink + "; font-weight: 600; letter-spacing: -0.2px; }\n"
-        + w + "label.title-1 { font-size: 20px; font-weight: 700; } " + w + "label.title-4 { font-size: 15px; }\n"
-        + w + "label.caption { font-size: 12px; color: " + ink3 + "; } " + w + ".dim-label { opacity: 1; }\n"
-        + w + ".mui-card { background-color: " + card + "; border-radius: 6px; padding: 12px 14px; box-shadow: inset 0 0 0 1px " + line + "; }\n"
-        + w + "label.mui-tone-warn { color: " + hex_of(p.warn) + "; } " + w + "label.mui-tone-good { color: " + hex_of(p.good) + "; }\n"
-        + w + "label.mui-tone-strong { color: " + ink + "; font-weight: 600; } " + w + "label.mui-tone-accent { color: " + accent + "; }\n"
-        + w + ".mui-card.mui-warn { background-color: " + hex_of(mix(p.card, p.warn, 0.09)) + "; box-shadow: inset 0 0 0 1px " + hex_of(mix(p.card, p.warn, 0.35)) + "; }\n"
-        + w + ".mui-card.mui-good { background-color: " + hex_of(mix(p.card, p.good, 0.08)) + "; box-shadow: inset 0 0 0 1px " + hex_of(mix(p.card, p.good, 0.30)) + "; }\n"
-        + w + ".mui-island { background-color: " + card + "; border-radius: 6px; padding: 6px 10px; min-height: 32px; box-shadow: inset 0 0 0 1px " + line + ", " + shadow + "; }\n"
-        + w + ".mui-board { background-color: " + page + "; }\n"
-        # the chrome band: toolbar, sheet tabs, status bar (tagged views)
-        + w + ".mui-tag-toolbar { background-color: " + chrome + "; border-bottom: 1px solid " + chrome_line + "; }\n"
-        + w + ".mui-tag-status-bar, " + w + ".mui-tag-sheet-tabs { background-color: " + chrome + "; color: " + ink3 + "; }\n"
-        + w + ".mui-tag-status-bar { border-top: 1px solid " + chrome_line + "; }\n"
-        + w + ".mui-tag-status-bar label { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: " + ink3 + "; }\n"
-        + w + ".mui-tag-formula-bar { background-color: " + card + "; border-bottom: 1px solid " + line + "; }\n"
-        + w + ".mui-tag-formula-bar entry { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }\n"
-        + w + ".mui-tag-toolbar label, " + w + ".mui-tag-toolbar button { color: " + chrome_ink + "; }\n"
-        # buttons: secondary with a hairline, primary filled, quiet ones flat; hover raised, pressed washed
-        + w + "button { border-radius: 6px; min-height: 30px; padding: 2px 14px; font-weight: 500; background: " + card + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; }\n"
-        + w + "button:hover { background: " + raised + "; }\n"
-        + w + "button:active { background: " + wash + "; }\n"
-        + w + "button:focus-visible { outline: 2px solid " + accent + "; outline-offset: 1px; }\n"
-        + w + "button.flat { background: transparent; box-shadow: none; color: " + ink2 + "; }\n"
-        + w + "button.flat:hover { background: " + raised + "; color: " + ink + "; }\n"
-        + w + "button.image-button { min-width: 30px; padding: 2px 6px; }\n"
-        + w + "button label, " + w + "button image { color: inherit; }\n"
-        + w + "button.suggested-action { background: " + accent + "; color: " + on_accent + "; box-shadow: none; font-weight: 600; }\n"
-        + w + "button.suggested-action:hover { background: " + hex_of(mix(p.accent, rgba(0, 0, 0), 0.14)) + "; }\n"
-        + w + "button.destructive-action { background: " + hex_of(p.bad) + "; color: #ffffff; box-shadow: none; font-weight: 600; }\n"
-        + w + "button.mui-tool { min-width: 64px; min-height: 58px; padding: 4px 6px; border-radius: 6px; font-size: 11px; }\n"
-        + w + "button.mui-tool:hover { background: " + hex_of(mix(p.chrome, p.chrome_ink, 0.08)) + "; }\n"
-        + w + "button.mui-tool-on { background: " + wash + "; color: " + accent + "; }\n"
-        + w + "button.mui-tool-on label, " + w + "button.mui-tool-on image { color: " + accent + "; }\n"
-        + w + "label.mui-tool-label { font-size: 11px; }\n"
-        + w + "button.mui-tool.mui-tool-inline { min-width: 0; min-height: 34px; padding: 0 10px; }\n"
-        + w + "button.mui-tool-inline label.mui-tool-label { font-size: 12px; }\n"
-        + w + ".mui-tag-toolbar button.image-button { min-width: 34px; min-height: 34px; padding: 0; }\n"
-        # fields and choices: hairline, accent ring on focus
-        + w + "entry, " + w + "textview, " + w + "dropdown > button { border-radius: 4px; background: " + card + "; color: " + ink + "; box-shadow: inset 0 0 0 1px " + strong + "; min-height: 30px; }\n"
-        + w + "entry:focus-within { box-shadow: inset 0 0 0 1px " + accent + ", 0 0 0 3px " + hex_of(mix(p.card, p.accent, 0.18)) + "; outline: none; }\n"
-        + w + "textview text { background: " + card + "; color: " + ink + "; }\n"
-        + w + "dropdown > button { padding: 2px 8px; font-weight: 400; }\n"
-        + w + "popover > contents, popover.menu > contents { background: " + card + "; color: " + ink + "; border-radius: 6px; box-shadow: inset 0 0 0 1px " + line + ", " + shadow + "; }\n"
-        + w + "scrollbar slider { min-width: 6px; min-height: 6px; background-color: " + strong + "; border-radius: 3px; }\n"
-        + w + "entry.mui-cell-editor { border-radius: 0; box-shadow: inset 0 0 0 2px " + accent + "; background: " + card + "; }\n"
-        + w + "toggle-group { background: transparent; }\n"
-        + w + "toggle-group > toggle { border-radius: 4px; min-height: 26px; padding: 0 10px; color: " + ink2 + "; }\n"
-        + w + "toggle-group > toggle:checked { background: " + accent + "; color: " + on_accent + "; font-weight: 600; }\n"
-        + w + ".mui-tag-sheet-tabs toggle-group > toggle:checked { background: " + card + "; color: " + ink + "; box-shadow: inset 0 2px " + accent + "; border-radius: 0; }\n"
-        + w + "checkbutton check, " + w + "checkbutton radio { border-radius: 3px; border: 1.5px solid " + strong + "; background: " + card + "; min-width: 15px; min-height: 15px; -gtk-icon-size: 12px; }\n"
-        + w + "checkbutton radio { border-radius: 50%; }\n"
-        + w + "checkbutton check:checked, " + w + "checkbutton radio:checked { background: " + accent + "; border-color: " + accent + "; color: " + on_accent + "; }\n"
-        + w + "switch { background: " + strong + "; } " + w + "switch:checked { background: " + accent + "; }\n"
-        + w + ".mui-menubar { background: " + chrome + "; }\n"
-        + w + "menubutton.mui-menu > button { min-height: 24px; padding: 2px 9px; font-size: 12.5px; font-weight: 400; color: " + chrome_ink + "; border-radius: 4px; background: transparent; box-shadow: none; }\n"
-        + w + "menubutton.mui-menu > button:checked, " + w + "menubutton.mui-menu > button:hover { background: " + hex_of(mix(p.chrome, p.chrome_ink, 0.08)) + "; }\n"
-        + w + "menubutton.mui-menu arrow { -gtk-icon-size: 0; min-width: 0; min-height: 0; margin: 0; }\n"
-        + "popover.mui-menu-popover > contents { padding: 4px; min-width: 260px; }\n"
-        + "popover.mui-menu-popover button.mui-menu-item { min-height: 28px; padding: 0 10px; border-radius: 4px; font-size: 12.5px; font-weight: 400; color: " + ink + "; }\n"
-        + "popover.mui-menu-popover button.mui-menu-item:hover { background: " + wash + "; }\n"
-        + "popover.mui-menu-popover button.mui-menu-item image { color: " + ink3 + "; -gtk-icon-size: 15px; }\n"
-        + "popover.mui-menu-popover button.mui-menu-item:hover image { color: " + accent + "; }\n"
-        + "popover.mui-menu-popover button.mui-danger, popover.mui-menu-popover button.mui-danger image { color: " + hex_of(p.bad) + "; }\n"
-        + "popover.mui-menu-popover label.mui-menu-key { color: " + ink3 + "; font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-left: 24px; }\n"
-        + "popover.mui-menu-popover label.mui-menu-label { color: " + ink3 + "; font-size: 10.5px; font-weight: 600; letter-spacing: .8px; padding: 6px 10px 4px; }\n"
-        + "popover.mui-menu-popover separator.mui-menu-sep { margin: 4px 6px; background: " + line + "; }\n"
-        # a submenu row is a menubutton: its inner button must look exactly like a plain item (no hairline, same type)
-        + "popover.mui-menu-popover menubutton > button { min-height: 28px; padding: 0 10px; border-radius: 4px; font-size: 12.5px; font-weight: 400; color: " + ink + "; background: transparent; box-shadow: none; }\n"
-        + "popover.mui-menu-popover menubutton > button:hover, popover.mui-menu-popover menubutton > button:checked { background: " + wash + "; }\n"
-        + "popover.mui-menu-popover menubutton > button image { color: " + ink3 + "; -gtk-icon-size: 15px; }\n"
-        + "popover.mui-menu-popover menubutton arrow { -gtk-icon-size: 0; min-width: 0; min-height: 0; margin: 0; }\n"
-        + "dialog.mui-dialog-surface, " + w + "dialog, dialog > sheet { border-radius: 8px; }\n"
-        + ".mui-dialog { background: " + card + "; color: " + ink + "; border-radius: 8px; }\n"
-        + ".mui-dialog-head { padding: 14px 16px 14px 20px; border-bottom: 1px solid " + line + "; }\n"
-        + ".mui-dialog-body { padding: 16px 20px; }\n"
-        + ".mui-dialog label { color: " + ink2 + "; } .mui-dialog label.title-4 { color: " + ink + "; font-weight: 600; font-size: 15px; }\n"
-        + "popover.mui-popover-surface > contents { padding: 12px 14px; min-width: 260px; }\n"
-        + "toast { background: " + ink + "; color: " + card + "; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 12.5px; }\n"
-        + "toast label, toast button { color: " + card + "; } toast button.flat { color: " + hex_of(mix(p.accent, p.card, 0.55)) + "; font-weight: 600; }\n"
-        + "tooltip { background: " + ink + "; color: " + card + "; border-radius: 4px; padding: 6px 10px; font-family: 'Inter', sans-serif; font-size: 12px; }\n"
-        + "tooltip > * { color: " + card + "; }\n"
-    )
 
 
 def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):

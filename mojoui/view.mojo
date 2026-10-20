@@ -84,15 +84,7 @@ comptime CARD = 1  # a raised panel: the platform's own card look
 comptime CARD_WARN = 2  # a card that asks for attention (an agent's finding): the theme's warning tint
 comptime CARD_GOOD = 3  # a card that confirms something went right: the theme's success tint
 
-# Design languages (App.design()): how hosts style their native controls
-comptime NATIVE = 0  # each platform's own look, untouched
-comptime FLUENT = 1  # Fluent 2 tokens (neutral greys, brand blue, rounded panels) wherever the host can apply them
-comptime OMARCHY = 2  # the person's Omarchy theme (mojoui.theme.Palette.omarchy()): its colours, JetBrains Mono, flat controls
-# omxplorer's own skins (D-149): the same colours, Inter and JetBrains Mono on every platform, never the desktop's theme
-comptime LEDGER = 3  # light: a white sheet, grey chrome, deep teal
-comptime GRAPHITE = 4  # dark and neutral, amber
-comptime BLUEPRINT = 5  # light with a navy band, blue
-comptime LIQUID = 6  # light Liquid: a white sheet, controls on frosted glass islands over a soft backdrop, teal (the default, D-225)
+# Themes are not here: an app hands its hosts a mojoui.theme.Theme (App.theme()), built outside the framework (D-260).
 
 # Button styles
 comptime PLAIN = 0

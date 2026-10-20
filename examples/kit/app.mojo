@@ -4,15 +4,25 @@
 # it builds, bundles and signs here and runs on the owner's devices.
 from mojoui.view import (View, Text, Button, TextField, Canvas, Board, Overlay, VStack, HStack, Card, Spacer, Divider,
                          Dropdown, Segmented, Radio, Icon, HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, ICON_ONLY, START, CENTER, END,
-                         STRETCH, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, TAP, SECONDARY, KEY, DOUBLE, LEDGER, GRAPHITE, BLUEPRINT)
+                         STRETCH, TONE_ACCENT, TONE_GOOD, TONE_WARN, NO_MSG, TAP, SECONDARY, KEY, DOUBLE)
 from mojoui.menus import MenuBar, Menu, Item, Separator, Submenu, ContextMenu
 from mojoui.overlays import Dialog, Toast, Popover, Checkbox
 from mojoui.sheetchrome import Tool, Toolbar, StatusBar
 from mojoui.app import App, Event
 from mojoui.canvas import Surface, rgba
 from mojoui.text import Font, CENTRE
-from mojoui.theme import Palette, skin_palette, skin_name
+from mojoui.theme import Palette, Theme
+from themes.skins import ledger, graphite, blueprint
 from mojoui.draw import rect, line
+
+comptime LEDGER = 3  # the three skins (themes/skins.mojo)
+comptime GRAPHITE = 4
+comptime BLUEPRINT = 5
+
+
+def skin_theme(skin: Int) -> Theme:
+    return graphite() if skin == GRAPHITE else (blueprint() if skin == BLUEPRINT else ledger())
+
 
 comptime NEW = 1
 comptime SAVE = 2
@@ -47,6 +57,7 @@ comptime SKINS: List[String] = ["Ledger", "Graphite", "Blueprint"]
 struct Main(App):
     var skin: Int
     var pal: Palette
+    var look: Theme  # the skin's theme
     var font: Font
     var last: String  # the last thing that happened (the status bar)
     var inspector: Bool
@@ -65,7 +76,8 @@ struct Main(App):
 
     def __init__(out self):
         self.skin = LEDGER
-        self.pal = skin_palette(LEDGER)
+        self.look = skin_theme(LEDGER)
+        self.pal = self.look.palette.copy()
         self.font = Font()
         self.last = "Ready"
         self.inspector = True
@@ -88,13 +100,14 @@ struct Main(App):
     def window_size(self) -> Tuple[Int, Int]:
         return (1280, 800)
 
-    def design(self) -> Int:
-        return self.skin
+    def theme(self) -> Theme:
+        return self.look.copy()
 
     def set_skin(mut self, skin: Int):
         self.skin = skin
-        self.pal = skin_palette(skin)
-        self.last = "Skin: " + skin_name(skin)
+        self.look = skin_theme(skin)
+        self.pal = self.look.palette.copy()
+        self.last = "Skin: " + self.look.id
         self.version += 1
 
     def update(mut self, event: Event):
@@ -244,7 +257,7 @@ struct Main(App):
         parts.append(self.toolbar().height(64))
         parts.append(body^)
         parts.append(Spacer())
-        parts.append(StatusBar([self.last, "Skin " + skin_name(self.skin)], "kit · omxapp"))
+        parts.append(StatusBar([self.last, "Skin " + self.look.id], "kit · omxapp"))
         if self.ctx_x >= 0:
             parts.append(ContextMenu("canvas", self.ctx_x, self.ctx_y, [Item("Sort A→Z", SORT_AZ, icon="sort"), Item("Sort Z→A", SORT_ZA), Separator(),
                                                                        Submenu("Format as", [Item("Number", NO_MSG), Item("Currency", NO_MSG, checked=True)], icon="format"),

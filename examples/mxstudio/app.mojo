@@ -5,12 +5,13 @@
 # PivotTable, ChartView, Card tones, Overlay islands, Segmented, Tabs.
 
 from mojoui.view import (View, Text, Button, TextField, Canvas, Board, Overlay, VStack, HStack, Card, Spacer, Segmented, Tabs, TAP,
-                         HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, ICON_ONLY, START, CENTER, END, BETWEEN, OMARCHY,
+                         HEADLINE, CAPTION, TITLE, PROMINENT, SUBTLE, ICON_ONLY, START, CENTER, END, BETWEEN, 
                          CARD, CARD_WARN, CARD_GOOD, TONE_WARN, TONE_GOOD, TONE_STRONG, TONE_ACCENT, NO_MSG)
 from mojoui.app import App, Event
 from mojoui.canvas import Surface
 from mojoui.text import Font
-from mojoui.theme import Palette
+from mojoui.theme import Palette, Theme
+from themes.omarchy import omarchy
 from mojoui.charts import money, grouped, fixed
 from mojoui.datagrid import DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GRID_READ_ONLY, GRID_REDRAW, GRID_FITTED, GRID_RESIZED, GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT
 from mojoui.pivot import PivotTable
@@ -84,6 +85,7 @@ struct Main(App):
     var gf_addr: Int
     var font: Font
     var pal: Palette
+    var look: Theme  # Omarchy (themes/omarchy.mojo)
     var grid: DataGrid
     var kinds: List[Int]  # per object on the page: TABLE, PIVOT, AGENT, CHART, then inserted ones
     var x: List[Int]
@@ -149,7 +151,8 @@ struct Main(App):
         self.frame = Frame(get_shared(0))
         self.gf_addr = get_shared(1)
         self.font = Font()
-        self.pal = Palette.omarchy()
+        self.look = omarchy()  # (read once: the person's Omarchy colours)
+        self.pal = self.look.palette.copy()
         self.grid = DataGrid()
         self.kinds = [TABLE, PIVOT, AGENT, CHART]
         self.x = [0, 416, 0, 0]  # the table across the top; the agent's card and Chart 1 left, Pivot 1 right
@@ -204,8 +207,8 @@ struct Main(App):
     def window_size(self) -> Tuple[Int, Int]:
         return (1440, 900)
 
-    def design(self) -> Int:
-        return OMARCHY
+    def theme(self) -> Theme:
+        return self.look.copy()
 
     def gf(self) -> Pointer[GpuFrame, MutUntrackedOrigin]:
         return at[GpuFrame](self.gf_addr)

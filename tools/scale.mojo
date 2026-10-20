@@ -10,6 +10,7 @@ from mojoui.datagrid import DataGrid
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
+from themes.omarchy import omarchy_palette
 from mojoui.numformat import ColumnFormat, CURRENCY
 from mojoui.charts import fixed, grouped
 
@@ -36,7 +37,7 @@ def main() raises:
     var order = frame.permutation(revenue, True)
     var sort_s = seconds_since(t)
     var font = Font()
-    var pal = Palette.omarchy()
+    var pal = omarchy_palette()
     var grid = DataGrid()
     var w = 1084
     var h = 676

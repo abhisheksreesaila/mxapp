@@ -10,6 +10,7 @@ from mojoui.view import View, DROPDOWN, IMAGE, SEGMENTED, RADIO, TABS, ALERT, LA
 from mojoui.diff import Diff
 from mojoui.app import App, Event, Runtime
 from mojoui.canvas import Surface
+from mojoui.theme import Palette, hex_of
 
 
 def json_str(s: String) -> String:
@@ -110,12 +111,28 @@ def web_title[A: App](handle: Int) -> String:
     return session_at[A](handle)[].app.title()
 
 
-def web_design[A: App](handle: Int) -> Int:
-    return session_at[A](handle)[].app.design()
+def web_theme_key[A: App](handle: Int) -> String:
+    """The app's theme's key (Theme.key): the page restyles when it changes."""
+    return session_at[A](handle)[].app.theme().key()
 
 
-def web_accent[A: App](handle: Int) -> Int:
-    return Int(session_at[A](handle)[].app.accent())
+def web_theme[A: App](handle: Int) -> String:
+    """The app's theme for the page, as four parts split by U+001F: its id, its body classes, its palette as CSS
+    variables (--o-page, --o-accent, …: what theme style sheets read), and its style sheet (D-260)."""
+    var t = session_at[A](handle)[].app.theme()
+    return t.id + chr(31) + t.classes + chr(31) + (palette_css(t.palette) if t.id != "" else String("")) + chr(31) + t.web_css
+
+
+def palette_css(p: Palette) -> String:
+    """A palette as the page's CSS variables (the vocabulary every web theme reads)."""
+    var shadow = "0 6px 20px rgba(0,0,0,.55), 0 0 0 1px #34363b" if p.dark else "0 4px 16px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08)"
+    return ("body {--o-page: " + hex_of(p.page) + ";--o-card: " + hex_of(p.card) + ";--o-raised: " + hex_of(p.raised)
+            + ";--o-ink: " + hex_of(p.ink) + ";--o-ink2: " + hex_of(p.ink2) + ";--o-ink3: " + hex_of(p.ink3) + ";--o-line: " + hex_of(p.line)
+            + ";--o-strong: " + hex_of(p.line_strong) + ";--o-accent: " + hex_of(p.accent) + ";--o-on-accent: " + hex_of(p.accent_ink)
+            + ";--o-wash: " + hex_of(p.accent_wash) + ";--o-bad: " + hex_of(p.bad) + ";--o-good: " + hex_of(p.good) + ";--o-warn: " + hex_of(p.warn)
+            + ";--o-formula: " + hex_of(p.formula) + ";--o-chrome: " + hex_of(p.chrome) + ";--o-chrome-ink: " + hex_of(p.chrome_ink)
+            + ";--o-chrome-line: " + hex_of(p.chrome_line) + ";--o-tint: " + hex_of(p.accent_tint) + ";--o-shadow: " + shadow + ";"
+            + ("color-scheme: dark;" if p.dark else "color-scheme: light;") + "}")
 
 
 def web_logo[A: App](handle: Int) -> String:

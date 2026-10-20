@@ -6,6 +6,7 @@ from mojoui import Text, Card, CARD, CARD_WARN, CARD_GOOD, TONE_WARN, TONE_STRON
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
+from themes.omarchy import omarchy_palette
 from mojoui.pivot import PivotTable
 from mojoui.chartview import ChartView
 from mojoui.kpi import KpiView
@@ -43,7 +44,7 @@ def main() raises:
 
     # ChartView: draws, and a tap on a bar picks it; again lets go
     var font = Font()
-    var pal = Palette.omarchy()
+    var pal = omarchy_palette()
     var cv = ChartView("Revenue by customer", ["Acme", "Globex", "Initech"], [300.0, 200.0, 100.0], "revenue")
     var w = 400
     var h = 180

@@ -19,7 +19,7 @@ from mojoui.view import (
     TONE_WARN, TONE_GOOD, TONE_STRONG, TONE_ACCENT, CARD, CARD_WARN, CARD_GOOD,
 )
 from mojoui.menus import CHECKED, DISABLED, DANGER
-from mojoui.theme import Palette, skin_palette, skin_name, mix
+from mojoui.theme import Palette, Theme, mix
 from mojoui.diff import Diff, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE
 from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
@@ -124,7 +124,7 @@ struct AppKitHost[A: App](Movable):
     var canvases: List[AppleCanvas]
     var link: Int  # CADisplayLink: one tick per display frame, for every canvas
     var last_frame: Float64  # the link's last timestamp (seconds)
-    var design: Int  # the app's design(); a skin's colours and fonts when it's one (D-149)
+    var theme_key: String  # the app's theme (Theme.key); its palette's colours and Inter when it paints native controls (a skin, D-149, D-260)
     var pal: Palette
     var skinned: Bool
     var popover: Int  # the NSPopover showing (a Popover node, or a context menu's items), and its node
@@ -147,9 +147,10 @@ struct AppKitHost[A: App](Movable):
         self.canvases = List[AppleCanvas]()
         self.link = 0
         self.last_frame = 0
-        self.design = self.rt.app.design()
-        self.pal = skin_palette(self.design)
-        self.skinned = skin_name(self.design) != ""
+        var theme = self.rt.app.theme()
+        self.theme_key = theme.key()
+        self.pal = theme.palette.copy()
+        self.skinned = theme.paint_native
         self.popover = 0
         self.popover_node = -1
         self.sheet = 0
@@ -809,11 +810,11 @@ struct AppKitHost[A: App](Movable):
         if self.link != 0:
             _ = msg(self.link, "invalidate")
             self.link = 0
-        var design = self.rt.app.design()
-        if design != self.design:  # Settings → Appearance: the skin switches live (D-156)
-            self.design = design
-            self.pal = skin_palette(design)
-            self.skinned = skin_name(design) != ""
+        var theme = self.rt.app.theme()
+        if theme.key() != self.theme_key:  # Settings → Appearance: the skin switches live (D-156)
+            self.theme_key = theme.key()
+            self.pal = theme.palette.copy()
+            self.skinned = theme.paint_native
         if self.skinned and self.window != 0:
             _ = msg(self.window, "setBackgroundColor:", ns_color(self.pal.page))
             _ = msg(self.window, "setAppearance:", msg(cls("NSAppearance"), "appearanceNamed:", ns_string("NSAppearanceNameDarkAqua" if self.pal.dark else "NSAppearanceNameAqua")))

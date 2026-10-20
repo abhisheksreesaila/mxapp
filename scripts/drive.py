@@ -7,6 +7,7 @@ Starts mojoui/hosts/web.py on a free port, performs each step on the real page
 state as the browser reports it (LABEL/BUTTON/FIELD/TOGGLE/DROPDOWN/SLIDER/PROGRESS).
 """
 
+import json
 import re
 import socket
 import os
@@ -253,6 +254,8 @@ def step(page, s):
         sel, prop = rest.rsplit("=", 1)  # (a selector may hold "=": [data-tag=inspector] hr)
         value = page.evaluate("([s, p]) => { const e = document.querySelector(s); return e ? getComputedStyle(e).getPropertyValue(p) : 'none'; }", [sel, prop])
         return f"STYLE: {sel} {prop} {value}"
+    elif verb == "js":  # js:expression: its value, as JSON (JS: value): a probe for what the other steps can't ask
+        return "JS: " + json.dumps(page.evaluate("(src) => { return eval(src); }", rest))
     elif verb == "attr":  # attr:selector=attribute: the first match's attribute (ATTR: selector attribute value, or none)
         sel, name = rest.rsplit("=", 1)
         value = page.evaluate("([s, a]) => { const e = document.querySelector(s); return e && e.getAttribute(a) !== null ? e.getAttribute(a) : 'none'; }", [sel, name])

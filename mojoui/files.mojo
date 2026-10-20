@@ -52,7 +52,7 @@ def remember(app: String, path: String, mut recent: List[String]):
 
 
 def read_setting(app: String, key: String, fallback: String = "") -> String:
-    """One value from <config>/settings.txt ("skin=graphite"), or the fallback."""
+    """One value from <config>/settings.txt ("skin=dark"), or the fallback."""
     try:
         with open(config_dir(app) + "/settings.txt", "r") as f:
             for line in f.read().split("\n"):

@@ -90,7 +90,6 @@ hr { width: var(--control-width, 280px); border: 0; border-top: 1px solid var(--
 [data-tag=status-bar] { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; flex-shrink: 0; }  /* one line, as on GTK: a long message is cut, not wrapped */
 button.icon-only.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
 .hstack > hr { width: 0; min-width: 0; align-self: center; height: var(--control-height, 28px); border-top: 0; border-left: 1px solid var(--line); margin: 0 6px; }
-body.skin .hstack > hr, body.omarchy .hstack > hr { border-left-color: var(--o-line); }
 img.image { max-width: 100%; height: auto; border-radius: 12px; image-rendering: auto; }
 .scroll { overflow-y: auto; width: 100%; display: flex; flex-direction: column; align-items: center; }  /* like a VStack */
 .segmented, .tabs { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: var(--surface); }
@@ -193,6 +192,16 @@ button svg { flex: none; }
 .canvas canvas:active { cursor: grabbing; }
 .vstack.card { background: light-dark(#fff, #2c2c2e); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 0 0 1px var(--line); }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
+/* the components' own layout (tools, the file picker, islands): every theme builds on it */
+.island .hstack { flex-wrap: nowrap; white-space: nowrap; }
+label.picker { position: relative; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+label.picker.tool { flex-direction: column; } label.picker input.picker-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+button.tool { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 58px; min-height: 48px; padding: 4px 6px; }
+button.tool span { font-size: 11px; line-height: 13px; }
+button.tool.inline, label.picker.tool.inline { flex-direction: row; gap: 6px; min-width: 0; min-height: 34px; padding: 0 10px; }
+button.tool.inline span, label.picker.tool.inline span { font-size: 12px; }
+[data-tag=toolbar] button.icon-only { min-width: 34px; min-height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+@media (pointer: coarse) { [data-tag=toolbar] button.icon-only, button.tool.inline, label.picker.tool.inline { min-width: 48px; min-height: 48px; } }
 """
 
 
@@ -569,260 +578,6 @@ CANVAS_JS = r"""
 """
 
 
-# Fluent 2 (Microsoft's design system) tokens, for apps whose design() is FLUENT: neutral greys,
-# the brand blue, 4/8 px corners, the Segoe type ramp, soft elevation. Light theme.
-FLUENT_CSS = """
-body.fluent { color-scheme: light; --accent: #0F6CBD; --danger: #C50F1F; --muted: #616161; --surface: #F0F0F0;
-  --line: #E0E0E0; background: #F7F7F8; color: #242424;
-  font: 14px/20px "Segoe UI Variable", "Segoe UI", "Adwaita Sans", Inter, system-ui, -apple-system, "Noto Sans", sans-serif; }
-body.fluent .text.title { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: 0; }
-body.fluent .text.headline { font-size: 16px; line-height: 22px; font-weight: 600; }
-body.fluent .text.caption { font-size: 12px; line-height: 16px; color: #616161; }
-body.fluent .text { text-align: left; }
-body.fluent button { border-radius: 6px; min-height: 32px; padding: 5px 12px; font-weight: 600; background: #fff;
-  border: 1px solid #D1D1D1; transition: background .1s; }
-body.fluent button:hover { filter: none; background: #F5F5F5; }
-body.fluent button:active { transform: none; background: #E0E0E0; }
-body.fluent button.prominent { background: #0F6CBD; border-color: transparent; color: #fff; }
-body.fluent button.prominent:hover { background: #115EA3; }
-body.fluent button.subtle { background: transparent; border-color: transparent; font-weight: 500; color: #424242; }
-body.fluent button.subtle:hover { background: rgba(0,0,0,.05); }
-body.fluent button.subtle:active { background: rgba(0,0,0,.09); }
-body.fluent button.icon-only { padding: 5px 6px; min-width: 32px; justify-content: center; }
-body.fluent select, body.fluent input[type=text], body.fluent input[type=date], body.fluent textarea { border-radius: 6px; min-height: 32px;
-  border: 1px solid #D1D1D1; border-bottom-color: #8A8A8A; background: #fff; }
-body.fluent input[type=text]:focus, body.fluent textarea:focus { outline: none; border-bottom: 2px solid #0F6CBD; }
-body.fluent label.toggle { min-height: 32px; }
-body.fluent .segmented, body.fluent .tabs { background: transparent; padding: 0; gap: 4px; }
-body.fluent .segmented span, body.fluent .tabs span { min-height: 32px; padding: 0 12px; border-radius: 4px; font-weight: 400; color: #424242; }
-body.fluent .segmented input:checked + span, body.fluent .tabs input:checked + span { background: #EBF3FC; color: #0F6CBD;
-  box-shadow: inset 0 0 0 1px #B4D6FA; font-weight: 600; }
-body.fluent .vstack.card { background: #fff; border-radius: 8px; padding: 12px 14px; box-sizing: border-box;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
-body.fluent .island > * { background: #fff; border-radius: 10px; padding: 6px 10px; min-height: 32px; align-items: center;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.07), 0 6px 20px rgba(0,0,0,.10); }
-.island .hstack { flex-wrap: nowrap; white-space: nowrap; }
-body.fluent .board { background-color: #F7F7F8; background-image: radial-gradient(circle, #D6D6DA 1px, transparent 1.5px);
-  background-size: 24px 24px; }
-body.fluent hr { border-top-color: #E0E0E0; }
-body.fluent .lazylist { border-radius: 4px; border-color: #E0E0E0; background: #fff; }
-body.fluent .lazylist .row { border-bottom-color: #F0F0F0; }
-body.fluent .canvas { background: transparent; }
-"""
-
-
-# Omarchy (design 2): the person's Omarchy theme (variables set per page from the Mojo palette),
-# JetBrains Mono, flat controls with hairline borders; the same rules as the GTK skin.
-OMARCHY_CSS = """
-body.omarchy { background: var(--o-page); color: var(--o-ink2); --accent: var(--o-accent); --line: var(--o-line); --muted: var(--o-ink3);
-  --surface: var(--o-raised); --danger: var(--o-bad);
-  font: 13px/18px "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, monospace; }
-body.omarchy .text { text-align: left; color: var(--o-ink2); }
-body.omarchy .text.title, body.omarchy .text.headline { color: var(--o-ink); font-weight: 700; letter-spacing: 0; }
-body.omarchy .text.title { font-size: 18px; line-height: 24px; } body.omarchy .text.headline { font-size: 13px; line-height: 18px; }
-body.omarchy .text.caption { font-size: 11px; line-height: 15px; color: var(--o-ink3); }
-body.omarchy button { border-radius: 3px; min-height: 28px; padding: 3px 10px; font-weight: 500; background: transparent;
-  color: var(--o-ink); border: 1px solid var(--o-strong); transition: background .1s; }
-body.omarchy button:hover { filter: none; background: var(--o-raised); }
-body.omarchy button:active { transform: none; background: var(--o-wash); }
-body.omarchy button.prominent { background: var(--o-accent); border-color: transparent; color: var(--o-on-accent); font-weight: 700; }
-body.omarchy button.subtle { border-color: transparent; color: var(--o-ink2); }
-body.omarchy button.subtle:hover { background: var(--o-raised); color: var(--o-ink); }
-body.omarchy button.icon-only { padding: 3px 5px; min-width: 28px; justify-content: center; }
-label.picker { position: relative; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-label.picker.tool { flex-direction: column; } label.picker input.picker-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-body.omarchy label.picker:not(.tool):not(.subtle) { border: 1px solid var(--o-strong); border-radius: 3px; padding: 3px 10px; min-height: 28px; box-sizing: border-box; color: var(--o-ink); }
-body.omarchy label.picker.prominent { background: var(--o-accent); color: var(--o-on-accent); border-color: transparent; font-weight: 700; }
-button.tool { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 58px; min-height: 48px; padding: 4px 6px; }
-button.tool span { font-size: 11px; line-height: 13px; }
-button.tool.inline, label.picker.tool.inline { flex-direction: row; gap: 6px; min-width: 0; min-height: 34px; padding: 0 10px; }
-button.tool.inline span, label.picker.tool.inline span { font-size: 12px; }
-[data-tag=toolbar] button.icon-only { min-width: 34px; min-height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-@media (pointer: coarse) { [data-tag=toolbar] button.icon-only, button.tool.inline, label.picker.tool.inline { min-width: 48px; min-height: 48px; } }
-body.omarchy button.tool { border-radius: 6px; } body.omarchy button.tool.on, body.omarchy button.icon-only.on { background: var(--o-raised); color: var(--o-accent); }
-body.omarchy select, body.omarchy input[type=text], body.omarchy input[type=date], body.omarchy textarea { border-radius: 3px; min-height: 28px;
-  border: 1px solid var(--o-strong); background: var(--o-page); color: var(--o-ink); font: inherit; }
-body.omarchy select { padding: 2px 4px; }
-body.omarchy input[type=text]:focus, body.omarchy textarea:focus, body.omarchy select:focus { outline: none; border-color: var(--o-accent); }
-body.omarchy .vstack.card { background: var(--o-card); border-radius: 4px; padding: 12px 14px; box-sizing: border-box; box-shadow: inset 0 0 0 1px var(--o-line); }
-body.omarchy .text.tone-warn { color: var(--o-warn); } body.omarchy .text.tone-good { color: var(--o-good); }
-body.omarchy .text.tone-strong { color: var(--o-ink); font-weight: 700; } body.omarchy .text.tone-accent { color: var(--o-accent); }
-body.fluent .text.tone-warn { color: #EA580C; } body.fluent .text.tone-good { color: #0F766E; }
-body.fluent .text.tone-strong { font-weight: 700; } body.fluent .text.tone-accent { color: #0F6CBD; }
-body.omarchy .vstack.card.warn { background: color-mix(in srgb, var(--o-warn) 12%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-warn) 55%, var(--o-card)); }
-body.omarchy .vstack.card.good { background: color-mix(in srgb, var(--o-good) 10%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-good) 50%, var(--o-card)); }
-body.fluent .vstack.card.warn { background: #FFF7ED; box-shadow: inset 0 0 0 1px #FED7AA; }
-body.fluent .vstack.card.good { background: #F0FDF4; box-shadow: inset 0 0 0 1px #BBF7D0; }
-body.omarchy .island > * { background: var(--o-card); border-radius: 4px; padding: 6px 10px; min-height: 32px; align-items: center;
-  box-shadow: inset 0 0 0 1px var(--o-strong), 0 6px 18px rgba(0,0,0,.35); }
-body.omarchy .board { background-color: var(--o-page); background-image: radial-gradient(circle, var(--o-line) 1px, transparent 1.5px);
-  background-size: 24px 24px; }
-body.omarchy .board > .object::after { border-color: var(--o-strong); }
-body.omarchy .canvas { background: transparent; }
-body.omarchy hr { border-top-color: var(--o-line); }
-body.omarchy input.cell-editor, body.fluent input.cell-editor { border-radius: 0; border: 2px solid var(--o-accent); background: var(--o-card); min-height: 0; }
-body.omarchy ::-webkit-scrollbar { width: 10px; height: 10px; } body.omarchy ::-webkit-scrollbar-thumb { background: var(--o-strong); border-radius: 5px; }
-body.omarchy ::-webkit-scrollbar-track { background: transparent; }
-"""
-
-
-# omxplorer's skins (designs 3–5, D-149): the palette's tokens as CSS variables (set per page from the Mojo
-# module), Inter for words, JetBrains Mono for figures, flat controls, a chrome band for the toolbar and bars.
-# The same rules as the GTK skin (skin_css in gtk.mojo). The fonts are the app's own (/static/fonts, D-155).
-SKIN_CSS = """
-@font-face { font-family: Inter; font-weight: 400; src: url(/static/fonts/Inter-Regular.ttf) format("truetype"); }
-@font-face { font-family: Inter; font-weight: 500; src: url(/static/fonts/Inter-Medium.ttf) format("truetype"); }
-@font-face { font-family: Inter; font-weight: 600; src: url(/static/fonts/Inter-SemiBold.ttf) format("truetype"); }
-@font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url(/static/fonts/JetBrainsMono-Regular.ttf) format("truetype"); }
-@font-face { font-family: "JetBrains Mono"; font-weight: 700; src: url(/static/fonts/JetBrainsMono-Bold.ttf) format("truetype"); }
-body.skin { background: var(--o-page); color: var(--o-ink2); --accent: var(--o-accent); --line: var(--o-line); --muted: var(--o-ink3);
-  --surface: var(--o-raised); --danger: var(--o-bad); font: 13px/18px Inter, sans-serif; }
-body.skin .num, body.skin .mono { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
-body.skin .text { text-align: left; color: var(--o-ink2); }
-body.skin .text.title, body.skin .text.headline { color: var(--o-ink); font-weight: 600; letter-spacing: -0.2px; }
-body.skin .text.title { font-size: 20px; line-height: 26px; font-weight: 700; } body.skin .text.headline { font-size: 15px; line-height: 20px; }
-body.skin .text.caption { font-size: 12px; line-height: 16px; color: var(--o-ink3); }
-body.skin .text.tone-warn { color: var(--o-warn); } body.skin .text.tone-good { color: var(--o-good); }
-body.skin .text.tone-strong { color: var(--o-ink); font-weight: 600; } body.skin .text.tone-accent { color: var(--o-accent); }
-body.skin button { border-radius: 6px; min-height: 30px; padding: 3px 14px; font-weight: 500; background: var(--o-card);
-  color: var(--o-ink); border: 1px solid var(--o-strong); transition: background .12s; font-family: inherit; }
-body.skin button:hover { filter: none; background: var(--o-raised); }
-body.skin button:active { transform: none; background: var(--o-wash); }
-body.skin button:focus-visible { outline: 2px solid var(--o-accent); outline-offset: 1px; }
-body.skin button.prominent { background: var(--o-accent); border-color: transparent; color: var(--o-on-accent); font-weight: 600; }
-body.skin button.prominent:hover { background: color-mix(in srgb, var(--o-accent) 86%, #000); }
-body.skin button.destructive { background: var(--o-bad); border-color: transparent; color: #fff; font-weight: 600; }
-body.skin button.subtle { background: transparent; border-color: transparent; color: var(--o-ink2); }
-body.skin button.subtle:hover { background: var(--o-raised); color: var(--o-ink); }
-body.skin button.icon-only { padding: 3px 6px; min-width: 30px; justify-content: center; }
-body.skin label.picker:not(.tool):not(.subtle) { border: 1px solid var(--o-strong); border-radius: 6px; padding: 3px 14px; min-height: 30px; box-sizing: border-box; color: var(--o-ink); background: var(--o-card); }
-body.skin label.picker.prominent { background: var(--o-accent); color: var(--o-on-accent); border-color: transparent; font-weight: 600; }
-body.skin button.tool, body.skin label.picker.tool { min-width: 64px; min-height: 58px; border-radius: 6px; font-size: 11px; color: var(--o-chrome-ink); }
-body.skin button.tool:hover, body.skin label.picker.tool:hover { background: color-mix(in srgb, var(--o-chrome-ink) 8%, var(--o-chrome)); }
-body.skin button.tool.on, body.skin button.icon-only.on { background: var(--o-wash); color: var(--o-accent); }
-body.skin button.tool.inline, body.skin label.picker.tool.inline { min-width: 0; min-height: 34px; padding: 0 10px; font-size: 12px; }
-body.skin select, body.skin input[type=text], body.skin input[type=date], body.skin textarea { border-radius: 4px; min-height: 30px;
-  border: 1px solid var(--o-strong); background: var(--o-card); color: var(--o-ink); font: inherit; padding: 3px 8px; }
-body.skin input[type=text]:focus, body.skin textarea:focus, body.skin select:focus { outline: none; border-color: var(--o-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--o-accent) 18%, transparent); }
-body.skin .vstack.card { background: var(--o-card); border-radius: 6px; padding: 12px 14px; box-sizing: border-box; box-shadow: inset 0 0 0 1px var(--o-line); }
-body.skin .vstack.card.warn { background: color-mix(in srgb, var(--o-warn) 9%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-warn) 35%, var(--o-card)); }
-body.skin .vstack.card.good { background: color-mix(in srgb, var(--o-good) 8%, var(--o-card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--o-good) 30%, var(--o-card)); }
-body.skin .island > * { background: var(--o-card); border-radius: 6px; padding: 6px 10px; min-height: 32px; align-items: center;
-  box-shadow: inset 0 0 0 1px var(--o-line), var(--o-shadow); }
-body.skin .board { background-color: var(--o-page); }
-body.skin .board > .object::after { border-color: var(--o-strong); }
-body.skin .canvas { background: transparent; }
-body.skin hr { border-top-color: var(--o-line); }
-body.skin input.cell-editor { border-radius: 0; border: 2px solid var(--o-accent); background: var(--o-card); min-height: 0; }
-body.skin ::-webkit-scrollbar { width: 10px; height: 10px; } body.skin ::-webkit-scrollbar-thumb { background: var(--o-strong); border-radius: 5px; }
-body.skin ::-webkit-scrollbar-track { background: transparent; }
-body.skin .segmented, body.skin .tabs { background: transparent; padding: 0; gap: 0; border: 1px solid var(--o-line); border-radius: 6px; overflow: hidden; }
-body.skin .segmented span, body.skin .tabs span { min-height: 26px; padding: 0 10px; border-radius: 0; font-weight: 400; color: var(--o-ink2); font-size: 12px; }
-body.skin .segmented input:checked + span, body.skin .tabs input:checked + span { background: var(--o-accent); color: var(--o-on-accent); font-weight: 600; box-shadow: none; }
-body.skin [data-tag=toolbar] { background: var(--o-chrome); border-bottom: 1px solid var(--o-chrome-line); }
-body.skin [data-tag=toolbar] .text, body.skin [data-tag=toolbar] button { color: var(--o-chrome-ink); }
-body.skin [data-tag=status-bar], body.skin [data-tag=sheet-tabs] { background: var(--o-chrome); color: var(--o-ink3); }
-body.skin [data-tag=status-bar] { border-top: 1px solid var(--o-chrome-line); }
-body.skin [data-tag=status-bar] .text { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--o-ink3); }
-body.skin [data-tag=sheet-tabs] .tabs { border: 0; border-radius: 0; }
-body.skin [data-tag=sheet-tabs] .tabs input:checked + span { background: var(--o-card); color: var(--o-ink); box-shadow: inset 0 2px var(--o-accent); }
-body.skin [data-tag=formula-bar] { background: var(--o-card); border-bottom: 1px solid var(--o-line); }
-body.skin [data-tag=formula-bar] input[type=text] { font-family: "JetBrains Mono", monospace; font-size: 12.5px; }
-body.skin label.toggle input, body.skin .radio input { accent-color: var(--o-accent); }
-body.skin dialog.alert, body.skin .lazylist { background: var(--o-card); color: var(--o-ink); border-radius: 8px; }
-body.skin .dialog, body.skin .popover { background: var(--o-card); color: var(--o-ink); }
-body.skin .dialog-layer .scrim { background: color-mix(in srgb, var(--o-ink) 32%, transparent); }
-body.skin .dialog-head { border-bottom-color: var(--o-line); } body.skin .dialog-head h3, body.skin .popover-title { color: var(--o-ink); }
-body.skin .popover { box-shadow: var(--o-shadow), 0 0 0 1px var(--o-line); }
-body.skin .toast { background: var(--o-ink); color: var(--o-card); } body.skin .toast .toast-close { color: var(--o-card); }
-body.skin .toast-action { color: color-mix(in srgb, var(--o-accent) 55%, var(--o-card)); }
-body.skin .menubar { background: var(--o-chrome); } body.skin .menu-title { color: var(--o-chrome-ink); border: 0; background: transparent; min-height: 0; padding: 4px 9px; box-shadow: none; }
-body.skin .menu.open > .menu-title { background: color-mix(in srgb, var(--o-chrome-ink) 8%, var(--o-chrome)); }
-body.skin .menu > .menu-items { background: var(--o-card); color: var(--o-ink); box-shadow: var(--o-shadow), 0 0 0 1px var(--o-line); }
-body.skin .mi:hover:not([disabled]) { background: var(--o-wash); } body.skin .mi:hover:not([disabled]) svg { color: var(--o-accent); opacity: 1; }
-body.skin .mi.danger, body.skin .mi.danger svg { color: var(--o-bad); } body.skin .mi .mi-key { color: var(--o-ink3); opacity: 1; }
-body.skin .menu-label { color: var(--o-ink3); opacity: 1; } body.skin .menu-sep { border-top-color: var(--o-line); }
-"""
-
-
-# omxplorer's Liquid skin (design 6, docs/design/liquid.md, D-225): on top of SKIN_CSS. The same rules as liquid_css in
-# gtk.mojo, plus what only a browser can do: a real backdrop blur on the glass and true spring curves (linear()).
-LIQUID_CSS = """
-body.liquid { --sp-snappy: cubic-bezier(.22, 1, .36, 1);  /* calm ease-out, no overshoot (goal 25 M5) */
-  --sp-bouncy: cubic-bezier(.22, 1, .36, 1);
-  --glass-bg: rgba(255,255,255,.62); --glass-fx: blur(24px) saturate(1.6);
-  --glass-shadow: inset 0 1px rgba(255,255,255,.9), 0 0 0 1px rgba(255,255,255,.75), 0 8px 32px rgba(15,23,42,.10), 0 1px 2px rgba(15,23,42,.06);
-  --solid-shadow: 0 0 0 1px rgba(15,23,42,.07), 0 1px 3px rgba(15,23,42,.05);
-  background: linear-gradient(180deg, #eef2f7, #e4e9f1) fixed; font: 13px/18px Inter, sans-serif; font-feature-settings: "tnum" 1; }
-body.liquid .text.title { font-size: 22px; line-height: 28px; letter-spacing: -.3px; } body.liquid .text.caption { font-size: 12px; }
-body.liquid .board { background: transparent; }
-@keyframes liquid-arrive { from { opacity: 0; transform: scale(.98) translateY(-4px); } to { opacity: 1; transform: none; } }
-@keyframes liquid-rise { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
-@keyframes liquid-land { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-body.liquid .menubar, body.liquid [data-tag=toolbar], body.liquid [data-tag=inspector], body.liquid [data-tag=sheet-tabs], body.liquid [data-tag=status-bar] {
-  background: var(--glass-bg); -webkit-backdrop-filter: var(--glass-fx); backdrop-filter: var(--glass-fx); box-shadow: var(--glass-shadow); border: 0; }
-body.liquid .menubar { margin: 8px 10px 0; border-radius: 12px; min-height: 34px; }
-body.liquid [data-tag=menubar] { margin: 8px 10px 0; border-radius: 12px; min-height: 34px; background: var(--glass-bg); -webkit-backdrop-filter: var(--glass-fx); backdrop-filter: var(--glass-fx); box-shadow: var(--glass-shadow); }
-body.liquid [data-tag=menubar] .menubar { margin: 0; background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-body.liquid [data-tag=app-mark] { font-size: 15px; font-weight: 700; color: var(--o-ink); letter-spacing: -.3px; }
-body.liquid [data-tag=doc-chip] { font-size: 12px; color: var(--o-ink2); background: rgba(15,23,42,.05); border-radius: 999px; padding: 2px 10px; }
-body.liquid [data-tag=gpu-chip] { font-size: 12px; font-weight: 500; color: var(--o-good); background: rgba(22,163,74,.10); border-radius: 999px; padding: 2px 10px; box-shadow: inset 0 0 0 1px rgba(22,163,74,.25); }
-body.liquid [data-tag=kpi-note] { font-size: 12px; color: var(--o-ink2); background: var(--o-raised); border-radius: 999px; padding: 2px 10px; box-shadow: inset 0 0 0 1px var(--o-line); }
-body.liquid [data-tag=kpi-fact] { font-size: 12px; color: var(--o-ink3); }
-body.liquid [data-tag=add-tile] { background: transparent; border: 2px dashed var(--o-strong); box-shadow: none; border-radius: 16px; min-height: 120px; color: var(--o-ink3); }
-body.liquid [data-tag=stat-card] { background: var(--o-raised); border-radius: 12px; box-shadow: 0 0 0 1px var(--o-strong); box-sizing: border-box; }
-body.liquid [data-tag=inspector] hr { border: 0; border-top: 1px solid var(--o-strong); margin: 2px 0; width: 100%; }
-body.liquid [data-tag=section-title] { font-size: 11px; font-weight: 600; letter-spacing: .5px; color: var(--o-ink2); }
-body.liquid [data-tag=stat-value] { font-size: 15px; font-weight: 600; color: var(--o-ink); }
-body.liquid .menu-title { font-size: 13px; padding: 4px 10px; border-radius: 8px; color: var(--o-ink2); transition: background 150ms var(--sp-snappy); }
-body.liquid .menu.open > .menu-title, body.liquid .menu-title:hover { background: rgba(15,23,42,.06); color: var(--o-ink); }
-body.liquid [data-tag=toolbar] { margin: 0 10px; border-radius: 18px; padding: 6px; }
-body.liquid button.tool, body.liquid label.picker.tool { min-width: 62px; min-height: 52px; border-radius: 12px; font-size: 11px; font-weight: 500; color: var(--o-ink2);
-  transition: background 150ms var(--sp-snappy), transform 150ms var(--sp-snappy); }
-body.liquid button.tool:hover, body.liquid label.picker.tool:hover { background: rgba(15,23,42,.06); }
-body.liquid button.tool:active, body.liquid button:active { transform: scale(.97); }
-body.liquid button.tool.on, body.liquid button.icon-only.on { background: var(--o-wash); color: var(--o-accent); }
-body.liquid button.tool.inline, body.liquid label.picker.tool.inline { min-width: 0; min-height: 34px; padding: 0 10px; border-radius: 10px; font-size: 12px; }
-body.liquid [data-tag=toolbar] button.icon-only { border-radius: 10px; }
-body.liquid button { border-radius: 999px; transition: background 150ms var(--sp-snappy), box-shadow 150ms var(--sp-snappy), transform 150ms var(--sp-snappy); }
-body.liquid button.icon-only { border-radius: 10px; }
-body.liquid button.prominent { box-shadow: 0 1px 2px var(--o-tint), inset 0 1px rgba(255,255,255,.18); }
-body.liquid [data-tag=formula-bar] { background: transparent; border: 0; margin: 0 10px; }
-body.liquid [data-tag=formula-bar] input[type=text] { font-size: 13px; }
-body.liquid select, body.liquid input[type=text], body.liquid input[type=date], body.liquid textarea { border-radius: 10px; }
-body.liquid .vstack.card, body.liquid [data-tag=table], body.liquid [data-tag=tile] { background: #fff; border-radius: 16px; box-shadow: var(--solid-shadow); }
-body.liquid [data-tag=table] { padding: 10px 12px 12px; box-sizing: border-box; }
-body.liquid [data-tag=tile] { padding: 16px 18px; box-sizing: border-box; animation: liquid-land 320ms var(--sp-bouncy) both;
-  transition: box-shadow 150ms var(--sp-snappy), transform 150ms var(--sp-snappy); }
-body.liquid [data-tag=tile]:hover { box-shadow: 0 0 0 1px rgba(15,23,42,.07), 0 10px 30px rgba(15,23,42,.10); transform: translateY(-2px); }
-body.liquid [data-tag=tile] button, body.liquid [data-tag=chart-tile] button.icon-only, body.liquid .board > .object button.icon-only { opacity: 0; transition: opacity 150ms var(--sp-snappy); }
-body.liquid [data-tag=tile]:hover button, body.liquid [data-tag=chart-tile]:hover button.icon-only, body.liquid .board > .object:hover button.icon-only,
-body.liquid [data-tag=tile] button:focus-visible, body.liquid [data-tag=chart-tile] button:focus-visible, body.liquid .board > .object button:focus-visible { opacity: 1; }
-@media (pointer: coarse) { body.liquid [data-tag=tile] button, body.liquid [data-tag=chart-tile] button.icon-only, body.liquid .board > .object button.icon-only { opacity: .6; } }
-body.liquid [data-tag=tile] .text.title { font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -.8px; }
-body.liquid [data-tag=inspector] { border-radius: 18px; padding: 10px; box-sizing: border-box; }
-body.liquid [data-tag=sheet-tabs] { margin: 0 10px; border-radius: 14px 14px 0 0; }
-body.liquid [data-tag=status-bar] { margin: 0 10px 10px; border-radius: 0 0 14px 14px; box-shadow: 0 8px 20px rgba(15,23,42,.06); }
-body.liquid [data-tag=status-bar] .text { font-family: Inter, sans-serif; font-size: 12px; }
-body.liquid [data-tag=sheet-tabs] button { border-radius: 999px; padding: 2px 14px; }
-body.liquid .segmented, body.liquid .tabs { background: rgba(15,23,42,.06); border: 0; border-radius: 999px; padding: 3px; overflow: visible; }
-body.liquid .segmented span, body.liquid .tabs span { border-radius: 999px; min-height: 24px; padding: 0 12px; font-weight: 500; transition: background 150ms var(--sp-snappy); }
-body.liquid .segmented input:checked + span, body.liquid .tabs input:checked + span { background: #fff; color: var(--o-ink); font-weight: 500;
-  box-shadow: 0 1px 3px rgba(15,23,42,.12), 0 0 0 1px rgba(15,23,42,.04); }
-body.liquid .menu > .menu-items, body.liquid .popover { border-radius: 14px; padding: 6px; background: rgba(255,255,255,.84);
-  -webkit-backdrop-filter: var(--glass-fx); backdrop-filter: var(--glass-fx); box-shadow: inset 0 1px rgba(255,255,255,.9), 0 0 0 1px rgba(15,23,42,.08), 0 12px 40px rgba(15,23,42,.16);
-  transform-origin: top left; animation: liquid-arrive 200ms var(--sp-bouncy) both; }
-body.liquid .menu.sub > .menu-items { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
-body.liquid .mi { height: 30px; border-radius: 8px; font-size: 13px; color: var(--o-ink); transition: background 150ms var(--sp-snappy); }
-body.liquid .mi:hover:not([disabled]) { background: var(--o-accent); color: #fff; } body.liquid .mi:hover:not([disabled]) svg, body.liquid .mi:hover:not([disabled]) .mi-key { color: #fff; }
-body.liquid .mi .mi-key { font-family: Inter, sans-serif; font-size: 12px; }
-body.liquid .dialog { border-radius: 20px; box-shadow: 0 40px 100px rgba(15,23,42,.30), 0 0 0 1px rgba(15,23,42,.07); animation: liquid-rise 300ms var(--sp-bouncy) both; }
-body.liquid .dialog-layer .scrim { background: rgba(15,23,42,.18); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-body.liquid .dialog-head h3 { font-size: 17px; }
-body.liquid .toast { border-radius: 999px; animation: liquid-rise 300ms var(--sp-bouncy) both; }
-@media (prefers-reduced-motion: reduce) { body.liquid *, body.liquid *::before, body.liquid *::after { animation: none !important; transition-duration: 0.01ms !important; } }
-"""
 
 
 def png(rgba, w, h):
@@ -1169,7 +924,7 @@ def make_app(module_dir):
         # inherited their list's hx-target and silently sent nothing). Note: hx-vals is still
         # merged from ancestors even so, so elements set every key they rely on themselves.
         Meta(name="htmx-config", content='{"disableInheritance": true}'),
-        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS), Style(FLUENT_CSS), Style(OMARCHY_CSS), Style(SKIN_CSS), Style(LIQUID_CSS)))
+        Script(src="/static/htmx.min.js"), Script(src="/static/mojoui-canvas.js"), Style(CSS)))
     sessions = OrderedDict()  # sid → Session, oldest first
     sessions_lock = threading.Lock()
 
@@ -1216,8 +971,8 @@ def make_app(module_dir):
                     mod.close(old.handle)
                 import shutil  # (its uploads go with it)
                 shutil.rmtree(Path(os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxapp" / "uploads")) / old_sid, ignore_errors=True)
-        s.design = mod.design(s.handle)
-        s.accent = mod.accent(s.handle) if hasattr(mod, "accent") else 0
+        s.theme_key = mod.theme_key(s.handle)
+        s.theme_id = None
         if hasattr(mod, "logo") and "app-logo" not in ICONS:
             mark = mod.logo(s.handle)
             if mark:
@@ -1226,22 +981,17 @@ def make_app(module_dir):
         if "app-logo" in ICONS:  # (the app's mark as the tab's icon)
             from urllib.parse import quote
             icon = (Link(rel="icon", type="image/svg+xml", href="data:image/svg+xml," + quote(ICONS["app-logo"])),)
-        return Title(mod.title(s.handle)), *icon, *root(s, sid), *skin(s.design, accent=s.accent)
+        return Title(mod.title(s.handle)), *icon, *root(s, sid), *skin(s)
 
-    def skin(design, oob=False, accent=0):
-        """The page's design: a body class and, for Omarchy and the skins, the palette's CSS variables (from the
-        Mojo module). oob: after a change (Settings → Appearance), swapped into the open page (D-156)."""
-        if design == 1:
-            parts = (Style("", id="mojoui-skin"), Script("document.body.className = ''; document.body.classList.add('fluent')", id="mojoui-skin-js"))
-        elif design in (2, 3, 4, 5, 6):  # Omarchy, or one of omxplorer's skins
-            name = {2: "omarchy", 3: "skin ledger", 4: "skin graphite", 5: "skin blueprint", 6: "skin liquid"}[design]
-            pal = dict(kv.split("=", 1) for kv in (mod.palette_for(design, accent) if hasattr(mod, "palette_for") else mod.palette(design)).split(";"))
-            shadow = "0 6px 20px rgba(0,0,0,.55), 0 0 0 1px #34363b" if pal.get("dark") == "1" else "0 4px 16px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08)"
-            css_vars = "body {" + "".join(f"--o-{k}: {v};" for k, v in pal.items() if k != "dark") + f"--o-shadow: {shadow};" + \
-                       ("color-scheme: dark;" if pal.get("dark") == "1" else "color-scheme: light;") + "}"
-            parts = (Style(css_vars, id="mojoui-skin"), Script(f"document.body.className = '{name}'", id="mojoui-skin-js"))
-        else:
-            parts = (Style("", id="mojoui-skin"), Script("document.body.className = ''", id="mojoui-skin-js"))
+    def skin(s, oob=False):
+        """The app's theme on the page (D-260): its body classes, its palette as CSS variables, and its style sheet; the
+        host knows no theme. oob: after a change (Settings → Appearance, a mode's tint), swapped into the open page
+        (D-156); the style sheet goes again only when the theme itself changed, not just its palette."""
+        tid, classes, css_vars, css = mod.theme(s.handle).split("\x1f")
+        parts = (Style(css_vars, id="mojoui-skin"), Script(f"document.body.className = '{classes}'", id="mojoui-skin-js"))
+        if tid != s.theme_id:
+            parts += (Style(css, id="mojoui-theme"),)
+            s.theme_id = tid
         if oob:
             for el in parts:
                 el.attrs["hx-swap-oob"] = "true"
@@ -1273,14 +1023,12 @@ def make_app(module_dir):
             return rows_div(s, n, sid, s.list_top[n])
 
     def restyle(s, out):
-        """A skin picked in Settings, or a mode's tint (App.accent) changed: the page restyles with whatever else goes out (D-156)."""
-        design = mod.design(s.handle)
-        accent = mod.accent(s.handle) if hasattr(mod, "accent") else 0
-        if design == getattr(s, "design", design) and accent == getattr(s, "accent", accent):
+        """A skin picked in Settings, or a mode's tint changed (Theme.key): the page restyles with whatever else goes out (D-156)."""
+        key = mod.theme_key(s.handle)
+        if key == s.theme_key:
             return out
-        s.design = design
-        s.accent = accent
-        return (out if isinstance(out, tuple) else ((out,) if out != "" else ())) + skin(design, oob=True, accent=accent)
+        s.theme_key = key
+        return (out if isinstance(out, tuple) else ((out,) if out != "" else ())) + skin(s, oob=True)
 
     def changes(s, sid, d, n=-1, text="", number=0):
         """What to send the page after a change: the whole screen on a rebuild, else the changed

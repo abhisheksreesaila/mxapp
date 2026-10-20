@@ -9,6 +9,7 @@ from mxframe import Table, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
+from themes.omarchy import omarchy_palette
 from mojoui.datagrid import DataGrid
 from mojoui.sheet import Sheet
 from mojoui.numformat import ColumnFormat, CURRENCY
@@ -49,7 +50,7 @@ struct Shot(Movable):
         self.px = List[UInt32](length=W * H, fill=0)
         var s = Surface(Int(self.px.unsafe_ptr()), W, H, 1.0)
         var g = DataGrid()
-        var pal = Palette.omarchy()
+        var pal = omarchy_palette()
         self.card = pal.card
         g.draw(s, sheet, Font(), pal)
         self.lefts = List[Int]()
