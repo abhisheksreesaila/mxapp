@@ -610,11 +610,11 @@ struct Main(App):
                 t.col = t.chart.value  # (compute_tile reads the tile's column and group)
                 t.group = t.chart.group
                 compute_tile(t, self.frame, self.filter)
-                self.message = chart_sentence(t.chart, self.frame) + " (" + fixed(t.chart.milliseconds, 1) + " ms)"
+                self.message = object_title(t.chart, self.frame)  # (the chart's short title: its sentence is on it, its timing in its inspector)
                 self.tiles[cref - TILE_REF] = t^
             else:
                 compute(c, self.frame)
-                self.message = chart_sentence(c, self.frame) + " (" + fixed(c.milliseconds, 1) + " ms)"
+                self.message = object_title(c, self.frame)
                 self.objects[cref] = c^
             if logged:
                 self.chart_undo.append((self.frame.undo_depth(), cref, before^))
@@ -1842,7 +1842,7 @@ struct Main(App):
             var note = String("The Report's filter applies too: ") + self.filter.words(f) if cref >= TILE_REF else String("Only these rows are added up")
             return InspectorPage("Rows", PAGE, [Section("Rows", [Dropdown(chart_choices(c, f, SLOT_FILTER), at, INSP_SET + SLOT_FILTER).fill(), Text(note, CAPTION)])])
         if self.insp_page == 4:
-            var marks: List[String] = ["Bars", "A line"]
+            var marks: List[String] = ["Bars", "Line"]
             return InspectorPage("Style", PAGE, [Section("As", [Segmented(marks, 1 if c.style == CHART_LINE else 0, INSP_SET + SLOT_MARK).fill()])])
         var head = List[View]()
         head.append(Text(chart_sentence(c, f), HEADLINE).tag("chart-sentence"))

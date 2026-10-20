@@ -121,7 +121,9 @@ def m3():
     import shutil
     shutil.rmtree(head, ignore_errors=True)
     shots.shoot(head, others_only=True)
-    meant = {"fluent-gtk.png": "P9: bars lost their track", "fluent-web.png": "P9: bars lost their track"}  # (the polish's own changes)
+    meant = {"fluent-gtk.png": "P9: bars lost their track", "fluent-web.png": "P9: bars lost their track",  # (the polish's own changes)
+             "omarchy-gtk.png": "MX Studio follows the desktop's live Omarchy theme (it changed on 2026-10-19 21:34, after M0)",
+             "omarchy-web.png": "the same: the move itself is proven by after-move, shot before the change (D-267)"}
     drift = [(n, s) for n, s in shots.compare(a, head) if s is not None and n not in meant and s > noise.get(n, 0) + 0.002]
     missing = [n for n, s in shots.compare(a, head) if s is None and not n.startswith("omx-")]
     if drift or missing:

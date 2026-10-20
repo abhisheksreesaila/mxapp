@@ -169,15 +169,16 @@ def m3():
             problems.append(f"{host}: the chart inspector's rows lack {missing}")
         page = root + ";tap:Order;pause:300;segment:1=Top 5;pause:300"
         out = g25.gtk(page, "m3-order")[0] if host == "GTK" else g25.web(page, "m3-order")
-        if "Back" not in re.findall(r"^BUTTON: (.*)$", out, re.M) or not any(l.startswith("Sum of amount by region, largest first, top 5") for l in labels(out)):
-            problems.append(f"{host}: the Order page didn't change the chart: {[l for l in labels(out) if ' as ' in l][-1:]}")
+        buttons = re.findall(r"^BUTTON: (.*)$", out, re.M)
+        if "Back" not in buttons or "largest first" not in buttons or "top 5" not in buttons:  # (the chart's own words: its title reads largest first, top 5)
+            problems.append(f"{host}: the Order page didn't change the chart: {[b for b in buttons if b in ('largest first', 'top 5', 'in data order', 'every region')]}")
         back = page + ";tap:Back;pause:300"
         out = g25.gtk(back, "m3-back")[0] if host == "GTK" else g25.web(back, "m3-back")
         if "largest first · top 5" not in labels(out):
             problems.append(f"{host}: Back didn't return to the chart's rows (or they don't say top 5)")
-    tile = g25.gtk(g25.OPEN + ";tap:Create table;tap:Report;tap:Chart tile;pause:300;tap:Style;pause:300;segment:0=A line;pause:300", "m3-tile")[0]
-    if not any(l.startswith("Sum of amount by region, in data order, every region, every row, as a line") for l in labels(tile)):
-        problems.append(f"GTK Report tile: the Style page didn't make a line: {[l for l in labels(tile) if ' as ' in l][-1:]}")
+    tile = g25.gtk(g25.OPEN + ";tap:Create table;tap:Report;tap:Chart tile;pause:300;tap:Style;pause:300;segment:0=Line;pause:300", "m3-tile")[0]
+    if "a line" not in re.findall(r"^BUTTON: (.*)$", tile, re.M):  # (the tile's title reads "…, as a line")
+        problems.append("GTK Report tile: the Style page didn't make a line")
     return not problems, "; ".join(problems) or ("a chart's inspector: its sentence and four rows saying what's set (Data, Order, Rows, Style); "
                                                   "Order → Top 5 changes the chart, Back returns (GTK, web); a Report tile's Style page makes a line")
 

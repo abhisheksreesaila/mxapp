@@ -205,7 +205,7 @@ body.liquid .dialog-head h3 { font-size: 17px; }
 body.liquid .toast { border-radius: 999px; animation: liquid-rise 300ms var(--sp-bouncy) both; }
 @media (prefers-reduced-motion: reduce) { body.liquid *, body.liquid *::before, body.liquid *::after { animation: none !important; transition-duration: 0.01ms !important; } }
 @keyframes liquid-page { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
-body.liquid [data-tag=inspector-page], body.liquid [data-tag=inspector-page] ~ * { animation: liquid-page 280ms var(--sp-snappy) both; }
+body.liquid [data-tag=inspector-page], body.liquid [data-tag=inspector-page] ~ * { animation: liquid-page 280ms cubic-bezier(.22, 1, .36, 1) both; }  /* (an arrival, not hover feedback) */
 """
 
 

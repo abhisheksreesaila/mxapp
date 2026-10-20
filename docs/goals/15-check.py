@@ -94,9 +94,10 @@ def m2():
         return False, msg
     o = oracle(CSV_1M)
     problems = []
-    bars = both(OPEN + ";tap:Chart;tapat:1=500,200", "chart")
-    regions = both(OPEN + ";tap:Chart;select:1=region;tapat:1=500,200", "chart-region")
-    line = both(OPEN + ";tap:Chart;segment:1=Line", "chart-line")
+    # (goal 28, D-267: the chart's settings are on its inspector's pages, and its ask field sits above a shorter canvas)
+    bars = both(OPEN + ";tap:Chart;tapat:1=300,40", "chart")
+    regions = both(OPEN + ";tap:Chart;tap:Data;select:1=region;tapat:1=300,40", "chart-region")
+    line = both(OPEN + ";tap:Chart;tap:Style;segment:1=Line", "chart-line")
     for r in (bars, regions, line):
         if r[0] is None:
             return False, r[1]
