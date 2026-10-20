@@ -649,6 +649,9 @@ def chart_view(obj: SheetObject, sheet: Sheet) -> ChartView:
         for v in obj.was_values:
             was.append(v * 100.0 if money else v)
         cv.moving_from(obj.was_labels.copy(), was^, ease(Float64(obj.moved) / Float64(MOVE_FRAMES)))
+    if obj.kind == OBJ_CHART and len(obj.values) == len(obj.labels):
+        for k in range(len(obj.labels)):
+            cv.missing.append(not has_value(obj, k))
     if obj.style == CHART_LINE:
         cv.kind = "Line Chart"
     return cv^

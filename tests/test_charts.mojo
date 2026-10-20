@@ -4,7 +4,7 @@ from std.testing import assert_equal, assert_true
 from mojoui import Surface, rgba
 from mojoui.text import Font
 from mojoui.png import encode_png
-from mojoui.charts import KpiTile, BarChart, LineChart, ColumnChart, money, axis_money, compact, nice_max, grouped, BRAND, CARD_BG
+from mojoui.charts import thin_labels, KpiTile, BarChart, LineChart, ColumnChart, money, axis_money, compact, nice_max, grouped, BRAND, CARD_BG
 
 
 def save(px: List[UInt32], w: Int, h: Int, name: String) raises:
@@ -90,4 +90,17 @@ def main() raises:
     assert_equal(cols.hit(300, 290), 4)
     save(px, w, h, "columns")
     _ = len(px)
+    # x labels never touch: 12 month labels 60 px wide, 30 px apart: every 3rd, and the last only if it clears (goal 29)
+    var xs = List[Float64]()
+    var ws = List[Float64]()
+    for m in range(12):
+        xs.append(Float64(m) * 30.0)
+        ws.append(60.0)
+    var shown = thin_labels(ws, xs, 8.0)
+    assert_equal(len(shown), 4)
+    assert_true(shown[0] == 0 and shown[1] == 3 and shown[2] == 6 and shown[3] == 9, "every 3rd; Dec doesn't fit after Oct")
+    var wide = List[Float64]()
+    for m in range(12):
+        wide.append(12.0)
+    assert_equal(len(thin_labels(wide, xs, 8.0)), 12, "labels that fit are all drawn")
     print("CHARTS TESTS PASSED")

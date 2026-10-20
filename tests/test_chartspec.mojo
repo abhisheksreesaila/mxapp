@@ -6,7 +6,7 @@ from mxframe import Table, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL
 from mojoui.sheet import Sheet
 from mojoui.omxfile import save_omx, open_document, read_spec
 from mojoui.json import Json
-from mojoui.sheetpage import (SheetObject, compute, chart_text, readout, object_title, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT,
+from mojoui.sheetpage import (SheetObject, compute, chart_view, chart_text, readout, object_title, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT,
                               COMBINE_MEDIAN, NUM_OVER, NUM_BETWEEN, ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ)
 from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_CHART
 from mojoui.shared import make_dir
@@ -144,4 +144,10 @@ def main() raises:
     var good = Json.parse('{"num_col": 2, "num_op": 1, "num_lo": 500}')
     read_spec(good, 0, o3, sheet)
     assert_true(o3.num_col == 2 and o3.num_op == NUM_OVER and o3.num_lo == 500)
+    # a group with no figure (Beta's median: no values; "(blank)": no median yet) draws no bar and reads "—", not 0
+    var med = chart(COMBINE_MEDIAN)
+    compute(med, sheet)
+    var cv = chart_view(med, sheet)
+    for k in range(len(med.labels)):
+        assert_equal(cv.missing[k], med.labels[k] == "Beta" or med.labels[k] == "(blank)", med.labels[k])
     print("CHARTSPEC TESTS PASSED")

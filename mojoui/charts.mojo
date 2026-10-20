@@ -247,7 +247,8 @@ struct BarChart(Movable):
             var on = self.selected < 0 or self.selected == i
             var bar_w = (x1 - x0) * (self.values[i] / top if top > 0 else 0)
             var bh = min(rh * 0.62, 26 * k)
-            rect(s, x0, cy - bh / 2, max(bar_w, 2 * k), bh, self.pal.accent if on else self.pal.accent_tint, 3 * k)
+            if self.labels[i] != "—":  # (no figure at all: no bar, not a zero's sliver)
+                rect(s, x0, cy - bh / 2, max(bar_w, 2 * k), bh, self.pal.accent if on else self.pal.accent_tint, 3 * k)
             var base = cy + 4.5 * k
             font.draw(s, self.names[i], x0 - 12 * k, base, 13 * k, self.pal.ink if on else self.pal.ink3, self.pal.medium if self.selected == i else self.pal.regular, RIGHT)
             font.draw(s, self.labels[i], x0 + bar_w + 8 * k, base, 13 * k, self.pal.ink if on else self.pal.ink3, self.pal.medium)
@@ -280,6 +281,30 @@ struct BarChart(Movable):
 
 
 # ---------- line / area over time ----------
+
+def thin_labels(widths: List[Float64], xs: List[Float64], gap: Float64) -> List[Int]:
+    """Which x labels to draw so none touch: every k-th (the same stride throughout), and the last (drawn ending at
+    the plot's edge) only if it clears the one before. widths[i] = 0: no label there."""
+    var n = len(xs)
+    var shown = List[Int]()
+    var widest = 0.0
+    for w in widths:
+        widest = max(widest, w)
+    var every = 1
+    if n > 1 and xs[n - 1] > xs[0]:
+        every = max(Int((widest + gap) / ((xs[n - 1] - xs[0]) / Float64(n - 1)) + 0.999), 1)
+    var drawn_right = -1.0e18
+    for i in range(n):
+        if widths[i] == 0.0 or (i % every != 0 and i != n - 1):
+            continue
+        var last = i == n - 1 and n > 1
+        var x0 = xs[i] - widths[i] if last else xs[i] - widths[i] / 2
+        if x0 < drawn_right + gap:
+            continue
+        shown.append(i)
+        drawn_right = xs[i] if last else xs[i] + widths[i] / 2
+    return shown^
+
 
 struct LineChart(Movable):
     """A value over time (e.g. 36 months) as a line over a fading area, with a y-axis in money."""
@@ -382,9 +407,11 @@ struct LineChart(Movable):
         for i in range(n):
             xs.append(left + (right - left) * Float64(i) / Float64(n - 1))
             ys.append(bottom - (bottom - top) * self.values[i] / axis_top)
-        for i in range(n):  # x labels
-            if self.labels[i] != "":  # (the last one ends at the plot's edge, not past it)
-                font.draw(s, self.labels[i], xs[i], bottom + 18 * k, 12 * k, self.pal.ink2, self.pal.regular, RIGHT if i == n - 1 and n > 1 else CENTRE)
+        var widths = List[Float64]()  # x labels: every k-th one, so none touch (24 months: Jan, Apr, Jul… on a small chart)
+        for i in range(n):
+            widths.append(font.measure(self.labels[i], 12 * k, self.pal.regular) if self.labels[i] != "" else 0.0)
+        for i in thin_labels(widths, xs, 8 * k):
+            font.draw(s, self.labels[i], xs[i], bottom + 18 * k, 12 * k, self.pal.ink2, self.pal.regular, RIGHT if i == n - 1 and n > 1 else CENTRE)
         area(s, xs, ys, bottom, with_alpha(self.pal.accent, 0.22), with_alpha(self.pal.accent, 0.0))
         for i in range(n - 1):
             line(s, xs[i], ys[i], xs[i + 1], ys[i + 1], 2.25 * k, self.pal.accent)

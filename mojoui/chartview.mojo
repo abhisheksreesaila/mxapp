@@ -30,6 +30,7 @@ struct ChartView(Copyable, Movable):
     var marker_text: String
     var was_labels: List[String]  # the chart before a change, and how far it has moved to this one (1: there)
     var was_values: List[Float64]
+    var missing: List[Bool]  # bars: a group with no figure at all (a median of no values): no bar, "—"
     var t: Float64
 
     def __init__(out self, title: String, var labels: List[String], var values: List[Float64], value_name: String = "value",
@@ -48,6 +49,7 @@ struct ChartView(Copyable, Movable):
         self.marker_text = ""
         self.was_labels = List[String]()
         self.was_values = List[Float64]()
+        self.missing = List[Bool]()
         self.t = 1.0
 
     @staticmethod
@@ -110,8 +112,8 @@ struct ChartView(Copyable, Movable):
                 return
             var f = self.flint(pal)
             var texts = List[String]()
-            for v in self.values:  # (the figures say where the bars are going)
-                texts.append(f.label("x", v))
+            for i in range(len(self.values)):  # (the figures say where the bars are going)
+                texts.append("—" if i < len(self.missing) and self.missing[i] else f.label("x", self.values[i]))
             BarChart(self.labels.copy(), now^, texts^, self.selected).themed(pal).moving(places^).draw(s, font)
             return
         if self.kind == "Heatmap":
@@ -119,6 +121,12 @@ struct ChartView(Copyable, Movable):
         elif self.kind == "Line Chart":
             LineChart(self.labels.copy(), self.values.copy(), self.selected).with_second(self.second.copy()).with_marker(
                 self.marker, self.marker_text).numbers(self.money).themed(pal).draw(s, font)
+        elif True in self.missing:  # (a group with no figure: "—" and no bar, which Flint's spec can't say)
+            var f = self.flint(pal)
+            var texts = List[String]()
+            for i in range(len(self.values)):
+                texts.append("—" if i < len(self.missing) and self.missing[i] else f.label("x", self.values[i]))
+            BarChart(self.labels.copy(), self.values.copy(), texts^, self.selected).themed(pal).draw(s, font)
         else:
             self.flint(pal).draw(s, font, self.selected)
 

@@ -1,54 +1,50 @@
-# Goal 28 report: editing a chart, the title is the query
+# Goal 29 report: charts that ask the new engine more (MX frame 321870f)
 
-**End goal (owner, 2026-10-19):** "charts can be on the inspector and a sub-inspector can have settings… be creative with UI… can't ship an Excel clone"; on the prototypes: "The title is the query: ask, then tap any word is the genius!!" And the standing bar: one language, every platform; the showcase dashboard with macOS polish, Linux speed and Windows usability.
+**End goal (owner):** one language for every platform; omxplorer is the showcase: the best-performing dashboard, with macOS polish, Linux speed and Windows usability. MX frame's session called **321870f** stable (SQL, expressions, FLOAT64, median and quantiles per group); goal 29 puts it under the chart sentence.
 
 ## Result
-M0–M7 PASS. Reviewer: round 2 PASS.
-```
-PASS  M0  12 specs (sum, average, count; in data order, largest, smallest, A to Z; top 2/3/5; paid or unpaid) equal pyarrow's; a document keeps a chart's spec and an older one opens as it was (tests/test_chartspec.mojo)
-PASS  M1  a chart's title is its sentence, every setting a token (GTK, web); a token's choices open on it; Sum→Average, in data order→largest first, every region→top 3 change the chart on both hosts; a Report tile's too
-PASS  M2  "top 3, unpaid, as a line" turns a chart into the top 3 regions' unpaid amounts as a line and says so (GTK, web, a Report tile too); nonsense changes nothing and says it; 37 phrases in tests/test_chartask.mojo
-PASS  M3  a chart's inspector: its sentence and four rows saying what's set (Data, Order, Rows, Style); Order → Top 5 changes the chart, Back returns (GTK, web); a Report tile's Style page makes a line
-PASS  M4  Undo takes back an ask (top 3), then the added row, then the earlier ask (average), each one step; a new chart opens its inspector; the toolbars only insert
-PASS  M5  a re-order moves the bars over 21 frames after the pick (GTK), each ≤ 0.9 ms; the first frame is the old chart, the last exactly the new (tests/test_chartmove.mojo)
-PASS  M6  real input: a click on Sum, Down and Return make it Average, the first bar reads pyarrow's mean; typing "top 3, as a line" and Return changes it; Ctrl+Z twice brings back the first chart
-PASS  M7  goal 27's M0–M8 (goals 3–26 inside them, on the Scene and on pixels): every check passed in the full run but goal 15's M5, which read the chart's old title; it now reads the title's words (D-267) and passes on the same build
-```
+RESULTS
 
-## What you can do with a chart now
-A chart's title **is** its settings, as a sentence:
+## What a chart can say now
+The sentence from goal 28 (tap a word, or ask) gained three things people ask a dashboard first:
 
-> **Sum** of **amount** by **region**, **in data order**, **every region**, **every row**, as **bars**
+| Ask | What changes |
+|---|---|
+| *median*, *p90*, *90th percentile* | **Median** or **p90** of amount by region: each group's middle value, or the value 90 % of its rows stay under |
+| *over 5,000*, *under 500*, *at least 2*, *at most 10*, *between 100 and 200*, *1.5k* | a number condition on the rows, beside a text or Yes/No one (*only paid and over 5,000*); also on the chart's Rows page |
+| *by month of day*, *monthly*, *by quarter*, *by weekday* | groups by a date's month, quarter or weekday: every month of the span in calendar order, empty months too |
 
-| Tap a word | Ask | Open a part |
+| Median by region | By month, as a line | Over 2,500 (Rows page) |
 |---|---|---|
-| ![](goals/28/picked-gtk.jpg) | ![](goals/28/asked-gtk.jpg) | ![](goals/28/pages-gtk.jpg) |
+| ![](goals/29/median-gtk.jpg) | ![](goals/29/month-gtk.jpg) | ![](goals/29/over-gtk.jpg) |
 
-- **Tap any coloured word** and its choices open on it: Sum, Average or Count; any number column; group by any text column; in data order, largest first, smallest first, A to Z; every group or the top 3, 5 or 10; every row, only paid, not paid, only West…; bars or a line. The arrow keys and Return work in the list, as in a native menu.
-- **Ask** in the field under the chart: "top 3, unpaid, as a line", "average qty by product", "only West, smallest first". It changes several words at once, says what it took (and what it skipped), and the words that changed glow for a moment. It reads the table's own names too: columns, Yes/No columns, text values. It's a keyword reader (instant, offline), not a model: an agent can write the same sentence later.
-- **The inspector** shows the sentence and what's set (Data, Order, Rows, Style); each row opens a page that slides in, with Back.
-- **The bars move** to their new length and place (about 330 ms, the calm curve) instead of cutting.
-- **Undo** takes back each chart change as one step, in order with your table edits (Ctrl+Z).
-- Report chart tiles work the same way; Insert Chart opens the chart's inspector; the toolbars only insert.
-- Saved in the document; older documents open as they were.
+- Every number is checked against pyarrow: 6 median/p90 charts, 8 number conditions (on money and on whole numbers, at an exact value), 4 calendar charts. Dates before 1970, across a year's end and centuries away read right.
+- The ask won't guess: "qty under 2.5" on a whole-number column, a second number condition, or "p95" is skipped and said, never rounded or swapped.
+- Saved in the document; a document that names something it can't use opens without it.
 
-The same on the web: ![](goals/28/asked-web.jpg)
+## What it costs (this machine, RTX 3090, engine 321870f)
+| | sum by region | median by region | sum by month |
+|---|---|---|---|
+| 1M rows | 0.5 ms | 6.4 ms | 5.7 ms |
+| 100M rows | 46 ms | 657 ms | 481 ms |
 
-## Fixed on the way (all in today's build)
-- **Undo right after Add row crashed the app** (the selection stayed on the removed row: the engine's bounds check aborted).
-- **Picking a choice scrolled the sheet** by 90 pt (the keyboard going back to the grid scrolled to it): the host's own focus moves no longer scroll a board.
-- **A line chart of a plain column read its values as cents** ($15K for 1.5M); its last label was cut off; its axis cut wide labels.
-- A popover's choices had no keyboard (GTK gives popovers no arrow keys): focus goes in, Up/Down move.
+At 1M rows every chart fits one 60 Hz frame. At 100M rows a median or a month chart takes half a second, and today the window waits for it. Goal 30 moves those onto MX frame 23edc59's background queries.
+
+## Fixed on the way
+- **A month chart's dates ran into each other** on the x axis ("Jan 2025Feb 2025…"). A line chart now draws every k-th label so none touch, on every chart.
+- The engine package isn't byte-for-byte reproducible (two builds of the same commit differ), so the old "vendor equals a fresh build" checks only held for a copied file. They now prove the sources match the commit's archive (D-269).
+- **A median chart drew "(blank)" as a 0 bar** though it has no median: a group with no figure reads "—" and draws no bar (an average of no values too).
+- The emulator kept a test app signed by another worktree's key, and Android installs failed; the driver reinstalls it.
 
 ## Your test
 ```
 cd ~/Projects/mxapp/mojo-ui
 scripts/omxplorer.sh build/data/orders_1m.csv
 ```
-Insert → Chart (or the Chart tool), then tap "Sum" in its title, or type in "Ask": *top 5, largest first, as a line*. Ctrl+Z to step back. On the Report: Chart tile, same.
+Insert → Chart, then in Ask: *median*, *by month of day, as a line*, *only paid and over 5,000*. Or tap the last-but-one word (every row) and pick a condition; the Rows page has Over / Under / Between.
 
 ## Not done
-- **Median per group, by month or week, ranges and several conditions** wait for MX frame 321870f (stable now): goal 29 vendors it and moves the charts' queries onto it, so the sentence gains "median", "by month", "over $1,000".
-- The ask reads English keywords only; a value equal to a vocabulary word (a tier called "Top") wins over the word (D-266).
-- Mac, iPhone and Android draw the sentence's words as plain buttons (no token style there yet); a dark Mac still draws charts light.
-- The bars move on GTK, measured; on the web they move too but no check measures them.
+- "(blank)" has no median yet: rows without a group key need the engine's NULL group through SQL.
+- One number condition per chart; weeks and years as groups; p-values other than p90.
+- At 100M rows a median or month chart blocks for about half a second (goal 30).
+- Mac, iPhone and Android build on 321870f; the new words weren't run there.

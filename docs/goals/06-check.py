@@ -222,6 +222,7 @@ def m6():
     if not view_line(wout) or view_line(wout)[2] != 2.0:
         problems.append(f"real wheel/drag didn't reach the app on the web: {view_line(wout)}")
     # A frame that changes the screen's shape (playback ends, a button appears) must reach the page.
+    (BUILD / "frame_rebuild" / "web").mkdir(parents=True, exist_ok=True)  # (a fresh worktree has no such folder)
     b = run(["scripts/mxbuild.sh", "-I", "tests/frame_rebuild", "-I", ".", "hosts/web_main.mojo", "--emit", "shared-lib",
              "-o", str(BUILD / "frame_rebuild" / "web" / "mojoui_app.so")], timeout=900)
     import drive
