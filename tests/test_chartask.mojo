@@ -14,8 +14,8 @@ def sheet() raises -> Sheet:
     make_dir("build/test-chartask")
     var path = String("build/test-chartask/orders.csv")
     with open(path, "w") as f:
-        f.write("amount,qty,region,product,paid\n12.50,3,North,Bolt,true\n7.25,1,West,Nut,false\n9.00,2,North,Gear,true\n"
-                + "4.75,5,South,Bolt,false\n3.10,4,West,Gear,true\n")
+        f.write("amount,qty,region,product,paid,day\n12.50,3,North,Bolt,true,2025-01-15\n7.25,1,West,Nut,false,2025-02-03\n9.00,2,North,Gear,true,2025-02-20\n"
+                + "4.75,5,South,Bolt,false,2025-04-01\n3.10,4,West,Gear,true,2025-06-30\n")
     return Sheet(read_csv(path).table)
 
 
@@ -134,6 +134,15 @@ def main() raises:
     _ = ask(nums, s, "only bolt, over 9")
     _ = ask(nums, s, "every row")
     assert_equal(chart_sentence(nums, s), base, "every row clears both conditions")
+    check("by month", s, "Sum of amount by month of day, in data order, every month, every row, as bars")
+    check("monthly, as a line", s, "Sum of amount by month of day, in data order, every month, every row, as a line")
+    check("by quarter of day", s, "Sum of amount by quarter of day, in data order, every quarter, every row, as bars")
+    check("count by weekday", s, "Count of rows by weekday of day, in data order, every weekday, every row, as bars")
+    var months = fresh()
+    _ = ask(months, s, "by month")
+    _ = ask(months, s, "by region")
+    assert_equal(slot_text(months, s, SLOT_FILTER), "every row")
+    assert_equal(chart_sentence(months, s), base, "by region after by month: the region's values again")
     check("median", s, "Median of amount by region, in data order, every region, every row, as bars")
     check("90th percentile", s, "p90 of amount by region, in data order, every region, every row, as bars")
     print("CHARTASK TESTS PASSED")

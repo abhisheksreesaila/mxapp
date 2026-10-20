@@ -8,7 +8,7 @@
 # Format 1 (the pyarrow shim's files) is refused with a message that says so.
 
 from mxframe import write_parquet, read_parquet, scan_parquet, ParquetScan, Table, UNCOMPRESSED
-from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT, BOOL
+from mojoui.sheet import Sheet, placeholder_sheet, INT, DECIMAL, TEXT, BOOL, DATE
 from mojoui.csvio import streams
 from mojoui.json import Json, json_string
 from mojoui.numformat import ColumnFormat
@@ -74,7 +74,7 @@ def spec_json(o: SheetObject, sheet: Sheet) -> String:
     var num = String("")
     if o.num_col >= 0 and o.num_op != 0:
         num = ', "num_col": ' + String(o.num_col) + ', "num_op": ' + String(o.num_op) + ', "num_lo": ' + String(o.num_lo) + ', "num_hi": ' + String(o.num_hi)
-    return ', "combine": ' + String(o.combine) + ', "order": ' + String(o.order) + ', "top": ' + String(o.top) + only + num
+    return ', "combine": ' + String(o.combine) + ', "order": ' + String(o.order) + ', "top": ' + String(o.top) + ', "part": ' + String(o.part) + only + num
 
 
 def read_spec(j: Json, node: Int, mut o: SheetObject, sheet: Sheet):
@@ -84,6 +84,8 @@ def read_spec(j: Json, node: Int, mut o: SheetObject, sheet: Sheet):
     var order = j.number(j.get(node, "order"), ORDER_TABLE)
     o.order = order if ORDER_TABLE <= order <= ORDER_AZ else ORDER_TABLE
     o.top = max(j.number(j.get(node, "top"), 0), 0)
+    var part = j.number(j.get(node, "part"), 0)
+    o.part = part if 0 <= part <= 3 and (part == 0 or sheet.kind(o.group) == DATE) else 0
     var only = j.number(j.get(node, "only_col"), -1)
     o.only_col = -1  # (every row, unless the file names a filter it still can)
     var nc = j.number(j.get(node, "num_col"), -1)
@@ -248,7 +250,8 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         var value = j.number(j.get(o, "value"), -1)
         var group = j.number(j.get(o, "group"), -1)
         var across = j.number(j.get(o, "across"), -1)
-        if (kind != OBJ_CHART and kind != OBJ_PIVOT) or not is_number(sheet, value) or not is_text(sheet, group) or not (across == -1 or is_text(sheet, across)):
+        var dated = kind == OBJ_CHART and 0 <= group < sheet.columns() and sheet.kind(group) == DATE and j.number(j.get(o, "part"), 0) > 0  # (a chart of a date's months)
+        if (kind != OBJ_CHART and kind != OBJ_PIVOT) or not is_number(sheet, value) or not (is_text(sheet, group) or dated) or not (across == -1 or is_text(sheet, across)):
             continue
         var obj = SheetObject.chart(value, group, j.number(j.get(o, "x")), j.number(j.get(o, "y")), j.number(j.get(o, "w"), 520), j.number(j.get(o, "h"), 340))
         obj.kind = kind
@@ -265,7 +268,8 @@ def open_document(path: String, mut objects: List[SheetObject], mut tiles: List[
         var col = j.number(j.get(t, "col"), -1)
         var group = j.number(j.get(t, "group"), -1)
         var column_ok = (0 <= col < sheet.columns()) if (kind == TILE_DISTINCT or kind == TILE_COUNT) else is_number(sheet, col)  # (distinct and count: any column)
-        if not (TILE_SUM <= kind <= TILE_LAST) or not column_ok or (kind == TILE_CHART and not is_text(sheet, group)):
+        var dated = kind == TILE_CHART and 0 <= group < sheet.columns() and sheet.kind(group) == DATE and j.number(j.get(t, "part"), 0) > 0
+        if not (TILE_SUM <= kind <= TILE_LAST) or not column_ok or (kind == TILE_CHART and not (is_text(sheet, group) or dated)):
             continue
         var tile = new_tile(kind, col, group)
         read_spec(j, t, tile.chart, sheet)

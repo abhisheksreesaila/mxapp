@@ -9,7 +9,7 @@ from mojoui.sheet import Sheet, TEXT, DECIMAL, INT, DATE, BOOL
 from mojoui.sentence import Word, Sentence, sentence_text
 from mojoui.chartview import ChartView
 from mojoui.pivot import PivotTable
-from mojoui.numformat import CURRENCY
+from mojoui.numformat import CURRENCY, civil
 from mojoui.charts import fixed, grouped
 
 comptime OBJ_CHART = 1
@@ -31,6 +31,13 @@ comptime ORDER_SMALLEST = 2
 comptime ORDER_AZ = 3
 comptime ORDERS: List[String] = ["in data order", "largest first", "smallest first", "A to Z"]  # (data order: as the data stores its groups, not sorted)
 comptime TOPS: List[Int] = [0, 3, 5, 10]  # (0: every group)
+comptime PART_NONE = 0  # a chart grouped by a date column: its month, quarter or weekday (calendar order)
+comptime PART_MONTH = 1
+comptime PART_QUARTER = 2
+comptime PART_WEEKDAY = 3
+comptime PARTS: List[String] = ["", "month", "quarter", "weekday"]
+comptime MONTHS: List[String] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+comptime WEEKDAYS: List[String] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 comptime NUM_ANY = 0  # a chart's number condition: none, or its column over / under / between values (stored units)
 comptime NUM_OVER = 1
 comptime NUM_UNDER = 2
@@ -49,6 +56,7 @@ struct SheetObject(Copyable, Movable):
     var h: Int
     var value: Int  # the value column (summed)
     var group: Int  # charts: group by; pivots: rows
+    var part: Int  # charts: PART_NONE (a text column's values), or a date column's month, quarter or weekday
     var across: Int  # pivots: columns (-1: none)
     var style: Int  # charts: CHART_BAR, CHART_LINE
     var selected: Int  # charts: the picked bar or point (-1)
@@ -76,13 +84,13 @@ struct SheetObject(Copyable, Movable):
 
     @staticmethod
     def chart(value: Int, group: Int, x: Int, y: Int, w: Int = 520, h: Int = 320) -> SheetObject:
-        return SheetObject(OBJ_CHART, x, y, w, h, value, group, -1, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0, -1, NUM_ANY, 0, 0,
+        return SheetObject(OBJ_CHART, x, y, w, h, value, group, PART_NONE, -1, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0, -1, NUM_ANY, 0, 0,
                            List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), List[Int](), List[Bool](), 0,
                            List[String](), List[Float64](), MOVE_FRAMES)
 
     @staticmethod
     def pivot(value: Int, rows: Int, across: Int, x: Int, y: Int, w: Int = 640, h: Int = 320) -> SheetObject:
-        return SheetObject(OBJ_PIVOT, x, y, w, h, value, rows, across, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0, -1, NUM_ANY, 0, 0,
+        return SheetObject(OBJ_PIVOT, x, y, w, h, value, rows, PART_NONE, across, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0, -1, NUM_ANY, 0, 0,
                            List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), List[Int](), List[Bool](), 0,
                            List[String](), List[Float64](), MOVE_FRAMES)
 
@@ -129,6 +137,41 @@ def with_blanks(cells: List[Int], by_row: List[Int], by_col: List[Int], total: I
     return out^
 
 
+def calendar_key(obj: SheetObject, sheet: Sheet) raises -> Tuple[Expr, Int, List[String]]:
+    """A date column's month, quarter or weekday as a dense group key (0 … n-1, the first month of its span first), how
+    many groups, and their labels ("Jan 2025", "Q1 2025", "Mon"). Dates are day numbers: the year and month come from
+    Howard Hinnant's civil-from-days arithmetic in whole numbers, so the engine groups them like any key."""
+    var d = col(sheet.name(obj.group))
+    var labels = List[String]()
+    if obj.part == PART_WEEKDAY:
+        for w in materialize[WEEKDAYS]():
+            labels.append(w)
+        return (((d + lit(3)) % lit(7) + lit(7)) % lit(7), 7, labels^)  # (1970-01-01 was a Thursday: Monday is 0)
+    var span = sheet.span(obj.group)
+    var a = civil(Int(span[0])) if span[2] else (1970, 1, 1)
+    var b = civil(Int(span[1])) if span[2] else (1970, 1, 1)
+    var z = d + lit(719468)
+    var era = z // lit(146097)
+    var doe = z - era * lit(146097)
+    var yoe = (doe - doe // lit(1460) + doe // lit(36524) - doe // lit(146096)) // lit(365)
+    var doy = doe - (lit(365) * yoe + yoe // lit(4) - yoe // lit(100))
+    var mp = (lit(5) * doy + lit(2)) // lit(153)
+    var month0 = mp + lit(2) - lit(12) * (mp // lit(10))  # (0 January … 11 December)
+    var year = yoe + era * lit(400) + mp // lit(10)
+    var months = materialize[MONTHS]()
+    if obj.part == PART_QUARTER:
+        var q0 = (a[1] - 1) // 3
+        var n = (b[0] - a[0]) * 4 + (b[1] - 1) // 3 - q0 + 1
+        for k in range(n):
+            labels.append("Q" + String((q0 + k) % 4 + 1) + " " + String(a[0] + (q0 + k) // 4))
+        return ((year - lit(a[0])) * lit(4) + month0 // lit(3) - lit(q0), n, labels^)
+    var n = (b[0] - a[0]) * 12 + (b[1] - 1) - (a[1] - 1) + 1
+    for k in range(n):
+        var m = a[1] - 1 + k
+        labels.append(months[m % 12] + " " + String(a[0] + m // 12))
+    return ((year - lit(a[0])) * lit(12) + month0 - lit(a[1] - 1), n, labels^)
+
+
 def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) raises:
     """The object's numbers: one group-by of its value column by its text column(s), on the GPU for a big table.
     Rows whose group is empty make a "(blank)" group (a row and/or a column of a pivot), as in a spreadsheet's pivot
@@ -143,13 +186,21 @@ def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) r
         var num = (c > lit(obj.num_lo)) if obj.num_op == NUM_OVER else ((c < lit(obj.num_hi)) if obj.num_op == NUM_UNDER else (
                    (c >= lit(obj.num_lo)) if obj.num_op == NUM_AT_LEAST else ((c <= lit(obj.num_hi)) if obj.num_op == NUM_AT_MOST else ((c >= lit(obj.num_lo)) & (c <= lit(obj.num_hi))))))
         cond = Optional[Expr]((cond.value().copy() & num^) if cond else num^)
-    var ng = groups_of(sheet, obj.group)
+    var key = col(sheet.name(obj.group))
+    var ng: Int
     obj.labels = List[String]()
-    for code in range(ng):
-        obj.labels.append(sheet.text_of(obj.group, Int64(code)))
+    if obj.kind == OBJ_CHART and obj.part != PART_NONE:  # (a date column's months, quarters or weekdays: whole-number calendar arithmetic)
+        var cal = calendar_key(obj, sheet)
+        key = cal[0].copy()
+        ng = cal[1]
+        obj.labels = cal[2].copy()
+    else:
+        ng = groups_of(sheet, obj.group)
+        for code in range(ng):
+            obj.labels.append(sheet.text_of(obj.group, Int64(code)))
     obj.cols = List[String]()
     var all = sheet.totals(obj.value, None, 1, cond)
-    var by_row = sheet.totals(obj.value, col(sheet.name(obj.group)), ng, cond)
+    var by_row = sheet.totals(obj.value, key.copy(), ng, cond)
     var blank_row = all.counts[0] > total_of(by_row.counts)
     var pivot = obj.kind == OBJ_PIVOT and obj.across >= 0
     if not pivot:
@@ -159,7 +210,7 @@ def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) r
         obj.stats = List[Int]()
         obj.has_stat = List[Bool]()
         if obj.combine == COMBINE_MEDIAN or obj.combine == COMBINE_P90:
-            var st = sheet.group_median(obj.value, col(sheet.name(obj.group)), ng, -1.0 if obj.combine == COMBINE_MEDIAN else 0.9, cond)
+            var st = sheet.group_median(obj.value, key.copy(), ng, -1.0 if obj.combine == COMBINE_MEDIAN else 0.9, cond)
             obj.stats = st[0].copy()
             obj.has_stat = st[1].copy()
         if blank_row:
@@ -180,8 +231,8 @@ def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) r
     for code in range(nc):
         obj.cols.append(sheet.text_of(obj.across, Int64(code)))
     var across = col(sheet.name(obj.across))
-    var key = col(sheet.name(obj.group)) * lit(nc) + across  # (row × columns + column: one dense key)
-    var cells = sheet.totals(obj.value, key^, ng * nc, cond)
+    var cell_key = col(sheet.name(obj.group)) * lit(nc) + across  # (row × columns + column: one dense key)
+    var cells = sheet.totals(obj.value, cell_key^, ng * nc, cond)
     var by_col = sheet.totals(obj.value, across.copy(), nc, cond)
     var blank_col = all.counts[0] > total_of(by_col.counts)
     obj.sums = with_blanks(cells.sums, by_row.sums, by_col.sums, all.sums[0], ng, nc, blank_row, blank_col)
@@ -364,6 +415,14 @@ def number_columns(sheet: Sheet) -> List[Int]:
     return out^
 
 
+def date_columns(sheet: Sheet) -> List[Int]:
+    var out = List[Int]()
+    for c in range(sheet.stored()):
+        if sheet.kind(c) == DATE:
+            out.append(c)
+    return out^
+
+
 def text_columns(sheet: Sheet) -> List[Int]:
     var out = List[Int]()
     for c in range(sheet.stored()):
@@ -379,11 +438,11 @@ def slot_text(obj: SheetObject, sheet: Sheet, slot: Int) -> String:
     if slot == SLOT_VALUE:
         return "rows" if obj.combine == COMBINE_COUNT else sheet.name(obj.value)
     if slot == SLOT_GROUP:
-        return sheet.name(obj.group)
+        return sheet.name(obj.group) if obj.part == PART_NONE else materialize[PARTS]()[obj.part] + " of " + sheet.name(obj.group)
     if slot == SLOT_ORDER:
         return materialize[ORDERS]()[obj.order]
     if slot == SLOT_TOP:
-        return ("every " + sheet.name(obj.group)) if obj.top == 0 else ("top " + String(obj.top))
+        return ("every " + (sheet.name(obj.group) if obj.part == PART_NONE else materialize[PARTS]()[obj.part])) if obj.top == 0 else ("top " + String(obj.top))
     if slot == SLOT_FILTER:
         var words = String("")
         if obj.only_col >= 0:
@@ -445,10 +504,13 @@ def chart_choices(obj: SheetObject, sheet: Sheet, slot: Int) -> List[String]:
     elif slot == SLOT_GROUP:
         for c in text_columns(sheet):
             out.append(sheet.name(c))
+        for c in date_columns(sheet):
+            for part in [PART_MONTH, PART_QUARTER, PART_WEEKDAY]:
+                out.append(materialize[PARTS]()[part] + " of " + sheet.name(c))
     elif slot == SLOT_ORDER:
         return materialize[ORDERS]()
     elif slot == SLOT_TOP:
-        out.append("every " + sheet.name(obj.group))
+        out.append(slot_text(obj, sheet, SLOT_TOP) if obj.top == 0 else "every " + (sheet.name(obj.group) if obj.part == PART_NONE else materialize[PARTS]()[obj.part]))
         for n in materialize[TOPS]()[1:]:
             out.append("top " + String(n))
     elif slot == SLOT_FILTER:
@@ -490,7 +552,16 @@ def apply_choice(mut obj: SheetObject, sheet: Sheet, slot: Int, k: Int) -> Bool:
             if obj.combine == COMBINE_COUNT:
                 obj.combine = COMBINE_SUM  # (a column to count rows of reads as its sum)
     elif slot == SLOT_GROUP:
-        obj.group = text_columns(sheet)[k]
+        var texts = text_columns(sheet)
+        if k < len(texts):
+            obj.group = texts[k]
+            obj.part = PART_NONE
+        else:
+            var dates = date_columns(sheet)
+            obj.group = dates[(k - len(texts)) // 3]
+            obj.part = (k - len(texts)) % 3 + 1
+            if obj.order == ORDER_AZ:
+                obj.order = ORDER_TABLE  # (months read in calendar order, not alphabetically)
         if obj.only_col == obj.group:
             obj.only_col = -1
     elif slot == SLOT_ORDER:
@@ -542,9 +613,9 @@ def object_title(obj: SheetObject, sheet: Sheet) -> String:
     if obj.kind == OBJ_PIVOT:
         return sheet.name(obj.value) + " · " + sheet.name(obj.group) + (" × " + sheet.name(obj.across) if obj.across >= 0 else "")
     if obj.combine == COMBINE_COUNT:
-        return "rows by " + sheet.name(obj.group)
+        return "rows by " + slot_text(obj, sheet, SLOT_GROUP)
     var how = "average " if obj.combine == COMBINE_AVERAGE else ("median " if obj.combine == COMBINE_MEDIAN else ("p90 " if obj.combine == COMBINE_P90 else ""))
-    return how + sheet.name(obj.value) + " by " + sheet.name(obj.group)
+    return how + sheet.name(obj.value) + " by " + slot_text(obj, sheet, SLOT_GROUP)
 
 
 def start_move(mut obj: SheetObject, before: SheetObject):
@@ -586,7 +657,7 @@ def chart_text(obj: SheetObject, sheet: Sheet) -> String:
     """The chart's numbers as tab-separated text (its group column, the value column; a line per bar or point, in
     the value column's format): what an agent reads (App.describe, D-163)."""
     var how = ["", "average ", "", "median ", "p90 "]
-    var out = sheet.name(obj.group) + "\t" + ("rows" if obj.combine == COMBINE_COUNT else how[obj.combine] + sheet.name(obj.value))
+    var out = slot_text(obj, sheet, SLOT_GROUP) + "\t" + ("rows" if obj.combine == COMBINE_COUNT else how[obj.combine] + sheet.name(obj.value))
     for k in range(min(len(obj.labels), len(obj.sums))):
         out += "\n" + obj.labels[k] + "\t" + value_text(obj, sheet, k)
     return out

@@ -10,7 +10,8 @@ from mojoui.sheet import Sheet, TEXT, BOOL, DECIMAL
 from mojoui.numformat import parse_decimal
 from mojoui.sheetpage import (SheetObject, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT, COMBINE_MEDIAN, COMBINE_P90, ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ,
                               CHART_BAR, CHART_LINE, SLOT_COMBINE, SLOT_VALUE, SLOT_GROUP, SLOT_ORDER, SLOT_TOP, SLOT_FILTER, SLOT_MARK,
-                              FILTER_WORDS, SLOTS, number_columns, text_columns, slot_text, number_words, NUM_OVER, NUM_UNDER, NUM_BETWEEN, NUM_ANY, NUM_AT_LEAST, NUM_AT_MOST)
+                              FILTER_WORDS, SLOTS, number_columns, text_columns, slot_text, number_words, NUM_OVER, NUM_UNDER, NUM_BETWEEN, NUM_ANY, NUM_AT_LEAST, NUM_AT_MOST,
+                              PART_NONE, PART_MONTH, PART_QUARTER, PART_WEEKDAY, PARTS, date_columns)
 
 comptime QUIET: List[String] = ["of", "the", "a", "an", "and", "show", "me", "please", "with", "for", "in", "on", "to", "as", "chart",
                                 "only", "just", "make", "it", "per", "each", "into", "then", "now", "values", "value"]
@@ -104,6 +105,17 @@ def number_condition(mut spec: SheetObject, sheet: Sheet, c: Int, w: List[String
     return 0
 
 
+def date_part(w: String) -> Int:
+    """ "month", "monthly", "quarter", "weekday", "day of week" words → PART_*; 0 if it isn't one."""
+    if w == "month" or w == "months" or w == "monthly":
+        return PART_MONTH
+    if w == "quarter" or w == "quarters" or w == "quarterly":
+        return PART_QUARTER
+    if w == "weekday" or w == "weekdays" or w == "dow":
+        return PART_WEEKDAY
+    return 0
+
+
 def joined(words: List[String], at: Int, n: Int) -> String:
     """Words at … at+n-1 with single spaces ("" past the end)."""
     if at + n > len(words):
@@ -154,6 +166,7 @@ def table_word(mut spec: SheetObject, sheet: Sheet, w: List[String], i: Int, mut
         for c in text_columns(sheet):
             if sheet.name(c).lower() == name:
                 spec.group = c
+                spec.part = PART_NONE
                 if spec.only_col == c:
                     spec.only_col = -1
                 took = (1 if by else 0) + n
@@ -313,6 +326,25 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
             took = 2 if two == "how many" or two == "number of" else 1
             what = "count"
             mark(said, SLOT_COMBINE)
+        elif date_part(one) > 0 or (one == "by" and i + 1 < len(w) and date_part(w[i + 1]) > 0):
+            var by = 1 if one == "by" else 0
+            var part = date_part(w[i + by])
+            var dc = -1
+            var named = 0
+            if i + by + 2 < len(w) and w[i + by + 1] == "of":  # ("by month of day": the date column named)
+                for c in date_columns(sheet):
+                    if sheet.name(c).lower() == w[i + by + 2]:
+                        dc = c
+                        named = 2
+            if dc < 0:
+                dc = spec.group if spec.part != PART_NONE else (date_columns(sheet)[0] if len(date_columns(sheet)) > 0 else -1)
+            if dc >= 0:
+                spec.group = dc
+                spec.part = part
+                if spec.order == ORDER_AZ:
+                    spec.order = ORDER_TABLE
+                took = by + 1 + named
+                what = "by " + materialize[PARTS]()[part] + " of " + sheet.name(dc)
         elif one == "line" or one == "lines" or two == "line chart":
             spec.style = CHART_LINE
             took = 2 if two == "line chart" else 1

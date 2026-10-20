@@ -151,6 +151,56 @@ def m2():
                                                       "\"only paid and over 5,000\" sets both; the Rows page's Over 2,500 filters the chart (GTK)")
 
 
+CALS = [("sum", "month", None), ("count", "quarter", None), ("mean", "weekday", None), ("median", "month", True)]
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def m3():
+    """By month, quarter or weekday of a date column: four charts equal pyarrow's, in calendar order; asked on GTK."""
+    import pyarrow.parquet as pq
+    problems = []
+    b = run(["scripts/mxbuild.sh", "tests/chartcal_dump.mojo", "-o", str(BUILD / "chartcal_dump")], timeout=1800)
+    if b.returncode != 0:
+        return False, "chartcal_dump: " + (b.stdout + b.stderr)[-400:]
+    out = run([str(BUILD / "chartcal_dump"), g25.small()], timeout=300).stdout
+    rows = pq.read_table(g25.small()).to_pylist()
+    blocks = re.split(r"^SPEC \d+\n", out.split("END")[0], flags=re.M)[1:]
+    if len(blocks) != len(CALS):
+        return False, f"{len(blocks)} charts printed: {out[-300:]}"
+    for k, (block, (how, part, paid)) in enumerate(zip(blocks, CALS)):
+        groups = {}
+        for r in rows:
+            if paid is not None and r["paid"] is not paid:
+                continue
+            d = r["day"]
+            name = "(blank)" if d is None else (f"{MONTHS[d.month - 1]} {d.year}" if part == "month" else
+                                                (f"Q{(d.month - 1) // 3 + 1} {d.year}" if part == "quarter" else WEEKDAYS[d.weekday()]))
+            groups.setdefault(name, []).append(float(r["amount"]) if r["amount"] is not None else None)
+        got = [l.split("\t") for l in block.strip().split("\n")[1:]]
+        names = [g[0] for g in got]
+        for name, text in got:
+            vals = [v for v in groups.get(name, []) if v is not None]
+            want = (sum(vals) if how == "sum" else len(groups.get(name, [])) if how == "count" else
+                    (sum(vals) / len(vals) if vals else None) if how == "mean" else stat(vals, "median"))
+            if text == "—":
+                if want is not None and name != "(blank)":
+                    problems.append(f"spec {k}: {name} reads —")
+                continue
+            if want is None or abs(float(text.replace(",", "")) - want) > 0.006:
+                problems.append(f"spec {k} ({how} by {part}): {name} {text} vs pyarrow {want}")
+        dated = [n for n in names if n != "(blank)"]
+        if part == "weekday" and dated != WEEKDAYS:
+            problems.append(f"spec {k}: weekdays in order {dated}")
+        if part == "month" and dated != sorted(dated, key=lambda n: (int(n.split()[1]), MONTHS.index(n.split()[0]))):
+            problems.append(f"spec {k}: months not in calendar order")
+    asked = g25.gtk(g25.SHEET + ";tap:Chart;pause:300;" + g28.ASK + "by month of day, as a line;pause:400", "m3-ask")[0]
+    if not {"month of day", "a line"} <= set(re.findall(r"^BUTTON: (.*)$", asked, re.M)):
+        problems.append("GTK: asking \"by month of day, as a line\" didn't group by month")
+    return not problems, "; ".join(problems[:6]) or ("sum by month, count by quarter, average by weekday and median by month (paid) equal pyarrow's, "
+                                                      "in calendar order; \"by month of day, as a line\" asked on GTK")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -167,7 +217,7 @@ def m5():
     return not problems, "; ".join(problems) or "goal 28's M0–M7 (goals 3–27 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", todo("by month, quarter, weekday")), ("M4", todo("timings")), ("M5", m5)]
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", todo("timings")), ("M5", m5)]
 
 
 def main():
