@@ -385,6 +385,11 @@ struct Sheet(Movable, GridSource):
         """A new empty row; returns its number."""
         return self.frame.append(List[String]())
 
+    def undo_depth(self) -> Int:
+        """How many changes Undo could take back now (edits and format changes): an app that keeps its own changes
+        (a chart's settings) records this with each, so one Undo takes back whichever came last."""
+        return len(self.frame.log) + len(self.style_log)
+
     def undo_drops(self) -> Int:
         """The column the next Undo would take away (a new formula column), -1 if none: an app moves or refuses what
         reads it first (a chart, a tile, a sort)."""

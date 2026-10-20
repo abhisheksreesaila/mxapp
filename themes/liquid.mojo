@@ -119,6 +119,9 @@ def liquid_css(p: Palette) -> String:
         + "window.liquid dialog > sheet, window.liquid dialog.mui-dialog-surface, .mui-dialog { border-radius: 20px; }\n"
         + "window.liquid dialog > sheet { animation: liquid-rise 300ms cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 0 40px 100px rgba(15,23,42,0.30), 0 0 0 1px rgba(15,23,42,0.07); }\n"
         + "window.liquid .mui-dialog-head label { font-size: 17px; font-weight: 600; color: " + ink + "; }\n"
+        # an inspector page slides in from the right (its header and every section after it)
+        + "@keyframes liquid-page { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }\n"
+        + "window.liquid .mui-tag-inspector-page, window.liquid .mui-tag-inspector-page ~ * { animation: liquid-page 280ms cubic-bezier(0.22, 1, 0.36, 1); }\n"
         + "window.liquid dimming { background-color: rgba(15,23,42,0.18); }\n"
         # toasts: a dark pill
         + "window.liquid toast { border-radius: 999px; animation: liquid-rise 300ms cubic-bezier(0.22, 1, 0.36, 1); }\n"
@@ -201,6 +204,8 @@ body.liquid .dialog-layer .scrim { background: rgba(15,23,42,.18); -webkit-backd
 body.liquid .dialog-head h3 { font-size: 17px; }
 body.liquid .toast { border-radius: 999px; animation: liquid-rise 300ms var(--sp-bouncy) both; }
 @media (prefers-reduced-motion: reduce) { body.liquid *, body.liquid *::before, body.liquid *::after { animation: none !important; transition-duration: 0.01ms !important; } }
+@keyframes liquid-page { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+body.liquid [data-tag=inspector-page], body.liquid [data-tag=inspector-page] ~ * { animation: liquid-page 280ms cubic-bezier(.22, 1, .36, 1) both; }  /* (an arrival, not hover feedback) */
 """
 
 

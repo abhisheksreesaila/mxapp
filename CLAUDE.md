@@ -4,7 +4,7 @@ Mode: experiment
 Ship: direct
 Design language: omxplorer = Liquid light (docs/design/liquid.md; owner 2026-10-18: "liquid, smooth, a showcase"), Ledger/Graphite/Blueprint as switchable skins; Omarchy for MX Studio and the Workbook; Fluent 2 for the analytics showcase
 
-Current experiment: `GOAL.md` (goal 27: a lean core with themes on top (themes/, D-260), polish, the Scene as GTK's default; next: goal 28, chart editing "the title is the query", docs/goals/28-draft.md). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 28: editing a chart by its sentence: tap a word, ask, inspector pages, bars that move; next: goal 29, vendor MX frame 321870f (STABLE.md) and move chart queries onto it, D-265). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 

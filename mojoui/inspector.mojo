@@ -28,6 +28,24 @@ def Section(title: String, items: List[View]) -> View:
     return VStack(all^, spacing=8).fill().align(START)
 
 
+def NavRow(title: String, summary: String, on_open: Int, icon: String = "") -> View:
+    """A row that opens a page of its own (InspectorPage): its title, what's set now beneath it, a chevron. The whole
+    title is the button; the chevron sends the same message."""
+    return HStack(VStack(Button(title, on_open, SUBTLE, icon=icon).fill().align(START).tag("nav-title"),
+                         Text(summary, CAPTION).padding(0, 12).tag("nav-summary"), spacing=0).fill().grow().align(START),
+                  Button("Open " + title, on_open, ICON_ONLY, icon="chevron-right"), spacing=4).fill().align(CENTER).tag("nav-row")
+
+
+def InspectorPage(title: String, on_back: Int, sections: List[View]) -> List[View]:
+    """A page an inspector row opened: a Back button and the page's title, then its sections. Hand the result to
+    Inspector as its sections; themes slide it in (it's tagged "inspector-page")."""
+    var out = List[View]()
+    out.append(HStack(Button("Back", on_back, SUBTLE, icon="back").tag("page-back"), Text(title, HEADLINE), Spacer(), spacing=6).fill().align(CENTER).tag("inspector-page"))
+    for v in sections:
+        out.append(v.copy())
+    return out^
+
+
 def Row(label: String, control: View) -> View:
     """A label on the left, its control on the right."""
     return HStack(Text(label), Spacer(), control.copy(), spacing=8).fill().align(CENTER)

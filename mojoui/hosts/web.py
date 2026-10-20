@@ -39,7 +39,7 @@ from PIL import Image
  DIALOG, TOAST, POPOVER, CLIPBOARD) = range(1, 34)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
-PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, ICON_ON, TOOL_INLINE, TOOL_INLINE_ON = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, ICON_ON, TOOL_INLINE, TOOL_INLINE_ON, TOKEN, TOKEN_LIT = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 START, CENTER, END = 1, 2, 3
 SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
 KEY = 7  # a canvas gesture: a key pressed while it had focus (text = the key, dx = modifiers)
@@ -75,6 +75,11 @@ button:hover { filter: brightness(1.08); }
 button:active { transform: scale(.97); }
 button.prominent { background: var(--accent); color: #fff; padding: 10px 26px; }
 button.destructive { color: var(--danger); }
+button.token { background: transparent; padding: 0 3px; min-height: 0; border-radius: 4px; font-weight: 600; color: var(--accent);
+  text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 3px; transition: background .15s; }
+button.token:hover { filter: none; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+[data-tag=sentence-line] { flex-wrap: nowrap; }
+[data-tag=sentence-line] > .text { white-space: pre; text-align: left; }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 2px; }
 form.field { margin: 0; }
 form.field { display: flex; }
@@ -711,7 +716,7 @@ def render_node(s, i, sid):
     if kind == BUTTON:
         cls = {PROMINENT: "prominent", DESTRUCTIVE: "destructive", SUBTLE: "subtle", ICON_ONLY: "subtle icon-only",
                ICON_ON: "subtle icon-only on", TOOL: "subtle tool", TOOL_ON: "subtle tool on",
-               TOOL_INLINE: "subtle tool inline", TOOL_INLINE_ON: "subtle tool inline on"}.get(n["style"], "")
+               TOOL_INLINE: "subtle tool inline", TOOL_INLINE_ON: "subtle tool inline on", TOKEN: "token", TOKEN_LIT: "token lit"}.get(n["style"], "")
         if n["msg2"]:  # a FilePicker: a file input styled as the button; the file uploads, then on_pick gets its path
             svg = NotStr(ICONS.get(n["hint"], "").replace('width="24"', 'width="18"').replace('height="24"', 'height="18"')) if n["hint"] else ""
             accept = n["options"][0] if n["options"] else ""

@@ -4,6 +4,17 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 28 (2026-10-19): editing a chart by its sentence (goal 28)
+- **Setup:** the owner's pick from the chart prototypes: "the title is the query: ask, then tap any word".
+- **Worked:**
+  - A chart's title is its settings as a sentence of tappable words (mojoui.sentence); each opens its choices; an ask field rewrites several at once (mojoui.chartask: keywords and the table's own names); inspector pages (NavRow, InspectorPage); bars move to a new spec; Undo per chart change, in order with table edits; GTK and the web, sheet charts and Report tiles.
+  - 12 specs equal pyarrow's; real input (XTest) clicks a word, picks with the keyboard, types an ask, Ctrl+Z.
+- **Broke and fixed:** Undo after Add row crashed (old); picking scrolled the sheet; popovers had no keyboard; a plain line read cents; message ranges overlapped; typing rebuilt the sentence and lost Return; a new document kept the old one's chart edits.
+- **Means:** the sentence is a small query language a person can read and an agent can write; the next step is MX frame 321870f (median per group, months, ranges).
+- **Next:** goal 29: vendor MX frame 321870f, move chart/report/pivot queries onto its builder.
+
+---
+
 ## Experiment 27 (2026-10-19): the core sheds its themes; polish; the Scene by default (goal 27)
 - **Setup:** owner: "the best looking, best polished UI… components native by default; themes opinionated, on top; anybody can add their own; don't tightly couple… then a list of what you need from MX frame".
 - **Worked:**

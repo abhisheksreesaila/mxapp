@@ -1,24 +1,21 @@
-# GOAL 27: a lean core, themes on top, and polish
+# GOAL 28: editing a chart, the title is the query
 
-**End goal (owner, 2026-10-19, after goal 26):** "currently I want the best looking, best polished UI; features can be added later. Of course components will be native by default; the themes are opinionated, stacked on top of it… anybody can add their own themes. I don't want to tightly couple this… the goal of the framework is to stay lean, provide a language for all platforms; everything theming, apps, are plugins on top of it. After this polish, super silky smooth UI, make a list of operations you need from mxframe."
-
-Today the hosts carry the themes: ~350 lines of Liquid, Ledger, Fluent and Omarchy CSS inside the GTK host, ~300 inside the web host, and the core names every theme (`LIQUID`, `skin_palette`, `Palette.omarchy()`, omxplorer's brand colours). This goal moves them out (D-260).
+**End goal (owner, 2026-10-19):** "for reports, charts can be on the inspector and a sub-inspector can have settings… we need to be creative with UI… can't ship an Excel clone, it will be rejected"; on the prototypes (docs/design/charts/): "The title is the query: ask, then tap any word is the genius!!" Decided (D-255): the chart's title is a sentence whose words are its settings (tap one, pick another); an ask field rewrites several at once; the inspector's pages hold the details; the toolbar only inserts. The ask field is a keyword matcher now; an agent (AG-UI) plugs into the same sentence later. After goal 27 (owner: "looks beautiful… I can see it's an app… continue").
 
 ## Milestones
 | # | Milestone | Proof (`scripts/check`) |
 |---|---|---|
-| M0 | Before, as pictures | every themed screen shot on GTK and the web before the move (omxplorer's start, sheet, report and Settings in Liquid, Ledger, Graphite and Blueprint; kit's skins; Fluent; Omarchy; a native app), twice, to know the noise (`build/g27/before`, `scripts/theme_shots.py`) |
-| M1 | The core knows no theme | no theme's name, colours or style sheet in `mojoui/` (the words liquid, ledger, graphite, blueprint, fluent, omarchy and the brand colours: 0 hits); an app hands its hosts a `Theme` (a name, a palette for drawn views, a GTK and a web style sheet), the hosts load whatever they're given; every theme lives in `themes/`, outside the framework |
-| M2 | Native by default | an app that names no theme gets each platform's own look: on GTK no style sheet from mojoui beyond layout, the system's light or dark; on the web the system font and colours |
-| M3 | Nothing moved | every M0 screen again after the move: no more pixels differ than between M0's two runs (+0.2 %) |
-| M4 | Anyone can add a theme | a new theme (`themes/paper.mojo`) written without touching `mojoui/`, picked by an example, switches live on GTK and the web |
-| M5 | Polish | a design pass over omxplorer's screens in Liquid (start, import, sheet, report, Settings, menus, popovers; 1742×876 and 1280×720), every finding in `docs/goals/27/polish.md` fixed, with before/after shots |
-| M6 | Silky by default | the Scene is GTK's default for the grid (`MOJOUI_SCENE=0` turns it off); goal 26's numbers hold without the flag; hover and press feedback ≤ 150 ms on every control |
-| M8 | What we need from MX frame | `docs/mxframe-needs.md`: each operation omxplorer and the framework need from MX frame, why, what we do meanwhile, how much it matters |
-| M7 | Nothing regressed | goal 26's checks (M0–M5, M8, M7; every earlier goal inside them) pass |
+| M0 | One chart model | a chart (on the sheet or a Report tile) has: combine (sum, average, count), value, group by, order (in data order, largest first, smallest first, A to Z: D-266), top N (all, or 3, 5, 10), one filter (a text or Yes/No column's value, or every row), mark (bars, line); its numbers equal pyarrow's for 12 specs over small.parquet; a document saved with them reopens with them (and an older .omx opens unchanged) |
+| M1 | The title is a sentence | every chart's title reads its spec ("**Sum** of **amount** by **region**, **largest first**, **top 5**, **every row**, as **bars**"); each setting word is a token: tap it, a popover lists its choices (the current one marked), pick one, the chart changes; GTK and the web; a framework `Sentence` (text runs and tokens, wrapping to lines), its test |
+| M2 | Ask | a field under the selected chart's sentence takes a phrase ("top 3, unpaid, as a line"; "average by region"; "only West") and changes those settings at once; it says what it understood and what it skipped; the words that changed are marked for a moment; a phrase it can't use changes nothing; the parser is plain Mojo with ≥ 30 phrases tested |
+| M3 | Inspector pages | selecting a chart shows its inspector: the sentence, then rows that say what's set (Data, Order, Filter, Style), each opening a page with a back button; framework `InspectorPage` and `NavRow` on GTK and the web; Report chart tiles get it too |
+| M4 | Undo, and the toolbar only inserts | Undo takes back a chart change (a token, an ask: one step each), in order with table edits; Insert Chart (sheet) and Chart tile (Report) open the chart's inspector; no chart settings in any toolbar |
+| M5 | Bars move | a spec change animates the bars to their new lengths and places over ~320 ms (bars keyed by their group, the calm curve) instead of a cut; every frame in between is drawn; ≤ 3 ms a frame for a 6-bar chart |
+| M6 | With real input | scripts/live.py on GTK: click "Sum" in a chart's title, pick Average, the bars read pyarrow's means; type "top 3, as a line" and Return: the title and the line match; Undo twice brings back the first chart |
+| M7 | Nothing regressed | goal 27's checks (M0–M8; every earlier goal inside them) pass |
 
-## Out of bounds
-Chart editing ("the title is the query", goal 28 now, docs/goals/28-draft.md); the menu-bar island; new components; the web, Apple and Android drawing through the Scene.
+## Out of bounds (waiting on MX frame: docs/mxframe-needs.md)
+Median or percentiles per group, grouping by month or week, filters on ranges or several conditions (goal 29: MX frame 321870f has them, D-265); dragging columns onto a chart (direction 2's wells); an LLM behind the ask field; the menu-bar island (goal 30).
 
 ## Done means
-`scripts/check` prints PASS for M0–M8; the reviewer passes it; `docs/report.md` is short, with the before/after; pushed to `origin`.
+`scripts/check` prints PASS for M0–M7; the reviewer passes it; `docs/report.md` is short with shots of a sentence being edited; pushed to `origin`.
