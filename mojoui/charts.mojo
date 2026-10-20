@@ -290,6 +290,7 @@ struct LineChart(Movable):
     var second: List[Float64]  # an optional second series, a share 0–1 (e.g. margin), on its own right-hand axis
     var marker: Int  # an event to mark (index into values), or -1
     var marker_text: String
+    var money: Bool  # the values are cents (the axis reads $5K); else plain numbers (5K)
 
     var pal: Palette  # the colours and canvas font it draws with
 
@@ -297,6 +298,7 @@ struct LineChart(Movable):
         self.labels = labels^
         self.values = values^
         self.selected = selected
+        self.money = True
         self.second = List[Float64]()
         self.marker = -1
         self.marker_text = ""
@@ -306,6 +308,28 @@ struct LineChart(Movable):
         """A second line (a share 0–1, e.g. margin) on its own percent axis at the right."""
         self.second = values^
         return self^
+
+    def numbers(var self, money: Bool) -> Self:
+        """Whether the values are money (cents, the axis in $) or plain numbers."""
+        self.money = money
+        return self^
+
+    def axis_label(self, v: Float64) -> String:
+        """An axis step: money without trailing zeros ($2.5M), or a plain number the same way (2.5M, 750K, 40)."""
+        if self.money:
+            return axis_money(Int(v))
+        var t = compact(v)
+        var unit = String("")
+        var n = t.byte_length()
+        if t.endswith("B") or t.endswith("M") or t.endswith("K"):
+            unit = String(t[byte = n - 1 :])
+            n -= 1
+        if "." in String(t[byte = : n]):
+            while n > 0 and String(t[byte = n - 1 : n]) == "0":
+                n -= 1
+            if n > 0 and String(t[byte = n - 1 : n]) == ".":
+                n -= 1
+        return String(t[byte = : n]) + unit
 
     def with_marker(var self, index: Int, text: String) -> Self:
         """A vertical line at an event (e.g. "Jul 14 · rate table v7")."""
@@ -322,7 +346,7 @@ struct LineChart(Movable):
         """(left, top, right, bottom) of the plotting area, in pixels."""
         var step = nice_step(self.max_value())
         var top_value = step * Float64(max(Int(self.max_value() / step + 0.999), 1))
-        var axis_w = font.measure(axis_money(Int(top_value)), 12 * k, self.pal.regular) + 10 * k
+        var axis_w = font.measure(self.axis_label(top_value), 12 * k, self.pal.regular) + 10 * k
         var right_w = (font.measure("100%", 12 * k, self.pal.regular) + 12 * k) if len(self.second) > 1 else 8 * k
         return SIMD[DType.float64, 4](axis_w, 10 * k + (16 * k if self.marker >= 0 else 0.0), w - right_w, h - 26 * k)
 
@@ -349,15 +373,15 @@ struct LineChart(Movable):
         for g in range(lines + 1):  # gridlines and y labels at round steps
             var y = bottom - (bottom - top) * Float64(g) / Float64(lines)
             hline(s, left, right, y, self.pal.line if g > 0 else self.pal.line_strong)
-            font.draw(s, axis_money(Int(step * Float64(g))), left - 8 * k, y + 4 * k, 12 * k, self.pal.ink2, self.pal.regular, RIGHT)
+            font.draw(s, self.axis_label(step * Float64(g)), left - 8 * k, y + 4 * k, 12 * k, self.pal.ink2, self.pal.regular, RIGHT)
         var xs = List[Float64]()
         var ys = List[Float64]()
         for i in range(n):
             xs.append(left + (right - left) * Float64(i) / Float64(n - 1))
             ys.append(bottom - (bottom - top) * self.values[i] / axis_top)
         for i in range(n):  # x labels
-            if self.labels[i] != "":
-                font.draw(s, self.labels[i], xs[i], bottom + 18 * k, 12 * k, self.pal.ink2, self.pal.regular, CENTRE)
+            if self.labels[i] != "":  # (the last one ends at the plot's edge, not past it)
+                font.draw(s, self.labels[i], xs[i], bottom + 18 * k, 12 * k, self.pal.ink2, self.pal.regular, RIGHT if i == n - 1 and n > 1 else CENTRE)
         area(s, xs, ys, bottom, with_alpha(self.pal.accent, 0.22), with_alpha(self.pal.accent, 0.0))
         for i in range(n - 1):
             line(s, xs[i], ys[i], xs[i + 1], ys[i + 1], 2.25 * k, self.pal.accent)

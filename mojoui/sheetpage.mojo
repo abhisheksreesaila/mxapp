@@ -499,7 +499,7 @@ def readout(obj: SheetObject, sheet: Sheet) -> String:
     """The picked bar or point, in the value column's format ("West · $72,061,236.00"); a hint when none is."""
     if 0 <= obj.selected < len(obj.sums) and obj.selected < len(obj.labels):
         return obj.labels[obj.selected] + " · " + value_text(obj, sheet, obj.selected)
-    return "Tap a bar to read it"
+    return "Tap a point to read it" if obj.style == CHART_LINE else "Tap a bar to read it"
 
 
 def pivot_view(obj: SheetObject, sheet: Sheet, height: Int) -> View:

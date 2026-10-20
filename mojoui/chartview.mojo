@@ -102,7 +102,7 @@ struct ChartView(Copyable, Movable):
                 places.append(old_i + (Float64(i) - old_i) * self.t)
             if self.kind == "Line Chart":
                 LineChart(self.labels.copy(), now^, self.selected).with_second(self.second.copy()).with_marker(
-                    self.marker, self.marker_text).themed(pal).draw(s, font)
+                    self.marker, self.marker_text).numbers(self.money).themed(pal).draw(s, font)
                 return
             var f = self.flint(pal)
             var texts = List[String]()
@@ -114,7 +114,7 @@ struct ChartView(Copyable, Movable):
             Heatmap(self.rows.copy(), self.labels.copy(), self.values.copy(), True, self.selected).themed(pal).draw(s, font)
         elif self.kind == "Line Chart":
             LineChart(self.labels.copy(), self.values.copy(), self.selected).with_second(self.second.copy()).with_marker(
-                self.marker, self.marker_text).themed(pal).draw(s, font)
+                self.marker, self.marker_text).numbers(self.money).themed(pal).draw(s, font)
         else:
             self.flint(pal).draw(s, font, self.selected)
 
@@ -125,7 +125,7 @@ struct ChartView(Copyable, Movable):
             hit = Heatmap(self.rows.copy(), self.labels.copy(), self.values.copy()).themed(pal).hit(self.size[0], self.size[1], font, x, y)
         elif self.kind == "Line Chart":
             hit = LineChart(self.labels.copy(), self.values.copy()).with_second(self.second.copy()).with_marker(
-                self.marker, self.marker_text).themed(pal).hit(self.size[0] * 2, self.size[1] * 2, 2.0, font, x)
+                self.marker, self.marker_text).numbers(self.money).themed(pal).hit(self.size[0] * 2, self.size[1] * 2, 2.0, font, x)
         else:
             hit = self.flint(pal).hit(self.size[0], self.size[1], font, x, y)
         if hit < 0:
