@@ -7,6 +7,7 @@
 #   chart.draw(surface, font, palette)                 # in draw()
 #   if chart.tap(event.x, event.y, font, palette): …   # in update(): True when the selection changed
 
+from std.collections import Dict
 from mojoui.canvas import Surface
 from mojoui.text import Font
 from mojoui.theme import Palette
@@ -91,13 +92,16 @@ struct ChartView(Copyable, Movable):
         if self.t < 1.0 and self.kind != "Heatmap":
             var now = List[Float64]()
             var places = List[Float64]()
+            var was = Dict[String, Int]()  # (each group's old row: one look-up a bar, thousands of groups too)
+            for j in range(len(self.was_labels)):
+                was[self.was_labels[j]] = j
             for i in range(len(self.labels)):
                 var old_v = 0.0
                 var old_i = Float64(i)
-                for j in range(len(self.was_labels)):
-                    if self.was_labels[j] == self.labels[i]:
-                        old_v = self.was_values[j] if j < len(self.was_values) else 0.0
-                        old_i = Float64(j)
+                var j = was.get(self.labels[i], -1)
+                if j >= 0:
+                    old_v = self.was_values[j] if j < len(self.was_values) else 0.0
+                    old_i = Float64(j)
                 now.append(old_v + (self.values[i] - old_v) * self.t)
                 places.append(old_i + (Float64(i) - old_i) * self.t)
             if self.kind == "Line Chart":

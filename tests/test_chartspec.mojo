@@ -4,7 +4,8 @@
 from std.testing import assert_equal, assert_true
 from mxframe import Table, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL
 from mojoui.sheet import Sheet
-from mojoui.omxfile import save_omx, open_document
+from mojoui.omxfile import save_omx, open_document, read_spec
+from mojoui.json import Json
 from mojoui.sheetpage import (SheetObject, compute, chart_text, readout, object_title, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT,
                               ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ)
 from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_CHART
@@ -106,11 +107,19 @@ def main() raises:
     assert_equal(back_tiles[0].chart.order, ORDER_LARGEST)
     assert_equal(back_tiles[0].chart.top, 5)
 
-    # an older document (no spec keys): its charts open as sums, as in the table, every group, every row
-    var old_objects: List[SheetObject] = [SheetObject.chart(2, 0, 0, 0)]
-    save_omx(dir + "/old.omx", sheet, old_objects)
-    var opened = List[SheetObject]()
-    var opened_tiles = List[ReportTile]()
-    _ = open_document(dir + "/old.omx", opened, opened_tiles, back_filter)
-    assert_true(opened[0].combine == COMBINE_SUM and opened[0].order == ORDER_TABLE and opened[0].top == 0 and opened[0].only_col == -1)
+    # an older document's chart (goal 27 wrote no spec keys): written here by hand, read by the same code a file is
+    var old = Json.parse('{"kind": 1, "x": 0, "y": 0, "w": 520, "h": 340, "value": 2, "group": 0, "across": -1, "style": 0}')
+    var opened = SheetObject.chart(2, 0, 0, 0)
+    opened.combine = COMBINE_COUNT  # (anything: what the file doesn't say must come back to its default)
+    opened.order = ORDER_AZ
+    opened.top = 3
+    opened.only_col = 1
+    read_spec(old, 0, opened, sheet)
+    assert_true(opened.combine == COMBINE_SUM and opened.order == ORDER_TABLE and opened.top == 0 and opened.only_col == -1,
+                "no spec keys: a sum, in data order, every group, every row")
+    # a spec naming a value the column doesn't have any more: the filter goes, the rest stays
+    var gone = Json.parse('{"combine": 1, "order": 1, "top": 5, "only_col": 1, "only_word": "zzz"}')
+    var o2 = SheetObject.chart(2, 0, 0, 0)
+    read_spec(gone, 0, o2, sheet)
+    assert_true(o2.combine == COMBINE_AVERAGE and o2.order == ORDER_LARGEST and o2.top == 5 and o2.only_col == -1)
     print("CHARTSPEC TESTS PASSED")

@@ -67,6 +67,7 @@ FEATURES = [
     ("Overlay islands", "Overlay(base, *islands) + .pin(h, v)", r"\bOVERLAY\b", "workbook"),
     ("Themes on top (themes/, or yours)", "def theme(self) -> Theme", r"gtk_css|web_css|theme_key|paint_native|mod\.theme", "themes"),
     ("Sentence with tappable words", "Sentence([Word(…)]) · Button(style=TOKEN)", r"\bTOKEN\b|mui-token|button\.token", "omxplorer"),
+    ("Inspector pages", "NavRow(…) · InspectorPage(…) (made of buttons and stacks)", r"\bBUTTON\b", "omxplorer"),
     ("Light and dark from the system", "def appearance(mut self, dark)", r"rt\.appearance\(|/appearance/|mod\.appearance", "themes"),
     ("Shared data per process", "App.init_shared()", r"init_shared", "workbook"),
     ("Toolbar button (icon over label)", "Button(style=TOOL / TOOL_ON)", r"mui-tool|button\.tool", "omxplorer"),

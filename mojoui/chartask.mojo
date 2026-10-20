@@ -9,7 +9,7 @@
 from mojoui.sheet import Sheet, TEXT, BOOL
 from mojoui.sheetpage import (SheetObject, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT, ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ,
                               CHART_BAR, CHART_LINE, SLOT_COMBINE, SLOT_VALUE, SLOT_GROUP, SLOT_ORDER, SLOT_TOP, SLOT_FILTER, SLOT_MARK,
-                              FILTER_WORDS, number_columns, text_columns)
+                              FILTER_WORDS, SLOTS, number_columns, text_columns, slot_text)
 
 comptime QUIET: List[String] = ["of", "the", "a", "an", "and", "show", "me", "please", "with", "for", "in", "on", "to", "as", "chart",
                                 "only", "just", "make", "it", "per", "each", "into", "then", "now", "values", "value"]
@@ -70,6 +70,84 @@ def mark(mut said: AskResult, slot: Int):
     said.changed.append(slot)
 
 
+def table_word(mut spec: SheetObject, sheet: Sheet, w: List[String], i: Int, mut said: AskResult) -> Tuple[Int, String]:
+    """The table's own words at word i (they come before the spec's, so a column called Total or a value called Line
+    is that column or value): "by <text column>", a number column, a Yes/No column (or "un…"/"not …" it), a text
+    column's value. Returns (words taken, what it understood); (0, "") when none."""
+    var took = 0
+    var what = String("")
+    var one = w[i]
+    # the table's words: "by <text column>", a number column, a Yes/No column, a text column's value
+    var by = one == "by" and i + 1 < len(w)
+    var at = i + 1 if by else i
+    var matched = False
+    for n in [3, 2, 1]:
+        if matched:
+            break
+        var name = joined(w, at, n)
+        if name == "":
+            continue
+        for c in text_columns(sheet):
+            if sheet.name(c).lower() == name:
+                spec.group = c
+                if spec.only_col == c:
+                    spec.only_col = -1
+                took = (1 if by else 0) + n
+                what = "by " + sheet.name(c)
+                mark(said, SLOT_GROUP)
+                matched = True
+                break
+        if matched or by:
+            continue
+        for c in number_columns(sheet):
+            if sheet.name(c).lower() == name:
+                spec.value = c
+                if spec.combine == COMBINE_COUNT:
+                    spec.combine = COMBINE_SUM
+                    mark(said, SLOT_COMBINE)
+                took = n
+                what = sheet.name(c)
+                mark(said, SLOT_VALUE)
+                matched = True
+                break
+        if matched:
+            continue
+        for c in range(sheet.stored()):
+            if sheet.kind(c) != BOOL:
+                continue
+            var b = sheet.name(c).lower()
+            var code = -1
+            if name == b:
+                code = 1
+            elif name == "un" + b or name == "not " + b or name == "non " + b or name == "non-" + b:
+                code = 0
+            if code >= 0:
+                spec.only_col = c
+                spec.only_code = code
+                took = n
+                what = ("" if code == 1 else "not ") + sheet.name(c)
+                mark(said, SLOT_FILTER)
+                matched = True
+                break
+        if matched:
+            continue
+        for c in text_columns(sheet):
+            if c == spec.group or sheet.word_count(c) > FILTER_WORDS * 20:
+                continue
+            for code in range(sheet.word_count(c)):
+                if sheet.text_of(c, Int64(code)).lower() == name:
+                    spec.only_col = c
+                    spec.only_code = code
+                    took = n
+                    what = "only " + sheet.text_of(c, Int64(code))
+                    mark(said, SLOT_FILTER)
+                    matched = True
+                    break
+            if matched:
+                break
+    return (took, what)
+
+
 def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
     """The phrase into the chart's spec. Longest matches first, so "largest first" is one setting and "not paid" one
     filter; a column's name can be several words."""
@@ -85,11 +163,15 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
         var one = w[i]
         var two = joined(w, i, 2)
         var three = joined(w, i, 3)
+        var table = table_word(spec, sheet, w, i, said)
+        if table[0] > 0:
+            took = table[0]
+            what = table[1]
         # the spec's own words
-        if three == "as in the" and joined(w, i, 4) == "as in the table":
+        elif (three == "as in the" and joined(w, i, 4) == "as in the table") or three == "in data order" or two == "data order" or one == "unsorted":
             spec.order = ORDER_TABLE
-            took = 4
-            what = "as in the table"
+            took = 4 if three == "as in the" else (3 if three == "in data order" else (2 if two == "data order" else 1))
+            what = "in data order"
             order_said = True
             mark(said, SLOT_ORDER)
         elif two == "largest first" or two == "biggest first" or two == "highest first" or two == "most first" or one == "descending" or one == "largest" or one == "biggest" or one == "highest":
@@ -157,75 +239,6 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
             took = 2 if two == "bar chart" else 1
             what = "bars"
             mark(said, SLOT_MARK)
-        else:
-            # the table's words: "by <text column>", a number column, a Yes/No column, a text column's value
-            var by = one == "by" and i + 1 < len(w)
-            var at = i + 1 if by else i
-            var matched = False
-            for n in [3, 2, 1]:
-                if matched:
-                    break
-                var name = joined(w, at, n)
-                if name == "":
-                    continue
-                for c in text_columns(sheet):
-                    if sheet.name(c).lower() == name:
-                        spec.group = c
-                        if spec.only_col == c:
-                            spec.only_col = -1
-                        took = (1 if by else 0) + n
-                        what = "by " + sheet.name(c)
-                        mark(said, SLOT_GROUP)
-                        matched = True
-                        break
-                if matched or by:
-                    continue
-                for c in number_columns(sheet):
-                    if sheet.name(c).lower() == name:
-                        spec.value = c
-                        if spec.combine == COMBINE_COUNT:
-                            spec.combine = COMBINE_SUM
-                            mark(said, SLOT_COMBINE)
-                        took = n
-                        what = sheet.name(c)
-                        mark(said, SLOT_VALUE)
-                        matched = True
-                        break
-                if matched:
-                    continue
-                for c in range(sheet.stored()):
-                    if sheet.kind(c) != BOOL:
-                        continue
-                    var b = sheet.name(c).lower()
-                    var code = -1
-                    if name == b:
-                        code = 1
-                    elif name == "un" + b or name == "not " + b or name == "non " + b or name == "non-" + b:
-                        code = 0
-                    if code >= 0:
-                        spec.only_col = c
-                        spec.only_code = code
-                        took = n
-                        what = ("" if code == 1 else "not ") + sheet.name(c)
-                        mark(said, SLOT_FILTER)
-                        matched = True
-                        break
-                if matched:
-                    continue
-                for c in text_columns(sheet):
-                    if c == spec.group or sheet.word_count(c) > FILTER_WORDS * 20:
-                        continue
-                    for code in range(sheet.word_count(c)):
-                        if sheet.text_of(c, Int64(code)).lower() == name:
-                            spec.only_col = c
-                            spec.only_code = code
-                            took = n
-                            what = "only " + sheet.text_of(c, Int64(code))
-                            mark(said, SLOT_FILTER)
-                            matched = True
-                            break
-                    if matched:
-                        break
         if took > 0:
             said.understood.append(what)
             i += took
@@ -237,7 +250,11 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
         if not quiet:
             said.skipped.append(w[i])
         i += 1
-    if len(said.understood) > 0:
+    said.changed = List[Int]()  # (the words that changed: the sentence before and after, slot by slot)
+    for slot in range(SLOTS):
+        if slot_text(spec, sheet, slot) != slot_text(obj, sheet, slot):
+            said.changed.append(slot)
+    if len(said.changed) > 0:
         spec.selected = -1
         obj = spec^
     return said^
@@ -247,7 +264,7 @@ def ask_reply(said: AskResult) -> String:
     """What the field says back: "Took top 3 · not paid · a line" (and "skipped …"), or that it understood nothing."""
     if len(said.understood) == 0:
         return "Didn't understand that: try “top 3, largest first, as a line” or a column's name"
-    var out = String("Took ")
+    var out = String("Took " if len(said.changed) > 0 else "Already so: ")
     for k in range(len(said.understood)):
         out += (" · " if k > 0 else "") + said.understood[k]
     if len(said.skipped) > 0:

@@ -23,11 +23,11 @@ comptime COMBINE_SUM = 0
 comptime COMBINE_AVERAGE = 1
 comptime COMBINE_COUNT = 2  # (rows: the value column doesn't matter)
 comptime COMBINES: List[String] = ["Sum", "Average", "Count"]
-comptime ORDER_TABLE = 0  # (the groups as the table first met them)
+comptime ORDER_TABLE = 0  # (the groups in the data's own order: how its dictionary stores them)
 comptime ORDER_LARGEST = 1
 comptime ORDER_SMALLEST = 2
 comptime ORDER_AZ = 3
-comptime ORDERS: List[String] = ["as in the table", "largest first", "smallest first", "A to Z"]
+comptime ORDERS: List[String] = ["in data order", "largest first", "smallest first", "A to Z"]  # (data order: as the data stores its groups, not sorted)
 comptime TOPS: List[Int] = [0, 3, 5, 10]  # (0: every group)
 comptime MOVE_FRAMES = 20  # a spec change moves the bars over this many frames (~330 ms at 60 Hz), on the calm curve
 
@@ -119,6 +119,7 @@ def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) r
     """The object's numbers: one group-by of its value column by its text column(s), on the GPU for a big table.
     Rows whose group is empty make a "(blank)" group (a row and/or a column of a pivot), as in a spreadsheet's pivot
     table, so the numbers add up to the column's total."""
+    var picked = obj.labels[obj.selected] if 0 <= obj.selected < len(obj.labels) else String("")  # (a picked bar stays on its group)
     var cond = filter.copy()
     if obj.kind == OBJ_CHART and obj.only_col >= 0:  # (the chart's own rows, within any the caller keeps: a Report's filter)
         var own = sheet.where_is(obj.only_col, obj.only_code)
@@ -143,6 +144,10 @@ def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) r
             obj.present.append(all.present[0] - total_of(by_row.present))
         obj.milliseconds = all.milliseconds + by_row.milliseconds
         shape(obj, sheet)
+        obj.selected = -1
+        for k in range(len(obj.labels)):
+            if obj.labels[k] == picked and picked != "":
+                obj.selected = k
         return
     var nc = groups_of(sheet, obj.across)
     for code in range(nc):
@@ -246,8 +251,6 @@ def shape(mut obj: SheetObject, sheet: Sheet):
     obj.counts = counts^
     obj.present = present^
     obj.values = values^
-    if obj.selected >= keep:
-        obj.selected = -1
 
 
 def value_text(obj: SheetObject, sheet: Sheet, k: Int) -> String:
@@ -382,6 +385,12 @@ def chart_choices(obj: SheetObject, sheet: Sheet, slot: Int) -> List[String]:
             elif sheet.kind(c) == TEXT and c != obj.group and 2 <= sheet.word_count(c) <= FILTER_WORDS:
                 for code in range(sheet.word_count(c)):
                     out.append("only " + sheet.text_of(c, Int64(code)))
+        var now = slot_text(obj, sheet, SLOT_FILTER)  # (a filter an ask set on a longer column: listed too, last, so it shows)
+        var listed = False
+        for c in out:
+            listed = listed or c == now
+        if not listed:
+            out.append(now)
     else:
         out.append("bars")
         out.append("a line")
@@ -414,6 +423,8 @@ def apply_choice(mut obj: SheetObject, sheet: Sheet, slot: Int, k: Int) -> Bool:
         if obj.top > 0 and obj.order == ORDER_TABLE:
             obj.order = ORDER_LARGEST  # ("top 5" means the five largest unless an order says otherwise)
     elif slot == SLOT_FILTER:
+        if k == len(choices) - 1 and choices[k] == slot_text(obj, sheet, SLOT_FILTER):
+            return True  # (the current filter, listed last: it stays)
         obj.only_col = -1
         var at = 1
         for c in range(sheet.stored()):

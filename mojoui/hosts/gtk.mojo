@@ -2470,12 +2470,14 @@ def on_window_resized[A: App](window: Int, pspec: Int, host_addr: Int) abi("C"):
 def on_popover_map(popover: Int, data: Int) abi("C"):
     """A popover just showed: on the next idle turn (it can't take focus while it's still mapping) its first control
     takes the keyboard, so arrows move through its choices and Return picks one, as in a native menu."""
+    _ = external_call["g_object_ref", Int](popover)  # (held until the idle turn: a rebuild may drop it before then)
     _ = external_call["g_idle_add", c_uint](on_popover_focus, popover)
 
 
 def on_popover_focus(popover: Int) abi("C") -> c_int:
     if external_call["gtk_widget_get_mapped", c_int](popover) != 0:
         _ = external_call["gtk_widget_child_focus", c_int](popover, c_int(0))  # GTK_DIR_TAB_FORWARD
+    external_call["g_object_unref", NoneType](popover)
     return 0
 
 

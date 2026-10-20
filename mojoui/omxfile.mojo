@@ -82,6 +82,7 @@ def read_spec(j: Json, node: Int, mut o: SheetObject, sheet: Sheet):
     o.order = order if ORDER_TABLE <= order <= ORDER_AZ else ORDER_TABLE
     o.top = max(j.number(j.get(node, "top"), 0), 0)
     var only = j.number(j.get(node, "only_col"), -1)
+    o.only_col = -1  # (every row, unless the file names a filter it still can)
     if 0 <= only < sheet.columns() and (sheet.kind(only) == TEXT or sheet.kind(only) == BOOL):
         var word = j.text(j.get(node, "only_word"))
         if sheet.kind(only) == BOOL:

@@ -400,6 +400,13 @@ struct Main(App):
         sheet.release()
         self.has_table = True
         self.stats_key = ""  # (the new file's edits count from 0 again: its stats are its own)
+        self.chart_undo = List[Tuple[Int, Int, SheetObject]]()  # (chart edits name the old table's columns and charts)
+        self.asking = -1
+        self.word_ref = -1
+        self.lit = List[Int]()
+        self.insp_page = 0
+        self.ask_text = ""
+        self.ask_said = ""
 
     def open_path(mut self, path: String):
         """A CSV or Parquet file → the Import step (its columns as read; a Parquet file too big for memory is streamed,
@@ -591,26 +598,29 @@ struct Main(App):
         return self.tiles[cref - TILE_REF].chart.copy() if cref >= TILE_REF else self.objects[cref].copy()
 
     def set_chart(mut self, cref: Int, var c: SheetObject, logged: Bool = True):
-        """A chart's new spec: computed (a tile through the Report's filter), put back, the screen redrawn; logged for
-        Undo (one step per change: a word's choice, an ask, an inspector control)."""
-        if logged:
-            self.chart_undo.append((self.frame.undo_depth(), cref, self.chart_of(cref)))
-        self.lit = List[Int]()  # (an ask sets its own marks after this)
-        start_move(c, self.chart_of(cref))  # (the bars move from what they showed)
+        """A chart's new spec: computed (a tile through the Report's filter) and only then put back and logged for Undo
+        (one step per change: a word's choice, an ask, an inspector control); a spec that can't be computed changes
+        nothing and says why."""
+        var before = self.chart_of(cref)
+        start_move(c, before)  # (the bars move from what they showed)
         try:
             if cref >= TILE_REF:
-                ref t = self.tiles[cref - TILE_REF]
+                var t = self.tiles[cref - TILE_REF].copy()
                 t.chart = c^
                 t.col = t.chart.value  # (compute_tile reads the tile's column and group)
                 t.group = t.chart.group
                 compute_tile(t, self.frame, self.filter)
                 self.message = chart_sentence(t.chart, self.frame) + " (" + fixed(t.chart.milliseconds, 1) + " ms)"
+                self.tiles[cref - TILE_REF] = t^
             else:
                 compute(c, self.frame)
                 self.message = chart_sentence(c, self.frame) + " (" + fixed(c.milliseconds, 1) + " ms)"
                 self.objects[cref] = c^
+            if logged:
+                self.chart_undo.append((self.frame.undo_depth(), cref, before^))
+            self.lit = List[Int]()  # (an ask sets its own marks after this)
         except e:
-            self.message = "Couldn't compute: " + String(e)
+            self.message = "Couldn't compute that chart: " + String(e)
         self.version += 1
 
     def ask_here(mut self, cref: Int):
@@ -1306,7 +1316,7 @@ struct Main(App):
             if self.asking >= 0 and self.has_chart(self.asking) and event.text != "":
                 var c = self.chart_of(self.asking)
                 var said = ask(c, self.frame, event.text)
-                if len(said.understood) > 0:
+                if len(said.changed) > 0:  # (an ask that leaves the chart as it was logs no Undo step and moves nothing)
                     self.set_chart(self.asking, c^)
                     self.lit = said.changed.copy()
                 self.ask_said = ask_reply(said)

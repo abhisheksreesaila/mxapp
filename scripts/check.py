@@ -85,11 +85,11 @@ def m0():
     err = g20.mojo_test("tests/test_chartspec.mojo", "CHARTSPEC TESTS PASSED", "test_chartspec", "tests")
     if err:
         problems.append(err)
-    return not problems, "; ".join(problems) or ("12 specs (sum, average, count; as in the table, largest, smallest, A to Z; top 2/3/5; paid or unpaid) equal pyarrow's; "
+    return not problems, "; ".join(problems) or ("12 specs (sum, average, count; in data order, largest, smallest, A to Z; top 2/3/5; paid or unpaid) equal pyarrow's; "
                                                   "a document keeps a chart's spec and an older one opens as it was (tests/test_chartspec.mojo)")
 
 
-TOKENS = ["Sum", "amount", "region", "as in the table", "every region", "every row", "bars"]
+TOKENS = ["Sum", "amount", "region", "in data order", "every region", "every row", "bars"]
 
 
 def m1():
@@ -101,7 +101,7 @@ def m1():
         problems.append(err)
     g25.OUT = OUT
     steps = g25.SHEET + ";tap:Chart;pause:300"
-    picks = ";tap:Sum;pause:200;tap:Average;pause:200;tap:as in the table;pause:200;tap:largest first;pause:200;tap:every region;pause:200;tap:top 3;pause:300"
+    picks = ";tap:Sum;pause:200;tap:Average;pause:200;tap:in data order;pause:200;tap:largest first;pause:200;tap:every region;pause:200;tap:top 3;pause:300"
     want = "Average of amount by region, largest first, top 3, every row, as bars"
     gtk, _ = g25.gtk(steps, "m1-tokens")
     buttons = re.findall(r"^BUTTON: (.*)$", gtk, re.M)
@@ -118,10 +118,10 @@ def m1():
     if not any(l.startswith(want) for l in labels(web)):
         problems.append(f"web: after the picks the chart says {[l for l in labels(web) if ' as ' in l][-1:]}")
     tile, _ = g25.gtk(g25.OPEN + ";tap:Create table;tap:Report;tap:Chart tile;pause:300;tap:bars;pause:200;tap:a line;pause:300", "m1-tile")
-    if not any(l.startswith("Sum of amount by region, as in the table, every region, every row, as a line") for l in labels(tile)):
+    if not any(l.startswith("Sum of amount by region, in data order, every region, every row, as a line") for l in labels(tile)):
         problems.append(f"GTK Report tile: {[l for l in labels(tile) if ' as ' in l][-1:]}")
     return not problems, "; ".join(problems) or ("a chart's title is its sentence, every setting a token (GTK, web); a token's choices open on it; "
-                                                  "Sum→Average, as in the table→largest first, every region→top 3 change the chart on both hosts; a Report tile's too")
+                                                  "Sum→Average, in data order→largest first, every region→top 3 change the chart on both hosts; a Report tile's too")
 
 
 ASK = "enter:Ask: top 3, unpaid, as a line="
@@ -146,7 +146,7 @@ def m2():
         if not all(t in sentence for t in ("largest first", "top 3", "not paid", "a line")):
             problems.append(f"{host}: the sentence's words after the ask: {[t for t in sentence if t in ('largest first', 'top 3', 'not paid', 'a line')]}")
     nonsense = g25.gtk(g25.SHEET + ";tap:Chart;pause:300;" + ASK + "bananas and apples;pause:300", "m2-nonsense")[0]
-    if not any(l.startswith("Didn't understand") for l in labels(nonsense)) or "as in the table" not in re.findall(r"^BUTTON: (.*)$", nonsense, re.M):
+    if not any(l.startswith("Didn't understand") for l in labels(nonsense)) or "in data order" not in re.findall(r"^BUTTON: (.*)$", nonsense, re.M):
         problems.append("GTK: a phrase it can't use changed something or said nothing")
     tile = g25.gtk(g25.OPEN + ";tap:Create table;tap:Report;tap:Chart tile;pause:300;" + ASK + "average, smallest first;pause:400", "m2-tile")[0]
     if not any(l.startswith("Took average · smallest first") for l in labels(tile)):
@@ -164,7 +164,7 @@ def m3():
     for host in ("GTK", "web"):
         out = g25.gtk(root, "m3-root")[0] if host == "GTK" else g25.web(root, "m3-root")
         ls = labels(out)
-        missing = [t for t in ("Sum of amount · by region", "as in the table · every region", "every row", "bars") if t not in ls]
+        missing = [t for t in ("Sum of amount · by region", "in data order · every region", "every row", "bars") if t not in ls]
         if missing or "PARTS" not in ls:
             problems.append(f"{host}: the chart inspector's rows lack {missing}")
         page = root + ";tap:Order;pause:300;segment:1=Top 5;pause:300"
@@ -176,7 +176,7 @@ def m3():
         if "largest first · top 5" not in labels(out):
             problems.append(f"{host}: Back didn't return to the chart's rows (or they don't say top 5)")
     tile = g25.gtk(g25.OPEN + ";tap:Create table;tap:Report;tap:Chart tile;pause:300;tap:Style;pause:300;segment:0=A line;pause:300", "m3-tile")[0]
-    if not any(l.startswith("Sum of amount by region, as in the table, every region, every row, as a line") for l in labels(tile)):
+    if not any(l.startswith("Sum of amount by region, in data order, every region, every row, as a line") for l in labels(tile)):
         problems.append(f"GTK Report tile: the Style page didn't make a line: {[l for l in labels(tile) if ' as ' in l][-1:]}")
     return not problems, "; ".join(problems) or ("a chart's inspector: its sentence and four rows saying what's set (Data, Order, Rows, Style); "
                                                   "Order → Top 5 changes the chart, Back returns (GTK, web); a Report tile's Style page makes a line")
@@ -218,13 +218,14 @@ def m5():
     if err:
         problems.append(err)
     g25.OUT = OUT
-    out = g25.gtk(g25.SHEET + ";tap:Chart;pause:600;tap:as in the table;pause:150;tap:largest first;pause:900", "m5-move", MOJOUI_TRACE="1")[0]
-    draws = [float(d) for d in re.findall(r"^TRACE: draw canvas 10 \S+ ([\d.]+) ms", out, re.M)]
+    out = g25.gtk(g25.SHEET + ";tap:Chart;pause:600;tap:in data order;pause:150;tap:largest first;pause:900", "m5-move", MOJOUI_TRACE="1")[0]
+    after = out[out.rfind("TRACE: event 19"):] if "TRACE: event 19" in out else ""  # (the frames after the pick, not before it)
+    draws = [float(d) for d in re.findall(r"^TRACE: draw canvas 10 \S+ ([\d.]+) ms", after, re.M)]
     if len(draws) < 18:
-        problems.append(f"the chart drew {len(draws)} times: the change was a cut, not a move")
+        problems.append(f"the chart drew {len(draws)} times after the pick: the change was a cut, not a move")
     elif max(draws) > 3.0:
         problems.append(f"a frame of the move took {max(draws):.2f} ms")
-    return not problems, "; ".join(problems) or (f"a re-order moves the bars over {len(draws) - 2} frames, each ≤ {max(draws):.1f} ms; "
+    return not problems, "; ".join(problems) or (f"a re-order moves the bars over {len(draws)} frames after the pick (GTK), each ≤ {max(draws):.1f} ms; "
                                                   "the first frame is the old chart, the last exactly the new (tests/test_chartmove.mojo)")
 
 
@@ -275,7 +276,7 @@ def m6():
     grid = g25.boxes(out, "grid")
     gx, gy = g26.centre(grid[0]) if grid else (300, 250)
     out = g25.live(asked + f";click:{gx},{gy};wait:300;key:Control+z;wait:500;key:Control+z;wait:800;report", "m6-undo")  # (a cell has the keyboard: Ctrl+Z is the app's)
-    if not any(l.startswith("Sum of amount by region, as in the table, every region, every row, as bars") for l in labels(out)):
+    if not any(l.startswith("Sum of amount by region, in data order, every region, every row, as bars") for l in labels(out)):
         problems.append(f"Ctrl+Z twice: {[l for l in labels(out) if ' as ' in l or l.startswith('Undid')][-2:]}")
     return not problems, "; ".join(problems) or ("real input: a click on Sum, Down and Return make it Average, the first bar reads pyarrow's mean; "
                                                   "typing \"top 3, as a line\" and Return changes it; Ctrl+Z twice brings back the first chart")
