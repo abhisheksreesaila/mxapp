@@ -81,6 +81,10 @@ def main() raises:
     compute(o, sheet)
     o.selected = 1
     assert_equal(readout(o, sheet), "Cole · 8.00", "a picked bar reads its figure, in the chart's order")
+    o.order = ORDER_SMALLEST  # (computed again in another order, every group: the picked bar stays on Cole)
+    o.top = 0
+    compute(o, sheet)
+    assert_equal(readout(o, sheet), "Cole · 8.00", "a picked bar stays on its group when the bars move")
 
     # a document keeps the spec: a sheet chart and a Report chart tile (its own filter as its word)
     var dir = String("build/test-chartspec")

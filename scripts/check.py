@@ -219,7 +219,7 @@ def m5():
         problems.append(err)
     g25.OUT = OUT
     out = g25.gtk(g25.SHEET + ";tap:Chart;pause:600;tap:in data order;pause:150;tap:largest first;pause:900", "m5-move", MOJOUI_TRACE="1")[0]
-    after = out[out.rfind("TRACE: event 19"):] if "TRACE: event 19" in out else ""  # (the frames after the pick, not before it)
+    after = out[out.rfind("TRACE: event 190"):] if "TRACE: event 190" in out else ""  # (after the pick: CHOICE is 1900 + k, so "event 190")
     draws = [float(d) for d in re.findall(r"^TRACE: draw canvas 10 \S+ ([\d.]+) ms", after, re.M)]
     if len(draws) < 18:
         problems.append(f"the chart drew {len(draws)} times after the pick: the change was a cut, not a move")

@@ -1294,7 +1294,8 @@ struct Main(App):
         elif m >= CHOICE and m < CHOICE + 100:
             if self.word_ref >= 0 and self.has_chart(self.word_ref):
                 var c = self.chart_of(self.word_ref)
-                if apply_choice(c, self.frame, self.word_slot, m - CHOICE):
+                var was = chart_sentence(c, self.frame)
+                if apply_choice(c, self.frame, self.word_slot, m - CHOICE) and chart_sentence(c, self.frame) != was:  # (re-picking the current choice: no Undo step)
                     self.set_chart(self.word_ref, c^)
             self.word_ref = -1
             self.version += 1
@@ -1307,7 +1308,8 @@ struct Main(App):
         elif m >= INSP_SET and m < INSP_SET + 7:  # (the inspector's controls: the same choices as the sentence's words)
             if self.asking >= 0 and self.has_chart(self.asking):
                 var c = self.chart_of(self.asking)
-                if apply_choice(c, self.frame, m - INSP_SET, event.number):
+                var was = chart_sentence(c, self.frame)
+                if apply_choice(c, self.frame, m - INSP_SET, event.number) and chart_sentence(c, self.frame) != was:
                     self.set_chart(self.asking, c^)
             self.version += 1
         elif m == ASK_CHANGE:  # (typing changes nothing else on screen: no rebuild under the field, so Return is never lost)

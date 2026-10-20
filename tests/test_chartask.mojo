@@ -111,5 +111,15 @@ def main() raises:
     var r4 = ask(same, s, "top 3")
     assert_equal(len(r4.changed), 0)
     assert_equal(ask_reply(r4), "Already so: top 3")
-    _ = r3
+    assert_equal(r3.understood[0], "average")
+    assert_equal(r3.understood[1], "total")
+    # the chart's choices list a filter an ask set on a column too long to list, and picking it keeps it
+    from mojoui.sheetpage import chart_choices, apply_choice, chosen, SLOT_FILTER
+    var long = fresh()
+    long.only_col = 2  # region = (its code 1), set by hand as an ask on a long column would
+    long.only_code = 1
+    var choices = chart_choices(long, s, SLOT_FILTER)
+    assert_equal(choices[chosen(long, s, SLOT_FILTER)], slot_text(long, s, SLOT_FILTER), "the current filter is listed")
+    _ = apply_choice(long, s, SLOT_FILTER, len(choices) - 1) if choices[len(choices) - 1] == slot_text(long, s, SLOT_FILTER) else True
+    assert_equal(long.only_col, 2, "picking the current filter keeps it")
     print("CHARTASK TESTS PASSED")

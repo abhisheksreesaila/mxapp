@@ -178,7 +178,7 @@ def shown_value(obj: SheetObject, sheet: Sheet, k: Int) -> Float64:
 
 
 def before(obj: SheetObject, a: Int, b: Int) -> Bool:
-    """Whether group a comes before group b in the chart's order (ties: as in the table)."""
+    """Whether group a comes before group b in the chart's order (ties: in data order)."""
     if obj.order == ORDER_LARGEST and obj.values[a] != obj.values[b]:
         return obj.values[a] > obj.values[b]
     if obj.order == ORDER_SMALLEST and obj.values[a] != obj.values[b]:

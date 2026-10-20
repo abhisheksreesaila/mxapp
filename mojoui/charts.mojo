@@ -345,8 +345,11 @@ struct LineChart(Movable):
     def plot_box(self, w: Float64, h: Float64, k: Float64, font: Font) -> SIMD[DType.float64, 4]:
         """(left, top, right, bottom) of the plotting area, in pixels."""
         var step = nice_step(self.max_value())
-        var top_value = step * Float64(max(Int(self.max_value() / step + 0.999), 1))
-        var axis_w = font.measure(self.axis_label(top_value), 12 * k, self.pal.regular) + 10 * k
+        var widest = 0.0  # (every step's label: "1.5M" is wider than the top's "2M")
+        var steps = max(Int(self.max_value() / step + 0.999), 1)
+        for g in range(steps + 1):
+            widest = max(widest, font.measure(self.axis_label(step * Float64(g)), 12 * k, self.pal.regular))
+        var axis_w = widest + 10 * k
         var right_w = (font.measure("100%", 12 * k, self.pal.regular) + 12 * k) if len(self.second) > 1 else 8 * k
         return SIMD[DType.float64, 4](axis_w, 10 * k + (16 * k if self.marker >= 0 else 0.0), w - right_w, h - 26 * k)
 
