@@ -114,13 +114,55 @@
   .get { text-align:center; padding:140px 0 120px; }
   .get h2 { font-size:clamp(44px, 7vw, 84px); font-weight:700; }
   .get .lede { font-size:21px; margin:20px auto 40px; max-width:640px; }
+  .get h2 { color:var(--ink); }
   .get pre { text-align:left; display:inline-block; background:var(--night-2); border:1px solid var(--night-line); border-radius:var(--radius); padding:20px 26px; font:14px/1.8 var(--mono); color:var(--night-body); margin:0 0 40px; max-width:100%; overflow-x:auto; }
   .get pre .c { color:var(--night-sub); }
   .get .cta { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-  footer { border-top:1px solid var(--night-line); padding:28px 0 40px; font:13px var(--mono); color:var(--night-sub); }
-  footer .wrap { display:flex; gap:24px; flex-wrap:wrap; }
-  footer a { color:var(--night-sub); text-decoration:none; } footer a:hover { color:var(--night-ink); }
-  footer .sp { flex:1; }
+
+  /* the reveal: three things, one language (the 2007 keynote's shape) */
+  .three-things { text-align:center; padding:150px 0 140px; }
+  .three-things .line { font-size:clamp(34px, 5.4vw, 64px); font-weight:700; color:var(--night-ink); letter-spacing:-.035em; line-height:1.12; }
+  .three-things .line + .line { margin-top:6px; }
+  .three-things .line.dim { color:#5a5e66; }
+  .three-things .turn { margin-top:56px; font-size:clamp(22px, 3vw, 32px); color:var(--night-body); font-weight:500; letter-spacing:-.02em; }
+  .three-things .turn b { color:var(--night-ink); font-weight:700; }
+  .three-things .turn .a { color:var(--night-accent); }
+
+  /* now possible */
+  .possible { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:20px; }
+  .card { background:var(--page); border:1px solid var(--line); border-radius:var(--radius); padding:28px 26px 26px; box-shadow:var(--shadow-1); display:flex; flex-direction:column; }
+  .card h3 { font-size:22px; letter-spacing:-.02em; line-height:1.2; margin-bottom:16px; }
+  .card .was { font-size:15px; color:var(--sub); margin:0 0 10px; }
+  .card .was b, .card .now b { display:block; font:600 11px var(--mono); letter-spacing:.14em; text-transform:uppercase; margin-bottom:4px; }
+  .card .now { font-size:15px; color:var(--body); margin:0; }
+  .card .now b { color:var(--accent); }
+  .card .v { margin-top:auto; padding-top:18px; font:12.5px var(--mono); color:var(--sub); }
+  .card.next { border-style:dashed; box-shadow:none; background:transparent; }
+  .card.next .now b { color:var(--sub); }
+
+  /* the next step */
+  .next-step { padding:150px 0; }
+  .next-step h2 { font-size:clamp(44px, 7vw, 88px); font-weight:700; text-align:center; margin:16px 0 26px; }
+  .next-step .lede { font-size:22px; text-align:center; max-width:760px; margin:0 auto 70px; }
+  .flow { display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:980px; margin:0 auto; }
+  .flow > div { border:1px solid var(--night-line); border-radius:var(--radius); padding:30px 28px; background:var(--night-2); }
+  .flow .h { font:600 12px var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--night-sub); margin-bottom:18px; }
+  .flow .now-h { color:var(--night-accent); }
+  .flow ol { margin:0; padding:0; list-style:none; font:14.5px/2.1 var(--mono); color:var(--night-body); }
+  .flow ol .x { color:#e0796f; }
+  .flow ol .ok { color:var(--night-accent); }
+  .flow p { margin:18px 0 0; font-size:16px; color:var(--night-ink); }
+
+  /* footer: light, quiet, Apple-style columns and fine print */
+  .site-foot { background:#f5f5f7; color:var(--sub); font:12.5px/1.5 var(--sans); padding:34px 0 26px; }
+  .site-foot .note { border-bottom:1px solid #d2d2d7; padding-bottom:18px; margin-bottom:22px; line-height:1.6; }
+  .site-foot .cols { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:24px; }
+  .site-foot h4 { margin:0 0 10px; font-size:12.5px; font-weight:600; color:var(--ink); letter-spacing:0; }
+  .site-foot ul { list-style:none; margin:0; padding:0; }
+  .site-foot li { margin:0 0 8px; }
+  .site-foot a { color:var(--sub); text-decoration:none; } .site-foot a:hover { color:var(--ink); text-decoration:underline; }
+  .site-foot .fine { display:flex; gap:20px; flex-wrap:wrap; border-top:1px solid #d2d2d7; margin-top:22px; padding-top:18px; }
+  .site-foot .fine .sp { flex:1; }
 
   /* settle in once, with a spring; nothing moves for people who asked for less motion */
   .settle { opacity:0; transform:translateY(18px); transition:opacity .8s var(--spring-slow), transform .9s var(--spring-slow); }
@@ -129,7 +171,8 @@
   @media (max-width: 860px) {
     header nav a:not(.pill) { display:none; }
     .feature { padding:80px 0; } .statement { padding:96px 0; }
-    .three, .nums { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .three, .nums, .site-foot .cols { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .possible, .flow { grid-template-columns:1fr; }
     .platforms { grid-template-columns:repeat(3, minmax(0,1fr)); }
   }
 </style>
@@ -141,10 +184,12 @@
     <a class="brand" href="#top"><img src="img/logo.svg" alt="">omxapp</a>
     <span class="sp"></span>
     <nav>
+      <a href="#possible">Now possible</a>
       <a href="#ask">The sentence</a>
       <a href="#agents">Agents</a>
       <a href="#speed">Speed</a>
       <a href="#everywhere">Platforms</a>
+      <a href="#next">Next</a>
       <a class="pill sm" href="https://github.com/abhisheksreesaila/mxapp">GitHub</a>
     </nav>
   </div>
@@ -172,6 +217,51 @@
 <section class="statement">
   <div class="narrow settle">
     <p>Write your app once, in Mojo. <span>It runs natively on Linux, the web, Android, Mac and iPhone, with the GPU in the same language.</span> And any AI agent can use it.</p>
+  </div>
+</section>
+
+<!-- 2b · three things, one language -->
+<section class="three-things dark">
+  <div class="wrap">
+    <div class="line settle">A native app.</div>
+    <div class="line settle">A GPU engine.</div>
+    <div class="line settle">An agent's toolbox.</div>
+    <p class="turn settle">These are not three things. <b>This is one program,</b> <span class="a">in one language.</span></p>
+  </div>
+</section>
+
+<!-- 2c · what wasn't possible before -->
+<section class="feature" id="possible">
+  <div class="wrap">
+    <div class="kicker">Now possible</div>
+    <h2>Things you couldn't do<br>in one codebase before.</h2>
+    <p class="lede">Each of these used to mean another language, another process, or another team.</p>
+    <div class="possible">
+      <div class="card settle"><h3>Draw on the GPU in your app's own language</h3>
+        <p class="was"><b>Before</b>Shaders in GLSL or Metal, a C++ engine, and glue code to your UI.</p>
+        <p class="now"><b>Now</b>A plain Mojo function colours the pixels. The same app code, the same file.</p>
+        <div class="v">20M points · 1.5 ms a frame</div></div>
+      <div class="card settle"><h3>Crunch a million rows inside the UI</h3>
+        <p class="was"><b>Before</b>A server, a notebook, or a dataframe on the CPU, then JSON back to the screen.</p>
+        <p class="now"><b>Now</b>The group-by runs on the GPU in the app's own process. No copy, no request.</p>
+        <div class="v">1M rows · 0.6 ms a chart</div></div>
+      <div class="card settle"><h3>One source, real native controls</h3>
+        <p class="was"><b>Before</b>A web view in a wrapper, or one codebase per platform.</p>
+        <p class="now"><b>Now</b>One app.mojo becomes GTK on Linux, HTML on the web, Android views, AppKit and UIKit.</p>
+        <div class="v">4 platforms run · 2 build</div></div>
+      <div class="card settle"><h3>An interface that rewrites itself</h3>
+        <p class="was"><b>Before</b>A chart is a picture with a label. Change it in a settings panel.</p>
+        <p class="now"><b>Now</b>The chart is its sentence. Change a word, or ask in your own, and it recomputes on the GPU.</p>
+        <div class="v">“monthly, as a line” · under 1 ms</div></div>
+      <div class="card settle"><h3>Agents use your app with no API</h3>
+        <p class="was"><b>Before</b>Write an API, then an MCP server, or let an agent read screenshots.</p>
+        <p class="now"><b>Now</b>The app's own buttons and fields are its MCP tools, from the first line.</p>
+        <div class="v">29 components read by the agent</div></div>
+      <div class="card next settle"><h3>The model in the same program</h3>
+        <p class="was"><b>Before</b>Your UI calls an AI model over HTTP, and waits.</p>
+        <p class="now"><b>Next</b>Mojo is the language Modular writes its AI kernels in. The model can live beside your UI, on the same GPU.</p>
+        <div class="v">not in the alpha · see below</div></div>
+    </div>
   </div>
 </section>
 
@@ -244,8 +334,26 @@
   </div>
 </section>
 
+<!-- 6b · the next step -->
+<section class="next-step dark" id="next">
+  <div class="wrap">
+    <div class="kicker" style="text-align:center;color:var(--night-accent);font:600 13px var(--mono);letter-spacing:.14em;text-transform:uppercase">The next step</div>
+    <h2>GPU‑native<br>generative interfaces.</h2>
+    <p class="lede">Today an AI app is two programs: an interface on one side, a model behind an HTTP API on the other, and JSON in between. Mojo is the language of both the GPU code that runs models and the GPU code that draws and computes this app. So they can be one program.</p>
+    <div class="flow">
+      <div class="settle"><div class="h">An AI app today</div>
+        <ol><li>UI in JavaScript or Swift</li><li class="x">→ HTTP request, JSON</li><li>model server in Python</li><li class="x">→ HTTP response, JSON</li><li>UI parses, re-renders</li></ol>
+        <p>Three languages, two processes, a network hop on every answer.</p></div>
+      <div class="settle"><div class="h now-h">Where omxapp is going</div>
+        <ol><li>your app in Mojo</li><li class="ok">→ the model, same process, same GPU</li><li class="ok">→ the data engine, same GPU</li><li class="ok">→ the interface, drawn on the GPU</li><li>&nbsp;</li></ol>
+        <p>One language, one program, no API in between.</p></div>
+    </div>
+    <p class="honest" style="color:var(--night-sub)">Not in the alpha. Today the interface, the data and the drawing share one language and one GPU; the model is the next piece.</p>
+  </div>
+</section>
+
 <!-- 7 · get it -->
-<section class="get dark" id="get">
+<section class="get" id="get">
   <div class="wrap">
     <h2>Available today.</h2>
     <p class="lede">omxapp is a public alpha. Free and open source under MIT. Linux with an NVIDIA GPU is the best place to start.</p>
@@ -258,20 +366,34 @@ scripts/omxplorer.sh</pre>
       <a class="pill" href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/reference.md">Read the docs</a>
     </div>
   </div>
-  <footer>
-    <div class="wrap">
-      <span>omxapp · built in Mojo · 2026</span>
-      <span class="sp"></span>
-      <a href="https://github.com/abhisheksreesaila/mxapp#readme">README</a>
-      <a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/reference.md">Reference</a>
-      <a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/agent.md">Agent host</a>
-      <a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/architecture.md">Architecture</a>
-      <a href="gallery/">Gallery</a>
-    </div>
-  </footer>
 </section>
 
 </main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <p class="note">Every number on this page is measured on one Linux machine with an NVIDIA RTX 3090; each one comes from a script in the repository. “Runs” means a script drives the app on that platform today; Mac and iPhone build and sign but aren't run by a check yet. The model in the same program is the next step, not part of the alpha.</p>
+    <div class="cols">
+      <div><h4>Start</h4><ul>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp">GitHub</a></li>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp#readme">README</a></li>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp#-try-it">Install</a></li></ul></div>
+      <div><h4>Build</h4><ul>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/reference.md">Reference</a></li>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/components.md">Components</a></li>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/architecture.md">Architecture</a></li></ul></div>
+      <div><h4>Platforms</h4><ul>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/agent.md">Agent host (MCP)</a></li>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/android.md">Android</a></li>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/wasm.md">Web and wasm</a></li></ul></div>
+      <div><h4>Follow along</h4><ul>
+        <li><a href="gallery/">Gallery</a></li>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/decisions.md">Decision log</a></li>
+        <li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/next.md">What's next</a></li></ul></div>
+    </div>
+    <div class="fine"><span>omxapp · public alpha · MIT licence · built in Mojo, 2026</span><span class="sp"></span><a href="https://github.com/abhisheksreesaila/mxapp/issues">Report an issue</a></div>
+  </div>
+</footer>
 
 <script>
   // new content settles in once
