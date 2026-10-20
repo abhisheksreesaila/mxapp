@@ -4,6 +4,19 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 27 (2026-10-19): the core sheds its themes; polish; the Scene by default (goal 27)
+- **Setup:** owner: "the best looking, best polished UI… components native by default; themes opinionated, on top; anybody can add their own; don't tightly couple… then a list of what you need from MX frame".
+- **Worked:**
+  - `mojoui/` names no theme: an app hands its hosts a `Theme` (classes, palette, GTK and web style sheets) built by `themes/` (Liquid, the skins, Fluent, Omarchy, Paper). No theme = libadwaita / the system's web look, light or dark with the system (`App.appearance`).
+  - 42 screens pixel-identical across the move (proven from a build of the move's own commit). Paper, a theme written outside the core, switches live in examples/themes.
+  - Polish: 12 findings fixed (web dialog, sidebar rows, one GPU chip, neutral charts without tracks, one-line report toolbar, titled inspector, the web's primary picker, compact labels).
+  - The Scene is GTK's default; `docs/mxframe-needs.md` lists 19 operations, ranked.
+- **Broke and fixed:** layout rules hidden inside a theme sheet (D-262); a dialog's width on its scrim; native kept a forced dark scheme; archived checks read theme code from the hosts (D-263); goal 5's import rule (D-264).
+- **Means:** the framework is a language plus native widgets; a look is a module anyone can write. Next: chart editing (goal 28) on this base, and MX frame's off-thread queries for smoothness on big files.
+- **Next:** owner reviews the MX frame list (file the issues?), runs scene-bench.sh; goal 28.
+
+---
+
 ## Experiment 26 (2026-10-19): the grid on the GPU as a display list; the owner's four; the brand (goal 26)
 - **Setup:** owner: "super fast… liquid… or else Rust guys will win". Bar: 120 fps, ≤ 2 ms main-thread work a frame, no grid repaint when only the ring moves; plan B is our own renderer, never a lower bar.
 - **Worked:**

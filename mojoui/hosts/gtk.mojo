@@ -533,6 +533,7 @@ struct GtkHost[A: App](Movable):
     var skin_provider: Int  # the theme's CSS provider (replaced when App.theme() changes: Settings → Appearance, a mode's tint)
     var skin_key: String  # the theme that provider is for (Theme.key)
     var skin_classes: String  # the CSS classes it put on the window
+    var dark_told: Int  # what App.appearance last said (1 dark, 0 light, -1 not yet): only a change is told again
     var forcing_scheme: Bool  # set while the host itself changes light/dark (a theme forcing one): not the person's change
     var icons_key: String  # the ink the icons were written in
     var fonts: Bool  # the app's own fonts (Inter, JetBrains Mono) were handed to fontconfig
@@ -609,6 +610,7 @@ struct GtkHost[A: App](Movable):
         self.skin_key = "?"
         self.skin_classes = ""
         self.forcing_scheme = False
+        self.dark_told = -1
         self.icons_key = ""
         self.fonts = False
         self.css = 0
@@ -2447,12 +2449,18 @@ def on_dark_changed[A: App](styles: Int, pspec: Int, host_addr: Int) abi("C"):
 def on_idle_appearance[A: App](host_addr: Int) abi("C") -> c_int:
     """Tells the app the system's light or dark (App.appearance); the canvases draw again. Once (G_SOURCE_REMOVE)."""
     var host = host_at[A](host_addr)
-    if busy():  # (a rebuild is under way: try again next idle turn)
-        return 1
+    if busy():  # (a rebuild is under way: try again in 50 ms, rather than spinning on every idle turn)
+        _ = external_call["g_timeout_add", c_uint](c_uint(50), on_idle_appearance[A], host_addr)
+        return 0
     var styles = external_call["adw_style_manager_get_default", Int]()
-    var d = host[].rt.appearance(external_call["adw_style_manager_get_dark", c_int](styles) != 0)
+    var dark = external_call["adw_style_manager_get_dark", c_int](styles) != 0
+    if (1 if dark else 0) == host[].dark_told:  # (the app already knows: nothing to redo, no list re-bound)
+        return 0
+    host[].dark_told = 1 if dark else 0
+    var d = host[].rt.appearance(dark)
     host[].arm_all(host_addr)
-    host[].apply(d, host_addr)
+    if d.rebuild or len(d.patches) > 0:
+        host[].apply(d, host_addr)
     return 0
 
 
@@ -3948,7 +3956,8 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
     host[].window_w = size[0]
     host[].rt.app.resize(size[0], size[1])  # (its real size follows once the window is laid out: App.resize again)
     var styles = external_call["adw_style_manager_get_default", Int]()
-    host[].rt.app.appearance(external_call["adw_style_manager_get_dark", c_int](styles) != 0)  # (and again when the person switches)
+    host[].dark_told = 1 if external_call["adw_style_manager_get_dark", c_int](styles) != 0 else 0
+    host[].rt.app.appearance(host[].dark_told == 1)  # (and again when the person switches)
     connect3(styles, "notify::dark", on_dark_changed[A], host_addr)
     host[].rt.shown = host[].rt.app.view()
     for prop in ["notify::default-width", "notify::default-height", "notify::maximized", "notify::fullscreened"]:

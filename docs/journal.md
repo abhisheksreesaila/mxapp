@@ -296,3 +296,15 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - M8 brand (D-254): `App.accent()` per screen, `App.logo()` (an SVG installed as the GTK icon theme's app-logo and the window icon, the web favicon). Full run 3 caught the web drawing the 100×100 SVG at full size: the menu bar grew under the toolbar; the SVG now declares 24×24 and M8 checks the logo fits the bar.
 - Reviewer: round 1 NEEDS WORK (selection layer, strict checks, clips/images/versions, leaks), round 2 NEEDS WORK (M4 wording, ring compare), round 3 PASS.
 - M6 is blocked on the owner's display (60 Hz: proves on-time frames at 60, the per-frame work argues for 120).
+
+## Goal 27 (2026-10-19): a lean core, themes on top, polish
+- Owner, mid-autopilot: "best looking, best polished UI; features later… native by default; themes opinionated, on top… anybody can add their own… don't tightly couple". Chart editing moved to goal 28 (D-260).
+- Measured the coupling first: ~350 lines of theme CSS in the GTK host, ~300 in the web host, theme names and the brand in the core.
+- Baseline before touching anything: 42 screens × GTK/web, shot twice; the two runs agree to 0.05 % (one Fluent web shot), 0.00 % elsewhere.
+- Moved the CSS with a script (byte for byte) into themes/*.mojo; `Theme` (classes, palette, gtk_css, web_css, icon inks, paint_native) is all the hosts know. First compare: GTK 0.00 %, web up to 13 %: the Omarchy sheet had held the tools' and file picker's layout rules for every page (D-262). After moving them to the base CSS: all 42 identical.
+- Paper (themes/paper.mojo) + examples/themes: native ↔ Paper ↔ Liquid ↔ skins, live, GTK and web. Native showed two gaps: drawn views stayed light in a dark system (App.appearance), tones lost their colour (libadwaita classes).
+- I once launched the themes app without the headless display (a window on the owner's desktop for a moment): scripts/hl.py now runs one command headless.
+- Polish: 12 findings (docs/goals/27/polish.md); the worst was the web's Settings dialog pinned left with a 560 px scrim (the generic layout width landed on the dialog's layer).
+- The Scene is the default on GTK (D-261); goal 26's archived checks ask for pixels by name.
+- Review round 1 NEEDS WORK: a test and five archived checks still used the old names (D-263), native never reset a forced scheme, the dark signal re-entered apply(), M1/M2/M3/M5 weaker than claimed (M3's "after" predated the commit: re-proven from a build of the move commit in its own worktree). Round 2 PASS.
+- Full run: M7 caught goal 5's "apps import only mojoui" (now "and themes", D-264) and a web compact toolbar's 18 px icon-only picker.

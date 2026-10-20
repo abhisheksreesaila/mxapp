@@ -4,7 +4,7 @@ Mode: experiment
 Ship: direct
 Design language: omxplorer = Liquid light (docs/design/liquid.md; owner 2026-10-18: "liquid, smooth, a showcase"), Ledger/Graphite/Blueprint as switchable skins; Omarchy for MX Studio and the Workbook; Fluent 2 for the analytics showcase
 
-Current experiment: `GOAL.md` (goal 26: the grid as a GPU display list (the Scene, `MOJOUI_SCENE=1`), the owner's four fixes, the brand; M6 waits for the owner's scene-bench run; next: goal 27, chart editing "the title is the query"). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 27: a lean core with themes on top (themes/, D-260), polish, the Scene as GTK's default; next: goal 28, chart editing "the title is the query", docs/goals/28-draft.md). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 
@@ -69,6 +69,7 @@ m0_call_c.mojo     M0: Mojo calling C
 bridge/            C side: mojoui_bridge.c (bridge), host_main.c (C shell driving Mojo)
 spike/             iOS spike: tiny.mojo, kgen_shim.c (runtime stand-in)
 scripts/m0_linux.sh  reproduces Experiment 1 end to end on Linux
+themes/            looks on top of the framework (D-260): liquid, skins, fluent, omarchy, paper (the one to copy); apps pick one with App.theme()
 mojoui/            the framework: view.mojo (components), diff.mojo, app.mojo (App, Event, Runtime), gpu.mojo, png.mojo, hosts/ (gtk, web.mojo+web.py, appkit, uikit, objc, mojo_rt)
 hosts/             entry points per platform (import your app.mojo)
 examples/          hello/, gallery/, todo/, gpu/, kitchen/, expenses/, layout/, lens/: one app.mojo each (optional `platforms` file)

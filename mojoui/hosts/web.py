@@ -200,8 +200,8 @@ button.tool { display: inline-flex; flex-direction: column; align-items: center;
 button.tool span { font-size: 11px; line-height: 13px; }
 button.tool.inline, label.picker.tool.inline { flex-direction: row; gap: 6px; min-width: 0; min-height: 34px; padding: 0 10px; }
 button.tool.inline span, label.picker.tool.inline span { font-size: 12px; }
-[data-tag=toolbar] button.icon-only { min-width: 34px; min-height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-@media (pointer: coarse) { [data-tag=toolbar] button.icon-only, button.tool.inline, label.picker.tool.inline { min-width: 48px; min-height: 48px; } }
+[data-tag=toolbar] button.icon-only, [data-tag=toolbar] label.picker.icon-only { min-width: 34px; min-height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+@media (pointer: coarse) { [data-tag=toolbar] button.icon-only, [data-tag=toolbar] label.picker.icon-only, button.tool.inline, label.picker.tool.inline { min-width: 48px; min-height: 48px; } }
 """
 
 
