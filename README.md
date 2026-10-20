@@ -13,6 +13,7 @@
   <img alt="Mojo 1.1" src="https://img.shields.io/badge/Mojo-1.1-ff5f1f">
   <img alt="Linux · Web · Android · Mac · iPhone · Agent" src="https://img.shields.io/badge/hosts-Linux%20%C2%B7%20Web%20%C2%B7%20Android%20%C2%B7%20Mac%20%C2%B7%20iPhone%20%C2%B7%20Agent-4f46e5">
   <img alt="Public alpha" src="https://img.shields.io/badge/status-public%20alpha-c8243f">
+  <a href="https://abhisheksreesaila.github.io/mxapp/"><img alt="Website" src="https://img.shields.io/badge/website-omxapp-0e7c86"></a>
 </p>
 
 <p align="center">
