@@ -201,6 +201,34 @@ def m3():
                                                       "in calendar order; \"by month of day, as a line\" asked on GTK")
 
 
+def m4():
+    """What a chart costs: at 1M rows each kind (sum, median, by month) fits one 60 Hz frame; at 100M rows the times are
+    recorded (median and months there wait for MX frame's background queries: goal 30)."""
+    b = run(["scripts/mxbuild.sh", "tests/chartbench.mojo", "-o", str(BUILD / "chartbench")], timeout=1800)
+    if b.returncode != 0:
+        return False, "chartbench: " + (b.stdout + b.stderr)[-400:]
+    lines = []
+    problems = []
+    big = ROOT.parent / "mojo-ui" / "build" / "g20" / "big.parquet"
+    for path in [ROOT.parent / "mojo-ui" / "build" / "data" / "orders_1m.csv", big if big.exists() else BUILD / "g20" / "big.parquet"]:
+        if not path.exists():
+            continue
+        out = run([str(BUILD / "chartbench"), str(path)], timeout=1800).stdout
+        m = re.search(r"^BENCH rows=(\d+) streamed=(\w+) sum_ms=([\d.]+) median_ms=([\d.]+) month_ms=([\d.]+)$", out, re.M)
+        if not m:
+            problems.append(f"{path.name}: {out[-200:]}")
+            continue
+        rows, streamed, s, med, mon = int(m.group(1)), m.group(2), float(m.group(3)), float(m.group(4)), float(m.group(5))
+        lines.append(f"{rows:,} rows ({'streamed' if streamed == 'True' else 'in memory'}): sum by region {s:.1f} ms, median by region {med:.1f} ms, sum by month {mon:.1f} ms")
+        if rows <= 1_000_000 and max(s, med, mon) > 16.0:
+            problems.append(f"at {rows:,} rows a chart took {max(s, med, mon):.1f} ms (want ≤ 16: one frame)")
+    (ROOT / "docs/goals/29").mkdir(parents=True, exist_ok=True)
+    (ROOT / "docs/goals/29/bench.txt").write_text("Goal 29: what a chart costs (best of three, engine 321870f, this machine)\n" + "\n".join(lines) + "\n")
+    if not lines:
+        problems.append("no bench ran")
+    return not problems, "; ".join(problems) or "; ".join(lines) + " (docs/goals/29/bench.txt)"
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -217,7 +245,7 @@ def m5():
     return not problems, "; ".join(problems) or "goal 28's M0–M7 (goals 3–27 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", todo("timings")), ("M5", m5)]
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5)]
 
 
 def main():
