@@ -15,7 +15,7 @@
 | M7 | Nothing regressed | goal 27's checks (M0–M8; every earlier goal inside them) pass |
 
 ## Out of bounds (waiting on MX frame: docs/mxframe-needs.md)
-Median or percentiles per group; grouping by month or week; filters on ranges or several conditions; dragging columns onto a chart (direction 2's wells); an LLM behind the ask field; the menu-bar island (goal 29).
+Median or percentiles per group, grouping by month or week, filters on ranges or several conditions (goal 29: MX frame 321870f has them, D-265); dragging columns onto a chart (direction 2's wells); an LLM behind the ask field; the menu-bar island (goal 30).
 
 ## Done means
 `scripts/check` prints PASS for M0–M7; the reviewer passes it; `docs/report.md` is short with shots of a sentence being edited; pushed to `origin`.
