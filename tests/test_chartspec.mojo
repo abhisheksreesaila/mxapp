@@ -1,0 +1,116 @@
+# Goal 28 M0: a chart's spec (combine, order, top N, its own filter) on a table small enough to add up by hand; a
+# document keeps the spec (a sheet chart and a Report chart tile), and an older document's charts open as they were.
+#   scripts/mxbuild.sh -I tests tests/test_chartspec.mojo -o build/test_chartspec && build/test_chartspec
+from std.testing import assert_equal, assert_true
+from mxframe import Table, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL
+from mojoui.sheet import Sheet
+from mojoui.omxfile import save_omx, open_document
+from mojoui.sheetpage import (SheetObject, compute, chart_text, readout, object_title, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT,
+                              ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ)
+from mojoui.reportpage import ReportTile, ReportFilter, new_tile, TILE_CHART
+from mojoui.shared import make_dir
+
+
+def table() raises -> Sheet:
+    """who (Acme ×2, Beta, Cole, blank), kind (x, y), amount: 1.00, 2.00, 4.00, 8.00, 16.00 (Beta's empty)."""
+    var t = Table.empty()
+    var who = t.add_column("who", MX_TEXT)
+    var kind = t.add_column("kind", MX_TEXT)
+    var amount = t.add_column("amount", MX_DECIMAL, 2)
+    for w in ["Cole", "Acme", "Beta"]:
+        _ = t.add_word(who, w)
+    for w in ["x", "y"]:
+        _ = t.add_word(kind, w)
+    var whos = [1, 1, 2, 0, -1]
+    var kinds = [0, 1, 0, 1, 0]
+    var amounts = [100, 200, -1, 800, 1600]
+    for r in range(5):
+        if whos[r] < 0:
+            t.append_null(who)
+        else:
+            t.append(who, Int64(whos[r]))
+        t.append(kind, Int64(kinds[r]))
+        if amounts[r] < 0:
+            t.append_null(amount)
+        else:
+            t.append(amount, Int64(amounts[r]))
+    return Sheet(t^.share(), False)
+
+
+def chart(combine: Int, order: Int = ORDER_TABLE, top: Int = 0, only: Int = -1, code: Int = 0) -> SheetObject:
+    var o = SheetObject.chart(2, 0, 0, 0)  # amount by who
+    o.combine = combine
+    o.order = order
+    o.top = top
+    o.only_col = only
+    o.only_code = code
+    return o^
+
+
+def lines(o: SheetObject, sheet: Sheet) -> String:
+    return chart_text(o, sheet).replace("\n", " | ")
+
+
+def main() raises:
+    var sheet = table()
+    var o = chart(COMBINE_SUM)
+    compute(o, sheet)
+    assert_equal(lines(o, sheet), "who\tamount | Cole\t8.00 | Acme\t3.00 | Beta\t0.00 | (blank)\t16.00")
+    o = chart(COMBINE_AVERAGE)
+    compute(o, sheet)
+    assert_equal(lines(o, sheet), "who\taverage amount | Cole\t8.00 | Acme\t1.50 | Beta\t— | (blank)\t16.00")
+    o = chart(COMBINE_COUNT)
+    compute(o, sheet)
+    assert_equal(lines(o, sheet), "who\trows | Cole\t1 | Acme\t2 | Beta\t1 | (blank)\t1")
+    o = chart(COMBINE_SUM, ORDER_LARGEST, 2)
+    compute(o, sheet)
+    assert_equal(lines(o, sheet), "who\tamount | (blank)\t16.00 | Cole\t8.00")
+    o = chart(COMBINE_SUM, ORDER_SMALLEST)
+    compute(o, sheet)
+    assert_equal(lines(o, sheet), "who\tamount | Beta\t0.00 | Acme\t3.00 | Cole\t8.00 | (blank)\t16.00")
+    o = chart(COMBINE_COUNT, ORDER_AZ)
+    compute(o, sheet)
+    assert_equal(lines(o, sheet), "who\trows | Acme\t2 | Beta\t1 | Cole\t1 | (blank)\t1", "A to Z, (blank) last")
+    o = chart(COMBINE_SUM, ORDER_TABLE, 0, 1, 0)  # (only kind = x)
+    compute(o, sheet)
+    assert_equal(lines(o, sheet), "who\tamount | Cole\t0.00 | Acme\t1.00 | Beta\t0.00 | (blank)\t16.00", "its own filter")
+    assert_equal(object_title(chart(COMBINE_AVERAGE), sheet), "average amount by who")
+    assert_equal(object_title(chart(COMBINE_COUNT), sheet), "rows by who")
+    o = chart(COMBINE_SUM, ORDER_LARGEST, 2)
+    compute(o, sheet)
+    o.selected = 1
+    assert_equal(readout(o, sheet), "Cole · 8.00", "a picked bar reads its figure, in the chart's order")
+
+    # a document keeps the spec: a sheet chart and a Report chart tile (its own filter as its word)
+    var dir = String("build/test-chartspec")
+    make_dir(dir)
+    var path = dir + "/spec.omx"
+    var objects: List[SheetObject] = [chart(COMBINE_AVERAGE, ORDER_AZ, 3, 1, 1)]
+    var tile = new_tile(TILE_CHART, 2, 0)
+    tile.chart.combine = COMBINE_COUNT
+    tile.chart.order = ORDER_LARGEST
+    tile.chart.top = 5
+    var tiles: List[ReportTile] = [tile^]
+    save_omx(path, sheet, objects, tiles, ReportFilter(-1, 0))
+    var back_objects = List[SheetObject]()
+    var back_tiles = List[ReportTile]()
+    var back_filter = ReportFilter(-1, 0)
+    _ = open_document(path, back_objects, back_tiles, back_filter)
+    assert_equal(len(back_objects), 1)
+    assert_equal(back_objects[0].combine, COMBINE_AVERAGE)
+    assert_equal(back_objects[0].order, ORDER_AZ)
+    assert_equal(back_objects[0].top, 3)
+    assert_equal(back_objects[0].only_col, 1)
+    assert_equal(back_objects[0].only_code, 1, "the filter's word (y) found again")
+    assert_equal(back_tiles[0].chart.combine, COMBINE_COUNT)
+    assert_equal(back_tiles[0].chart.order, ORDER_LARGEST)
+    assert_equal(back_tiles[0].chart.top, 5)
+
+    # an older document (no spec keys): its charts open as sums, as in the table, every group, every row
+    var old_objects: List[SheetObject] = [SheetObject.chart(2, 0, 0, 0)]
+    save_omx(dir + "/old.omx", sheet, old_objects)
+    var opened = List[SheetObject]()
+    var opened_tiles = List[ReportTile]()
+    _ = open_document(dir + "/old.omx", opened, opened_tiles, back_filter)
+    assert_true(opened[0].combine == COMBINE_SUM and opened[0].order == ORDER_TABLE and opened[0].top == 0 and opened[0].only_col == -1)
+    print("CHARTSPEC TESTS PASSED")
