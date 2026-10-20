@@ -155,6 +155,62 @@ def m2():
                                                   "nonsense changes nothing and says it; 37 phrases in tests/test_chartask.mojo")
 
 
+def m3():
+    """Inspector pages: a chart's inspector says what's set, a row per part opens its page, a page's control changes the
+    chart, Back returns; GTK and the web; a Report chart tile's too."""
+    problems = []
+    g25.OUT = OUT
+    root = g25.SHEET + ";tap:Chart;pause:300"
+    for host in ("GTK", "web"):
+        out = g25.gtk(root, "m3-root")[0] if host == "GTK" else g25.web(root, "m3-root")
+        ls = labels(out)
+        missing = [t for t in ("Sum of amount · by region", "as in the table · every region", "every row", "bars") if t not in ls]
+        if missing or "PARTS" not in ls:
+            problems.append(f"{host}: the chart inspector's rows lack {missing}")
+        page = root + ";tap:Order;pause:300;segment:1=Top 5;pause:300"
+        out = g25.gtk(page, "m3-order")[0] if host == "GTK" else g25.web(page, "m3-order")
+        if "Back" not in re.findall(r"^BUTTON: (.*)$", out, re.M) or not any(l.startswith("Sum of amount by region, largest first, top 5") for l in labels(out)):
+            problems.append(f"{host}: the Order page didn't change the chart: {[l for l in labels(out) if ' as ' in l][-1:]}")
+        back = page + ";tap:Back;pause:300"
+        out = g25.gtk(back, "m3-back")[0] if host == "GTK" else g25.web(back, "m3-back")
+        if "largest first · top 5" not in labels(out):
+            problems.append(f"{host}: Back didn't return to the chart's rows (or they don't say top 5)")
+    tile = g25.gtk(g25.OPEN + ";tap:Create table;tap:Report;tap:Chart tile;pause:300;tap:Style;pause:300;segment:0=A line;pause:300", "m3-tile")[0]
+    if not any(l.startswith("Sum of amount by region, as in the table, every region, every row, as a line") for l in labels(tile)):
+        problems.append(f"GTK Report tile: the Style page didn't make a line: {[l for l in labels(tile) if ' as ' in l][-1:]}")
+    return not problems, "; ".join(problems) or ("a chart's inspector: its sentence and four rows saying what's set (Data, Order, Rows, Style); "
+                                                  "Order → Top 5 changes the chart, Back returns (GTK, web); a Report tile's Style page makes a line")
+
+
+def m4():
+    """Undo takes back chart changes one step each, in order with table edits; Insert Chart and Chart tile open the
+    chart's inspector; no chart settings in any toolbar."""
+    problems = []
+    g25.OUT = OUT
+    base = g25.SHEET + ";tap:Chart;pause:300;" + ASK + "average;pause:200;tap:Add row;pause:200;" + ASK + "top 3;pause:200"
+    want = [("Average", "top 3", "Rows 5,001"), ("Average", "every region", "Rows 5,001"), ("Average", "every region", "Rows 5,000"), ("Sum", "every region", "Rows 5,000")]
+    for n, (combine, top, rows) in enumerate(want):
+        out = g25.gtk(base + ";menu:Edit>Undo;pause:200" * n, f"m4-undo{n}")[0]
+        buttons = re.findall(r"^BUTTON: (.*)$", out, re.M)
+        ls = labels(out)
+        if combine not in buttons or top not in buttons or rows not in ls:
+            problems.append(f"after {n} undos: want {combine}, {top}, {rows}; got {[b for b in buttons if b in ('Sum', 'Average', 'top 3', 'every region')]} {[l for l in ls if l.startswith('Rows ')]}")
+    e = g25.env("m4-closed")
+    (OUT / "m4-closed" / "config" / "settings.txt").write_text("inspector=no\ntimings=no\n")
+    closed = run([str(BUILD / "omxplorer" / "linux" / "omxplorer")], env=dict(e, MOJOUI_TEST=(g25.SHEET + ";tap:Chart;pause:300").format(f=g25.small())), timeout=600).stdout
+    if "PARTS" not in labels(closed):  # (the chart inspector's rows: on screen only when it's open)
+        problems.append("Insert Chart didn't open the chart's inspector (with the inspector closed before)")
+    sheet = g25.gtk(g25.SHEET, "m4-toolbar")[0]
+    report = g25.gtk(g25.OPEN + ";tap:Create table;tap:Report", "m4-toolbar-report")[0]
+    for name, out in (("sheet", sheet), ("Report", report)):
+        tools = [b[0] for b in [(m.group(1),) for m in re.finditer(r"^BOX: toolbar/(.+?) [\d.-]+ [\d.-]+ [\d.-]+ [\d.-]+$", out, re.M)]]
+        settings = [t for t in tools if t in ("Bar", "Line", "Average", "Group by", "Largest first", "Top 3", "Value")]
+        if settings:
+            problems.append(f"the {name} toolbar holds chart settings: {settings}")
+    return not problems, "; ".join(problems) or ("Undo takes back an ask (top 3), then the added row, then the earlier ask (average), each one step; "
+                                                  "a new chart opens its inspector; the toolbars only insert")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -172,7 +228,7 @@ def m7():
     return not problems, "; ".join(problems) or "goal 27's M0–M8 (goals 3–26 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", todo("inspector pages")), ("M4", todo("undo, insert opens the inspector")),
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4),
               ("M5", todo("bars move")), ("M6", todo("real input")), ("M7", m7)]
 
 

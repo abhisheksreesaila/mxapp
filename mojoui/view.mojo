@@ -63,7 +63,7 @@ comptime ICON_NAMES: List[String] = [
     # Lucide icons drawn the same on every host (GTK loads the same SVGs)
     "table", "pivot", "chart-bar", "note", "undo", "save", "open", "close", "sort", "filter-off", "row-plus", "row-minus",
     "view", "zoom", "category", "formula", "comment", "shape", "text", "organise", "format", "share", "import", "database", "sample", "grid", "sheet", "file", "export", "upload", "chevron",
-    "bold", "italic", "underline", "strikethrough", "text-colour", "fill", "align-left", "align-center", "align-right", "currency", "percent", "decimals-less", "decimals-more", "clear-format", "rename", "settings",
+    "bold", "italic", "underline", "strikethrough", "text-colour", "fill", "align-left", "align-center", "align-right", "currency", "percent", "decimals-less", "decimals-more", "clear-format", "rename", "settings", "chevron-right", "back",
 ]
 
 # Text styles (each platform maps them to its own type scale)

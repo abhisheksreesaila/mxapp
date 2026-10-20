@@ -71,13 +71,15 @@ from mojoui.csvio import read_table, empty_import, CsvImport, CsvColumn, kind_na
 from mojoui.omxfile import save_omx, open_document
 from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
                               NUMBER_STYLES, DATE_STYLES)
-from mojoui.inspector import Inspector, Section, Row, Stepper, StatCards
+from mojoui.inspector import Inspector, Section, Row, Stepper, StatCards, NavRow, InspectorPage
 from mojoui.sheetchrome import Tool, Toolbar, FormulaBar, StatusBar, Tab, BottomTabs
 from mojoui.cellstyle import (CellStyle, BOLD, ITALIC, UNDERLINE, STRIKE, INK_MASK, FILL_MASK, ALIGN_MASK, ink_bits, fill_bits, align_bits,
                               AUTO_ALIGN, ALIGN_LEFT, ALIGN_CENTRE, ALIGN_RIGHT, SWATCH_NAMES, swatch_name)
 from mojoui.swatches import SwatchPicker, draw_swatches, swatch_at
 from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_text, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
-                              CHART_BAR, CHART_LINE, HEADER_H, chart_words, chart_choices, apply_choice, chosen, chart_sentence, SLOT_NAMES)
+                              CHART_BAR, CHART_LINE, HEADER_H, chart_words, chart_choices, apply_choice, chosen, chart_sentence, SLOT_NAMES, slot_text,
+                              number_columns, text_columns, COMBINES, ORDERS, TOPS, SLOT_COMBINE, SLOT_VALUE, SLOT_GROUP, SLOT_ORDER, SLOT_TOP,
+                              SLOT_FILTER, SLOT_MARK, COMBINE_COUNT)
 from mojoui.sentence import Sentence
 from mojoui.chartask import ask, ask_reply
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, tile_fact, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
@@ -177,6 +179,8 @@ comptime TILE_REF = 40  # (a Report tile's ref: TILE_REF + its index)
 comptime ASK_CHANGE = 2000  # the ask field typed in (past CHOICE's hundred)
 comptime ASK_SUBMIT = 2001  # its Return: the phrase edits the chart
 comptime ASK_H = 66  # the ask field and its reply, under a chart's sentence
+comptime PAGE = 2010  # + 0 (the chart's own page) … 4: the chart inspector's pages (Data, Order, Rows, Style)
+comptime INSP_SET = 2020  # + slot: an inspector control changed a chart setting (event.number: the choice)
 comptime SET_INK = 600  # + 0 (automatic) … 8: the Format menu's text colours
 comptime SET_FILL = 610  # + 0 (none) … 8
 comptime SWATCH_CANVAS = 5  # the swatches' canvas id
@@ -259,6 +263,8 @@ struct Main(App):
     var ask_text: String  # what's typed in it
     var ask_said: String  # what it said back last
     var lit: List[Int]  # the slots the last ask changed (marked once), on chart `asking`
+    var chart_undo: List[Tuple[Int, Int, SheetObject]]  # chart changes Undo can take back: (the table's undo depth then, the chart's ref, the chart before)
+    var insp_page: Int  # the chart inspector's page (0: the chart; 1 Data, 2 Order, 3 Rows, 4 Style)
     var word_slot: Int
 
     def __init__(out self):
@@ -325,6 +331,8 @@ struct Main(App):
         self.ask_text = ""
         self.ask_said = ""
         self.lit = List[Int]()
+        self.insp_page = 0
+        self.chart_undo = List[Tuple[Int, Int, SheetObject]]()
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -582,8 +590,12 @@ struct Main(App):
     def chart_of(self, cref: Int) -> SheetObject:
         return self.tiles[cref - TILE_REF].chart.copy() if cref >= TILE_REF else self.objects[cref].copy()
 
-    def set_chart(mut self, cref: Int, var c: SheetObject):
-        """A chart's new spec: computed (a tile through the Report's filter), put back, the screen redrawn."""
+    def set_chart(mut self, cref: Int, var c: SheetObject, logged: Bool = True):
+        """A chart's new spec: computed (a tile through the Report's filter), put back, the screen redrawn; logged for
+        Undo (one step per change: a word's choice, an ask, an inspector control)."""
+        if logged:
+            self.chart_undo.append((self.frame.undo_depth(), cref, self.chart_of(cref)))
+        self.lit = List[Int]()  # (an ask sets its own marks after this)
         try:
             if cref >= TILE_REF:
                 ref t = self.tiles[cref - TILE_REF]
@@ -607,6 +619,7 @@ struct Main(App):
             self.ask_said = ""
             self.ask_text = ""
             self.lit = List[Int]()
+            self.insp_page = 0
 
     def table_h(self) -> Int:
         if self.table_h_set > 0:
@@ -1133,6 +1146,7 @@ struct Main(App):
                 self.active = len(self.objects) - 1
                 if m == INSERT_CHART:
                     self.ask_here(self.active)
+                    self.inspector_open = True  # (a new chart opens its inspector: the toolbar only inserts)
                 self.insp_tab = 2
                 self.reveal = self.active + 1  # (child 0 is the table)
                 self.reveal_count += 1
@@ -1174,6 +1188,8 @@ struct Main(App):
             var k = m - OBJ_CLOSE
             if k < len(self.objects):
                 _ = self.objects.pop(k)
+                self.chart_undo = List[Tuple[Int, Int, SheetObject]]()  # (refs after it moved: its changes can't be undone any more)
+                self.asking = -1
                 if self.active == k:
                     self.active = -1  # (the one shown was removed: show none)
                 elif self.active > k:
@@ -1185,6 +1201,8 @@ struct Main(App):
             if m - OBJ_PICK < len(self.objects):
                 self.active = m - OBJ_PICK
                 self.insp_tab = 2
+                if self.objects[self.active].kind == OBJ_CHART:
+                    self.ask_here(self.active)
                 self.inspector_open = True
                 self.version += 1
         elif m == CHART_STYLE or m == OBJ_VALUE or m == OBJ_GROUP or m == OBJ_ACROSS:
@@ -1233,10 +1251,13 @@ struct Main(App):
                 self.tiles.append(t^)
                 if chart_tile:
                     self.ask_here(TILE_REF + len(self.tiles) - 1)
+                    self.inspector_open = True
             self.version += 1
         elif m >= TILE_CLOSE and m < TILE_CLOSE + 100:
             if m - TILE_CLOSE < len(self.tiles):
                 _ = self.tiles.pop(m - TILE_CLOSE)
+                self.chart_undo = List[Tuple[Int, Int, SheetObject]]()
+                self.asking = -1
                 self.version += 1
         elif m >= TILE_TAP and m < TILE_TAP + 100:
             var k = m - TILE_TAP
@@ -1269,9 +1290,17 @@ struct Main(App):
         elif m == WORD_CLOSE:
             self.word_ref = -1
             self.version += 1
-        elif m == ASK_CHANGE:
+        elif m >= PAGE and m <= PAGE + 4:
+            self.insp_page = m - PAGE
+            self.version += 1
+        elif m >= INSP_SET and m < INSP_SET + 7:  # (the inspector's controls: the same choices as the sentence's words)
+            if self.asking >= 0 and self.has_chart(self.asking):
+                var c = self.chart_of(self.asking)
+                if apply_choice(c, self.frame, m - INSP_SET, event.number):
+                    self.set_chart(self.asking, c^)
+            self.version += 1
+        elif m == ASK_CHANGE:  # (typing changes nothing else on screen: no rebuild under the field, so Return is never lost)
             self.ask_text = event.text
-            self.lit = List[Int]()
         elif m == ASK_SUBMIT:
             if self.asking >= 0 and self.has_chart(self.asking) and event.text != "":
                 var c = self.chart_of(self.asking)
@@ -1353,6 +1382,13 @@ struct Main(App):
             self.renaming = -1
             self.message = "Kept the name"
             self.version += 1
+        elif m == UNDO and len(self.chart_undo) > 0 and self.chart_undo[len(self.chart_undo) - 1][0] >= self.frame.undo_depth():
+            var last = self.chart_undo.pop()  # (a chart change came after the table's last change: it goes first)
+            if self.has_chart(last[1]):
+                self.set_chart(last[1], last[2].copy(), logged=False)
+                self.message = "Undid a chart change: " + chart_sentence(self.chart_of(last[1]), self.frame)
+            self.lit = List[Int]()
+            self.version += 1
         elif m == UNDO and self.uses(self.frame.undo_drops()) != "":
             var gone = self.frame.undo_drops()
             self.message = "Can't undo the formula column " + self.frame.name(gone) + " yet: " + self.uses(gone) + " reads it. Remove that first"
@@ -1369,6 +1405,8 @@ struct Main(App):
                 self.grid.prepare(self.frame, self.font, self.pal)
                 if self.grid.cur_col >= self.frame.columns():
                     self.grid.select(self.grid.cur_row, self.frame.columns() - 1)
+                if self.grid.cur_row >= self.frame.rows():  # (an added row taken back: the selection stays in the table, or reading it asserts)
+                    self.grid.select(self.frame.rows() - 1, max(self.grid.cur_col, 0))
                 self.grid.redraw()
                 self.select_cell(self.grid.cur_row, self.grid.cur_col)
                 self.refresh()
@@ -1735,7 +1773,11 @@ struct Main(App):
         return out^
 
     def report_inspector(self) -> View:
-        """The Report's inspector: where its numbers come from (the tiles and the filter are in the toolbar)."""
+        """The Report's inspector: the chart tile being edited (its sentence and pages), else where the Report's numbers
+        come from (the tiles and the filter are in the toolbar)."""
+        if self.asking >= TILE_REF and self.has_chart(self.asking):
+            var one: List[String] = ["Chart"]
+            return Inspector(one, 0, NO_MSG, self.chart_inspector(self.asking), INSPECTOR_W)
         var sections = List[View]()
         var data = List[View]()
         data.append(Row("Source", Text(self.sheet_name)))
@@ -1745,6 +1787,54 @@ struct Main(App):
         sections.append(Section("Data", data))
         var tabs: List[String] = [self.report_name]
         return Inspector(tabs, 0, NO_MSG, sections, INSPECTOR_W)
+
+    def chart_inspector(self, cref: Int) -> List[View]:
+        """A chart's inspector: its sentence and what's set, a row per part opening its page (Data, Order, Rows, Style)."""
+        var c = self.chart_of(cref)
+        ref f = self.frame
+        if self.insp_page == 1:
+            var nums = number_columns(f)
+            var texts = text_columns(f)
+            var at_value = 0
+            for k in range(len(nums)):
+                if nums[k] == c.value:
+                    at_value = k
+            var at_group = 0
+            for k in range(len(texts)):
+                if texts[k] == c.group:
+                    at_group = k
+            return InspectorPage("Data", PAGE, [
+                Section("Combine", [Segmented(materialize[COMBINES](), c.combine, INSP_SET + SLOT_COMBINE).fill()]),
+                Section("Value", [Dropdown(self.names_of(nums), at_value, INSP_SET + SLOT_VALUE).fill(),
+                                  Text("Count reads rows: the value doesn't matter to it" if c.combine == COMBINE_COUNT else "Numbers and formula columns", CAPTION)]),
+                Section("Group by", [Dropdown(self.names_of(texts), at_group, INSP_SET + SLOT_GROUP).fill()])])
+        if self.insp_page == 2:
+            var tops = materialize[TOPS]()
+            var at_top = 0
+            for k in range(len(tops)):
+                if tops[k] == c.top:
+                    at_top = k
+            var shows: List[String] = ["All", "Top 3", "Top 5", "Top 10"]
+            return InspectorPage("Order", PAGE, [
+                Section("Order", [Dropdown(materialize[ORDERS](), c.order, INSP_SET + SLOT_ORDER).fill()]),
+                Section("Show", [Segmented(shows, at_top, INSP_SET + SLOT_TOP).fill()])])
+        if self.insp_page == 3:
+            var at = max(chosen(c, f, SLOT_FILTER), 0)
+            var note = String("The Report's filter applies too: ") + self.filter.words(f) if cref >= TILE_REF else String("Only these rows are added up")
+            return InspectorPage("Rows", PAGE, [Section("Rows", [Dropdown(chart_choices(c, f, SLOT_FILTER), at, INSP_SET + SLOT_FILTER).fill(), Text(note, CAPTION)])])
+        if self.insp_page == 4:
+            var marks: List[String] = ["Bars", "A line"]
+            return InspectorPage("Style", PAGE, [Section("As", [Segmented(marks, 1 if c.style == CHART_LINE else 0, INSP_SET + SLOT_MARK).fill()])])
+        var head = List[View]()
+        head.append(Text(chart_sentence(c, f), HEADLINE).tag("chart-sentence"))
+        head.append(Text("Tap a coloured word in the chart's title, ask in its field, or open a part below. Follows edits to " + self.sheet_name
+                         + " (" + fixed(c.milliseconds, 1) + " ms on " + f.last_device() + ")", CAPTION))
+        var rows = List[View]()
+        rows.append(NavRow("Data", slot_text(c, f, SLOT_COMBINE) + " of " + slot_text(c, f, SLOT_VALUE) + " · by " + slot_text(c, f, SLOT_GROUP), PAGE + 1, icon="formula"))
+        rows.append(NavRow("Order", slot_text(c, f, SLOT_ORDER) + " · " + slot_text(c, f, SLOT_TOP), PAGE + 2, icon="sort"))
+        rows.append(NavRow("Rows", slot_text(c, f, SLOT_FILTER), PAGE + 3, icon="filter-off"))
+        rows.append(NavRow("Style", slot_text(c, f, SLOT_MARK), PAGE + 4, icon="chart-bar"))
+        return [Section("Chart", head), Section("Parts", rows)]
 
     def object_inspector(self) -> List[View]:
         """The selected chart's or pivot's settings."""
@@ -1780,6 +1870,10 @@ struct Main(App):
         if 0 <= self.active < len(self.objects):
             tabs.append("Chart" if self.objects[self.active].kind == OBJ_CHART else "Pivot")
             if self.insp_tab == 2:
+                if self.objects[self.active].kind == OBJ_CHART:  # (a chart: its sentence and pages, editing the chart being asked about)
+                    if self.asking != self.active:
+                        return Inspector(tabs, 2, INSP_TAB, self.object_inspector(), INSPECTOR_W)
+                    return Inspector(tabs, 2, INSP_TAB, self.chart_inspector(self.active), INSPECTOR_W)
                 return Inspector(tabs, 2, INSP_TAB, self.object_inspector(), INSPECTOR_W)
         var sections = List[View]()
         if self.insp_tab == 0:
