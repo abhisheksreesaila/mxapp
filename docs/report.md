@@ -3,7 +3,18 @@
 **End goal (owner, 2026-10-19):** "the best looking, best polished UI; features can be added later. Components native by default; the themes are opinionated, stacked on top… anybody can add their own. I don't want to tightly couple this… the framework stays lean, a language for all platforms; theming, apps are plugins on top. After this polish, super silky smooth UI, make a list of operations you need from mxframe."
 
 ## Result
-RESULT_LINES
+M0–M8 PASS (M6 and M7 in a rerun after the last fixes: every earlier goal inside them, on the Scene and on pixels). Reviewer: round 2 PASS.
+```
+PASS  M0  42 shots (omxplorer's 4 screens in 4 skins, kit's skins, Fluent, Omarchy, native; GTK and the web); two runs differ by at most 0.05% of pixels
+PASS  M1  mojoui/ names no theme, colour or style sheet (0 hits); the GTK host loads only its padding rules and the app's theme, neither host styles a theme's class; Liquid, the skins, Fluent and Omarchy are themes/ modules; hosts apply App.theme()
+PASS  M2  hello names no theme: GTK loads no style sheet but layout (THEME: none); the web page is the system font and colours, no body class
+PASS  M3  42 screens from a build of the move (76d715b): at most 0.07% of pixels differ (per channel, each within its own noise); at HEAD, kit, Fluent (but its bars' tracks, P9), Omarchy and native unchanged
+PASS  M4  themes/paper.mojo (no line of it in mojoui/) picked in the themes example: GTK and the web switch live from native to Paper (window and page in #f4efe6)
+PASS  M5  docs/goals/27/polish.md: every finding fixed; at 1742×876 and 1280×720: one name, no empty chip, the GPU's state once, the report's toolbar the sheet's height, a titled inspector, charts not red; the web's dialog covers the window and Choose a file is the primary; no theme draws dark with a dark system
+PASS  M8  docs/mxframe-needs.md: 19 operations, each with why, what the app does meanwhile and how much it matters; the order to ask in
+PASS  M6  no flag: scroll 0.8 ms p95, glide 0.2 ms, 0 cell rebuilds, 0 uploads; hover and press ≤ 150 ms (goal 25's M5); goals 3–24 (goal 25's M7) pass on the Scene; MOJOUI_SCENE=0 is the pixel path
+PASS  M7  goal 26's M0–M5, M8 and M7 (goals 3–25 inside them) pass
+```
 
 ## Themes are plugins now
 Before: the GTK host carried ~350 lines of Liquid, Ledger, Fluent and Omarchy CSS, the web host ~300, and the core named every theme (and omxplorer's brand colours). Now:
@@ -46,6 +57,7 @@ scripts/scene-bench.sh                                # goal 26's M6, still wait
 ```
 
 ## Not done
+- **Known in this build:** Undo right after Add row crashes (the selection stays on the removed row); and picking a choice in a popover could scroll the sheet. Both found while building goal 28 and fixed there.
 - Android hosts take no theme yet (their own look only); Mac and iPhone apply a theme's palette but haven't run on hardware. `App.appearance` is GTK and the web only.
 - Charts and the import preview still paint pixels (only the grid is a Scene).
 - Chart editing ("the title is the query") is goal 28 (`docs/goals/28-draft.md`).

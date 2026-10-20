@@ -7,6 +7,12 @@ that list, ranked by what a person feels. Vendored today: MX frame **1889b7f** (
 How to read it: **Need** is the operation, **Why** is what the person sees today, **Meanwhile** is what the app does
 instead (with the code), **Matters** is high / medium / low.
 
+## Status (MX frame session, 2026-10-19)
+- **Stable now: 321870f** (STABLE.md at the root of abhisheksreesaila/mxframe is the one place that says which commit is safe to vendor; dc1a722 was stable too).
+- **Already in 321870f** (by switching chart, report and pivot queries to its SQL or builder): #5's avg, median, quantile_disc, min, max per group; #6 `ORDER BY agg DESC LIMIT n`; #7 WHERE expressions, streamed too; #8's EXTRACT year/quarter/month/dow, date_trunc, equal-width bins; #9 multi-key GROUP BY with NULL as its own group; #16 SQL and joins; #18 LIKE/contains.
+- **Filed as issues (label `omxplorer`):** #1 → mxframe#6 (F-175), #2 → #7 (F-160), #3 → #8 (F-176), #4 → #9 (F-176), #5 σ → #10 (F-177), #8 quantile bins and ISO week → #11 (F-177), #10 → #12, #11 → #13 (F-178), #12 → #14, #13 → #15 (F-179), #14 → #16, #17 → #17, #19 → #18.
+- **Stay in omxplorer or a plugin:** the "everything else" row (top N plus the total, or UNION ALL once F-159 lands), the Excel and JSON readers (#15, an import plugin), the pivot layout.
+
 ## 1. Silky: keep the UI thread free (the owner's bar)
 The Scene made drawing cost ≤ 1 ms a frame (goal 26). What still freezes the window is data work on the same thread.
 
