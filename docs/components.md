@@ -69,6 +69,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | Board: phone-width list | `(automatic under 720 pt)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Overlay islands | `Overlay(base, *islands) + .pin(h, v)` | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 |
 | Themes on top (themes/, or yours) | `def theme(self) -> Theme` | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 |
+| Sentence with tappable words | `Sentence([Word(…)]) · Button(style=TOKEN)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Light and dark from the system | `def appearance(mut self, dark)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Shared data per process | `App.init_shared()` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | 🔨 |
 | Toolbar button (icon over label) | `Button(style=TOOL / TOOL_ON)` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
@@ -104,12 +105,12 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 76 | 1 | 0 |
-| Web | 77 | 0 | 0 |
-| Android | 19 | 15 | 43 |
-| Mac (AppKit) | 0 | 59 | 18 |
-| iPhone (UIKit) | 0 | 60 | 17 |
-| Agent (MCP) | 28 | 17 | 32 |
+| Linux (GTK) | 77 | 1 | 0 |
+| Web | 78 | 0 | 0 |
+| Android | 19 | 15 | 44 |
+| Mac (AppKit) | 0 | 59 | 19 |
+| iPhone (UIKit) | 0 | 60 | 18 |
+| Agent (MCP) | 28 | 17 | 33 |
 
 ## Inside one app, not components yet (the debt)
 

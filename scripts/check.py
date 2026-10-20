@@ -89,6 +89,41 @@ def m0():
                                                   "a document keeps a chart's spec and an older one opens as it was (tests/test_chartspec.mojo)")
 
 
+TOKENS = ["Sum", "amount", "region", "as in the table", "every region", "every row", "bars"]
+
+
+def m1():
+    """The title is a sentence: every setting a token; a token's choices in a popover; a pick changes the chart (GTK, web,
+    a sheet chart and a Report chart tile)."""
+    problems = []
+    err = g20.mojo_test("tests/test_sentence.mojo", "SENTENCE TESTS PASSED", "test_sentence", "tests")
+    if err:
+        problems.append(err)
+    g25.OUT = OUT
+    steps = g25.SHEET + ";tap:Chart;pause:300"
+    picks = ";tap:Sum;pause:200;tap:Average;pause:200;tap:as in the table;pause:200;tap:largest first;pause:200;tap:every region;pause:200;tap:top 3;pause:300"
+    want = "Average of amount by region, largest first, top 3, every row, as bars"
+    gtk, _ = g25.gtk(steps, "m1-tokens")
+    buttons = re.findall(r"^BUTTON: (.*)$", gtk, re.M)
+    missing = [t for t in TOKENS if t not in buttons]
+    if missing:
+        problems.append(f"GTK: the sentence lacks tokens {missing}")
+    pop, _ = g25.gtk(steps + ";tap:region;pause:300", "m1-popover")
+    if "POPOVER: Group by" not in pop:
+        problems.append("GTK: tapping a word opens no choices")
+    picked, _ = g25.gtk(steps + picks, "m1-picked")
+    if not any(l.startswith(want) for l in labels(picked)):
+        problems.append(f"GTK: after the picks the chart says {[l for l in labels(picked) if ' as ' in l][-1:]}")
+    web = g25.web(steps + picks, "m1-picked")
+    if not any(l.startswith(want) for l in labels(web)):
+        problems.append(f"web: after the picks the chart says {[l for l in labels(web) if ' as ' in l][-1:]}")
+    tile, _ = g25.gtk(g25.OPEN + ";tap:Create table;tap:Report;tap:Chart tile;pause:300;tap:bars;pause:200;tap:a line;pause:300", "m1-tile")
+    if not any(l.startswith("Sum of amount by region, as in the table, every region, every row, as a line") for l in labels(tile)):
+        problems.append(f"GTK Report tile: {[l for l in labels(tile) if ' as ' in l][-1:]}")
+    return not problems, "; ".join(problems) or ("a chart's title is its sentence, every setting a token (GTK, web); a token's choices open on it; "
+                                                  "Sum→Average, as in the table→largest first, every region→top 3 change the chart on both hosts; a Report tile's too")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -106,7 +141,7 @@ def m7():
     return not problems, "; ".join(problems) or "goal 27's M0–M8 (goals 3–26 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", todo("the sentence")), ("M2", todo("ask")), ("M3", todo("inspector pages")), ("M4", todo("undo, insert opens the inspector")),
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", todo("ask")), ("M3", todo("inspector pages")), ("M4", todo("undo, insert opens the inspector")),
               ("M5", todo("bars move")), ("M6", todo("real input")), ("M7", m7)]
 
 

@@ -5,7 +5,8 @@
 
 from mojoui.view import View, Text, Button, Canvas, VStack, HStack, Spacer, Card, HEADLINE, CAPTION, ICON_ONLY, SUBTLE, CENTER, START, NO_MSG
 from mxframe import Expr, col, lit, least, greatest
-from mojoui.sheet import Sheet, TEXT, DECIMAL, INT, DATE
+from mojoui.sheet import Sheet, TEXT, DECIMAL, INT, DATE, BOOL
+from mojoui.sentence import Word, Sentence, sentence_text
 from mojoui.chartview import ChartView
 from mojoui.pivot import PivotTable
 from mojoui.numformat import CURRENCY
@@ -16,6 +17,7 @@ comptime OBJ_PIVOT = 2
 comptime CHART_BAR = 0
 comptime CHART_LINE = 1
 comptime HEADER_H = 44  # an object's title bar (its drag handle)
+comptime SENTENCE_H = 52  # a chart's title bar when its title is its sentence (two lines)
 # A chart's spec (goal 28): how its groups combine, their order, how many show, the rows it reads
 comptime COMBINE_SUM = 0
 comptime COMBINE_AVERAGE = 1
@@ -278,6 +280,160 @@ def shape_of(sheet: Sheet, c: Int) raises -> List[Float64]:
     return out^
 
 
+# The words of a chart's sentence (goal 28 M1): each setting is a token
+comptime SLOT_COMBINE = 0
+comptime SLOT_VALUE = 1
+comptime SLOT_GROUP = 2
+comptime SLOT_ORDER = 3
+comptime SLOT_TOP = 4
+comptime SLOT_FILTER = 5
+comptime SLOT_MARK = 6
+comptime SLOTS = 7
+comptime SLOT_NAMES: List[String] = ["Combine", "Value", "Group by", "Order", "Show", "Rows", "As"]
+comptime FILTER_WORDS = 12  # a text column offers its values as filters when it has at most this many
+
+
+def number_columns(sheet: Sheet) -> List[Int]:
+    var out = List[Int]()
+    for c in range(sheet.columns()):
+        if sheet.kind(c) == INT or sheet.kind(c) == DECIMAL:
+            out.append(c)
+    return out^
+
+
+def text_columns(sheet: Sheet) -> List[Int]:
+    var out = List[Int]()
+    for c in range(sheet.stored()):
+        if sheet.kind(c) == TEXT:
+            out.append(c)
+    return out^
+
+
+def slot_text(obj: SheetObject, sheet: Sheet, slot: Int) -> String:
+    """What a token reads now."""
+    if slot == SLOT_COMBINE:
+        return materialize[COMBINES]()[obj.combine]
+    if slot == SLOT_VALUE:
+        return "rows" if obj.combine == COMBINE_COUNT else sheet.name(obj.value)
+    if slot == SLOT_GROUP:
+        return sheet.name(obj.group)
+    if slot == SLOT_ORDER:
+        return materialize[ORDERS]()[obj.order]
+    if slot == SLOT_TOP:
+        return ("every " + sheet.name(obj.group)) if obj.top == 0 else ("top " + String(obj.top))
+    if slot == SLOT_FILTER:
+        if obj.only_col < 0:
+            return "every row"
+        if sheet.kind(obj.only_col) == BOOL:
+            return ("only " if obj.only_code == 1 else "not ") + sheet.name(obj.only_col)
+        return "only " + sheet.text_of(obj.only_col, Int64(obj.only_code))
+    return "a line" if obj.style == CHART_LINE else "bars"
+
+
+def chart_words(obj: SheetObject, sheet: Sheet, on_word: Int, cref: Int) -> List[Word]:
+    """The chart's title as a sentence: "Sum of amount by region, largest first, top 5, every row, as bars". Token
+    `slot` sends `on_word + slot` and is tagged "word-<cref>-<slot>" (its popover's anchor)."""
+    var out = List[Word]()
+    var glue: List[String] = ["", " of ", " by ", ", ", ", ", ", ", ", as "]
+    for slot in range(SLOTS):
+        if glue[slot] != "":
+            out.append(Word(glue[slot]))
+        out.append(Word(slot_text(obj, sheet, slot), on_word + slot, "word-" + String(cref) + "-" + String(slot)))
+    return out^
+
+
+def chart_sentence(obj: SheetObject, sheet: Sheet) -> String:
+    return sentence_text(chart_words(obj, sheet, 1, 0))
+
+
+def chart_choices(obj: SheetObject, sheet: Sheet, slot: Int) -> List[String]:
+    """What a token offers (apply_choice takes the index)."""
+    var out = List[String]()
+    if slot == SLOT_COMBINE:
+        return materialize[COMBINES]()
+    if slot == SLOT_VALUE:
+        for c in number_columns(sheet):
+            out.append(sheet.name(c))
+        out.append("rows")
+    elif slot == SLOT_GROUP:
+        for c in text_columns(sheet):
+            out.append(sheet.name(c))
+    elif slot == SLOT_ORDER:
+        return materialize[ORDERS]()
+    elif slot == SLOT_TOP:
+        out.append("every " + sheet.name(obj.group))
+        for n in materialize[TOPS]()[1:]:
+            out.append("top " + String(n))
+    elif slot == SLOT_FILTER:
+        out.append("every row")
+        for c in range(sheet.stored()):
+            if sheet.kind(c) == BOOL:
+                out.append("only " + sheet.name(c))
+                out.append("not " + sheet.name(c))
+            elif sheet.kind(c) == TEXT and c != obj.group and 2 <= sheet.word_count(c) <= FILTER_WORDS:
+                for code in range(sheet.word_count(c)):
+                    out.append("only " + sheet.text_of(c, Int64(code)))
+    else:
+        out.append("bars")
+        out.append("a line")
+    return out^
+
+
+def apply_choice(mut obj: SheetObject, sheet: Sheet, slot: Int, k: Int) -> Bool:
+    """Choice k of chart_choices(slot) into the spec; False when it isn't one."""
+    var choices = chart_choices(obj, sheet, slot)
+    if k < 0 or k >= len(choices):
+        return False
+    if slot == SLOT_COMBINE:
+        obj.combine = k
+    elif slot == SLOT_VALUE:
+        var nums = number_columns(sheet)
+        if k == len(nums):
+            obj.combine = COMBINE_COUNT
+        else:
+            obj.value = nums[k]
+            if obj.combine == COMBINE_COUNT:
+                obj.combine = COMBINE_SUM  # (a column to count rows of reads as its sum)
+    elif slot == SLOT_GROUP:
+        obj.group = text_columns(sheet)[k]
+        if obj.only_col == obj.group:
+            obj.only_col = -1
+    elif slot == SLOT_ORDER:
+        obj.order = k
+    elif slot == SLOT_TOP:
+        obj.top = materialize[TOPS]()[k]
+        if obj.top > 0 and obj.order == ORDER_TABLE:
+            obj.order = ORDER_LARGEST  # ("top 5" means the five largest unless an order says otherwise)
+    elif slot == SLOT_FILTER:
+        obj.only_col = -1
+        var at = 1
+        for c in range(sheet.stored()):
+            if sheet.kind(c) == BOOL:
+                if k == at or k == at + 1:
+                    obj.only_col = c
+                    obj.only_code = 1 if k == at else 0
+                at += 2
+            elif sheet.kind(c) == TEXT and c != obj.group and 2 <= sheet.word_count(c) <= FILTER_WORDS:
+                if at <= k < at + sheet.word_count(c):
+                    obj.only_col = c
+                    obj.only_code = k - at
+                at += sheet.word_count(c)
+    else:
+        obj.style = CHART_LINE if k == 1 else CHART_BAR
+    obj.selected = -1
+    return True
+
+
+def chosen(obj: SheetObject, sheet: Sheet, slot: Int) -> Int:
+    """Which choice is set now (the popover marks it)."""
+    var current = slot_text(obj, sheet, slot)
+    var choices = chart_choices(obj, sheet, slot)
+    for k in range(len(choices)):
+        if choices[k] == current:
+            return k
+    return -1
+
+
 def object_title(obj: SheetObject, sheet: Sheet) -> String:
     if obj.kind == OBJ_PIVOT:
         return sheet.name(obj.value) + " · " + sheet.name(obj.group) + (" × " + sheet.name(obj.across) if obj.across >= 0 else "")
@@ -352,15 +508,17 @@ def pivot_view(obj: SheetObject, sheet: Sheet, height: Int) -> View:
                       corner=sheet.name(obj.group))
 
 
-def object_card(obj: SheetObject, sheet: Sheet, canvas: Int, version: Int, on_tap: Int, on_close: Int, on_pick: Int) -> View:
+def object_card(obj: SheetObject, sheet: Sheet, canvas: Int, version: Int, on_tap: Int, on_close: Int, on_pick: Int, on_word: Int = NO_MSG, cref: Int = 0) -> View:
     """The object as it sits on the sheet: a title bar (its drag handle) with a close button, then the chart (on
-    Canvas `canvas`) and its readout, or the pivot."""
-    var head = HStack(Button(object_title(obj, sheet), on_pick, style=SUBTLE), Spacer(),
+    Canvas `canvas`) and its readout, or the pivot. With `on_word`, a chart's title is its sentence (chart_words)."""
+    var title = Sentence(chart_words(obj, sheet, on_word, cref), width=max(24, (obj.w - 130) // 8), tag="sentence-" + String(cref)) if obj.kind == OBJ_CHART and on_word != NO_MSG else Button(object_title(obj, sheet), on_pick, style=SUBTLE)
+    var head_h = SENTENCE_H if obj.kind == OBJ_CHART and on_word != NO_MSG else HEADER_H - 8  # (a sentence takes two lines)
+    var head = HStack(title^, Spacer(),
                       Text(fixed(obj.milliseconds, 1) + " ms", CAPTION),
-                      Button("Remove", on_close, ICON_ONLY, icon="close"), spacing=8).fill().align(CENTER).height(HEADER_H - 8)
+                      Button("Remove", on_close, ICON_ONLY, icon="close"), spacing=8).fill().align(START if on_word != NO_MSG else CENTER).height(head_h)
     var body: View
     if obj.kind == OBJ_CHART:
-        body = VStack(Canvas(canvas, version, on_gesture=on_tap).fill().height(obj.h - HEADER_H - 40).tag("chart-" + String(canvas - 9)),
+        body = VStack(Canvas(canvas, version, on_gesture=on_tap).fill().height(obj.h - head_h - 48).tag("chart-" + String(canvas - 9)),
                       Text(readout(obj, sheet), CAPTION).tag("readout"), spacing=4).fill()
     else:
         body = pivot_view(obj, sheet, obj.h - HEADER_H - 24)

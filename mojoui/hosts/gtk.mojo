@@ -15,7 +15,7 @@ from mojoui.view import (
     CLIPBOARD, View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, SECONDARY, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD,
-    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON, KEY, SHIFT, CTRL, ALT,
+    TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON, TOKEN, KEY, SHIFT, CTRL, ALT,
 )
 from mojoui.diff import Diff, Patch, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE, SET_SIZE
 from mojoui.app import App, Event, Runtime, ms
@@ -624,13 +624,16 @@ struct GtkHost[A: App](Movable):
 
     def padding_class(mut self, v: Int, h: Int) -> String:
         """A CSS class giving `v`/`h` padding (GTK has no padding setter; CSS does it)."""
-        var name = "mui-p-" + String(v) + "-" + String(h)
+        return self.layout_class("mui-p-" + String(v) + "-" + String(h), "padding: " + String(v) + "px " + String(h) + "px;")
+
+    def layout_class(mut self, name: String, body: String) -> String:
+        """A CSS class with layout-only rules (sizes, padding: never colours, which are the theme's), loaded once."""
         if ("." + name + " ") not in self.css_rules:
             if self.css == 0:
                 self.css = external_call["gtk_css_provider_new", Int]()
                 var display = external_call["gdk_display_get_default", Int]()
                 external_call["gtk_style_context_add_provider_for_display", NoneType](display, self.css, c_uint(800))
-            self.css_rules += "." + name + " { padding: " + String(v) + "px " + String(h) + "px; }\n"
+            self.css_rules += "." + name + " { " + body + " }\n"
             var rules = self.css_rules
             external_call["gtk_css_provider_load_from_string", NoneType](self.css, rules.as_c_string_span())
         return name
@@ -872,6 +875,13 @@ struct GtkHost[A: App](Movable):
                 add_class(w, "destructive-action")
             elif node.style == SUBTLE or node.style == ICON_ONLY or node.style == ICON_ON or node.style == TOOL or node.style == TOOL_ON or node.style == TOOL_INLINE or node.style == TOOL_INLINE_ON:
                 add_class(w, "flat")
+            elif node.style == TOKEN:  # a word in a sentence: flat, tight, in the accent (libadwaita's own accent colour)
+                add_class(w, "flat")
+                add_class(w, self.layout_class("mui-token", "padding: 0 3px; min-height: 0; min-width: 0; border-radius: 4px;"))
+                var label = external_call["gtk_button_get_child", Int](w)
+                if label != 0:
+                    add_class(label, "accent")
+                    add_class(label, "mui-token-label")
             connect(w, "clicked", on_clicked[Self.A], self_addr)
         elif node.kind == FIELD:
             w = external_call["gtk_entry_new", Int]()

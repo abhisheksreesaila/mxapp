@@ -77,7 +77,8 @@ from mojoui.cellstyle import (CellStyle, BOLD, ITALIC, UNDERLINE, STRIKE, INK_MA
                               AUTO_ALIGN, ALIGN_LEFT, ALIGN_CENTRE, ALIGN_RIGHT, SWATCH_NAMES, swatch_name)
 from mojoui.swatches import SwatchPicker, draw_swatches, swatch_at
 from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_text, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
-                              CHART_BAR, CHART_LINE, HEADER_H)
+                              CHART_BAR, CHART_LINE, HEADER_H, chart_words, chart_choices, apply_choice, chosen, chart_sentence, SLOT_NAMES)
+from mojoui.sentence import Sentence
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, tile_fact, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
                                TILE_CHART, TILE_DISTINCT, TILE_MEDIAN, TILE_LAST, TILE_NAMES)
 from mojoui.chartview import ChartView
@@ -168,6 +169,10 @@ comptime RENAME_TAB = 95  # Sheet > Rename tab…: the current tab's name become
 comptime RENAME_SUBMIT = 96
 comptime RENAME_CANCEL = 97
 comptime PREVIEW = 98  # the import preview's gestures: it scrolls (it's read-only: taps and keys do nothing)
+comptime WORD_CLOSE = 99  # a chart word's choices dismissed
+comptime WORD = 1000  # + ref × 10 + slot: a word of a chart's sentence tapped (ref: a sheet chart 0…39, a Report chart tile 40…79)
+comptime CHOICE = 1900  # + k: one of the tapped word's choices picked
+comptime TILE_REF = 40  # (a Report tile's ref: TILE_REF + its index)
 comptime SET_INK = 600  # + 0 (automatic) … 8: the Format menu's text colours
 comptime SET_FILL = 610  # + 0 (none) … 8
 comptime SWATCH_CANVAS = 5  # the swatches' canvas id
@@ -245,6 +250,8 @@ struct Main(App):
     var report_name: String  # the Report tab's name ("Report" until it's renamed)
     var renaming: Int  # the tab being renamed (0 the sheet, 1 the Report), -1 none
     var picking: Int  # the swatches open: PICK_INK or PICK_FILL, 0 none
+    var word_ref: Int  # a chart word whose choices are open: its chart (a ref) and slot; -1 none
+    var word_slot: Int
 
     def __init__(out self):
         self.screen = START_SCREEN
@@ -304,6 +311,8 @@ struct Main(App):
         self.report_name = "Report"
         self.renaming = -1
         self.picking = 0
+        self.word_ref = -1
+        self.word_slot = 0
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -541,6 +550,33 @@ struct Main(App):
                 compute(self.objects[k], self.frame)
             for k in range(len(self.tiles)):
                 compute_tile(self.tiles[k], self.frame, self.filter)
+        except e:
+            self.message = "Couldn't compute: " + String(e)
+        self.version += 1
+
+    def has_chart(self, cref: Int) -> Bool:
+        """Whether `cref` names a chart: a sheet chart (0…39) or a Report chart tile (TILE_REF + k)."""
+        if cref >= TILE_REF:
+            return cref - TILE_REF < len(self.tiles) and self.tiles[cref - TILE_REF].kind == TILE_CHART
+        return 0 <= cref < len(self.objects) and self.objects[cref].kind == OBJ_CHART
+
+    def chart_of(self, cref: Int) -> SheetObject:
+        return self.tiles[cref - TILE_REF].chart.copy() if cref >= TILE_REF else self.objects[cref].copy()
+
+    def set_chart(mut self, cref: Int, var c: SheetObject):
+        """A chart's new spec: computed (a tile through the Report's filter), put back, the screen redrawn."""
+        try:
+            if cref >= TILE_REF:
+                ref t = self.tiles[cref - TILE_REF]
+                t.chart = c^
+                t.col = t.chart.value  # (compute_tile reads the tile's column and group)
+                t.group = t.chart.group
+                compute_tile(t, self.frame, self.filter)
+                self.message = chart_sentence(t.chart, self.frame) + " (" + fixed(t.chart.milliseconds, 1) + " ms)"
+            else:
+                compute(c, self.frame)
+                self.message = chart_sentence(c, self.frame) + " (" + fixed(c.milliseconds, 1) + " ms)"
+                self.objects[cref] = c^
         except e:
             self.message = "Couldn't compute: " + String(e)
         self.version += 1
@@ -1175,6 +1211,25 @@ struct Main(App):
                 if cv.tap(event.x, event.y, self.font, self.pal):
                     self.tiles[k].chart.selected = cv.selected
                     self.version += 1
+        elif m >= WORD and m < WORD + (TILE_REF + MAX_OBJECTS) * 10:  # a chart's word: its choices open on it
+            var cref = (m - WORD) // 10
+            if self.has_chart(cref):
+                self.word_ref = cref
+                self.word_slot = (m - WORD) % 10
+                if cref < TILE_REF:
+                    self.active = cref  # (the inspector follows the chart being edited)
+                    self.insp_tab = 2
+            self.version += 1
+        elif m >= CHOICE and m < CHOICE + 100:
+            if self.word_ref >= 0 and self.has_chart(self.word_ref):
+                var c = self.chart_of(self.word_ref)
+                if apply_choice(c, self.frame, self.word_slot, m - CHOICE):
+                    self.set_chart(self.word_ref, c^)
+            self.word_ref = -1
+            self.version += 1
+        elif m == WORD_CLOSE:
+            self.word_ref = -1
+            self.version += 1
         elif m == FILTER_COL:
             var texts = self.texts()
             if 0 <= event.number <= len(texts):
@@ -1535,6 +1590,15 @@ struct Main(App):
                 Text("A formula makes a whole column from other columns: margin = revenue - cost", CAPTION),
                 Text("+  −  ×  ÷  //  %   and parentheses", CAPTION), Text("min(a, b)   max(a, b)   −a", CAPTION),
                 Text("Money keeps its decimals; division rounds the way the column does.", CAPTION), spacing=6).align(START).max_width(420), on_close=HELP_CLOSE))
+        if self.word_ref >= 0 and self.has_chart(self.word_ref):  # a chart word's choices, attached to the word
+            var c = self.chart_of(self.word_ref)
+            var rows = List[View]()
+            var now = chosen(c, self.frame, self.word_slot)
+            var choices = chart_choices(c, self.frame, self.word_slot)
+            for k in range(min(len(choices), 60)):
+                rows.append(Button(choices[k], CHOICE + k, SUBTLE, icon="check" if k == now else "").fill().align(START).tag("choice"))
+            out.append(Popover("word-" + String(self.word_ref) + "-" + String(self.word_slot), materialize[SLOT_NAMES]()[self.word_slot],
+                               VStack(rows^, spacing=2).align(STRETCH).max_width(260), on_close=WORD_CLOSE))
         if self.toast != "":
             out.append(Toast(self.toast, "Undo" if self.toast_undo != NO_MSG else "", self.toast_undo, on_close=TOAST_CLOSE))
         return out^
@@ -1747,7 +1811,8 @@ struct Main(App):
             ref t = self.tiles[k]
             if t.kind == TILE_CHART:
                 var cv = chart_view(t.chart, self.frame)
-                charts.append(Card(HStack(Text(cv.title, HEADLINE), Spacer(), Button("Remove", TILE_CLOSE + k, ICON_ONLY, icon="close"), spacing=8).fill().align(CENTER),
+                charts.append(Card(HStack(Sentence(chart_words(t.chart, self.frame, WORD + (TILE_REF + k) * 10, TILE_REF + k), width=max(30, (self.sheet_width() - 120) // 9),
+                                                   tag="sentence-" + String(TILE_REF + k)), Spacer(), Button("Remove", TILE_CLOSE + k, ICON_ONLY, icon="close"), spacing=8).fill().align(START),
                                    Canvas(60 + k, self.version, on_gesture=TILE_TAP + k).fill().height(240),
                                    Text(readout(t.chart, self.frame), CAPTION), spacing=6).fill().tag("chart-tile"))
             else:
@@ -1785,7 +1850,7 @@ struct Main(App):
         var bottom = self.table_y + th
         for k in range(len(self.objects)):
             ref o = self.objects[k]
-            items.append(object_card(o, self.frame, 10 + k, self.version, OBJ_TAP + k, OBJ_CLOSE + k, OBJ_PICK + k)
+            items.append(object_card(o, self.frame, 10 + k, self.version, OBJ_TAP + k, OBJ_CLOSE + k, OBJ_PICK + k, WORD + k * 10, k)
                          .at(o.x, o.y).width(o.w).height(o.h).tag("chart" + String(k) if o.kind == OBJ_CHART else "pivot" + String(k)))
             bottom = max(bottom, o.y + o.h)
         var ed = self.grid.editor_place(self.frame)

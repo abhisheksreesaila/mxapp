@@ -97,6 +97,7 @@ comptime TOOL_ON = 6  # the same, shown as the active tool
 comptime ICON_ON = 7  # ICON_ONLY shown pressed (a toggle that is on: Bold, Align left)
 comptime TOOL_INLINE = 8  # a toolbar button: its icon beside a small title, on one line with icon-only toggles
 comptime TOOL_INLINE_ON = 9  # the same, shown as the active tool
+comptime TOKEN = 10  # a word inside a sentence that opens its choices (mojoui.sentence): inline, the accent's colour, no fill
 
 
 def as_tool(style: Int) -> Int:
