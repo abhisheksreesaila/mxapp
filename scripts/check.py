@@ -277,9 +277,10 @@ def main():
     headless.ensure()
     only = sys.argv[1:]
     if not only:
-        for ex in g20.EXAMPLES:
+        every = list(dict.fromkeys(list(g20.EXAMPLES) + APPS))  # (goal 20's list predates kit and themes)
+        for ex in every:
             shutil.rmtree(BUILD / ex, ignore_errors=True)
-        for ex in g20.EXAMPLES:
+        for ex in every:
             if not (ROOT / "examples" / ex / "app.mojo").exists():
                 continue
             b = run(["scripts/build.sh", ex, "all"], timeout=3600)
