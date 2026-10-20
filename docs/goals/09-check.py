@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pixi.toml").exists())  # (archived in docs/goals/)
 sys.path.insert(0, str(ROOT / "scripts"))
+from documented import documented  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("goal8", ROOT / "docs/goals/08-check.py")
 g8 = importlib.util.module_from_spec(_spec)
@@ -269,7 +270,7 @@ def m6():
     gallery = (ROOT / "docs/gallery/index.html").read_text()
     if "workbook" not in gallery.lower():
         problems.append("the gallery doesn't show the workbook")
-    readme = (ROOT / "README.md").read_text()
+    readme = documented()  # README.md + docs/reference.md (D-270)
     if "scripts/workbook.sh" not in readme:
         problems.append("README doesn't say how to run the workbook")
     morning = (ROOT / "docs/morning.md").read_text() if (ROOT / "docs/morning.md").exists() else ""

@@ -13,6 +13,7 @@ from pathlib import Path
 
 ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pixi.toml").exists())  # (archived in docs/goals/)
 sys.path.insert(0, str(ROOT / "scripts"))
+from documented import documented  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("goal7", ROOT / "docs/goals/07-check.py")
 g7 = importlib.util.module_from_spec(_spec)
@@ -270,7 +271,7 @@ def m9():
 
 
 def m10():
-    readme = (ROOT / "README.md").read_text()
+    readme = documented()  # README.md + docs/reference.md (D-270)
     missing = [w for w in ("examples/analytics/app.mojo", "Flint", "MX frame", "gallery", "scripts/build.sh analytics")
                if w not in readme]
     return not missing, f"README lacks {missing}" if missing else "README shows the analytics showcase, how to run it, the gallery"

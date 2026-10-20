@@ -23,6 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 sys.path.insert(0, str(ROOT / "scripts"))
+from documented import documented  # noqa: E402
 EXAMPLES = ["hello", "gallery", "todo", "gpu", "kitchen", "expenses"]
 NATIVE_APPLE = ["hello", "gallery", "todo", "kitchen", "expenses"]
 
@@ -320,7 +321,7 @@ def g3_m8():
 
 def g3_m9():
     problems = []
-    readme = (ROOT / "README.md").read_text()
+    readme = documented()  # README.md + docs/reference.md (D-270)
     for word in ("Linux", "Mac", "iPhone", "Web", "Android", "GPU", "TextField", "Dropdown", "examples/todo/app.mojo"):
         if word not in readme:
             problems.append(f"README.md doesn't mention {word}")
@@ -470,7 +471,7 @@ def m10():
 
 def m11():
     problems = []
-    readme = (ROOT / "README.md").read_text()
+    readme = documented()  # README.md + docs/reference.md (D-270)
     for c in ("Segmented", "Radio", "TextArea", "Alert", "Tabs", "NavBar", "DatePicker", "Icon", "Grid", "LazyList",
               "examples/expenses/app.mojo"):
         if c not in readme:

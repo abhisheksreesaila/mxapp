@@ -17,6 +17,7 @@ from pathlib import Path
 
 ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pixi.toml").exists())  # (archived in docs/goals/)
 sys.path.insert(0, str(ROOT / "scripts"))
+from documented import documented  # noqa: E402
 
 # Goal 5's checker (and through it goals 3–4): its helpers and milestones, pointed at this repo.
 _spec = importlib.util.spec_from_file_location("goal5", ROOT / "docs/goals/05-check.py")
@@ -270,7 +271,7 @@ def m8():
 
 def m9():
     problems = []
-    readme = (ROOT / "README.md").read_text()
+    readme = documented()  # README.md + docs/reference.md (D-270)
     for m in ("Canvas(", "on_gesture", "on_frame", "def draw(", "Surface", "mojoui.gpu", "PAN", "ZOOM", "examples/lens/app.mojo"):
         if m not in readme:
             problems.append(f"README.md doesn't show {m}")
