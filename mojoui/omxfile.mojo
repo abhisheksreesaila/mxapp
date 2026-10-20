@@ -71,7 +71,10 @@ def spec_json(o: SheetObject, sheet: Sheet) -> String:
     var only = String("")
     if o.only_col >= 0:
         only = ', "only_col": ' + String(o.only_col) + ', "only_word": ' + json_string(sheet.text_of(o.only_col, Int64(o.only_code)) if sheet.kind(o.only_col) == TEXT else String(o.only_code))
-    return ', "combine": ' + String(o.combine) + ', "order": ' + String(o.order) + ', "top": ' + String(o.top) + only
+    var num = String("")
+    if o.num_col >= 0 and o.num_op != 0:
+        num = ', "num_col": ' + String(o.num_col) + ', "num_op": ' + String(o.num_op) + ', "num_lo": ' + String(o.num_lo) + ', "num_hi": ' + String(o.num_hi)
+    return ', "combine": ' + String(o.combine) + ', "order": ' + String(o.order) + ', "top": ' + String(o.top) + only + num
 
 
 def read_spec(j: Json, node: Int, mut o: SheetObject, sheet: Sheet):
@@ -83,6 +86,15 @@ def read_spec(j: Json, node: Int, mut o: SheetObject, sheet: Sheet):
     o.top = max(j.number(j.get(node, "top"), 0), 0)
     var only = j.number(j.get(node, "only_col"), -1)
     o.only_col = -1  # (every row, unless the file names a filter it still can)
+    var nc = j.number(j.get(node, "num_col"), -1)
+    var op = j.number(j.get(node, "num_op"), 0)
+    o.num_col = -1
+    o.num_op = 0
+    if 0 <= nc < sheet.columns() and (sheet.kind(nc) == INT or sheet.kind(nc) == DECIMAL) and 1 <= op <= 5:  # (a number condition on a number column)
+        o.num_col = nc
+        o.num_op = op
+        o.num_lo = j.number(j.get(node, "num_lo"), 0)
+        o.num_hi = j.number(j.get(node, "num_hi"), 0)
     if 0 <= only < sheet.columns() and (sheet.kind(only) == TEXT or sheet.kind(only) == BOOL):
         var word = j.text(j.get(node, "only_word"))
         if sheet.kind(only) == BOOL:

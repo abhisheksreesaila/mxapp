@@ -104,6 +104,53 @@ def m1():
                                                       "in every order and with a filter; \"median\" and \"p90\" asked on GTK")
 
 
+NUMS = [("sum", ">", 5000, None, None), ("count", "<", None, 1000, None), ("mean", "between", 2000, 4000, None), ("sum", ">", 5000, None, True),
+        ("median", ">=", 5000, None, None)]
+
+
+def m2():
+    """Numbers as filters: five charts with number conditions (and a Yes/No one) equal pyarrow's; the ask and the Rows page set them."""
+    import pyarrow.parquet as pq
+    problems = []
+    b = run(["scripts/mxbuild.sh", "tests/chartnum_dump.mojo", "-o", str(BUILD / "chartnum_dump")], timeout=1800)
+    if b.returncode != 0:
+        return False, "chartnum_dump: " + (b.stdout + b.stderr)[-400:]
+    out = run([str(BUILD / "chartnum_dump"), g25.small()], timeout=300).stdout
+    rows = pq.read_table(g25.small()).to_pylist()
+    blocks = re.split(r"^SPEC \d+\n", out.split("END")[0], flags=re.M)[1:]
+    if len(blocks) != len(NUMS):
+        return False, f"{len(blocks)} charts printed: {out[-300:]}"
+    for k, (block, (how, op, lo, hi, paid)) in enumerate(zip(blocks, NUMS)):
+        keep = lambda a: a is not None and ((op == ">" and a > lo) or (op == "<" and a < hi) or (op == "between" and lo <= a <= hi) or (op == ">=" and a >= lo))
+        groups = {}
+        for r in rows:
+            if paid is not None and r["paid"] is not paid:
+                continue
+            a = float(r["amount"]) if r["amount"] is not None else None
+            if not keep(a):
+                continue
+            groups.setdefault(r["region"] if r["region"] is not None else "(blank)", []).append(a)
+        for line in block.strip().split("\n")[1:]:
+            name, text = line.split("\t")
+            vals = groups.get(name, [])
+            want = (sum(vals) if how == "sum" else len(vals) if how == "count" else (sum(vals) / len(vals) if vals else None) if how == "mean"
+                    else stat(vals, "median"))
+            if text == "—":
+                if want is not None and name != "(blank)":
+                    problems.append(f"spec {k}: {name} reads — but pyarrow has {want}")
+                continue
+            if want is None or abs(float(text.replace(",", "")) - want) > 0.006:
+                problems.append(f"spec {k} ({how} {op}): {name} {text} vs pyarrow {want}")
+    asked = g25.gtk(g25.SHEET + ";tap:Chart;pause:300;" + g28.ASK + "only paid and over 5,000;pause:400", "m2-ask")[0]
+    if "paid, amount over 5,000.00" not in " ".join(re.findall(r"^BUTTON: (.*)$", asked, re.M)):
+        problems.append("GTK: asking \"only paid and over 5,000\" didn't set both")
+    page = g25.gtk(g25.SHEET + ";tap:Chart;pause:300;tap:Rows;pause:300;select:1=Over;pause:300;enter:From=2,500;pause:400", "m2-page")[0]
+    if "amount over 2,500.00" not in re.findall(r"^BUTTON: (.*)$", page, re.M):
+        problems.append(f"GTK Rows page: {[b for b in re.findall(r'^BUTTON: (.*)$', page, re.M) if 'amount' in b]}")
+    return not problems, "; ".join(problems[:6]) or ("five number conditions (over, under, between, at least; with a Yes/No filter too) equal pyarrow's; "
+                                                      "\"only paid and over 5,000\" sets both; the Rows page's Over 2,500 filters the chart (GTK)")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -120,7 +167,7 @@ def m5():
     return not problems, "; ".join(problems) or "goal 28's M0–M7 (goals 3–27 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", m1), ("M2", todo("number filters")), ("M3", todo("by month, quarter, weekday")), ("M4", todo("timings")), ("M5", m5)]
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", todo("by month, quarter, weekday")), ("M4", todo("timings")), ("M5", m5)]
 
 
 def main():

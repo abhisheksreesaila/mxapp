@@ -31,6 +31,12 @@ comptime ORDER_SMALLEST = 2
 comptime ORDER_AZ = 3
 comptime ORDERS: List[String] = ["in data order", "largest first", "smallest first", "A to Z"]  # (data order: as the data stores its groups, not sorted)
 comptime TOPS: List[Int] = [0, 3, 5, 10]  # (0: every group)
+comptime NUM_ANY = 0  # a chart's number condition: none, or its column over / under / between values (stored units)
+comptime NUM_OVER = 1
+comptime NUM_UNDER = 2
+comptime NUM_BETWEEN = 3
+comptime NUM_AT_LEAST = 4
+comptime NUM_AT_MOST = 5
 comptime MOVE_FRAMES = 20  # a spec change moves the bars over this many frames (~330 ms at 60 Hz), on the calm curve
 
 
@@ -51,6 +57,10 @@ struct SheetObject(Copyable, Movable):
     var top: Int  # charts: how many groups show (0: all)
     var only_col: Int  # charts: the rows it reads: this text or Yes/No column's value `only_code` (-1: every row)
     var only_code: Int
+    var num_col: Int  # charts: a number condition too (NUM_*), on this column (-1: none), in its stored units (both ends kept)
+    var num_op: Int
+    var num_lo: Int
+    var num_hi: Int
     var labels: List[String]  # (computed) the groups' texts (charts: in the chart's order, cut to its top N)
     var cols: List[String]  # (computed) pivots: the columns' texts
     var sums: List[Int]  # (computed) per group (pivots: rows × columns), in the value column's stored units
@@ -66,13 +76,13 @@ struct SheetObject(Copyable, Movable):
 
     @staticmethod
     def chart(value: Int, group: Int, x: Int, y: Int, w: Int = 520, h: Int = 320) -> SheetObject:
-        return SheetObject(OBJ_CHART, x, y, w, h, value, group, -1, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0,
+        return SheetObject(OBJ_CHART, x, y, w, h, value, group, -1, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0, -1, NUM_ANY, 0, 0,
                            List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), List[Int](), List[Bool](), 0,
                            List[String](), List[Float64](), MOVE_FRAMES)
 
     @staticmethod
     def pivot(value: Int, rows: Int, across: Int, x: Int, y: Int, w: Int = 640, h: Int = 320) -> SheetObject:
-        return SheetObject(OBJ_PIVOT, x, y, w, h, value, rows, across, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0,
+        return SheetObject(OBJ_PIVOT, x, y, w, h, value, rows, across, CHART_BAR, -1, COMBINE_SUM, ORDER_TABLE, 0, -1, 0, -1, NUM_ANY, 0, 0,
                            List[String](), List[String](), List[Int](), List[Int](), List[Int](), List[Float64](), List[Int](), List[Bool](), 0,
                            List[String](), List[Float64](), MOVE_FRAMES)
 
@@ -128,6 +138,11 @@ def compute(mut obj: SheetObject, sheet: Sheet, filter: Optional[Expr] = None) r
     if obj.kind == OBJ_CHART and obj.only_col >= 0:  # (the chart's own rows, within any the caller keeps: a Report's filter)
         var own = sheet.where_is(obj.only_col, obj.only_code)
         cond = Optional[Expr]((cond.value().copy() & own^) if cond else own^)
+    if obj.kind == OBJ_CHART and obj.num_col >= 0 and obj.num_op != NUM_ANY:  # (and its number condition)
+        var c = col(sheet.name(obj.num_col))
+        var num = (c > lit(obj.num_lo)) if obj.num_op == NUM_OVER else ((c < lit(obj.num_hi)) if obj.num_op == NUM_UNDER else (
+                   (c >= lit(obj.num_lo)) if obj.num_op == NUM_AT_LEAST else ((c <= lit(obj.num_hi)) if obj.num_op == NUM_AT_MOST else ((c >= lit(obj.num_lo)) & (c <= lit(obj.num_hi))))))
+        cond = Optional[Expr]((cond.value().copy() & num^) if cond else num^)
     var ng = groups_of(sheet, obj.group)
     obj.labels = List[String]()
     for code in range(ng):
@@ -370,12 +385,33 @@ def slot_text(obj: SheetObject, sheet: Sheet, slot: Int) -> String:
     if slot == SLOT_TOP:
         return ("every " + sheet.name(obj.group)) if obj.top == 0 else ("top " + String(obj.top))
     if slot == SLOT_FILTER:
-        if obj.only_col < 0:
-            return "every row"
-        if sheet.kind(obj.only_col) == BOOL:
-            return ("only " if obj.only_code == 1 else "not ") + sheet.name(obj.only_col)
-        return "only " + sheet.text_of(obj.only_col, Int64(obj.only_code))
+        var words = String("")
+        if obj.only_col >= 0:
+            if sheet.kind(obj.only_col) == BOOL:
+                words = ("only " if obj.only_code == 1 else "not ") + sheet.name(obj.only_col)
+            else:
+                words = "only " + sheet.text_of(obj.only_col, Int64(obj.only_code))
+        var nums = number_words(obj, sheet)
+        if nums != "":
+            words = (words + ", " if words != "" else String("")) + nums
+        return words if words != "" else String("every row")
     return "a line" if obj.style == CHART_LINE else "bars"
+
+
+def number_words(obj: SheetObject, sheet: Sheet) -> String:
+    """The number condition as words: "amount over 1,000.00", "qty between 2 and 5" ("" none)."""
+    if obj.num_col < 0 or obj.num_op == NUM_ANY:
+        return ""
+    var name = sheet.name(obj.num_col)
+    if obj.num_op == NUM_OVER:
+        return name + " over " + sheet.format_value(obj.num_col, Int64(obj.num_lo), total=True)
+    if obj.num_op == NUM_UNDER:
+        return name + " under " + sheet.format_value(obj.num_col, Int64(obj.num_hi), total=True)
+    if obj.num_op == NUM_AT_LEAST:
+        return name + " at least " + sheet.format_value(obj.num_col, Int64(obj.num_lo), total=True)
+    if obj.num_op == NUM_AT_MOST:
+        return name + " at most " + sheet.format_value(obj.num_col, Int64(obj.num_hi), total=True)
+    return name + " between " + sheet.format_value(obj.num_col, Int64(obj.num_lo), total=True) + " and " + sheet.format_value(obj.num_col, Int64(obj.num_hi), total=True)
 
 
 def chart_words(obj: SheetObject, sheet: Sheet, on_word: Int, cref: Int, lit: List[Int] = []) -> List[Word]:
@@ -424,6 +460,8 @@ def chart_choices(obj: SheetObject, sheet: Sheet, slot: Int) -> List[String]:
             elif sheet.kind(c) == TEXT and c != obj.group and 2 <= sheet.word_count(c) <= FILTER_WORDS:
                 for code in range(sheet.word_count(c)):
                     out.append("only " + sheet.text_of(c, Int64(code)))
+        if obj.num_col >= 0 and obj.num_op != NUM_ANY:
+            out.append("any " + sheet.name(obj.num_col))  # (clears the number condition, keeps the rest)
         var now = slot_text(obj, sheet, SLOT_FILTER)  # (a filter an ask set on a longer column: listed too, last, so it shows)
         var listed = False
         for c in out:
@@ -464,7 +502,14 @@ def apply_choice(mut obj: SheetObject, sheet: Sheet, slot: Int, k: Int) -> Bool:
     elif slot == SLOT_FILTER:
         if k == len(choices) - 1 and choices[k] == slot_text(obj, sheet, SLOT_FILTER):
             return True  # (the current filter, listed last: it stays)
+        if obj.num_col >= 0 and obj.num_op != NUM_ANY and choices[k] == "any " + sheet.name(obj.num_col):
+            obj.num_op = NUM_ANY
+            obj.num_col = -1
+            return True
         obj.only_col = -1
+        if k == 0:  # ("every row": no condition of either kind)
+            obj.num_op = NUM_ANY
+            obj.num_col = -1
         var at = 1
         for c in range(sheet.stored()):
             if sheet.kind(c) == BOOL:

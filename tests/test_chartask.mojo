@@ -122,4 +122,18 @@ def main() raises:
     assert_equal(choices[chosen(long, s, SLOT_FILTER)], slot_text(long, s, SLOT_FILTER), "the current filter is listed")
     _ = apply_choice(long, s, SLOT_FILTER, len(choices) - 1) if choices[len(choices) - 1] == slot_text(long, s, SLOT_FILTER) else True
     assert_equal(long.only_col, 2, "picking the current filter keeps it")
+    # number conditions (goal 29): on the chart's value, or on a column named before them; with a text filter too
+    check("over 9", s, "Sum of amount by region, in data order, every region, amount over 9.00, as bars")
+    check("amount under 5", s, "Sum of amount by region, in data order, every region, amount under 5.00, as bars")
+    check("qty between 2 and 4", s, "Sum of amount by region, in data order, every region, qty between 2 and 4, as bars")
+    check("only bolt and more than 4.5", s, "Sum of amount by region, in data order, every region, only Bolt, amount over 4.50, as bars")
+    check("qty at least 3", s, "Sum of amount by region, in data order, every region, qty at least 3, as bars")
+    check("over 1,000", s, "Sum of amount by region, in data order, every region, amount over 1,000.00, as bars")
+    check("over 1k", s, "Sum of amount by region, in data order, every region, amount over 1,000.00, as bars")
+    var nums = fresh()
+    _ = ask(nums, s, "only bolt, over 9")
+    _ = ask(nums, s, "every row")
+    assert_equal(chart_sentence(nums, s), base, "every row clears both conditions")
+    check("median", s, "Median of amount by region, in data order, every region, every row, as bars")
+    check("90th percentile", s, "p90 of amount by region, in data order, every region, every row, as bars")
     print("CHARTASK TESTS PASSED")

@@ -6,10 +6,11 @@
 #
 #   var said = ask(chart, sheet, "top 3, unpaid, as a line")   # said.understood, said.skipped, said.changed (slots)
 
-from mojoui.sheet import Sheet, TEXT, BOOL
+from mojoui.sheet import Sheet, TEXT, BOOL, DECIMAL
+from mojoui.numformat import parse_decimal
 from mojoui.sheetpage import (SheetObject, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT, COMBINE_MEDIAN, COMBINE_P90, ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ,
                               CHART_BAR, CHART_LINE, SLOT_COMBINE, SLOT_VALUE, SLOT_GROUP, SLOT_ORDER, SLOT_TOP, SLOT_FILTER, SLOT_MARK,
-                              FILTER_WORDS, SLOTS, number_columns, text_columns, slot_text)
+                              FILTER_WORDS, SLOTS, number_columns, text_columns, slot_text, number_words, NUM_OVER, NUM_UNDER, NUM_BETWEEN, NUM_ANY, NUM_AT_LEAST, NUM_AT_MOST)
 
 comptime QUIET: List[String] = ["of", "the", "a", "an", "and", "show", "me", "please", "with", "for", "in", "on", "to", "as", "chart",
                                 "only", "just", "make", "it", "per", "each", "into", "then", "now", "values", "value"]
@@ -24,11 +25,19 @@ struct AskResult(Copyable, Movable):
 
 
 def words_of(phrase: String) -> List[String]:
-    """Lower-case words: commas, full stops and semicolons are breaks; "a-z" stays one word."""
+    """Lower-case words: commas, full stops and semicolons are breaks, except inside a number ("1,000", "2.5");
+    "a-z" stays one word."""
     var out = List[String]()
     var cur = String("")
+    var chars = List[String]()
     for ch in phrase.lower().codepoint_slices():
-        var c = String(ch)
+        chars.append(String(ch))
+    for i in range(len(chars)):
+        var c = chars[i]
+        var in_number = (c == "," or c == ".") and i > 0 and i + 1 < len(chars) and is_digit(chars[i - 1]) and is_digit(chars[i + 1])
+        if in_number:
+            cur += c
+            continue
         if c == " " or c == "," or c == ";" or c == "." or c == "\t" or c == "!" or c == "?":
             if cur != "":
                 out.append(cur)
@@ -38,6 +47,61 @@ def words_of(phrase: String) -> List[String]:
     if cur != "":
         out.append(cur)
     return out^
+
+
+def is_digit(c: String) -> Bool:
+    return c.byte_length() == 1 and c >= "0" and c <= "9"
+
+
+def amount_of(word: String, sheet: Sheet, c: Int) -> Optional[Int]:
+    """A number the person typed ("1,000", "$1,000", "2.5", "1k", "2m") in column c's stored units; none if it isn't one."""
+    var t = word
+    var times = 1
+    if t.endswith("k") or t.endswith("m"):
+        times = 1000 if t.endswith("k") else 1000000
+        var digits = String(t[byte = : t.byte_length() - 1])
+        t = digits
+    if t == "" or not (is_digit(String(t[byte=0:1])) or t.startswith("$") or t.startswith("-")):
+        return None
+    try:
+        var v = parse_decimal(t, sheet.scale(c) if sheet.kind(c) == DECIMAL else 0)
+        return Int(v) * times
+    except:
+        return None
+
+
+def number_condition(mut spec: SheetObject, sheet: Sheet, c: Int, w: List[String], i: Int) -> Int:
+    """ "over 1,000", "more than 5", "under 500", "between 100 and 200" at word i, on number column c: how many words it
+    took (0: none there)."""
+    if i >= len(w):
+        return 0
+    var one = w[i]
+    var two = joined(w, i, 2)
+    var over = one == "over" or one == "above" or one == ">" or two == "more than" or two == "greater than" or two == "at least" or one == ">="
+    var under = one == "under" or one == "below" or one == "<" or two == "less than" or two == "at most" or one == "<="
+    var skip = 2 if (two == "more than" or two == "greater than" or two == "less than" or two == "at least" or two == "at most") else 1
+    if over or under:
+        var v = amount_of(w[i + skip], sheet, c) if i + skip < len(w) else Optional[Int](None)
+        if not v:
+            return 0
+        var inclusive = two == "at least" or two == "at most" or one == ">=" or one == "<="
+        spec.num_col = c
+        spec.num_op = (NUM_AT_LEAST if inclusive else NUM_OVER) if over else (NUM_AT_MOST if inclusive else NUM_UNDER)
+        if over:
+            spec.num_lo = v.value()
+        else:
+            spec.num_hi = v.value()
+        return skip + 1
+    if one == "between" and i + 3 < len(w) and w[i + 2] == "and":
+        var lo = amount_of(w[i + 1], sheet, c)
+        var hi = amount_of(w[i + 3], sheet, c)
+        if lo and hi:
+            spec.num_col = c
+            spec.num_op = NUM_BETWEEN
+            spec.num_lo = min(lo.value(), hi.value())
+            spec.num_hi = max(lo.value(), hi.value())
+            return 4
+    return 0
 
 
 def joined(words: List[String], at: Int, n: Int) -> String:
@@ -101,6 +165,12 @@ def table_word(mut spec: SheetObject, sheet: Sheet, w: List[String], i: Int, mut
             continue
         for c in number_columns(sheet):
             if sheet.name(c).lower() == name:
+                var cmp = number_condition(spec, sheet, c, w, at + n)  # ("qty over 2": the column is the condition's, not the value)
+                if cmp > 0:
+                    took = n + cmp
+                    what = number_words(spec, sheet)
+                    matched = True
+                    break
                 spec.value = c
                 if spec.combine == COMBINE_COUNT:
                     spec.combine = COMBINE_SUM
@@ -164,9 +234,13 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
         var two = joined(w, i, 2)
         var three = joined(w, i, 3)
         var table = table_word(spec, sheet, w, i, said)
+        var cmp = number_condition(spec, sheet, spec.value, w, i) if table[0] == 0 else 0  # ("over 1,000": on the chart's value)
         if table[0] > 0:
             took = table[0]
             what = table[1]
+        elif cmp > 0:
+            took = cmp
+            what = number_words(spec, sheet)
         # the spec's own words
         elif (three == "as in the" and joined(w, i, 4) == "as in the table") or three == "in data order" or two == "data order" or one == "unsorted":
             spec.order = ORDER_TABLE
@@ -211,6 +285,8 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
             mark(said, SLOT_TOP)
         elif two == "every row" or two == "all rows" or one == "everything" or two == "no filter" or one == "unfiltered":
             spec.only_col = -1
+            spec.num_op = NUM_ANY
+            spec.num_col = -1
             took = 1 if one == "everything" or one == "unfiltered" else 2
             what = "every row"
             mark(said, SLOT_FILTER)

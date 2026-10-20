@@ -79,7 +79,9 @@ from mojoui.swatches import SwatchPicker, draw_swatches, swatch_at
 from mojoui.sheetpage import (SheetObject, compute, shape_of, chart_view, chart_text, object_card, readout, free_spot, object_title, groups_of, OBJ_CHART, OBJ_PIVOT,
                               CHART_BAR, CHART_LINE, HEADER_H, chart_words, chart_choices, apply_choice, chosen, chart_sentence, SLOT_NAMES, slot_text,
                               number_columns, text_columns, COMBINES, ORDERS, TOPS, SLOT_COMBINE, SLOT_VALUE, SLOT_GROUP, SLOT_ORDER, SLOT_TOP,
-                              SLOT_FILTER, SLOT_MARK, COMBINE_COUNT, start_move, MOVE_FRAMES)
+                              SLOT_FILTER, SLOT_MARK, COMBINE_COUNT, start_move, MOVE_FRAMES, NUM_ANY, NUM_OVER, NUM_UNDER, NUM_BETWEEN,
+                              NUM_AT_LEAST, NUM_AT_MOST, number_words)
+from mojoui.numformat import parse_decimal
 from mojoui.sentence import Sentence
 from mojoui.chartask import ask, ask_reply
 from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, compute_tile, kpi_of, tile_fact, TILE_SUM, TILE_AVERAGE, TILE_COUNT,
@@ -181,6 +183,10 @@ comptime ASK_SUBMIT = 2001  # its Return: the phrase edits the chart
 comptime ASK_H = 66  # the ask field and its reply, under a chart's sentence
 comptime PAGE = 2010  # + 0 (the chart's own page) … 4: the chart inspector's pages (Data, Order, Rows, Style)
 comptime INSP_SET = 2020  # + slot: an inspector control changed a chart setting (event.number: the choice)
+comptime NUM_PICK = 2030  # the Rows page's number condition: its kind (event.number), its low and high values (Return)
+comptime NUM_LO = 2031
+comptime NUM_HI = 2032
+comptime NUM_KINDS: List[String] = ["Any", "Over", "Under", "At least", "At most", "Between"]
 comptime SET_INK = 600  # + 0 (automatic) … 8: the Format menu's text colours
 comptime SET_FILL = 610  # + 0 (none) … 8
 comptime SWATCH_CANVAS = 5  # the swatches' canvas id
@@ -1312,6 +1318,27 @@ struct Main(App):
                 if apply_choice(c, self.frame, m - INSP_SET, event.number) and chart_sentence(c, self.frame) != was:
                     self.set_chart(self.asking, c^)
             self.version += 1
+        elif m == NUM_PICK or m == NUM_LO or m == NUM_HI:  # the Rows page's number condition
+            if self.asking >= 0 and self.has_chart(self.asking):
+                var c = self.chart_of(self.asking)
+                var ncol = c.num_col if c.num_col >= 0 else c.value
+                var was = chart_sentence(c, self.frame)
+                if m == NUM_PICK and 0 <= event.number <= NUM_AT_MOST:
+                    c.num_op = event.number
+                    c.num_col = ncol if event.number != NUM_ANY else -1
+                else:
+                    try:
+                        var v = Int(parse_decimal(event.text, self.frame.scale(ncol) if self.frame.kind(ncol) == DECIMAL else 0))
+                        if m == NUM_LO:
+                            c.num_lo = v
+                        else:
+                            c.num_hi = v
+                        c.num_col = ncol
+                    except:
+                        self.message = "Not a number: " + event.text
+                if chart_sentence(c, self.frame) != was:
+                    self.set_chart(self.asking, c^)
+            self.version += 1
         elif m == ASK_CHANGE:  # (typing changes nothing else on screen: no rebuild under the field, so Return is never lost)
             self.ask_text = event.text
         elif m == ASK_SUBMIT:
@@ -1840,7 +1867,21 @@ struct Main(App):
         if self.insp_page == 3:
             var at = max(chosen(c, f, SLOT_FILTER), 0)
             var note = String("The Report's filter applies too: ") + self.filter.words(f) if cref >= TILE_REF else String("Only these rows are added up")
-            return InspectorPage("Rows", PAGE, [Section("Rows", [Dropdown(chart_choices(c, f, SLOT_FILTER), at, INSP_SET + SLOT_FILTER).fill(), Text(note, CAPTION)])])
+            var ncol = c.num_col if c.num_col >= 0 else c.value
+            var kinds = materialize[NUM_KINDS]()
+            var kind_at = c.num_op if c.num_col >= 0 else 0  # (NUM_* in NUM_KINDS's order)
+            var nums = List[View]()
+            nums.append(Dropdown(kinds, kind_at, NUM_PICK).fill().tag("num-kind"))
+            if kind_at != NUM_ANY:
+                var lo = f.format_value(ncol, Int64(c.num_lo), total=True)
+                var hi = f.format_value(ncol, Int64(c.num_hi), total=True)
+                if kind_at == NUM_OVER or kind_at == NUM_AT_LEAST or kind_at == NUM_BETWEEN:
+                    nums.append(TextField(lo, "From", on_submit=NUM_LO).fill().tag("num-lo"))
+                if kind_at == NUM_UNDER or kind_at == NUM_AT_MOST or kind_at == NUM_BETWEEN:
+                    nums.append(TextField(hi, "To", on_submit=NUM_HI).fill().tag("num-hi"))
+            nums.append(Text("On " + f.name(ncol) + ": type a value and press Return", CAPTION))
+            return InspectorPage("Rows", PAGE, [Section("Rows", [Dropdown(chart_choices(c, f, SLOT_FILTER), at, INSP_SET + SLOT_FILTER).fill(), Text(note, CAPTION)]),
+                                                Section(f.name(ncol), nums)])
         if self.insp_page == 4:
             var marks: List[String] = ["Bars", "Line"]
             return InspectorPage("Style", PAGE, [Section("As", [Segmented(marks, 1 if c.style == CHART_LINE else 0, INSP_SET + SLOT_MARK).fill()])])
