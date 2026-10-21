@@ -34,15 +34,15 @@ The words for the launch page, the README's top half, the tweet and the forum po
 
 **Lede:** Each of these used to mean another language, another process, or another team.
 
-**Lead card, full width: An interface you can talk to** (the old "sentence" section folded in)
+**One table: capability · before (red dot) · now (green dot) · proof (mono). First row: An interface you can talk to** (the old "sentence" section folded in)
 - Before: A chart is a picture with a label; you change it in a settings panel.
 - Now: The chart is its sentence. Every underlined word is a setting: tap it to change it, or type what you want and it recomputes.
 - > **Sum** of **revenue** by **product**, **largest first**, **top 5**, **every row**, as **bars**
 - Try: "median" · "monthly, as a line" · "only paid and over 5,000" (tests/test_chartask.mojo; the last is goal 29 M2 on GTK)
-- It says what it understood and names what it skipped instead of guessing. A keyword reader, instant and offline, not a model.
-- Proof: `1,000,000 rows · answered in 0.7 ms · RTX 3090`
+- It says what it understood and names what it skipped. A keyword reader, instant and offline, not a model.
+- Proof: `1M rows · answered in 0.7 ms`
 
-Then the other cards: *what it took before → what you do now → the measured proof.*
+Then the other rows: *what it took before → what you do now → the measured proof.* The table ends in `one Linux machine · NVIDIA RTX 3090 · README, docs/goals/26, 29`.
 
 | | Before | Now | Proof |
 |---|---|---|---|
@@ -61,6 +61,8 @@ Then the other cards: *what it took before → what you do now → the measured 
 **Body:** A serious app today is really four programs. The interface, written again for each platform. The data work, in Python on a server. The graphics, in a shader language. And an API, so other software, now AI agents, can use it. Every line between them is a rewrite, a network hop, or another team.
 
 omxapp is one program. Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.
+
+**Diagram (isometric, under the read-along):** one `app.mojo` plate; three layers (controls, data engine, GPU code) drop onto it as their words light; wires run out to Linux, Web, Android (runs) and Mac, iPhone (builds); the agent-tools tile arrives on "agent tools". Drawn by `docs/launch/iso.py`; static when motion is reduced.
 
 ---
 

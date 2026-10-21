@@ -85,27 +85,51 @@ h1, h2, .lede, .body { text-wrap: balance; }
 .stack .line:nth-child(n+5) { color: color-mix(in srgb, var(--ink2) 70%, var(--bg)); }
 
 /* read-along: the turn lights up word by word as you scroll */
+/* the read-along builds the isometric diagram: each part has the index of the word that lights it (data-w) */
+.read { height: 240vh; padding: 0 20px; }
+.read .stick { position: sticky; top: 70px; height: calc(100vh - 70px); height: calc(100dvh - 70px); display: flex; align-items: center; }
+.read .stick .wrap { width: 100%; }
+.read .stick p { font-size: clamp(22px, 2.6vw, 34px); max-width: 900px; margin-top: 8px; }
+.iso { display: block; width: 100%; max-width: 980px; max-height: 60vh; max-height: 60dvh; margin: 0 auto; overflow: visible; }
+.iso polygon { stroke: var(--line); stroke-width: 1; stroke-linejoin: round; }
+.iso .tp { fill: var(--oq-surface-3); } .iso .fx { fill: var(--oq-surface-1); } .iso .fy { fill: var(--oq-surface-2); }
+.iso .pl.tp { fill: var(--oq-surface-2); }
+.iso .plate polygon { transition: stroke .5s var(--ease); }
+.iso .plate.on polygon { stroke: var(--word); }
+.iso .plate.on .pl.tp { fill: color-mix(in srgb, var(--word) 14%, var(--oq-surface-2)); }
+.iso text { font-family: var(--mono); fill: var(--ink2); }
+.iso .t-file { font-size: 11px; font-weight: 600; fill: var(--ink); dominant-baseline: middle; }
+.iso .t-side { font-size: 11px; letter-spacing: .1em; fill: var(--ink); dominant-baseline: middle; }
+.iso .t-tile { font-size: 12px; font-weight: 600; fill: var(--ink); font-family: var(--sans); dominant-baseline: middle; }
+.iso .t-st { font-size: 9px; dominant-baseline: middle; }
+.iso .t-st.ok { fill: var(--oq-ok); } .iso .t-st.info { fill: var(--oq-info); }
+.iso .slab, .iso .tile { opacity: 0; transform: translateY(-46px); transition: opacity .5s var(--ease), transform .7s var(--ease); }
+.iso .tile { transform: translateY(14px); }
+.iso .slab.on, .iso .tile.on { opacity: 1; transform: none; }
+.iso .wire path { fill: none; stroke: var(--word); stroke-width: 1.5; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .6s var(--ease); }
+.iso .wire.on path { stroke-dashoffset: 0; }
 .read p { font: 600 var(--read)/1.22 var(--sans); letter-spacing: -.03em; max-width: 980px; margin: 0 auto; }
 .read p span { color: color-mix(in srgb, var(--ink) 22%, var(--bg)); transition: color .25s; }
 .read p span.lit { color: var(--ink); }
 
-/* now possible: six cards, before → now → proof */
-.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 64px; text-align: left; }
-.cards .card { font-size: 15.5px; line-height: 1.5; }
-.cards .card-h { padding: 22px 22px 6px; }
-.cards .card-h h3 { font-size: 19px; }
-.cards .card-b { padding: 4px 22px 20px; }
-.cards .was { color: var(--ink2); margin: 0 0 10px; }
-.cards .now { margin: 0; }
-.cards .k { display: block; font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); margin-bottom: 2px; }
-.cards .now .k { color: var(--ink); }
-.cards .src { padding: 12px 22px; font-size: 12px; }
-.cards .card.lead { grid-column: 1 / -1; }
-.cards .card.lead .sentence { font-size: clamp(24px, 3.4vw, 44px); margin: 28px 0 0; max-width: none; }
-.cards .card.lead .asks { justify-content: flex-start; margin-top: 20px; }
-.cards .card.lead .tail { margin: 22px 0 0; }
-.cards .card.next { grid-column: span 2; background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
-.cards .card.next .now .k { color: var(--oq-warn); }
+/* now possible: one before / now table; red dot = the old way, green dot = what runs today, amber = next */
+.cmp { margin-top: 64px; text-align: left; font-size: 15.5px; line-height: 1.5; overflow: hidden; }
+.cmp { padding: 0; }
+.cmp .tbl { font-size: inherit; }
+.cmp .tbl th, .cmp .tbl td { padding: 18px 20px; vertical-align: top; }
+.cmp thead th { padding-top: 16px; padding-bottom: 14px; }
+.cmp thead .badge { font-size: 11px; }
+.cmp tbody th { font: 600 16.5px/1.35 var(--sans); color: var(--ink); text-transform: none; letter-spacing: -.01em; width: 19%; border-bottom: 1px solid var(--oq-line-2); }
+.cmp .was { color: var(--ink2); width: 24%; box-shadow: inset 2px 0 0 color-mix(in srgb, var(--oq-bad) 55%, transparent); }
+.cmp .now { color: var(--ink); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--oq-ok) 70%, transparent); }
+.cmp .pf { font: 500 12.5px/1.5 var(--mono); color: var(--ink2); width: 14%; }
+.cmp .lead .sentence { font-size: clamp(20px, 2.2vw, 28px); margin: 18px 0 0; max-width: none; }
+.cmp .lead .asks { justify-content: flex-start; margin-top: 14px; gap: 8px; }
+.cmp .lead .asks span { font-size: 13px; padding: 6px 10px; }
+.cmp .lead .tail { color: var(--ink2); margin: 14px 0 0; }
+.cmp .next .now { color: var(--ink2); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--oq-warn) 70%, transparent); }
+.cmp .next .now .badge { margin-right: 6px; vertical-align: 1px; }
+.cmp .src { padding: 12px 20px; font-size: 12px; }
 
 /* numbers that count up once */
 .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px 20px; margin-top: 70px; }
@@ -164,17 +188,30 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
 @media (max-width: 860px) {
   section { padding: 96px 20px; }
   .lnav .pill { display: none; }
-  .cards, .nums, .flow, .agent .g2 { grid-template-columns: 1fr; }
-  .cards .card.next { grid-column: auto; }
+  .nums, .flow, .agent .g2 { grid-template-columns: 1fr; }
+  .iso .t-tile { font-size: 15px; } .iso .t-side, .iso .t-file { font-size: 13px; } .iso .t-st { font-size: 11px; }
+  .cmp thead { display: none; }
+  .cmp .tbl, .cmp tbody, .cmp tr, .cmp tbody th, .cmp td { display: block; width: auto; }
+  .cmp tr { border-bottom: 1px solid var(--oq-line-2); padding: 6px 0 10px; }
+  .cmp .tbl tbody th { border: 0; padding: 14px 18px 6px; }
+  .cmp .tbl td { border: 0; padding: 6px 18px 6px 16px; margin-left: 18px; }
+  .cmp td::before { content: attr(data-k); display: block; font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }
+  .cmp .was::before { color: var(--oq-bad); } .cmp .now::before { color: var(--oq-ok); } .cmp .next .now::before { color: var(--oq-warn); }
+  .cmp .tbl .pf { padding-left: 2px; }
+  .cmp .pf::before { content: none; }
+  .cmp tbody th, .cmp .was, .cmp .now, .cmp .pf { width: auto; }
+  .cmp .next .now .badge { display: none; }
   footer .cols { grid-template-columns: 1fr 1fr; }
   .unfold { height: 120vh; }
 }
 @media (prefers-reduced-motion: reduce) {
   .rise > span, .rv { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
   .read p span { color: var(--ink); }
+  .read { height: auto; } .read .stick { position: static; height: auto; padding: 96px 0; }
+  .iso .slab, .iso .tile { opacity: 1; transform: none; transition: none; } .iso .wire path { stroke-dashoffset: 0; transition: none; }
 }
 </style>
-<noscript><style>.rv { opacity: 1; transform: none; } .read p span { color: inherit; }</style></noscript>
+<noscript><style>.rv { opacity: 1; transform: none; } .read p span { color: inherit; } .iso .slab, .iso .tile { opacity: 1; transform: none; } .iso .wire path { stroke-dashoffset: 0; }</style></noscript>
 </head>
 <body>
 
@@ -209,34 +246,40 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
     <div class="eyebrow rv">Now possible</div>
     <h2 class="rv">What one language <span class="two">makes possible.</span></h2>
     <p class="lede rv">Each of these used to mean another language, another process, or another team.</p>
-    <div class="cards">
-      <article class="card lead rv"><div class="card-h"><h3>An interface you can talk to</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>A chart is a picture with a label; you change it in a settings panel.</p>
-        <p class="now"><span class="k">Now</span>The chart is its sentence. Every underlined word is a setting: tap it to change it, or type what you want and it recomputes.</p>
-        <p class="sentence"><u>Sum</u> of <u>revenue</u> by <u>product</u>, <u>largest first</u>, <u>top 5</u>, <u>every row</u>, as <u>bars</u></p>
-        <div class="asks"><span>"median"</span><span>"monthly, as a line"</span><span>"only paid and over 5,000"</span></div>
-        <p class="was tail">It says what it understood and names what it skipped instead of guessing. A keyword reader, instant and offline, not a model.</p></div>
-        <div class="src note">1,000,000 rows · answered in 0.7 ms · RTX 3090</div></article>
-      <article class="card rv"><div class="card-h"><h3>One source, real native controls</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>A web page in a wrapper, or one codebase per platform.</p>
-        <p class="now"><span class="k">Now</span>One <span class="mono">app.mojo</span> becomes GTK on Linux, HTML on the web, Android views, AppKit on the Mac and UIKit on iPhone.</p></div>
-        <div class="src note">4 platforms run · 2 build</div></article>
-      <article class="card rv"><div class="card-h"><h3>A million rows inside the interface</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>A server or a notebook, then JSON back to the screen.</p>
-        <p class="now"><span class="k">Now</span>The group-by runs on the GPU, in the app's own process. No request, no copy.</p></div>
-        <div class="src note">1M rows · a chart in 0.6 ms</div></article>
-      <article class="card rv"><div class="card-h"><h3>GPU drawing in your app's language</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>Shaders in GLSL or Metal, an engine in C++, glue to the UI.</p>
-        <p class="now"><span class="k">Now</span>A plain Mojo function colours the pixels. Without a GPU, the same function runs on the CPU.</p></div>
-        <div class="src note">20M points · 1.5 ms a frame</div></article>
-      <article class="card rv"><div class="card-h"><h3>Agents with no API</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>Build an API, then an MCP server, or let the agent read screenshots.</p>
-        <p class="now"><span class="k">Now</span>The app's buttons and fields are its tools, from the first line.</p></div>
-        <div class="src note">29 components proven through the agent</div></article>
-      <article class="card next rv"><div class="card-h"><h3>The model in the same program</h3><span class="sp"></span><span class="badge warn"><i></i>next</span></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>The interface calls a model over HTTP, and waits.</p>
-        <p class="now"><span class="k">Next</span>Mojo is the language Modular writes its AI kernels in. The model can live beside the interface, on the same GPU.</p></div>
-        <div class="src note">not in the alpha</div></article>
+    <div class="card cmp rv">
+      <table class="tbl">
+        <thead><tr><th></th><th><span class="badge bad"><i></i>before</span></th><th><span class="badge ok"><i></i>now</span></th><th>proof</th></tr></thead>
+        <tbody>
+          <tr class="lead"><th scope="row">An interface you can talk to</th>
+            <td class="was" data-k="before">A chart is a picture with a label; you change it in a settings panel.</td>
+            <td class="now" data-k="now">The chart is its sentence. Every underlined word is a setting: tap it to change it, or type what you want and it recomputes.
+              <p class="sentence"><u>Sum</u> of <u>revenue</u> by <u>product</u>, <u>largest first</u>, <u>top 5</u>, <u>every row</u>, as <u>bars</u></p>
+              <div class="asks"><span>"median"</span><span>"monthly, as a line"</span><span>"only paid and over 5,000"</span></div>
+              <p class="tail">It says what it understood and names what it skipped. A keyword reader, instant and offline, not a model.</p></td>
+            <td class="pf" data-k="proof">1M rows · answered in 0.7 ms</td></tr>
+          <tr><th scope="row">One source, real native controls</th>
+            <td class="was" data-k="before">A web page in a wrapper, or one codebase per platform.</td>
+            <td class="now" data-k="now">One <span class="mono">app.mojo</span> becomes GTK on Linux, HTML on the web, Android views, AppKit on the Mac and UIKit on iPhone.</td>
+            <td class="pf" data-k="proof">4 platforms run · 2 build</td></tr>
+          <tr><th scope="row">A million rows inside the interface</th>
+            <td class="was" data-k="before">A server or a notebook, then JSON back to the screen.</td>
+            <td class="now" data-k="now">The group-by runs on the GPU, in the app's own process. No request, no copy.</td>
+            <td class="pf" data-k="proof">1M rows · a chart in 0.6 ms</td></tr>
+          <tr><th scope="row">GPU drawing in your app's language</th>
+            <td class="was" data-k="before">Shaders in GLSL or Metal, an engine in C++, glue to the UI.</td>
+            <td class="now" data-k="now">A plain Mojo function colours the pixels. Without a GPU, the same function runs on the CPU.</td>
+            <td class="pf" data-k="proof">20M points · 1.5 ms a frame</td></tr>
+          <tr><th scope="row">Agents with no API</th>
+            <td class="was" data-k="before">Build an API, then an MCP server, or let the agent read screenshots.</td>
+            <td class="now" data-k="now">The app's buttons and fields are its tools, from the first line.</td>
+            <td class="pf" data-k="proof">29 components proven through the agent</td></tr>
+          <tr class="next"><th scope="row">The model in the same program</th>
+            <td class="was" data-k="before">The interface calls a model over HTTP, and waits.</td>
+            <td class="now" data-k="next"><span class="badge warn"><i></i>next</span> Mojo is the language Modular writes its AI kernels in. The model can live beside the interface, on the same GPU.</td>
+            <td class="pf" data-k="proof">not in the alpha</td></tr>
+        </tbody>
+      </table>
+      <div class="src note">one Linux machine · NVIDIA RTX 3090 · README, docs/goals/26, 29</div>
     </div>
   </div>
 </section>
@@ -255,7 +298,9 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
 </section>
 
 <section class="read" data-read>
-  <div class="wrap center"><p data-read-words>Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.</p></div>
+  <div class="stick"><div class="wrap center">
+    <svg class="iso" viewBox="-328 -227 818 515" role="img" aria-label="One app.mojo file holds three layers, the controls, the data engine and the GPU code. Wires run from it to Linux, Web and Android, which run, Mac and iPhone, which build, and to agent tools."><g class="wire" data-w="17"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L295.1,-12.0 L372.0,32.4"/></g><g class="wire" data-w="18"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L216.2,33.6 L293.1,78.0"/></g><g class="wire" data-w="19"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L137.2,79.2 L214.1,123.6"/></g><g class="wire" data-w="20"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L58.2,124.8 L135.1,169.2"/></g><g class="wire" data-w="21"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L-20.8,170.4 L56.1,214.8"/></g><g class="wire" data-w="27"><path pathLength="1" d="M-87.3,50.4 L-199.5,115.2"/></g><g class="plate" data-w="13"><polygon class="fy pl" points="-174.6,-8.4 0.0,92.4 0.0,100.8 -174.6,0.0"/><polygon class="fx pl" points="174.6,-8.4 0.0,92.4 0.0,100.8 174.6,0.0"/><polygon class="tp pl" points="0.0,-109.2 174.6,-8.4 0.0,92.4 -174.6,-8.4"/><text class="t-file" text-anchor="middle" transform="matrix(0.8660,0.5000,-0.8660,0.5000,-77.9,36.6)">app.mojo</text></g><g class="slab" data-w="10"><polygon class="fy sl" points="-137.2,-38.4 0.0,40.8 0.0,61.2 -137.2,-18.0"/><polygon class="fx sl" points="137.2,-38.4 0.0,40.8 0.0,61.2 137.2,-18.0"/><polygon class="tp sl" points="0.0,-117.6 137.2,-38.4 0.0,40.8 -137.2,-38.4"/><text class="t-side" text-anchor="middle" transform="matrix(0.8660,-0.5000,0,1,68.6,13.9)">GPU CODE</text></g><g class="slab" data-w="6"><polygon class="fy sl" points="-137.2,-67.2 0.0,12.0 0.0,32.4 -137.2,-46.8"/><polygon class="fx sl" points="137.2,-67.2 0.0,12.0 0.0,32.4 137.2,-46.8"/><polygon class="tp sl" points="0.0,-146.4 137.2,-67.2 0.0,12.0 -137.2,-67.2"/><text class="t-side" text-anchor="middle" transform="matrix(0.8660,-0.5000,0,1,68.6,-14.9)">DATA ENGINE</text></g><g class="slab" data-w="3"><polygon class="fy sl" points="-137.2,-96.0 0.0,-16.8 0.0,3.6 -137.2,-75.6"/><polygon class="fx sl" points="137.2,-96.0 0.0,-16.8 0.0,3.6 137.2,-75.6"/><polygon class="tp sl" points="0.0,-175.2 137.2,-96.0 0.0,-16.8 -137.2,-96.0"/><text class="t-side" text-anchor="middle" transform="matrix(0.8660,-0.5000,0,1,68.6,-43.7)">CONTROLS</text></g><g class="tile" data-w="17"><polygon class="fy tl" points="336.7,43.2 407.4,84.0 407.4,93.6 336.7,52.8"/><polygon class="fx tl" points="478.0,43.2 407.4,84.0 407.4,93.6 478.0,52.8"/><polygon class="tp tl" points="407.4,2.4 478.0,43.2 407.4,84.0 336.7,43.2"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,409.5,44.4)">Linux</text><text class="t-st ok" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,428.2,55.2)">runs</text></g><g class="tile" data-w="18"><polygon class="fy tl" points="257.7,88.8 328.4,129.6 328.4,139.2 257.7,98.4"/><polygon class="fx tl" points="399.1,88.8 328.4,129.6 328.4,139.2 399.1,98.4"/><polygon class="tp tl" points="328.4,48.0 399.1,88.8 328.4,129.6 257.7,88.8"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,330.5,90.0)">Web</text><text class="t-st ok" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,349.2,100.8)">runs</text></g><g class="tile" data-w="19"><polygon class="fy tl" points="178.7,134.4 249.4,175.2 249.4,184.8 178.7,144.0"/><polygon class="fx tl" points="320.1,134.4 249.4,175.2 249.4,184.8 320.1,144.0"/><polygon class="tp tl" points="249.4,93.6 320.1,134.4 249.4,175.2 178.7,134.4"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,251.5,135.6)">Android</text><text class="t-st ok" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,270.2,146.4)">runs</text></g><g class="tile" data-w="20"><polygon class="fy tl" points="99.8,180.0 170.4,220.8 170.4,230.4 99.8,189.6"/><polygon class="fx tl" points="241.1,180.0 170.4,220.8 170.4,230.4 241.1,189.6"/><polygon class="tp tl" points="170.4,139.2 241.1,180.0 170.4,220.8 99.8,180.0"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,172.5,181.2)">Mac</text><text class="t-st info" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,191.2,192.0)">builds</text></g><g class="tile" data-w="21"><polygon class="fy tl" points="20.8,225.6 91.5,266.4 91.5,276.0 20.8,235.2"/><polygon class="fx tl" points="162.1,225.6 91.5,266.4 91.5,276.0 162.1,235.2"/><polygon class="tp tl" points="91.5,184.8 162.1,225.6 91.5,266.4 20.8,225.6"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,93.5,226.8)">iPhone</text><text class="t-st info" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,112.2,237.6)">builds</text></g><g class="tile agent" data-w="28"><polygon class="fy tl ag" points="-315.9,110.4 -207.8,172.8 -207.8,182.4 -315.9,120.0"/><polygon class="fx tl ag" points="-145.5,136.8 -207.8,172.8 -207.8,182.4 -145.5,146.4"/><polygon class="tp tl ag" points="-253.6,74.4 -145.5,136.8 -207.8,172.8 -315.9,110.4"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,0.5000,-0.8660,0.5000,-228.6,122.4)">agent tools</text><text class="t-st" text-anchor="middle" transform="matrix(0.8660,0.5000,-0.8660,0.5000,-247.3,133.2)">buttons · fields</text></g></svg>
+    <p data-read-words>Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.</p></div></div>
 </section>
 
 <!-- 4 · Native everywhere -->
@@ -388,7 +433,8 @@ scripts/omxplorer.sh</pre>
     $$("[data-unfold]").forEach(s => { const r = s.getBoundingClientRect(), p = Math.min(1, Math.max(0, (vh - r.top) / r.height)), k = reduce ? 1 : Math.min(1, p * 1.6), f = $(".frame", s);
       f.style.transform = `scale(${0.82 + 0.18 * k})`; f.style.borderRadius = `${40 - 26 * k}px`; });
     $$("[data-read]").forEach(s => { const r = s.getBoundingClientRect(), p = Math.min(1, Math.max(0, (vh * .8 - r.top) / (r.height * .9))), sp = $$("p span", s), n = Math.round(p * sp.length);
-      sp.forEach((x, i) => x.classList.toggle("lit", reduce || i < n)); });
+      sp.forEach((x, i) => x.classList.toggle("lit", reduce || i < n));
+      $$("[data-w]", s).forEach(g => g.classList.toggle("on", reduce || n > +g.dataset.w)); });
   }
   addEventListener("scroll", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(onScroll); }, { passive: true });
   addEventListener("resize", onScroll); onScroll();
