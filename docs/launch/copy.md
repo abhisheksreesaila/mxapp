@@ -26,6 +26,8 @@ The words for the launch page, the README's top half, the tweet and the forum po
 **Picture:** omxplorer's report over a million orders.
 `1,000,000 orders · every tile and chart recomputed in 0.3 ms · RTX 3090`
 
+**Hero diagram (isometric, right of the introduction; below it on phones):** one `app.mojo` plate; the three layers (GPU code, data engine, controls) stack onto it, then a wire and a tile for each of Linux, Web, Android (runs) and Mac, iPhone (builds), then the agent-tools tile. It builds once on load, 170 ms a part; static when motion is reduced. Drawn by `docs/launch/iso.py`.
+
 ---
 
 ## 2 · Now possible (moved up: the page leads with it)
@@ -61,8 +63,6 @@ Then the other rows: *what it took before → what you do now → the measured p
 **Body:** A serious app today is really four programs. The interface, written again for each platform. The data work, in Python on a server. The graphics, in a shader language. And an API, so other software, now AI agents, can use it. Every line between them is a rewrite, a network hop, or another team.
 
 omxapp is one program. Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.
-
-**Diagram (isometric, under the read-along):** one `app.mojo` plate; three layers (controls, data engine, GPU code) drop onto it as their words light; wires run out to Linux, Web, Android (runs) and Mac, iPhone (builds); the agent-tools tile arrives on "agent tools". Drawn by `docs/launch/iso.py`; static when motion is reduced.
 
 ---
 

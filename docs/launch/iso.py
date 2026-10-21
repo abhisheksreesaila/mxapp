@@ -1,5 +1,6 @@
 """Draws the launch page's isometric diagram (one app.mojo -> three layers -> five platforms + agent tools).
-Prints an <svg> to paste into docs/index.html's .read section. Run: python3 docs/launch/iso.py"""
+Prints an <svg> to paste into docs/index.html's hero. Each part has data-o, its place in the build on load
+(plate, layers bottom up, each platform's wire and tile, agent tools). Run: python3 docs/launch/iso.py"""
 S = 24
 C, H = 0.8660254, 0.5
 
@@ -34,28 +35,28 @@ def side_text(x, y, z, s, cls):
 
 out = []
 # wires on the floor, under everything: base plate edge -> bus at x=7 -> tile
-PLATS = [("Linux", "runs", -7.6, 17), ("Web", "runs", -3.8, 18), ("Android", "runs", 0.0, 19),
-         ("Mac", "builds", 3.8, 20), ("iPhone", "builds", 7.6, 21)]
+PLATS = [("Linux", "runs", -7.6, 4), ("Web", "runs", -3.8, 5), ("Android", "runs", 0.0, 6),
+         ("Mac", "builds", 3.8, 7), ("iPhone", "builds", 7.6, 8)]
 TX = 12.0  # tile centre x
 for name, st, y, w in PLATS:
     d = "M{:.1f},{:.1f} L{:.1f},{:.1f} L{:.1f},{:.1f} L{:.1f},{:.1f}".format(*P(4.2, 0), *P(6.6, 0), *P(6.6, y), *P(TX - 1.7, y))
-    out.append(f'<g class="wire" data-w="{w}"><path pathLength="1" d="{d}"/></g>')
+    out.append(f'<g class="wire" data-o="{w}"><path pathLength="1" d="{d}"/></g>')
 d = "M{:.1f},{:.1f} L{:.1f},{:.1f}".format(*P(0, 4.2), *P(0, 9.6))
-out.append(f'<g class="wire" data-w="27"><path pathLength="1" d="{d}"/></g>')
+out.append(f'<g class="wire" data-o="9"><path pathLength="1" d="{d}"/></g>')
 # the file: a thin violet-edged plate
-out.append('<g class="plate" data-w="13">' + box(-4.2, -4.2, 4.2, 4.2, 0, 0.35, "pl")
+out.append('<g class="plate" data-o="0">' + box(-4.2, -4.2, 4.2, 4.2, 0, 0.35, "pl")
            + floor_text(0, 3.75, 0.35, "app.mojo", "t-file") + "</g>")
 # three layers, exploded upwards until their word lights
-LAYERS = [("GPU code", 10, 0.75), ("data engine", 6, 1.95), ("controls", 3, 3.15)]
+LAYERS = [("GPU code", 1, 0.75), ("data engine", 2, 1.95), ("controls", 3, 3.15)]
 for name, w, z in LAYERS:
-    out.append(f'<g class="slab" data-w="{w}">' + box(-3.3, -3.3, 3.3, 3.3, z, z + 0.85, "sl")
+    out.append(f'<g class="slab" data-o="{w}">' + box(-3.3, -3.3, 3.3, 3.3, z, z + 0.85, "sl")
                + side_text(3.3, 0, z + 0.32, name.upper(), "t-side") + "</g>")
 # platform tiles, back to front
 for name, st, y, w in PLATS:
-    out.append(f'<g class="tile" data-w="{w}">' + box(TX - 1.7, y - 1.7, TX + 1.7, y + 1.7, 0, 0.4, "tl")
+    out.append(f'<g class="tile" data-o="{w}">' + box(TX - 1.7, y - 1.7, TX + 1.7, y + 1.7, 0, 0.4, "tl")
                + floor_text_y(TX + 0.1, y, 0.4, name, "t-tile")
                + floor_text_y(TX + 1.0, y, 0.4, st, "t-st " + ("ok" if st == "runs" else "info")) + "</g>")
-out.append('<g class="tile agent" data-w="28">' + box(-2.6, 9.6, 2.6, 12.6, 0, 0.4, "tl ag")
+out.append('<g class="tile agent" data-o="9">' + box(-2.6, 9.6, 2.6, 12.6, 0, 0.4, "tl ag")
            + floor_text(0, 11.0, 0.4, "agent tools", "t-tile") + floor_text(0, 11.9, 0.4, "buttons · fields", "t-st") + "</g>")
 
 xs, ys = [], []
