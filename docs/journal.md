@@ -329,3 +329,14 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - M4 (this machine): at 1M rows a sum 0.5 ms, a median 6.2 ms, a month chart 5.8 ms; at 100M rows 46 ms, 671 ms and 480 ms: the last two are goal 30's (background queries).
 - A full run started before the review fixes picked up a half-edited file (a parse error mid-build): never edit a worktree's sources while its full run builds; fixes go to a second worktree (../mojo-ui-g29fix).
 - Reviewer: round 1 NEEDS WORK ("qty under 2.5" rounded onto a whole-number column, a second condition silently replaced the first, weak completeness checks, no calendar test); round 2 PASS with five should-fixes, all done (a second condition naming its column, huge amounts, the old inspector's Group by on a month chart, a document's part with no group, a stray stat).
+
+## Goal 29 polish (2026-10-21): what the screenshots showed
+- "by month of day" reads "by month" (the date column is named only when a sheet has two: part_text); the ask still takes "by month of day".
+- What an ask took goes to the status bar only; under the field only what it skipped or didn't understand (goal 28's M2 reads the status bar).
+- A chart's time: on its card only (not the inspectors). The status bar's right-hand time is the selected column's totals, not the chart's; the "Chart: … ms on <device>" message after Insert stays (goals 22, 23 read it).
+- Money median bars without "$": not a bug, the screenshot's column had no currency format; a guard test proves a Currency column's median and sum bars read "$…".
+- Dead end: a new chart filling its row's free width broke goal 15's M2 and M5 (a chart at 520x340 with a pivot beside it at x=536, kept across save and reopen). Reverted: charts resize from the corner; filling on insert is the owner's call (it changes goal 15's layout).
+- Cleaning orphaned displays with `pgrep -f 'Xvfb :9'` killed the check's own shell (exit 144), the second time that lesson bit: scripts/stop-check now stops this checkout's Xvfb too.
+- scripts/check M0–M5 PASS (M5: goal 28's M0–M7, goals 3–27 inside, 85 min); reviewer PASS (three should-fixes in the guard test, fixed).
+- Launch drafts (GitHub release, X thread, Modular forum post) in docs/launch/posts.md; nothing posted.
+

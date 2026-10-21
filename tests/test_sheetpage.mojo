@@ -134,6 +134,17 @@ def main() raises:
     spot = free_spot(placed, 400, 1084, 520, 340)
     assert_equal(spot[0], 0)
     assert_equal(spot[1], 772)
+    # a money column's median bars read in money ("$…"), like its sums (goal 29's polish; revenue is Currency since above)
+    from mojoui.sheetpage import COMBINE_MEDIAN
+    from mojoui.theme import Palette
+    var med = SheetObject.chart(REVENUE, REGION, 0, 0)
+    med.combine = COMBINE_MEDIAN
+    compute(med, frame)
+    var med_texts = chart_view(med, frame).bar_texts(Palette.plain())
+    assert_true(len(med_texts) > 0 and med_texts[0].startswith("$"), "median bars in money: " + med_texts[0])
+    var sum_bars = SheetObject.chart(REVENUE, REGION, 0, 0)
+    compute(sum_bars, frame)
+    assert_true(chart_view(sum_bars, frame).bar_texts(Palette.plain())[0].startswith("$"), "sum bars in money")
 
     # a Report tile through a filter (region = the first region)
     var filter = ReportFilter(REGION, 0)

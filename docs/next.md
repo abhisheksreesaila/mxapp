@@ -7,12 +7,9 @@ The owner paused feature work after goal 29: "100M no one will try on day 1. I w
 - Drafts for a GitHub release, an X thread and a Modular forum post.
 - Nothing is pushed or posted without the owner's yes (CLAUDE.md: never push).
 
-## 2. Polish seen in goal 29's screenshots (small)
-- The chart card is small, with empty space beside it: fill or let it resize.
-- "by month of day" should read "by month" (the date column's name only when there are two).
-- "Took median" under the chart repeats the title and the status bar.
-- A chart's time shows three times (chip, inspector, status bar): once.
-- A money column's median bars read "5,157" without "$".
+## 2. Polish seen in goal 29's screenshots (done 2026-10-21 but one)
+- Done: "by month"; the ask's reply once (status bar); a chart's time once (its card); "$" was a column without a currency format (guard test).
+- **Owner's call:** a new chart filling its row's width breaks goal 15's layout (a chart at 520 with a pivot beside it, kept across reopen). Charts resize from the corner today. Say "fill it" and goal 15's check changes with it.
 
 ## 3. Goal 30, parked: the island with background queries (6–10 h)
 - MX frame 23edc59 (issue #2): `start_job`/`Job` with poll, cancel, progress; `range_aggregate` for the status bar; `read_block` for the grid. The engine job's vendoring is uncommitted on an old base (~/.abode/home/worktrees/mojo-ui/t3-828a9b57): vendor it ourselves (D-270).

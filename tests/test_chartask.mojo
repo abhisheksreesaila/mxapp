@@ -134,10 +134,11 @@ def main() raises:
     _ = ask(nums, s, "only bolt, over 9")
     _ = ask(nums, s, "every row")
     assert_equal(chart_sentence(nums, s), base, "every row clears both conditions")
-    check("by month", s, "Sum of amount by month of day, in data order, every month, every row, as bars")
-    check("monthly, as a line", s, "Sum of amount by month of day, in data order, every month, every row, as a line")
-    check("by quarter of day", s, "Sum of amount by quarter of day, in data order, every quarter, every row, as bars")
-    check("count by weekday", s, "Count of rows by weekday of day, in data order, every weekday, every row, as bars")
+    check("by month", s, "Sum of amount by month, in data order, every month, every row, as bars")
+    check("monthly, as a line", s, "Sum of amount by month, in data order, every month, every row, as a line")
+    check("by quarter of day", s, "Sum of amount by quarter, in data order, every quarter, every row, as bars")
+    check("count by weekday", s, "Count of rows by weekday, in data order, every weekday, every row, as bars")
+    check("by month of day", s, "Sum of amount by month, in data order, every month, every row, as bars")  # (naming the one date column still works)
     var months = fresh()
     _ = ask(months, s, "by month")
     _ = ask(months, s, "by region")
@@ -170,12 +171,12 @@ def main() raises:
     var groups = chart_choices(g, s, SLOT_GROUP)  # (text columns, then each date column's month, quarter, weekday)
     var at = -1
     for k in range(len(groups)):
-        if groups[k] == "weekday of day":
+        if groups[k] == "weekday":
             at = k
     assert_true(at >= 0, "the group choices offer the date's weekday")
     _ = apply_choice(g, s, SLOT_GROUP, at)
     assert_true(g.part == PART_WEEKDAY and s.name(g.group) == "day")
-    assert_equal(groups[chosen(g, s, SLOT_GROUP)], "weekday of day")
+    assert_equal(groups[chosen(g, s, SLOT_GROUP)], "weekday")
     assert_equal(chart_choices(g, s, SLOT_TOP)[0], "every weekday")
     var anyc = fresh()
     _ = ask(anyc, s, "only bolt, over 9")
@@ -187,4 +188,13 @@ def main() raises:
             any_at = k
     _ = apply_choice(anyc, s, SLOT_FILTER, any_at)
     assert_equal(slot_text(anyc, s, SLOT_FILTER), "only Bolt", "any amount clears the number condition only")
+    # two date columns: the group names its column again ("month of shipped"), one date column reads just "month"
+    var path2 = String("build/test-chartask/two-dates.csv")
+    with open(path2, "w") as f:
+        f.write("amount,region,day,shipped\n12.50,North,2025-01-15,2025-01-20\n7.25,West,2025-02-03,2025-03-01\n")
+    var s2 = Sheet(read_csv(path2).table)
+    var two_dates = SheetObject.chart(0, 1, 0, 0)
+    _ = ask(two_dates, s2, "by month of shipped")
+    assert_equal(slot_text(two_dates, s2, SLOT_GROUP), "month of shipped")
+    assert_true("month of day" in chart_choices(two_dates, s2, SLOT_GROUP), "two date columns: each named in the choices")
     print("CHARTASK TESTS PASSED")

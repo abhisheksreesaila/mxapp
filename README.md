@@ -50,7 +50,7 @@ In omxplorer a chart's title isn't a label. It *is* the chart:
 
 > **Sum** of **revenue** by **product**, **largest first**, **top 5**, **every row**, as **bars**
 
-Every coloured word is a setting: tap it and pick another. Or type into the ask field: *"median"*, *"by month of day, as a line"*, *"only paid and over 5,000"*. The sentence rewrites itself, and the bars animate to the new answer. A person, a keyboard and an agent all edit the same sentence.
+Every coloured word is a setting: tap it and pick another. Or type into the ask field: *"median"*, *"by month, as a line"*, *"only paid and over 5,000"*. The sentence rewrites itself, and the bars animate to the new answer. A person, a keyboard and an agent all edit the same sentence.
 
 <p align="center">
   <img src="docs/img/readme-sheet.jpg" alt="omxplorer's sheet: 1,000,000 orders, and a chart whose title is a sentence of tappable settings, 'Sum of revenue by product, largest first, top 5, every row, as bars', answered in 0.7 ms on the GPU" width="100%">
@@ -191,7 +191,7 @@ scripts/check                                  # rebuild everything and re-prove
 ```
 
 > [!TIP]
-> Insert → Chart, then type into its ask field: *median*, *by month of day, as a line*, or *only paid and over 5,000*. Or tap any coloured word in the chart's title.
+> Insert → Chart, then type into its ask field: *median*, *by month, as a line*, or *only paid and over 5,000*. Or tap any coloured word in the chart's title.
 
 The smallest app is one file (trimmed from `examples/hello/app.mojo`):
 

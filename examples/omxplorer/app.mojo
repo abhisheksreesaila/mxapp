@@ -616,7 +616,7 @@ struct Main(App):
                 t.col = t.chart.value  # (compute_tile reads the tile's column and group)
                 t.group = t.chart.group
                 compute_tile(t, self.frame, self.filter)
-                self.message = object_title(t.chart, self.frame)  # (the chart's short title: its sentence is on it, its timing in its inspector)
+                self.message = object_title(t.chart, self.frame)  # (the chart's short title: its sentence and its time are on it)
                 self.tiles[cref - TILE_REF] = t^
             else:
                 compute(c, self.frame)
@@ -1170,7 +1170,7 @@ struct Main(App):
                 if problem != "":  # (said, not replaced by the chart's timing)
                     self.message = "Couldn't compute the " + ("chart" if m == INSERT_CHART else "pivot") + ": " + problem
                 else:
-                    self.message = ("Chart: " if m == INSERT_CHART else "Pivot: ") + object_title(self.objects[self.active], self.frame) + " (" + fixed(self.objects[self.active].milliseconds, 1) + " ms on " + self.frame.last_device() + (", streamed from disk" if self.frame.streamed() else "") + ")"
+                    self.message = ("Chart: " if m == INSERT_CHART else "Pivot: ") + object_title(self.objects[self.active], self.frame) + " (" + fixed(self.objects[self.active].milliseconds, 1) + " ms on " + self.frame.last_device() + (", streamed from disk" if self.frame.streamed() else "") + ")"  # (once, when it lands: where it ran)
             self.version += 1
         elif m == MOVE or m == RESIZE:  # a sheet object (child 0: the table) dragged by its title bar, or by its corner
             var k = event.number - 1
@@ -1359,8 +1359,8 @@ struct Main(App):
                 if len(said.changed) > 0:  # (an ask that leaves the chart as it was logs no Undo step and moves nothing)
                     self.set_chart(self.asking, c^)
                     self.lit = said.changed.copy()
-                self.ask_said = ask_reply(said)
-                self.message = self.ask_said
+                self.message = ask_reply(said)  # (what it took: in the status bar, once; the sentence marks the words)
+                self.ask_said = self.message if len(said.skipped) > 0 or len(said.understood) == 0 else String("")  # (under the field only what it couldn't use)
                 self.ask_text = ""
             self.version += 1
         elif m == FILTER_COL:
@@ -1896,8 +1896,7 @@ struct Main(App):
             return InspectorPage("Style", PAGE, [Section("As", [Segmented(marks, 1 if c.style == CHART_LINE else 0, INSP_SET + SLOT_MARK).fill()])])
         var head = List[View]()
         head.append(Text(chart_sentence(c, f), HEADLINE).tag("chart-sentence"))
-        head.append(Text("Tap a coloured word in the chart's title, ask in its field, or open a part below. Follows edits to " + self.sheet_name
-                         + " (" + fixed(c.milliseconds, 1) + " ms on " + f.last_device() + ")", CAPTION))
+        head.append(Text("Tap a coloured word in the chart's title, ask in its field, or open a part below. Follows edits to " + self.sheet_name + ".", CAPTION))
         var rows = List[View]()
         rows.append(NavRow("Data", slot_text(c, f, SLOT_COMBINE) + " of " + slot_text(c, f, SLOT_VALUE) + " · by " + slot_text(c, f, SLOT_GROUP), PAGE + 1, icon="formula"))
         rows.append(NavRow("Order", slot_text(c, f, SLOT_ORDER) + " · " + slot_text(c, f, SLOT_TOP), PAGE + 2, icon="sort"))
@@ -1913,7 +1912,7 @@ struct Main(App):
         var texts = self.texts()
         var head = List[View]()
         head.append(Text(object_title(o, self.frame), HEADLINE))
-        head.append(Text("Follows edits to " + self.sheet_name + " (" + fixed(o.milliseconds, 1) + " ms on " + self.frame.last_device() + ")", CAPTION))
+        head.append(Text("Follows edits to " + self.sheet_name + ".", CAPTION))  # (its time is on the card, once)
         sections.append(Section("Chart" if o.kind == OBJ_CHART else "Pivot", head))
         var data = List[View]()
         if o.kind == OBJ_CHART:

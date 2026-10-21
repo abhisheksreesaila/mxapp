@@ -432,6 +432,12 @@ def text_columns(sheet: Sheet) -> List[Int]:
     return out^
 
 
+def part_text(part: Int, col: Int, sheet: Sheet) -> String:
+    """A date column's part as words: "month", or "month of shipped" when the sheet has more than one date column."""
+    var word = materialize[PARTS]()[part]
+    return word if len(date_columns(sheet)) < 2 else word + " of " + sheet.name(col)
+
+
 def slot_text(obj: SheetObject, sheet: Sheet, slot: Int) -> String:
     """What a token reads now."""
     if slot == SLOT_COMBINE:
@@ -439,7 +445,7 @@ def slot_text(obj: SheetObject, sheet: Sheet, slot: Int) -> String:
     if slot == SLOT_VALUE:
         return "rows" if obj.combine == COMBINE_COUNT else sheet.name(obj.value)
     if slot == SLOT_GROUP:
-        return sheet.name(obj.group) if obj.part == PART_NONE else materialize[PARTS]()[obj.part] + " of " + sheet.name(obj.group)
+        return sheet.name(obj.group) if obj.part == PART_NONE else part_text(obj.part, obj.group, sheet)
     if slot == SLOT_ORDER:
         return materialize[ORDERS]()[obj.order]
     if slot == SLOT_TOP:
@@ -507,7 +513,7 @@ def chart_choices(obj: SheetObject, sheet: Sheet, slot: Int) -> List[String]:
             out.append(sheet.name(c))
         for c in date_columns(sheet):
             for part in [PART_MONTH, PART_QUARTER, PART_WEEKDAY]:
-                out.append(materialize[PARTS]()[part] + " of " + sheet.name(c))
+                out.append(part_text(part, c, sheet))
     elif slot == SLOT_ORDER:
         return materialize[ORDERS]()
     elif slot == SLOT_TOP:

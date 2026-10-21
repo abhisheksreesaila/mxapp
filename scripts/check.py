@@ -217,7 +217,7 @@ def m3():
     if err:
         problems.append(err)
     asked = g25.gtk(g25.SHEET + ";tap:Chart;pause:300;" + g28.ASK + "by month of day, as a line;pause:400", "m3-ask")[0]
-    if not {"month of day", "a line"} <= set(re.findall(r"^BUTTON: (.*)$", asked, re.M)):
+    if not {"month", "a line"} <= set(re.findall(r"^BUTTON: (.*)$", asked, re.M)):
         problems.append("GTK: asking \"by month of day, as a line\" didn't group by month")
     return not problems, "; ".join(problems[:6]) or ("sum by month, count by quarter, average by weekday and median by month (paid) equal pyarrow's, "
                                                       "every month and quarter of the span, in calendar order; before 1970, across a year's end and centuries away "

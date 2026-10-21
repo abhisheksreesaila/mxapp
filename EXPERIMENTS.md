@@ -4,6 +4,15 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 29b (2026-10-21): polish from goal 29's screenshots
+- **Setup:** the owner's five notes on goal 29's shots (docs/next.md §2).
+- **Worked:** "by month" without the column's name when there's one date column; an ask's reply said once (status bar); a chart's time once (its card); the "$" note was a column without a currency format (now a guard test).
+- **Broke and fixed:** a chart filling its row broke goal 15's chart-and-pivot layout: reverted, left to the owner. A `pgrep -f` cleanup killed its own shell: stop-check now stops the displays.
+- **Means:** small text fixes stay cheap because every earlier goal re-runs; layout changes run into old goals' pinned positions.
+- **Next:** clips and screenshots of omxplorer for the launch; the owner's yes on the posts.
+
+---
+
 ## Experiment 29 (2026-10-20): charts that ask the new engine more (goal 29)
 - **Setup:** MX frame 321870f (STABLE.md: SQL, expressions, median and quantiles per group), vendored by the engine job.
 - **Worked:**

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Stops a running scripts/check (and the checker it runs) in this checkout only.
 
-  scripts/stop-check        # this checkout's check, if one is running
+  scripts/stop-check        # this checkout's check, if one is running, and its headless displays (Xvfb)
 
 Matches processes by their real argv (python … scripts/check.py) and working directory, never by a pattern over
 command lines: `pkill -f` / `pgrep -f` also match the shell that runs them, and killed it twice (docs/lessons.md).
@@ -13,6 +13,7 @@ from pathlib import Path
 root = str(Path(__file__).resolve().parent.parent)
 me = {os.getpid(), os.getppid()}
 stopped = []
+displays = []
 for d in Path("/proc").iterdir():
     if not d.name.isdigit() or int(d.name) in me:
         continue
@@ -25,4 +26,10 @@ for d in Path("/proc").iterdir():
             and argv[1] == b"scripts/check.py" and cwd == root:
         os.kill(int(d.name), signal.SIGTERM)
         stopped.append(d.name)
+    elif argv and Path(argv[0].decode(errors="replace")).name == "Xvfb" and cwd == root:
+        displays.append(int(d.name))  # (a stopped check leaves its display running: docs/lessons.md, 2026-10-18)
+for pid in displays:
+    os.kill(pid, signal.SIGTERM)
 print(f"stopped {', '.join(stopped)}" if stopped else "no check running here")
+if displays:
+    print(f"stopped {len(displays)} headless display(s)")
