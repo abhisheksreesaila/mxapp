@@ -1,0 +1,29 @@
+# omxapp
+
+> Write an app once in Mojo and run it natively on Linux (GTK 4), the web, Android, Mac and iPhone, with the heavy data work on the GPU in the same file. Every running app is also a set of MCP tools an AI agent can call, with no per-app work. Public alpha, MIT licence, Mojo 1.1.
+
+Status, measured by the checks in `scripts/check` (see components.md for the full matrix):
+
+- Runs: Linux (GTK 4), web (FastHTML), the agent host (MCP over stdio), Android (views over JNI, the classic controls).
+- Builds and signs, not yet run by a check: Mac (AppKit), iPhone (UIKit).
+- GPU path: NVIDIA today. Apple and phone GPUs use the CPU path, which runs the same functions.
+- Showcase: omxplorer, a data app over a million rows, about 2,100 lines of Mojo.
+
+An app is a struct with `update(event)` and `view() -> View`; the platforms draw the view tree with their own native controls. Build with `scripts/build.sh <example> linux|web|mac|ios|android|all`.
+
+The README, reference, architecture, agent host and components in one file: [llms-full.txt](https://abhisheksreesaila.github.io/mxapp/llms-full.txt)
+
+## Docs
+
+- [README](https://raw.githubusercontent.com/abhisheksreesaila/mxapp/main/README.md): what it is, what it feels like, measured numbers, how to try it
+- [Reference](https://abhisheksreesaila.github.io/mxapp/reference.md): the app model, every component, layout, the GPU canvas, the examples
+- [How it works](https://abhisheksreesaila.github.io/mxapp/architecture.md): the view tree, the update loop, how each platform is reached
+- [The agent host](https://abhisheksreesaila.github.io/mxapp/agent.md): the MCP tools (screen, act, read, render), what an agent gets back, what it can't do yet
+- [Components × platforms](https://abhisheksreesaila.github.io/mxapp/components.md): what exists where, generated from the code
+
+## Optional
+
+- [Decisions](https://abhisheksreesaila.github.io/mxapp/decisions.md): every design decision, with reasons (D-nn)
+- [Experiments](https://raw.githubusercontent.com/abhisheksreesaila/mxapp/main/EXPERIMENTS.md): what was tried, what broke, what was learned
+- [Roadmap](https://raw.githubusercontent.com/abhisheksreesaila/mxapp/main/ROADMAP.md): the original vision
+- [Source](https://github.com/abhisheksreesaila/mxapp): the repository

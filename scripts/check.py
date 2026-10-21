@@ -259,13 +259,16 @@ def todo(what):
 
 
 def m5():
-    """Goal 28's checks (every earlier goal's inside them)."""
+    """Goal 28's checks (every earlier goal's inside them), and docs/llms-full.txt is current."""
     problems = []
     for name, fn in [(f"28-M{i}", getattr(g28, f"m{i}")) for i in range(8)]:
         ok, msg = fn()
         if not ok:
             problems.append(f"{name}: {msg}")
-    return not problems, "; ".join(problems) or "goal 28's M0–M7 (goals 3–27 inside them) pass"
+    llms = run(["pixi", "run", "python", "scripts/llms.py", "--check"], timeout=120)
+    if llms.returncode != 0:
+        problems.append(llms.stdout.strip())
+    return not problems, "; ".join(problems) or "goal 28's M0–M7 (goals 3–27 inside them) pass; docs/llms-full.txt current"
 
 
 MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2), ("M3", m3), ("M4", m4), ("M5", m5)]

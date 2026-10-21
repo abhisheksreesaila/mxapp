@@ -218,7 +218,8 @@ struct Main(App):
 - **[How it works](docs/architecture.md):** the view tree, the update loop, how each platform is reached.
 - **[The agent host](docs/agent.md):** the tools, what an agent gets back, what it can't do yet.
 - **[Components × platforms](docs/components.md):** what exists where, generated from the code.
-- **[Decisions](docs/decisions.md):** all 270, with reasons.
+- **[llms.txt](https://abhisheksreesaila.github.io/mxapp/llms.txt):** these docs for an agent; [llms-full.txt](https://abhisheksreesaila.github.io/mxapp/llms-full.txt) is all of them in one file.
+- **[Decisions](docs/decisions.md):** every one, with reasons.
 - **[Experiments](EXPERIMENTS.md)** and the **[goal reports](docs/goals/):** what was tried, what broke, what was learned. The latest is [docs/report.md](docs/report.md).
 - **[The long view](ROADMAP.md):** the original vision.
 - **[Gallery](https://abhisheksreesaila.github.io/mxapp/gallery/):** the earlier showcases (analytics, the Workbook, the Data Lens).
