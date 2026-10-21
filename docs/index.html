@@ -26,7 +26,8 @@
   --bg: #000; --bg2: var(--oq-surface-1); --ink: var(--oq-ink); --ink2: var(--oq-ink-2); --line: var(--oq-line);
   --word: var(--oq-data-1); }
 html, body { margin: 0; background: var(--bg); }
-html { scroll-padding-top: 72px; }
+html { scroll-padding-top: 72px; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body { font: 400 19px/1.55 var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
 a { color: inherit; }
 section { padding: 140px 24px; position: relative; }
@@ -59,9 +60,15 @@ h1, h2, .lede, .body { text-wrap: balance; }
 .lnav { position: sticky; top: 0; z-index: 50; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 12px 20px; background: var(--bg); box-shadow: 0 1px 0 var(--line); }
 .brand { font: 700 17px var(--display); letter-spacing: -.02em; display: flex; align-items: center; gap: 9px; text-decoration: none; }
 .mark { width: 26px; height: 26px; border-radius: 8px; background: var(--oq-accent); color: var(--oq-on-accent); display: grid; place-items: center; font: 700 12px var(--mono); }
-.lnav .pill { display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); }
+.lnav .pill { position: relative; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); }
 .lnav .pill a { color: var(--ink2); text-decoration: none; font: 500 13.5px var(--sans); padding: 8px 14px; min-height: 34px; box-sizing: border-box; display: inline-flex; align-items: center; border-radius: 999px; transition: background .15s, color .15s; }
 .lnav .pill a:hover { color: var(--ink); background: rgb(var(--oq-state) / .08); }
+/* the selected section: one state-layer pill that slides between links on the island spring */
+.lnav .pill a { position: relative; z-index: 1; }
+.lnav .pill a.on { color: var(--ink); background: none; }
+.lnav .pill .ind { position: absolute; top: 4px; left: 0; height: calc(100% - 8px); border-radius: 999px; background: rgb(var(--oq-state) / .16); opacity: 0; pointer-events: none;
+  transition: transform var(--oq-spring-dur) var(--oq-island-spring), width var(--oq-spring-dur) var(--oq-island-spring), opacity .2s var(--ease); }
+.lnav .pill .ind.still { transition: opacity .2s var(--ease); }
 .lnav .right { justify-self: end; }
 .lnav .cta { height: 34px; padding: 0 16px; font-size: 13.5px; }
 
@@ -217,7 +224,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
 
 <nav class="lnav">
   <a class="brand" href="#top"><span class="mark">ox</span>omxapp</a>
-  <div class="pill"><a href="#possible">Possible</a><a href="#speed">Speed</a><a href="#agents">Agents</a><a href="#next">Next</a></div>
+  <div class="pill"><span class="ind" aria-hidden="true"></span><a href="#possible">Possible</a><a href="#speed">Speed</a><a href="#agents">Agents</a><a href="#next">Next</a></div>
   <div class="right"><a class="cta" href="#get">Get the alpha</a></div>
 </nav>
 
@@ -427,6 +434,21 @@ scripts/omxplorer.sh</pre>
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); count(e.target); io.unobserve(e.target); } }), { threshold: .2 });
   $$(".rv").forEach(el => reduce ? el.classList.add("in") : io.observe(el));
   // scroll scenes: the product unfolds; the turn lights up word by word
+  // the island: the section you're in is selected; a click selects at once and holds until the scroll lands
+  const ind = $(".lnav .ind"), links = $$(".lnav .pill a");
+  let cur = null, pinned = null, pinT;
+  function select(a) {
+    if (a === cur) return;
+    links.forEach(l => { l.classList.toggle("on", l === a); l === a ? l.setAttribute("aria-current", "location") : l.removeAttribute("aria-current"); });
+    if (!a) { ind.style.opacity = 0; cur = null; return; }
+    ind.classList.toggle("still", !cur || reduce);  // first appearance doesn't slide in from the left
+    ind.style.width = a.offsetWidth + "px"; ind.style.transform = `translateX(${a.offsetLeft}px)`; ind.style.opacity = 1;
+    if (!cur && !reduce) { void ind.offsetWidth; ind.classList.remove("still"); }  // flush, so only later moves animate
+    cur = a;
+  }
+  links.forEach(a => a.addEventListener("click", () => { select(a); pinned = a; clearTimeout(pinT);
+    pinT = setTimeout(() => { pinned = null; onScroll(); }, "onscrollend" in window ? 3000 : 1200); }));
+  addEventListener("scrollend", () => { if (pinned) { clearTimeout(pinT); pinned = null; onScroll(); } });
   let raf;
   function onScroll() {
     const vh = innerHeight;
@@ -435,9 +457,10 @@ scripts/omxplorer.sh</pre>
     $$("[data-read]").forEach(s => { const r = s.getBoundingClientRect(), p = Math.min(1, Math.max(0, (vh * .8 - r.top) / (r.height * .9))), sp = $$("p span", s), n = Math.round(p * sp.length);
       sp.forEach((x, i) => x.classList.toggle("lit", reduce || i < n));
       $$("[data-w]", s).forEach(g => g.classList.toggle("on", reduce || n > +g.dataset.w)); });
+    if (!pinned) select(links.filter(a => $(a.hash).getBoundingClientRect().top <= vh * .4).pop());
   }
   addEventListener("scroll", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(onScroll); }, { passive: true });
-  addEventListener("resize", onScroll); onScroll();
+  addEventListener("resize", () => { const a = cur; cur = null; ind.classList.add("still"); select(a); onScroll(); }); onScroll();
   // copy the three commands
   document.addEventListener("click", e => { const b = e.target.closest("[data-copy]"); if (!b) return;
     navigator.clipboard?.writeText($(b.dataset.copy).textContent).then(() => { b.textContent = "copied"; setTimeout(() => b.textContent = "copy", 1600); }); });
