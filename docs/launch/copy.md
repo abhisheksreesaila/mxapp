@@ -30,7 +30,72 @@ The words for the launch page, the README's top half, the tweet and the forum po
 
 ---
 
-## 2 · Now possible (moved up: the page leads with it)
+## 2 · Agents now, generative interfaces next (one section)
+
+**Eyebrow:** Agent native · where it's going
+
+**Headline:** GPU-native generative interfaces.
+
+**Lede:** It starts today: every app is already a set of agent tools. Next, the model moves into the same program, on the same GPU.
+
+
+**Part 1 · `runs today` badge, heading:** Every app is already a set of agent tools.
+
+**Body:** The agent is a platform, like Linux or the web. omxapp shows it the same app as a list of MCP tools: a button's tag names its tool, its tooltip describes it, and calling the tool is tapping the button. No API to write, no screenshots to read.
+
+**A real session:**
+```
+→ choose-a-file  {"path": "orders_1m.csv"}
+→ create-table
+→ insert-chart
+→ ask  {"text": "revenue by product, largest first, top 5"}
+← Did ask.
+  Now: chart0: 0.6 ms
+  Now: inspector: Sum of revenue by product, largest first, top 5, as bars
+```
+
+**Three points:**
+- **No per-app work.** Every omxapp app is an MCP server from its first line.
+- **Safe by construction.** An agent can't do anything a person couldn't. A disabled button isn't a tool; a dialog's buttons exist only while it's open.
+- **It hears what changed.** Every call answers in words: the new texts, what opened or closed, which tools appeared.
+
+
+**Part 2 · `next` badge, heading:** The model in the same program.
+
+**Body:** Today an AI app is two programs: an interface on one side, a model behind an HTTP API on the other, and JSON in between. Mojo is the language of both: the GPU code that runs models, and the GPU code that draws and computes this app. So they can be one program, where the model reads the app's data where it already sits and the interface answers in the same frame.
+
+| An AI app today | Where omxapp is going |
+|---|---|
+| interface in JavaScript or Swift | your app, in Mojo |
+| → HTTP request, JSON | → the model: same process, same GPU |
+| model server in Python | → the data engine: same GPU |
+| → HTTP response, JSON | → the interface, drawn on the GPU |
+| three languages, two processes, a network hop per answer | one language, one program, no API in between |
+
+`Not in the alpha. Today the interface, the data and the drawing share one language and one GPU; the model is the next piece.`
+
+---
+
+## 3 · Data on the GPU
+
+**Headline:** Instant at a million rows.
+
+**Body:** The code that sums your data is plain Mojo, running on the GPU next to the code that draws it. Nothing leaves the process.
+
+| | |
+|---|---|
+| a chart over 1M rows, grouped and sorted | **0.6 ms** |
+| the status bar's sum and average over 1M rows | **0.3 ms** |
+| a frame of 1M-row grid scrolling (p95) | **0.8 ms** |
+| 20M points counted and coloured, one 1080p frame | **1.5 ms** (130 ms on the CPU) |
+| opening a 100M-row, 4 GB file, streamed | **0.2 s** |
+
+**Honest edge:** At 100M rows in memory, a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the window is the next piece of engine work.
+`one Linux machine · NVIDIA RTX 3090 · docs/goals/26, 29`
+
+---
+
+## 4 · Now possible
 
 **Headline:** What one language makes possible.
 
@@ -56,7 +121,7 @@ Then the other rows: *what it took before → what you do now → the measured p
 
 ---
 
-## 3 · The problem, then the turn
+## 5 · The problem, then the turn
 
 **Headline:** Four programs, one file.
 
@@ -66,79 +131,7 @@ omxapp is one program. Mojo writes the controls, the data engine and the GPU cod
 
 ---
 
-## 4 · Native everywhere
-
-**Headline:** Real controls, not imitations.
-
-**Body:** A button is a GTK button on Linux, an HTML button on the web, an Android view on a phone, an NSButton on a Mac. Each platform brings its own look, keyboard and screen reader. The drawn parts, like charts and the million-row grid, are one Mojo display list, replayed by each platform's GPU renderer.
-
-**Status:** Linux runs · Web runs · Agent runs · Android runs · Mac builds · iPhone builds
-`"Runs" means a script drives it there today. Mac and iPhone build and sign; no check runs them yet.`
-
----
-
-## 5 · Data on the GPU
-
-**Headline:** Instant at a million rows.
-
-**Body:** The code that sums your data is plain Mojo, running on the GPU next to the code that draws it. Nothing leaves the process.
-
-| | |
-|---|---|
-| a chart over 1M rows, grouped and sorted | **0.6 ms** |
-| the status bar's sum and average over 1M rows | **0.3 ms** |
-| a frame of 1M-row grid scrolling (p95) | **0.8 ms** |
-| 20M points counted and coloured, one 1080p frame | **1.5 ms** (130 ms on the CPU) |
-| opening a 100M-row, 4 GB file, streamed | **0.2 s** |
-
-**Honest edge:** At 100M rows in memory, a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the window is the next piece of engine work.
-`one Linux machine · NVIDIA RTX 3090 · docs/goals/26, 29`
-
----
-
-## 6 · Agent native
-
-**Headline:** Every app is already a set of agent tools.
-
-**Body:** The agent is a platform, like Linux or the web. omxapp shows it the same app as a list of MCP tools: a button's tag names its tool, its tooltip describes it, and calling the tool is tapping the button. No API to write, no screenshots to read.
-
-**A real session:**
-```
-→ choose-a-file  {"path": "orders_1m.csv"}
-→ create-table
-→ insert-chart
-→ ask  {"text": "revenue by product, largest first, top 5"}
-← Did ask.
-  Now: chart0: 0.6 ms
-  Now: inspector: Sum of revenue by product, largest first, top 5, as bars
-```
-
-**Three points:**
-- **No per-app work.** Every omxapp app is an MCP server from its first line.
-- **Safe by construction.** An agent can't do anything a person couldn't. A disabled button isn't a tool; a dialog's buttons exist only while it's open.
-- **It hears what changed.** Every call answers in words: the new texts, what opened or closed, which tools appeared.
-
----
-
-## 7 · Where it's going
-
-**Headline:** GPU-native generative interfaces.
-
-**Body:** Today an AI app is two programs: an interface on one side, a model behind an HTTP API on the other, and JSON in between. Mojo is the language of both: the GPU code that runs models, and the GPU code that draws and computes this app. So they can be one program, where the model reads the app's data where it already sits and the interface answers in the same frame.
-
-| An AI app today | Where omxapp is going |
-|---|---|
-| interface in JavaScript or Swift | your app, in Mojo |
-| → HTTP request, JSON | → the model: same process, same GPU |
-| model server in Python | → the data engine: same GPU |
-| → HTTP response, JSON | → the interface, drawn on the GPU |
-| three languages, two processes, a network hop per answer | one language, one program, no API in between |
-
-`Not in the alpha. Today the interface, the data and the drawing share one language and one GPU; the model is the next piece.`
-
----
-
-## 8 · Get it
+## 6 · Get it
 
 **Headline:** Available today.
 
@@ -153,6 +146,8 @@ scripts/omxplorer.sh
 **Buttons:** Get it on GitHub · Read the docs
 
 ---
+
+> Removed: "Real controls, not imitations." (its claim lives in the table's first native-controls row and the hero diagram's runs/builds tiles).
 
 ## Footer note
 

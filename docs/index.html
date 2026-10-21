@@ -149,10 +149,6 @@ h1, h2, .lede, .body { text-wrap: balance; }
 .edge b { color: var(--ink); }
 
 /* platforms: status as a word + dot */
-.plats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
-.plats .badge { font-size: 13px; padding: 8px 12px; }
-.native .shot { margin-top: 56px; border-radius: var(--oq-radius-card); overflow: hidden; box-shadow: var(--oq-shadow-3), 0 0 0 1px var(--line); }
-.native .shot img { width: 100%; display: block; }
 
 /* the sentence: every underlined word is a setting */
 .sentence { font: 700 clamp(30px, 4.6vw, 60px)/1.25 var(--display); letter-spacing: -.035em; margin: 56px auto 0; max-width: 1000px; }
@@ -161,6 +157,10 @@ h1, h2, .lede, .body { text-wrap: balance; }
 .asks span { font: 500 15px var(--mono); color: var(--ink2); padding: 8px 14px; border-radius: var(--oq-radius-xs); box-shadow: inset 0 0 0 1px var(--line); }
 
 /* agent: a real session, and three points */
+.agent .lede { margin-left: 0; max-width: 760px; }
+.agent .part { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 96px; }
+.agent .part h3 { font: 700 clamp(28px, 3.4vw, 44px)/1.1 var(--display); letter-spacing: -.035em; }
+.agent .part + .body { margin-top: 18px; }
 .agent .g2 { display: grid; grid-template-columns: 1.25fr 1fr; gap: 28px; margin-top: 56px; align-items: start; }
 .term { margin: 0; padding: 4px 22px 20px; font: 14.5px/1.75 var(--mono); color: var(--ink2); white-space: pre-wrap; overflow-x: auto; }
 .term .c { color: var(--ink); }
@@ -225,7 +225,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
 
 <nav class="lnav">
   <a class="brand" href="#top"><span class="mark">ox</span>omxapp</a>
-  <div class="pill"><span class="ind" aria-hidden="true"></span><a href="#possible">Possible</a><a href="#speed">Speed</a><a href="#agents">Agents</a><a href="#next">Next</a></div>
+  <div class="pill"><span class="ind" aria-hidden="true"></span><a href="#agents">Agents</a><a href="#speed">Speed</a><a href="#possible">Possible</a></div>
   <div class="right"><a class="cta" href="#get">Get the alpha</a></div>
 </nav>
 
@@ -251,7 +251,65 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   </div>
 </section>
 
-<!-- 2 · Now possible -->
+<!-- 2 · Agents now, generative interfaces next -->
+<section id="agents" class="agent">
+  <div class="wrap">
+    <div class="eyebrow rv">Agent native · where it's going</div>
+    <h2 class="rv">GPU-native <span class="two">generative interfaces.</span></h2>
+    <p class="lede rv">It starts today: every app is already a set of agent tools. Next, the model moves into the same program, on the same GPU.</p>
+
+    <div class="part rv"><span class="badge ok"><i></i>runs today</span><h3>Every app is already a set of agent tools.</h3></div>
+    <p class="body rv">The agent is a platform, like Linux or the web. omxapp shows it the same app as a list of MCP tools: a button's tag names its tool, its tooltip describes it, and calling the tool is tapping the button. No API to write, no screenshots to read.</p>
+    <div class="g2">
+      <div class="card rv">
+        <div class="card-h"><h3>A real session</h3><span class="sp"></span><span class="badge">MCP · stdio</span></div>
+<pre class="term"><span class="c">→ choose-a-file</span>  {"path": "orders_1m.csv"}
+<span class="c">→ create-table</span>
+<span class="c">→ insert-chart</span>
+<span class="c">→ ask</span>  {"text": "revenue by product, largest first, top 5"}
+<span class="r">← Did ask.</span>
+  Now: chart0: 0.6 ms
+  Now: inspector: Sum of revenue by product, largest first, top 5, as bars</pre>
+        <div class="src note">omxplorer on the agent host, over stdio</div>
+      </div>
+      <div class="points">
+        <div class="rv"><h3>No per-app work.</h3><p>Every omxapp app is an MCP server from its first line.</p></div>
+        <div class="rv"><h3>Safe by construction.</h3><p>An agent can't do anything a person couldn't. A disabled button isn't a tool; a dialog's buttons exist only while it's open.</p></div>
+        <div class="rv"><h3>It hears what changed.</h3><p>Every call answers in words: the new texts, what opened or closed, which tools appeared.</p></div>
+      </div>
+    </div>
+
+    <div class="part rv" id="next"><span class="badge warn"><i></i>next</span><h3>The model in the same program.</h3></div>
+    <p class="body rv">Today an AI app is two programs: an interface on one side, a model behind an HTTP API on the other, and JSON in between. Mojo is the language of both: the GPU code that runs models, and the GPU code that draws and computes this app. So they can be one program, where the model reads the app's data where it already sits and the interface answers in the same frame.</p>
+    <div class="flow">
+      <div class="card today rv"><div class="card-h"><h3>An AI app today</h3></div><div class="card-b"><ol>
+        <li>Interface in JavaScript or Swift</li><li class="hop">→ HTTP request, JSON</li><li>Model server in Python</li><li class="hop">→ HTTP response, JSON</li><li class="sum">Three languages, two processes, a network hop per answer</li></ol></div><div class="src note">a typical AI app today</div></div>
+      <div class="card going rv"><div class="card-h"><h3>Where omxapp is going</h3><span class="sp"></span><span class="badge warn"><i></i>next</span></div><div class="card-b"><ol>
+        <li>Your app, in Mojo</li><li class="hop">→ the model: same process, same GPU</li><li>The data engine: same GPU</li><li class="hop">→ the interface, drawn on the GPU</li><li class="sum">One language, one program, no API in between</li></ol></div><div class="src note">not in the alpha</div></div>
+    </div>
+    <p class="srcline rv">Not in the alpha. Today the interface, the data and the drawing share one language and one GPU; the model is the next piece.</p>
+  </div>
+</section>
+
+<!-- 3 · Data on the GPU -->
+<section id="speed" class="speed">
+  <div class="wrap">
+    <div class="eyebrow rv">Data on the GPU</div>
+    <h2 class="rv">Instant <span class="two">at a million rows.</span></h2>
+    <p class="body rv">The code that sums your data is plain Mojo, running on the GPU next to the code that draws it. Nothing leaves the process.</p>
+    <div class="nums">
+      <div class="rv"><b><span data-count="0.6" data-dec="1">0.6</span><small>ms</small></b><span>a chart over 1M rows, grouped and sorted</span></div>
+      <div class="rv"><b><span data-count="0.3" data-dec="1">0.3</span><small>ms</small></b><span>the status bar's sum and average over 1M rows</span></div>
+      <div class="rv"><b><span data-count="0.8" data-dec="1">0.8</span><small>ms</small></b><span>a frame of 1M-row grid scrolling, p95</span></div>
+      <div class="rv"><b><span data-count="1.5" data-dec="1">1.5</span><small>ms</small></b><span>20M points counted and coloured, one 1080p frame (130 ms on the CPU)</span></div>
+      <div class="rv"><b><span data-count="0.2" data-dec="1">0.2</span><small>s</small></b><span>opening a 100M-row, 4 GB file, streamed</span></div>
+    </div>
+    <p class="srcline rv">one Linux machine · NVIDIA RTX 3090 · docs/goals/26, 29</p>
+    <p class="edge rv"><b>The honest edge.</b> At 100M rows in memory, a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the window is the next piece of engine work.</p>
+  </div>
+</section>
+
+<!-- 4 · Now possible -->
 <section id="possible" class="center">
   <div class="wrap">
     <div class="eyebrow rv">Now possible</div>
@@ -295,7 +353,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   </div>
 </section>
 
-<!-- 3 · The problem, then the turn -->
+<!-- 5 · The problem, then the turn -->
 <section class="stack" id="four">
   <div class="wrap">
     <div class="eyebrow rv">The problem</div>
@@ -312,93 +370,18 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   <div class="wrap center"><p data-read-words>Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.</p></div>
 </section>
 
-<!-- 4 · Native everywhere -->
-<section class="native">
-  <div class="wrap">
-    <div class="eyebrow rv">Native everywhere</div>
-    <h2 class="rv">Real controls. <span class="two">Not imitations.</span></h2>
-    <p class="body rv">A button is a GTK button on Linux, an HTML button on the web, an Android view on a phone, an NSButton on a Mac. Each platform brings its own look, keyboard and screen reader. The drawn parts, like charts and the million-row grid, are one Mojo display list, replayed by each platform's GPU renderer.</p>
-    <div class="plats rv">
-      <span class="badge ok"><i></i>Linux · runs</span><span class="badge ok"><i></i>Web · runs</span><span class="badge ok"><i></i>Agent · runs</span><span class="badge ok"><i></i>Android · runs</span><span class="badge info"><i></i>Mac · builds</span><span class="badge info"><i></i>iPhone · builds</span>
-    </div>
-    <p class="srcline rv">"runs" means a script drives it there today. Mac and iPhone build and sign; no check runs them yet.</p>
-    <div class="shot rv"><img src="img/readme-sheet.jpg" alt="omxplorer's sheet: a million-row grid drawn by mojoui inside native GTK controls" loading="lazy"></div>
-  </div>
-</section>
-
-<!-- 5 · Data on the GPU -->
-<section id="speed" class="speed">
-  <div class="wrap">
-    <div class="eyebrow rv">Data on the GPU</div>
-    <h2 class="rv">Instant <span class="two">at a million rows.</span></h2>
-    <p class="body rv">The code that sums your data is plain Mojo, running on the GPU next to the code that draws it. Nothing leaves the process.</p>
-    <div class="nums">
-      <div class="rv"><b><span data-count="0.6" data-dec="1">0.6</span><small>ms</small></b><span>a chart over 1M rows, grouped and sorted</span></div>
-      <div class="rv"><b><span data-count="0.3" data-dec="1">0.3</span><small>ms</small></b><span>the status bar's sum and average over 1M rows</span></div>
-      <div class="rv"><b><span data-count="0.8" data-dec="1">0.8</span><small>ms</small></b><span>a frame of 1M-row grid scrolling, p95</span></div>
-      <div class="rv"><b><span data-count="1.5" data-dec="1">1.5</span><small>ms</small></b><span>20M points counted and coloured, one 1080p frame (130 ms on the CPU)</span></div>
-      <div class="rv"><b><span data-count="0.2" data-dec="1">0.2</span><small>s</small></b><span>opening a 100M-row, 4 GB file, streamed</span></div>
-    </div>
-    <p class="srcline rv">one Linux machine · NVIDIA RTX 3090 · docs/goals/26, 29</p>
-    <p class="edge rv"><b>The honest edge.</b> At 100M rows in memory, a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the window is the next piece of engine work.</p>
-  </div>
-</section>
-
-<!-- 6 · Agent native -->
-<section id="agents" class="agent">
-  <div class="wrap">
-    <div class="eyebrow rv">Agent native</div>
-    <h2 class="rv">Every app is already <span class="two">a set of agent tools.</span></h2>
-    <p class="body rv">The agent is a platform, like Linux or the web. omxapp shows it the same app as a list of MCP tools: a button's tag names its tool, its tooltip describes it, and calling the tool is tapping the button. No API to write, no screenshots to read.</p>
-    <div class="g2">
-      <section class="card rv">
-        <div class="card-h"><h3>A real session</h3><span class="sp"></span><span class="badge">MCP · stdio</span></div>
-<pre class="term"><span class="c">→ choose-a-file</span>  {"path": "orders_1m.csv"}
-<span class="c">→ create-table</span>
-<span class="c">→ insert-chart</span>
-<span class="c">→ ask</span>  {"text": "revenue by product, largest first, top 5"}
-<span class="r">← Did ask.</span>
-  Now: chart0: 0.6 ms
-  Now: inspector: Sum of revenue by product, largest first, top 5, as bars</pre>
-        <div class="src note">omxplorer on the agent host, over stdio</div>
-      </section>
-      <div class="points">
-        <div class="rv"><h3>No per-app work.</h3><p>Every omxapp app is an MCP server from its first line.</p></div>
-        <div class="rv"><h3>Safe by construction.</h3><p>An agent can't do anything a person couldn't. A disabled button isn't a tool; a dialog's buttons exist only while it's open.</p></div>
-        <div class="rv"><h3>It hears what changed.</h3><p>Every call answers in words: the new texts, what opened or closed, which tools appeared.</p></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 7 · Where it's going -->
-<section id="next" class="center">
-  <div class="wrap">
-    <div class="eyebrow rv">Where it's going</div>
-    <h2 class="rv">GPU-native <span class="two">generative interfaces.</span></h2>
-    <p class="body rv">Today an AI app is two programs: an interface on one side, a model behind an HTTP API on the other, and JSON in between. Mojo is the language of both: the GPU code that runs models, and the GPU code that draws and computes this app. So they can be one program, where the model reads the app's data where it already sits and the interface answers in the same frame.</p>
-    <div class="flow">
-      <section class="card today rv"><div class="card-h"><h3>An AI app today</h3></div><div class="card-b"><ol>
-        <li>Interface in JavaScript or Swift</li><li class="hop">→ HTTP request, JSON</li><li>Model server in Python</li><li class="hop">→ HTTP response, JSON</li><li class="sum">Three languages, two processes, a network hop per answer</li></ol></div><div class="src note">a typical AI app today</div></section>
-      <section class="card going rv"><div class="card-h"><h3>Where omxapp is going</h3><span class="sp"></span><span class="badge warn"><i></i>next</span></div><div class="card-b"><ol>
-        <li>Your app, in Mojo</li><li class="hop">→ the model: same process, same GPU</li><li>The data engine: same GPU</li><li class="hop">→ the interface, drawn on the GPU</li><li class="sum">One language, one program, no API in between</li></ol></div><div class="src note">not in the alpha</div></section>
-    </div>
-    <p class="srcline rv">Not in the alpha. Today the interface, the data and the drawing share one language and one GPU; the model is the next piece.</p>
-  </div>
-</section>
-
-<!-- 8 · Get it -->
+<!-- 6 · Get it -->
 <section id="get" class="center">
   <div class="wrap">
     <div class="eyebrow rv">Get it</div>
     <h2 class="rv">Available today.</h2>
     <p class="body rv">omxapp is a public alpha, free and open source under MIT. Linux with an NVIDIA GPU is the best place to start.</p>
-    <section class="card install rv">
+    <div class="card install rv">
 <pre id="cmds">git clone https://github.com/abhisheksreesaila/mxapp
 cd mxapp &amp;&amp; pixi install
 scripts/omxplorer.sh</pre>
       <div class="src">three commands · Linux · NVIDIA GPU<button class="cp" data-copy="#cmds">copy</button></div>
-    </section>
+    </div>
     <div class="ctas rv"><a class="cta" href="https://github.com/abhisheksreesaila/mxapp">Get it on GitHub</a><a class="more" href="https://github.com/abhisheksreesaila/mxapp#readme">Read the docs</a></div>
   </div>
 </section>
