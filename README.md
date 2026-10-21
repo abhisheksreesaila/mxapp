@@ -5,15 +5,15 @@
 <h1 align="center">omxapp</h1>
 
 <p align="center">
-  <b>One language. Every screen. The GPU underneath.<br>And an agent can use every app you build, from the first line.</b>
+  <b>One Mojo file. Every screen. The GPU underneath. Agents built in.</b>
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/licence-MIT-2ea44f"></a>
-  <img alt="Mojo 1.1" src="https://img.shields.io/badge/Mojo-1.1-ff5f1f">
-  <img alt="Linux · Web · Android · Mac · iPhone · Agent" src="https://img.shields.io/badge/hosts-Linux%20%C2%B7%20Web%20%C2%B7%20Android%20%C2%B7%20Mac%20%C2%B7%20iPhone%20%C2%B7%20Agent-4f46e5">
-  <img alt="Public alpha" src="https://img.shields.io/badge/status-public%20alpha-c8243f">
-  <a href="https://abhisheksreesaila.github.io/mxapp/"><img alt="Website" src="https://img.shields.io/badge/website-omxapp-0e7c86"></a>
+  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/licence-MIT-1d1d21?labelColor=0b0b0d"></a>
+  <img alt="Mojo 1.1" src="https://img.shields.io/badge/Mojo-1.1-1d1d21?labelColor=0b0b0d">
+  <img alt="Linux · Web · Android · Mac · iPhone · Agent" src="https://img.shields.io/badge/hosts-Linux%20%C2%B7%20Web%20%C2%B7%20Android%20%C2%B7%20Mac%20%C2%B7%20iPhone%20%C2%B7%20Agent-1d1d21?labelColor=0b0b0d">
+  <img alt="Public alpha" src="https://img.shields.io/badge/status-public%20alpha-1d1d21?labelColor=0b0b0d">
+  <a href="https://abhisheksreesaila.github.io/mxapp/"><img alt="Website" src="https://img.shields.io/badge/website-omxapp-1d1d21?labelColor=0b0b0d"></a>
 </p>
 
 <p align="center">
@@ -42,9 +42,9 @@ It opens as a real app on Linux, in the browser, on Android, on a Mac and on an 
 
 That's **omxapp**. Its showcase, **omxplorer**, is a data app in the spirit of Numbers and Power BI, and the app itself is about 2,100 lines of Mojo, built from the framework's components.
 
-## ✨ What it feels like
+## What it feels like
 
-### 🗣️ The sentence is the interface
+### The sentence is the interface
 
 In omxplorer a chart's title isn't a label. It *is* the chart:
 
@@ -57,15 +57,15 @@ Every coloured word is a setting: tap it and pick another. Or type into the ask 
   <br><sub>1,000,000 rows. The chart answered "revenue by product, largest first, top 5" in 0.7 ms on an RTX 3090. The inspector on the right shows the same sentence as four pages: Data, Order, Rows, Style.</sub>
 </p>
 
-### 🔍 It shows its work
+### It shows its work
 
 Every answer says how long it took and where it ran ("0.7 ms on NVIDIA GeForce RTX 3090"). A tile says what it's made of ("p50 exact", "of 1,000,000 values"). And when you ask for something it can't do, it tells you what it skipped instead of quietly guessing. For example, "under 2.5" on a whole-number column, or a second number condition, is left out and named.
 
-### 🌙 It's quiet
+### It's quiet
 
 The toolbar only inserts things; the inspector sets them up, and shows only the settings that apply. One accent colour per mode (green for the sheet, red for the report). Motion is short and springy: hover and press in 150 ms or less, tiles in 320 ms, and nothing overshoots.
 
-## 🤖 Agent native, from the first line
+## Agent native, from the first line
 
 Most apps meet AI agents through the screen: screenshots, pixel coordinates, an accessibility tree written for screen readers, or an API someone added later. omxapp takes a different route. **The agent is a host**, the same way GTK and the browser are.
 
@@ -105,46 +105,46 @@ The charts speak an agent's language too. They are [Flint](https://microsoft.git
 > [!NOTE]
 > **What the agent can't do yet:** read a chart's figures as text (it reads the sentence and can `render` the picture), read a drawn grid's cells in apps other than omxplorer, drag objects on a page, or generate new UI. Generated UI over AG-UI is next, built on the same operations log.
 
-## ⚙️ Under the hood
+## Under the hood
 
 The choices, and why each was made.
 
 ```mermaid
 flowchart TB
-    A["📄 <b>app.mojo</b><br/>view() · update()"]:::app
-    A --> L["🐧 GTK 4"]:::host
-    A --> W["🌐 Web · FastHTML"]:::host
-    A --> D["🤖 Android views"]:::host
-    A --> M["🍎 AppKit"]:::host
-    A --> I["📱 UIKit"]:::host
-    A --> G["🧠 Agent · MCP tools"]:::agent
-    A -. "same language" .-> K["⚡ GPU · MX frame"]:::gpu
-    classDef app fill:#0e7c86,stroke:#0b6870,color:#ffffff
+    A["<b>app.mojo</b><br/>view() · update()"]:::app
+    A --> L["GTK 4"]:::host
+    A --> W["Web · FastHTML"]:::host
+    A --> D["Android views"]:::host
+    A --> M["AppKit"]:::host
+    A --> I["UIKit"]:::host
+    A --> G["Agent · MCP tools"]:::agent
+    A -. "same language" .-> K["GPU · MX frame"]:::gpu
+    classDef app fill:#0b0b0d,stroke:#0b0b0d,color:#ffffff
     classDef host fill:#f6f8fb,stroke:#c9ced6,color:#1b1f24
-    classDef agent fill:#f6f8fb,stroke:#0e7c86,color:#0e7c86
+    classDef agent fill:#f6f8fb,stroke:#0b0b0d,color:#0b0b0d
     classDef gpu fill:#f6f8fb,stroke:#c9ced6,color:#1b1f24
 ```
 
 | Layer | Choice | Why |
 |---|---|---|
-| 🔥 **Language** | **Mojo** for the app, the UI framework and the GPU code | Reads like Python, compiles to native code, and runs the same functions on the GPU. One language from button to kernel. |
-| 🔁 **App model** | `view()` describes the screen from state; `update(event)` changes it | The model of Elm, SwiftUI and React. Hosts patch only what changed: after a sheet opens, an edit rebuilds **at most 15 widgets**. |
-| 🧩 **Native controls** | GTK 4 · HTML · Android views · AppKit · UIKit | The platform's own look, keyboard, text input and screen reader. Mojo calls C and Objective-C directly, with no binding generator. |
-| 🎨 **Drawn views** | A **Scene**: a display list in keyed layers, replayed as GPU render nodes (GTK today) | A 1M-row grid at 2180×1074 px scrolls at **0.8 ms p95 a frame**, against 14.2 ms for painted pixels: 18–75× cheaper, 0 texture uploads. |
-| 🗄️ **Data engine** | **MX frame**, a Mojo dataframe engine on the GPU | Sum, median and p90 per group, number conditions, calendar groups. **100M rows** (a 4 GB table) stream from disk and **open in 0.2 s**. |
-| 🌐 **Web** | **FastHTML** server; HTMX patches the page | One app state per tab, shared GPU data per process, no app JavaScript. |
-| 🤖 **Agent** | A hand-written **MCP** server over the same module the web serves | The view tree becomes tools; see above. |
-| 📊 **Charts** | **Flint** specs, drawn natively | One chart language for people, agents and every host. |
-| 🖌️ **Looks** | Themes as plugins (`themes/`): Liquid, Ledger, Graphite, Blueprint, Fluent, Omarchy, Paper | The framework names no theme (a check proves it). With no theme, an app looks like its platform. |
-| ✅ **Proof** | `scripts/check`: every goal, re-run on GTK, in Chromium and on the Android emulator | Results compared with pyarrow, pixels diffed, real input used. A goal isn't done until the reviewer passes it. |
+| **Language** | **Mojo** for the app, the UI framework and the GPU code | Reads like Python, compiles to native code, and runs the same functions on the GPU. One language from button to kernel. |
+| **App model** | `view()` describes the screen from state; `update(event)` changes it | The model of Elm, SwiftUI and React. Hosts patch only what changed: after a sheet opens, an edit rebuilds **at most 15 widgets**. |
+| **Native controls** | GTK 4 · HTML · Android views · AppKit · UIKit | The platform's own look, keyboard, text input and screen reader. Mojo calls C and Objective-C directly, with no binding generator. |
+| **Drawn views** | A **Scene**: a display list in keyed layers, replayed as GPU render nodes (GTK today) | A 1M-row grid at 2180×1074 px scrolls at **0.8 ms p95 a frame**, against 14.2 ms for painted pixels: 18–75× cheaper, 0 texture uploads. |
+| **Data engine** | **MX frame**, a Mojo dataframe engine on the GPU | Sum, median and p90 per group, number conditions, calendar groups. **100M rows** (a 4 GB table) stream from disk and **open in 0.2 s**. |
+| **Web** | **FastHTML** server; HTMX patches the page | One app state per tab, shared GPU data per process, no app JavaScript. |
+| **Agent** | A hand-written **MCP** server over the same module the web serves | The view tree becomes tools; see above. |
+| **Charts** | **Flint** specs, drawn natively | One chart language for people, agents and every host. |
+| **Looks** | Themes as plugins (`themes/`): Liquid, Ledger, Graphite, Blueprint, Fluent, Omarchy, Paper | The framework names no theme (a check proves it). With no theme, an app looks like its platform. |
+| **Proof** | `scripts/check`: every goal, re-run on GTK, in Chromium and on the Android emulator | Results compared with pyarrow, pixels diffed, real input used. A goal isn't done until the reviewer passes it. |
 
-### ⚡ Measured
+### Measured
 
 <p>
-  <img alt="1M-row chart 0.6 ms" src="https://img.shields.io/badge/1M--row%20chart-0.6%20ms-0e7c86?style=for-the-badge">
-  <img alt="grid scroll 0.8 ms a frame" src="https://img.shields.io/badge/grid%20scroll-0.8%20ms%20a%20frame-0e7c86?style=for-the-badge">
-  <img alt="20M points 1.5 ms" src="https://img.shields.io/badge/20M%20points-1.5%20ms-0e7c86?style=for-the-badge">
-  <img alt="100M rows open in 0.2 s" src="https://img.shields.io/badge/100M%20rows-open%20in%200.2%20s-0e7c86?style=for-the-badge">
+  <img alt="1M-row chart 0.6 ms" src="https://img.shields.io/badge/1M--row%20chart-0.6%20ms-1d1d21?style=for-the-badge&labelColor=0b0b0d">
+  <img alt="grid scroll 0.8 ms a frame" src="https://img.shields.io/badge/grid%20scroll-0.8%20ms%20a%20frame-1d1d21?style=for-the-badge&labelColor=0b0b0d">
+  <img alt="20M points 1.5 ms" src="https://img.shields.io/badge/20M%20points-1.5%20ms-1d1d21?style=for-the-badge&labelColor=0b0b0d">
+  <img alt="100M rows open in 0.2 s" src="https://img.shields.io/badge/100M%20rows-open%20in%200.2%20s-1d1d21?style=for-the-badge&labelColor=0b0b0d">
 </p>
 
 All on one Linux machine with an RTX 3090, and all from the checks or their benchmarks.
@@ -162,24 +162,24 @@ All on one Linux machine with an RTX 3090, and all from the checks or their benc
 > [!NOTE]
 > **The honest edge:** at 100M rows in memory a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the UI thread is next.
 
-## 📍 Where it stands
+## Where it stands
 
-`✅` means a script runs it on that platform. `🔨` means it builds but no check runs it there yet. The full matrix is generated from the code: [docs/components.md](docs/components.md).
+**Runs** means a script runs it on that platform. **Builds** means it builds but no check runs it there yet. The full matrix is generated from the code: [docs/components.md](docs/components.md).
 
-| Host | ✅ | 🔨 | Notes |
+| Host | Runs | Builds | Notes |
 |---|---|---|---|
-| 🐧 **Linux** (GTK 4) | 78 | 1 | Every component, gesture and theme; omxplorer's home |
-| 🌐 **Web** (FastHTML) | 79 | 0 | The same results as Linux, checked in Chromium |
-| 🤖 **Agent** (MCP) | 29 | 17 | Every app, no per-app work |
-| 🤖 **Android** (views over JNI) | 19 | 16 | runs the classic controls on the emulator; the newer ones are still to come |
-| 🍎 **Mac** (AppKit) | 0 | 60 | Builds and signs; not proven by a check yet |
-| 📱 **iPhone** (UIKit) | 0 | 61 | Builds and signs; not proven by a check yet |
+| **Linux** (GTK 4) | 78 | 1 | Every component, gesture and theme; omxplorer's home |
+| **Web** (FastHTML) | 79 | 0 | The same results as Linux, checked in Chromium |
+| **Agent** (MCP) | 29 | 17 | Every app, no per-app work |
+| **Android** (views over JNI) | 19 | 16 | runs the classic controls on the emulator; the newer ones are still to come |
+| **Mac** (AppKit) | 0 | 60 | Builds and signs; not proven by a check yet |
+| **iPhone** (UIKit) | 0 | 61 | Builds and signs; not proven by a check yet |
 
 The GPU path is NVIDIA today. Apple and phone GPUs use the CPU path, which runs the same functions.
 
 **Why Mojo, honestly.** Mojo is young (1.1). It has a small ecosystem, no official iPhone, Android or WebAssembly target (omxapp cross-compiles with two hand-written runtime functions), and no Windows release yet. Flutter, React Native and the Rust kits are far ahead on maturity, tooling and production users. What none of them has is one readable language from the button to the GPU kernel, with native controls on every platform and an agent built in as a host.
 
-## 🚀 Try it
+## Try it
 
 You need x86-64 Linux with GTK 4 and libadwaita 1.7+, [pixi](https://pixi.sh), and an NVIDIA GPU for the GPU path (without one, the CPU path runs the same code).
 
@@ -212,7 +212,7 @@ struct Main(App):
 
 `scripts/build.sh hello all` turns it into a GTK app, a web app, a Mac app and an iPhone app; `scripts/build.sh hello android` makes the APK.
 
-## 📚 Read more
+## Read more
 
 - **[Reference](docs/reference.md):** the app model, every component, layout, the GPU canvas, the examples.
 - **[How it works](docs/architecture.md):** the view tree, the update loop, how each platform is reached.
@@ -223,6 +223,6 @@ struct Main(App):
 - **[The long view](ROADMAP.md):** the original vision.
 - **[Gallery](https://abhisheksreesaila.github.io/mxapp/gallery/):** the earlier showcases (analytics, the Workbook, the Data Lens).
 
-## ⚖️ License
+## License
 
 MIT: see [LICENSE](LICENSE). Vendored third-party files keep their own licences: HTMX (BSD 0-Clause) and Lucide icons (ISC), in `mojoui/hosts/static/`.
