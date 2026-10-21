@@ -28,32 +28,39 @@ The words for the launch page, the README's top half, the tweet and the forum po
 
 ---
 
-## 2 · The problem, then the turn
-
-**Headline:** Four programs, one file.
-
-**Body:** A serious app today is really four programs. The interface, written again for each platform. The data work, in Python on a server. The graphics, in a shader language. And an API, so other software, now AI agents, can use it. Every line between them is a rewrite, a network hop, or another team.
-
-omxapp is one program. Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.
-
----
-
-## 3 · Now possible
+## 2 · Now possible (moved up: the page leads with it)
 
 **Headline:** What one language makes possible.
 
 **Lede:** Each of these used to mean another language, another process, or another team.
 
-Each card: *what it took before → what you do now → the measured proof.* The sections after this expand them, in this order.
+**Lead card, full width: An interface you can talk to** (the old "sentence" section folded in)
+- Before: A chart is a picture with a label; you change it in a settings panel.
+- Now: The chart is its sentence. Every underlined word is a setting: tap it to change it, or type what you want and it recomputes.
+- > **Sum** of **revenue** by **product**, **largest first**, **top 5**, **every row**, as **bars**
+- Try: "median" · "monthly, as a line" · "only paid and over 5,000" (tests/test_chartask.mojo; the last is goal 29 M2 on GTK)
+- It says what it understood and names what it skipped instead of guessing. A keyword reader, instant and offline, not a model.
+- Proof: `1,000,000 rows · answered in 0.7 ms · RTX 3090`
+
+Then the other cards: *what it took before → what you do now → the measured proof.*
 
 | | Before | Now | Proof |
 |---|---|---|---|
 | **One source, real native controls** | A web page in a wrapper, or one codebase per platform. | One `app.mojo` becomes GTK on Linux, HTML on the web, Android views, AppKit on the Mac and UIKit on iPhone. | `4 platforms run · 2 build` |
 | **A million rows inside the interface** | A server or a notebook, then JSON back to the screen. | The group-by runs on the GPU, in the app's own process. No request, no copy. | `1M rows · a chart in 0.6 ms` |
 | **GPU drawing in your app's language** | Shaders in GLSL or Metal, an engine in C++, glue to the UI. | A plain Mojo function colours the pixels. Without a GPU, the same function runs on the CPU. | `20M points · 1.5 ms a frame` |
-| **An interface you can talk to** | A chart is a picture with a label; you change it in a settings panel. | The chart *is* its sentence. Tap a word, or ask in your own, and it recomputes. | `"monthly, as a line" · under 1 ms` |
 | **Agents with no API** | Build an API, then an MCP server, or let the agent read screenshots. | The app's buttons and fields are its tools, from the first line. | `29 components proven through the agent` |
 | **The model in the same program** *(Next)* | The interface calls a model over HTTP, and waits. | Mojo is the language Modular writes its AI kernels in. The model can live beside the interface, on the same GPU. | `not in the alpha` |
+
+---
+
+## 3 · The problem, then the turn
+
+**Headline:** Four programs, one file.
+
+**Body:** A serious app today is really four programs. The interface, written again for each platform. The data work, in Python on a server. The graphics, in a shader language. And an API, so other software, now AI agents, can use it. Every line between them is a rewrite, a network hop, or another team.
+
+omxapp is one program. Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.
 
 ---
 
@@ -87,22 +94,7 @@ Each card: *what it took before → what you do now → the measured proof.* The
 
 ---
 
-## 6 · The sentence
-
-**Headline:** Ask, and the chart rewrites itself.
-
-**Body:** A chart's title isn't a label. It's the chart. Every underlined word is a setting: tap it to change it, or type what you want.
-
-> **Sum** of **revenue** by **product**, **largest first**, **top 5**, **every row**, as **bars**
-
-**Try:** "median" · "monthly, as a line" · "only paid and over 5,000"
-
-**It shows its work:** every answer says how long it took and where it ran. When it can't do part of what you asked, it names what it skipped instead of guessing.
-`1,000,000 rows · answered in 0.7 ms · RTX 3090`
-
----
-
-## 7 · Agent native
+## 6 · Agent native
 
 **Headline:** Every app is already a set of agent tools.
 
@@ -126,7 +118,7 @@ Each card: *what it took before → what you do now → the measured proof.* The
 
 ---
 
-## 8 · Where it's going
+## 7 · Where it's going
 
 **Headline:** GPU-native generative interfaces.
 
@@ -144,7 +136,7 @@ Each card: *what it took before → what you do now → the measured proof.* The
 
 ---
 
-## 9 · Get it
+## 8 · Get it
 
 **Headline:** Available today.
 

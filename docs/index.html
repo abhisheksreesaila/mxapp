@@ -100,7 +100,11 @@ h1, h2, .lede, .body { text-wrap: balance; }
 .cards .k { display: block; font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); margin-bottom: 2px; }
 .cards .now .k { color: var(--ink); }
 .cards .src { padding: 12px 22px; font-size: 12px; }
-.cards .card.next { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.cards .card.lead { grid-column: 1 / -1; }
+.cards .card.lead .sentence { font-size: clamp(24px, 3.4vw, 44px); margin: 28px 0 0; max-width: none; }
+.cards .card.lead .asks { justify-content: flex-start; margin-top: 20px; }
+.cards .card.lead .tail { margin: 22px 0 0; }
+.cards .card.next { grid-column: span 2; background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
 .cards .card.next .now .k { color: var(--oq-warn); }
 
 /* numbers that count up once */
@@ -161,6 +165,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   section { padding: 96px 20px; }
   .lnav .pill { display: none; }
   .cards, .nums, .flow, .agent .g2 { grid-template-columns: 1fr; }
+  .cards .card.next { grid-column: auto; }
   footer .cols { grid-template-columns: 1fr 1fr; }
   .unfold { height: 120vh; }
 }
@@ -175,7 +180,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
 
 <nav class="lnav">
   <a class="brand" href="#top"><span class="mark">ox</span>omxapp</a>
-  <div class="pill"><a href="#possible">Possible</a><a href="#speed">Speed</a><a href="#sentence">Ask</a><a href="#agents">Agents</a><a href="#next">Next</a></div>
+  <div class="pill"><a href="#possible">Possible</a><a href="#speed">Speed</a><a href="#agents">Agents</a><a href="#next">Next</a></div>
   <div class="right"><a class="cta" href="#get">Get the alpha</a></div>
 </nav>
 
@@ -198,7 +203,45 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   </div>
 </section>
 
-<!-- 2 · The problem, then the turn -->
+<!-- 2 · Now possible -->
+<section id="possible" class="center">
+  <div class="wrap">
+    <div class="eyebrow rv">Now possible</div>
+    <h2 class="rv">What one language <span class="two">makes possible.</span></h2>
+    <p class="lede rv">Each of these used to mean another language, another process, or another team.</p>
+    <div class="cards">
+      <article class="card lead rv"><div class="card-h"><h3>An interface you can talk to</h3></div><div class="card-b">
+        <p class="was"><span class="k">Before</span>A chart is a picture with a label; you change it in a settings panel.</p>
+        <p class="now"><span class="k">Now</span>The chart is its sentence. Every underlined word is a setting: tap it to change it, or type what you want and it recomputes.</p>
+        <p class="sentence"><u>Sum</u> of <u>revenue</u> by <u>product</u>, <u>largest first</u>, <u>top 5</u>, <u>every row</u>, as <u>bars</u></p>
+        <div class="asks"><span>"median"</span><span>"monthly, as a line"</span><span>"only paid and over 5,000"</span></div>
+        <p class="was tail">It says what it understood and names what it skipped instead of guessing. A keyword reader, instant and offline, not a model.</p></div>
+        <div class="src note">1,000,000 rows · answered in 0.7 ms · RTX 3090</div></article>
+      <article class="card rv"><div class="card-h"><h3>One source, real native controls</h3></div><div class="card-b">
+        <p class="was"><span class="k">Before</span>A web page in a wrapper, or one codebase per platform.</p>
+        <p class="now"><span class="k">Now</span>One <span class="mono">app.mojo</span> becomes GTK on Linux, HTML on the web, Android views, AppKit on the Mac and UIKit on iPhone.</p></div>
+        <div class="src note">4 platforms run · 2 build</div></article>
+      <article class="card rv"><div class="card-h"><h3>A million rows inside the interface</h3></div><div class="card-b">
+        <p class="was"><span class="k">Before</span>A server or a notebook, then JSON back to the screen.</p>
+        <p class="now"><span class="k">Now</span>The group-by runs on the GPU, in the app's own process. No request, no copy.</p></div>
+        <div class="src note">1M rows · a chart in 0.6 ms</div></article>
+      <article class="card rv"><div class="card-h"><h3>GPU drawing in your app's language</h3></div><div class="card-b">
+        <p class="was"><span class="k">Before</span>Shaders in GLSL or Metal, an engine in C++, glue to the UI.</p>
+        <p class="now"><span class="k">Now</span>A plain Mojo function colours the pixels. Without a GPU, the same function runs on the CPU.</p></div>
+        <div class="src note">20M points · 1.5 ms a frame</div></article>
+      <article class="card rv"><div class="card-h"><h3>Agents with no API</h3></div><div class="card-b">
+        <p class="was"><span class="k">Before</span>Build an API, then an MCP server, or let the agent read screenshots.</p>
+        <p class="now"><span class="k">Now</span>The app's buttons and fields are its tools, from the first line.</p></div>
+        <div class="src note">29 components proven through the agent</div></article>
+      <article class="card next rv"><div class="card-h"><h3>The model in the same program</h3><span class="sp"></span><span class="badge warn"><i></i>next</span></div><div class="card-b">
+        <p class="was"><span class="k">Before</span>The interface calls a model over HTTP, and waits.</p>
+        <p class="now"><span class="k">Next</span>Mojo is the language Modular writes its AI kernels in. The model can live beside the interface, on the same GPU.</p></div>
+        <div class="src note">not in the alpha</div></article>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · The problem, then the turn -->
 <section class="stack" id="four">
   <div class="wrap">
     <div class="eyebrow rv">The problem</div>
@@ -213,41 +256,6 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
 
 <section class="read" data-read>
   <div class="wrap center"><p data-read-words>Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.</p></div>
-</section>
-
-<!-- 3 · Now possible -->
-<section id="possible" class="center">
-  <div class="wrap">
-    <div class="eyebrow rv">Now possible</div>
-    <h2 class="rv">What one language <span class="two">makes possible.</span></h2>
-    <p class="lede rv">Each of these used to mean another language, another process, or another team.</p>
-    <div class="cards">
-      <article class="card rv"><div class="card-h"><h3>One source, real native controls</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>A web page in a wrapper, or one codebase per platform.</p>
-        <p class="now"><span class="k">Now</span>One <span class="mono">app.mojo</span> becomes GTK on Linux, HTML on the web, Android views, AppKit on the Mac and UIKit on iPhone.</p></div>
-        <div class="src note">4 platforms run · 2 build</div></article>
-      <article class="card rv"><div class="card-h"><h3>A million rows inside the interface</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>A server or a notebook, then JSON back to the screen.</p>
-        <p class="now"><span class="k">Now</span>The group-by runs on the GPU, in the app's own process. No request, no copy.</p></div>
-        <div class="src note">1M rows · a chart in 0.6 ms</div></article>
-      <article class="card rv"><div class="card-h"><h3>GPU drawing in your app's language</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>Shaders in GLSL or Metal, an engine in C++, glue to the UI.</p>
-        <p class="now"><span class="k">Now</span>A plain Mojo function colours the pixels. Without a GPU, the same function runs on the CPU.</p></div>
-        <div class="src note">20M points · 1.5 ms a frame</div></article>
-      <article class="card rv"><div class="card-h"><h3>An interface you can talk to</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>A chart is a picture with a label; you change it in a settings panel.</p>
-        <p class="now"><span class="k">Now</span>The chart is its sentence. Tap a word, or ask in your own, and it recomputes.</p></div>
-        <div class="src note">"monthly, as a line" · under 1 ms</div></article>
-      <article class="card rv"><div class="card-h"><h3>Agents with no API</h3></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>Build an API, then an MCP server, or let the agent read screenshots.</p>
-        <p class="now"><span class="k">Now</span>The app's buttons and fields are its tools, from the first line.</p></div>
-        <div class="src note">29 components proven through the agent</div></article>
-      <article class="card next rv"><div class="card-h"><h3>The model in the same program</h3><span class="sp"></span><span class="badge warn"><i></i>next</span></div><div class="card-b">
-        <p class="was"><span class="k">Before</span>The interface calls a model over HTTP, and waits.</p>
-        <p class="now"><span class="k">Next</span>Mojo is the language Modular writes its AI kernels in. The model can live beside the interface, on the same GPU.</p></div>
-        <div class="src note">not in the alpha</div></article>
-    </div>
-  </div>
 </section>
 
 <!-- 4 · Native everywhere -->
@@ -282,20 +290,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   </div>
 </section>
 
-<!-- 6 · The sentence -->
-<section id="sentence" class="center">
-  <div class="wrap">
-    <div class="eyebrow rv">The sentence</div>
-    <h2 class="rv">Ask, and the chart <span class="two">rewrites itself.</span></h2>
-    <p class="body rv">A chart's title isn't a label. It's the chart. Every underlined word is a setting: tap it to change it, or type what you want.</p>
-    <p class="sentence rv"><u>Sum</u> of <u>revenue</u> by <u>product</u>, <u>largest first</u>, <u>top 5</u>, <u>every row</u>, as <u>bars</u></p>
-    <div class="asks rv"><span>"median"</span><span>"monthly, as a line"</span><span>"only paid and over 5,000"</span></div>
-    <p class="body rv">It shows its work: every answer says how long it took and where it ran. When it can't do part of what you asked, it names what it skipped instead of guessing.</p>
-    <p class="srcline rv">1,000,000 rows · answered in 0.7 ms · RTX 3090</p>
-  </div>
-</section>
-
-<!-- 7 · Agent native -->
+<!-- 6 · Agent native -->
 <section id="agents" class="agent">
   <div class="wrap">
     <div class="eyebrow rv">Agent native</div>
@@ -322,7 +317,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   </div>
 </section>
 
-<!-- 8 · Where it's going -->
+<!-- 7 · Where it's going -->
 <section id="next" class="center">
   <div class="wrap">
     <div class="eyebrow rv">Where it's going</div>
@@ -338,7 +333,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   </div>
 </section>
 
-<!-- 9 · Get it -->
+<!-- 8 · Get it -->
 <section id="get" class="center">
   <div class="wrap">
     <div class="eyebrow rv">Get it</div>
