@@ -134,7 +134,11 @@ def m1():
     after = rm.split("JOB: start chart1 median amount by region", 1)[-1]
     if "JOB: start chart1 median amount by region" not in rm or "JOB: landed chart0" not in after or want_chart.get("median") not in charts_in(after):
         problems.append("removing chart 0 while chart 1's median ran: the median didn't land on chart 1, now chart 0")
-    # (CSV_1M is under BIG_FILE, so it opens at once, with no job of its own landing after the drop)
+    # (CSV_1M is under BIG_FILE, so it opens at once, with no job of its own landing after the drop; a fresh worktree
+    # has no CSV_1M before goal 15's ensure_csv writes it, and then the swap opens nothing)
+    ok, msg = g15.ensure_csv()
+    if not ok:
+        return False, msg
     swap = gtk(opened + ";tap:Data;segment:1=Median;pause:100;pick:Open={f};pause:2500".format(f=g15.CSV_1M), "g30-m1-swap")
     after = swap.split("JOB: start chart0 median amount by region", 1)[-1]
     dropped = after.split("JOB: dropped every job", 1)[-1]  # (an old job may land before the new file opens: the column's 2 s)
