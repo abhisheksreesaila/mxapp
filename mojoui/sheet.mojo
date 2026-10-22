@@ -18,7 +18,7 @@ from std.collections import Dict
 from mxframe import float_text
 from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of, count_distinct, median, percentile,
                      AUTO as MX_AUTO, GPU as MX_GPU, CPU as MX_CPU, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL, DATE as MX_DATE,
-                     gpu_available, ParquetScan)
+                     gpu_available, ParquetScan, frame_snapshot)
 from mojoui.datagrid import GridSource
 from mojoui.cellstyle import CellStyle, ALL_PARTS
 from mojoui.shared import memory_bytes
@@ -180,6 +180,20 @@ struct Sheet(Movable, GridSource):
                 pass
         self.scan = scan.copy()
         self.notes = ArcPointer(Notes())
+
+    def snapshot(self) -> Sheet:
+        """A sheet of its own with this one's edits, formulas and formats as they are now, for a background job: the
+        caller goes on editing this one. It shares the table and the GPU copy (read only: a DeviceTable is a shared
+        handle) and the file, not the notes. Don't release() this sheet while a job holds its snapshot."""
+        var out = Sheet(self.scan.value(), False) if self.scan else Sheet(self.frame.base, False)
+        out.frame = frame_snapshot(self.frame)
+        out.formats = self.formats.copy()
+        out.styles = self.styles.copy()
+        out.cell_styles = self.cell_styles.copy()
+        out.device = self.device
+        out.device_name = self.device_name
+        out.mode = self.mode
+        return out^
 
     def streamed(self) -> Bool:
         return Bool(self.scan)
