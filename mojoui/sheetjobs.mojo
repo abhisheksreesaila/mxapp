@@ -70,13 +70,16 @@ def progress_share(p: JobProgress) -> Float64:
 struct ChartQueue(Movable):
     """Charts waiting for their numbers: one job runs at a time (the GPU does one query well, not three at once), the
     newest spec per chart waits behind it, and a newer spec for the chart that's running cancels it (only the newest
-    lands). The app polls it once a frame."""
+    lands). A cancelled job's thread runs on until it sees the cancel (between blocks of rows): it waits in `orphans`,
+    and nothing new starts until it has stopped, so two jobs never read the GPU at once and `forget(wait=True)` can
+    wait for every thread before the table goes. The app polls it once a frame."""
 
     var job: Optional[Job[Charted]]
     var cref: Int  # the chart the running job is for (-1: none)
     var spec: SheetObject  # what it asked (its words, for the island)
     var started: Int  # ns
     var waiting: List[Tuple[Int, SheetObject]]
+    var orphans: List[Job[Charted]]  # cancelled, their threads not yet stopped
     var failed: Int  # the chart whose job last failed (-1: none since the last poll), and why
     var failure: String
     var landed_gpu: Bool  # whether the chart poll() last handed out ran on the GPU
@@ -87,12 +90,18 @@ struct ChartQueue(Movable):
         self.spec = SheetObject.chart(0, 0, 0, 0)
         self.started = 0
         self.waiting = List[Tuple[Int, SheetObject]]()
+        self.orphans = List[Job[Charted]]()
         self.failed = -1
         self.failure = ""
         self.landed_gpu = False
 
-    def busy(self) -> Bool:
+    def running(self) -> Bool:
+        """A job runs for a chart (`cref`, `spec`)."""
         return self.cref >= 0
+
+    def busy(self) -> Bool:
+        """Anything left to do: a job running, a chart waiting, or a cancelled thread still stopping (keep polling)."""
+        return self.cref >= 0 or len(self.waiting) > 0 or len(self.orphans) > 0
 
     def ask(mut self, cref: Int, spec: SheetObject, sheet: Sheet):
         """Chart `cref`'s numbers for `spec`: started now if nothing runs, else queued (replacing what that chart had
@@ -104,7 +113,7 @@ struct ChartQueue(Movable):
         self.waiting = kept^
         if self.cref == cref:
             self.cancel_running()
-        if self.cref < 0:
+        if self.cref < 0 and len(self.orphans) == 0:
             self.start(cref, spec, sheet)
         else:
             self.waiting.append((cref, spec.copy()))
@@ -119,16 +128,33 @@ struct ChartQueue(Movable):
         """The running job cancelled; with `wait`, only once its thread has stopped (it reads the sheet's table and GPU
         copy until then: wait before giving those back)."""
         if self.job:
-            self.job.value().cancel()
+            var job = self.job.take()
+            job.cancel()
             if wait:
-                _ = self.job.value().wait()
-        self.job = None  # (dropping the handle lets its thread finish on its own and free what it owns)
+                _ = job.wait()
+            else:
+                self.orphans.append(job^)  # (a dropped handle would detach a thread that may still read the GPU copy)
+        self.job = None
         self.cref = -1
 
+    def reap(mut self, wait: Bool = False):
+        """Cancelled threads that have stopped let go (with `wait`, every one, once it stops)."""
+        var kept = List[Job[Charted]]()
+        while len(self.orphans) > 0:
+            var job = self.orphans.pop()
+            if wait:
+                _ = job.wait()
+            elif job.poll() == JOB_RUNNING:
+                kept.append(job^)
+        self.orphans = kept^
+
     def forget(mut self, wait: Bool = False):
-        """Every job and wait dropped (the document replaced: `wait` for the running one to stop first)."""
+        """Every job and wait dropped (the document replaced: `wait` until every thread, cancelled ones too, has
+        stopped)."""
         self.cancel_running(wait)
         self.waiting = List[Tuple[Int, SheetObject]]()
+        if wait:
+            self.reap(wait=True)
 
     def remove(mut self, k: Int, sheet: Sheet):
         """Object k left the page: its job is cancelled and its wait dropped; the objects after it move down one
@@ -164,7 +190,10 @@ struct ChartQueue(Movable):
         """A chart whose numbers have landed (its cref and the computed object; landed_gpu says where it ran), or None;
         the next waiting job starts. A job that failed leaves its chart in `failed` and the reason in `failure`."""
         self.failed = -1
+        if len(self.orphans) > 0:
+            self.reap()
         if self.cref < 0 or not self.job:
+            self.next(sheet)  # (a chart waiting for a cancelled thread to stop)
             return None
         var state = self.job.value().poll()
         if state == JOB_RUNNING:
@@ -185,7 +214,7 @@ struct ChartQueue(Movable):
             return None
 
     def next(mut self, sheet: Sheet):
-        if len(self.waiting) > 0 and self.cref < 0:
+        if len(self.waiting) > 0 and self.cref < 0 and len(self.orphans) == 0:
             var w = self.waiting.pop(0)
             self.start(w[0], w[1], sheet)
 

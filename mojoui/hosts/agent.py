@@ -413,15 +413,16 @@ class Host:
             if not wanting:
                 return
             now = time.perf_counter()
-            island = any(self.nodes[j]["name"] == "island" for j in wanting)
-            if now - t0 > (cap if island else 2.0):
+            if now - t0 > 2.0:  # (past 2 s only the island keeps its frames: a canvas animating for good doesn't hold every action)
+                wanting = [j for j in wanting if self.nodes[j]["name"] == "island"]
+            if not wanting or now - t0 > cap:
                 return
             us = int((now - last) * 1e6) or 16667
             last = now
             for j in wanting:
                 if j < len(self.nodes) and self.nodes[j]["kind"] == CANVAS:
                     self.mod.frame(self.handle, j, us)
-            self.reload()
+            self.reload()  # (frame()'s own answer isn't needed: whether a canvas still asks is in the tree, msg2)
             time.sleep(0.016)
 
     def read(self, name, first, count):

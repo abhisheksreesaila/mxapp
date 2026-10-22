@@ -124,10 +124,25 @@ def main() raises:
     r4.ask(0, b, s)
     r4.ask(1, c, s)
     r4.remove(0, s)
-    assert_equal(r4.cref, 0, "chart 1 (now 0) runs")
+    assert_true(r4.running() != (len(r4.orphans) > 0), "the next starts only once the cancelled thread has stopped")
+    var first = -1
     while r4.busy():
+        if r4.running() and first < 0:
+            first = r4.cref
+        assert_false(r4.running() and len(r4.orphans) > 0, "never two threads on the GPU")
         _ = r4.poll(s)
-    # forget, waiting: nothing runs afterwards (the sheet's table can be given back)
+    assert_equal(first, 0, "chart 1 (now 0) runs")
+    assert_equal(len(r4.orphans), 0, "the cancelled thread let go once stopped")
+    # a re-asked chart: the cancelled job is kept until its thread stops (not detached), and the new one waits for it
+    var r6 = ChartQueue()
+    r6.ask(0, a, s)
+    r6.ask(0, b, s)
+    assert_true(len(r6.orphans) == 1 and not r6.running(), "the first job waits in orphans; the second hasn't started")
+    assert_true(r6.busy(), "busy: polling goes on")
+    # forget, waiting: nothing runs afterwards, cancelled threads included (the sheet's table can be given back)
+    r6.forget(wait=True)
+    assert_false(r6.busy(), "forgotten")
+    assert_equal(len(r6.orphans), 0, "every thread stopped")
     var r5 = ChartQueue()
     r5.ask(0, b, s)
     r5.forget(wait=True)

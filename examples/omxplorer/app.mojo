@@ -301,6 +301,7 @@ struct Main(App):
     var held: List[Tuple[Int, SheetObject]]  # what a waiting chart showed before its change: drawn (faded) until its numbers land
     var col_job: Optional[Job[ColumnFigures]]  # the selected column's figures, coming (big tables)
     var col_started: Int
+    var col_orphans: List[Job[ColumnFigures]]  # column jobs cancelled for a newer column, their threads not yet stopped
     var opening: Optional[Job[Opened]]  # a big file being read (its path in `source` once it lands)
     var opening_path: String
     var trace: Bool  # MOJOUI_TRACE: the jobs say what they do (for scripts/check)
@@ -381,6 +382,7 @@ struct Main(App):
         self.held = List[Tuple[Int, SheetObject]]()
         self.col_job = None
         self.col_started = 0
+        self.col_orphans = List[Job[ColumnFigures]]()
         self.opening = None
         self.opening_path = ""
         self.trace = environment("MOJOUI_TRACE") != ""
@@ -494,6 +496,7 @@ struct Main(App):
         except:
             pass
         if bytes >= BIG_FILE:  # (read in a job: the window stays live, the island shows how far it is)
+            self.stop_opening()  # (a file still being read gives way to this one)
             self.opening = open_job(path)
             self.opening_path = path
             if self.trace:
@@ -753,6 +756,10 @@ struct Main(App):
             self.column_stats()
             return
         if self.big():  # (a column job: the status bar and the inspector fill in when it lands; the window stays live)
+            if self.col_job:  # (the column before it: cancelled, kept until its thread stops: it reads the GPU copy)
+                var old = self.col_job.take()
+                old.cancel()
+                self.col_orphans.append(old^)
             self.col_job = column_job(self.frame, col, self.inspector_open)
             self.col_started = now_ns()
             self.stats = List[Tuple[String, String]]()
@@ -1055,6 +1062,18 @@ struct Main(App):
             self.col_job.value().cancel()
             _ = self.col_job.value().wait()
             self.col_job = None
+        while len(self.col_orphans) > 0:
+            var old = self.col_orphans.pop()
+            _ = old.wait()
+        self.stop_opening()  # (a file still being read would land over the document opened since)
+
+    def stop_opening(mut self):
+        """A file still being read: cancelled, and forgotten once its thread has stopped."""
+        if self.opening:
+            self.opening.value().cancel()
+            _ = self.opening.value().wait()
+            self.opening = None
+            self.opening_path = ""
 
     def hold(mut self, cref: Int):
         """Chart `cref` keeps showing what it shows now (faded) until its new numbers land (the first hold wins: a second
@@ -1101,6 +1120,13 @@ struct Main(App):
                 except e:
                     self.say(Activity.error("Couldn't open " + file_name(path), String(e)))
                 self.version += 1
+        if len(self.col_orphans) > 0:
+            var kept = List[Job[ColumnFigures]]()
+            while len(self.col_orphans) > 0:
+                var job = self.col_orphans.pop()
+                if job.poll() == JOB_RUNNING:
+                    kept.append(job^)
+            self.col_orphans = kept^
         var was = self.charts.cref
         while True:
             var got = self.charts.poll(self.frame)
@@ -1130,7 +1156,7 @@ struct Main(App):
                 if not self.charts.busy():
                     self.say(Activity.done(capital(object_title(self.objects[cref], self.frame)), took))
             self.version += 1
-        if self.charts.busy():
+        if self.charts.running():
             if self.charts.cref != was:
                 self.say(Activity.running(capital(object_title(self.charts.spec, self.frame)), 0.0, "starting"))
             var secs = self.charts.seconds()
@@ -1987,7 +2013,7 @@ struct Main(App):
         var row: List[View] = [HStack(Icon("app-logo", 18), Text("omxplorer", HEADLINE), spacing=6).align(CENTER).tag("app-mark"), bar^, Spacer()]
         _ = doc
         var t = now_ns()
-        var moving = self.island.wants_frames(t) or self.charts.busy() or Bool(self.col_job) or Bool(self.opening)
+        var moving = self.island.wants_frames(t) or self.charts.busy() or Bool(self.col_job) or Bool(self.opening) or len(self.col_orphans) > 0
         var says = self.island.now.lead + (" · " + self.island.now.text if self.island.now.text != "" else String(""))
         row.append(IslandView(ISLAND_CANVAS, self.island_v, ISLAND_TAP, ISLAND_FRAME if moving else NO_MSG).tooltip(says))  # (the document, the GPU and what's happening, in one place: D-255)
         return HStack(row^, spacing=10).fill().align(CENTER).height(38).padding(2, 10).tag("menubar")
@@ -2058,7 +2084,7 @@ struct Main(App):
             parts.append(Row("Name", Text(self.sheet_name)))
             parts.append(Row("Rows", Text(grouped(self.frame.rows()))))
             parts.append(Row("Columns", Text(String(self.frame.columns()))))
-        if self.charts.busy():
+        if self.charts.running():
             parts.append(Text("Now", HEADLINE))
             parts.append(Text(object_title(self.charts.spec, self.frame) + " · " + String(Int(self.charts.share() * 100)) + "% · " + fixed(self.charts.seconds(), 1) + " s", CAPTION).tag("island-now"))
         parts.append(Text("Recent", HEADLINE))
