@@ -3654,6 +3654,13 @@ def run_step[A: App](host_addr: Int, step: String):
             presses.append(name)
         var signal = String("key-pressed")
         for p in presses:
+            # a typist's next key comes after the screen has caught up: wait out a rebuild (up to 3 s), whose idle turn waits
+            # behind every frame while the island moves; a key sent while busy is dropped by the handlers (D-288)
+            var free_by = perf_counter_ns() + 3_000_000_000
+            while (busy() or host[].has_pending) and perf_counter_ns() < free_by:
+                pump()
+            if busy() or host[].has_pending:
+                print("TEST: " + p + " pressed while the window was still rebuilding (it would be dropped)")
             var editor = -1  # an in-place editor open: it has the keyboard, as it would for a person
             for k in range(len(host[].rt.shown.nodes)):
                 if host[].rt.shown.nodes[k].kind == FIELD and host[].rt.shown.nodes[k].value >= 1 and k < len(host[].widgets) and host[].widgets[k] != 0:

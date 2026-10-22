@@ -17,6 +17,7 @@ The owner paused feature work after goal 29: "100M no one will try on day 1. I w
 
 ## 3b. Goal 31, next: tiles that snap, labels that fit, bars that switch smoothly (docs/goals/31-draft.md)
 - The owner, trying the package: pivots land over each other and the table; the inspector reads "Ave… Co… Me…".
+- A key typed while the window rebuilds is dropped (D-288): queue keys during a rebuild, replay them to the focus after it.
 - Then: the island drawn as a Scene (today a pixel canvas: it uploads a texture per frame while it moves); the Mac's jobs off the start call.
 - The rename to omxcode (D-285, branch rename-omxcode): in the repo first, then the release's title and notes and the site (the owner said yes).
 
