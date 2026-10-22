@@ -17,6 +17,8 @@ Before posting, the owner decides:
 
 **Tag:** `v0.1.0-alpha` · **Title:** omxapp 0.1 alpha: one Mojo file, native on Linux, the web and Android, the GPU underneath, agents built in
 
+**See it in action: https://abhisheksreesaila.github.io/mxapp/**
+
 omxapp is a framework for writing an app once, in Mojo, and running it natively on Linux, the web and Android, with Mac and
 iPhone building today. The same file computes on the GPU, and any AI agent can use the app as a set of MCP tools.
 
@@ -58,7 +60,7 @@ MIT licence. Every number above comes from `scripts/check` or its benchmarks on 
 I wrote one app in Mojo. It runs as a real GTK app on Linux, in the browser, and as real Android views. The same file sums
 a million rows on the GPU. And an AI agent can use it with no API.
 
-It's called omxapp. Public alpha, MIT.
+It's called omxapp. Public alpha, MIT. abhisheksreesaila.github.io/mxapp
 [clip-sentence-gtk.mp4]
 
 **2/**
@@ -91,7 +93,8 @@ up: background queries). Mojo is young: no official phone target, no Windows yet
 **6/**
 Built on Mojo 1.1, one small step at a time, with every claim proven by a script in the repo.
 
-github.com/abhisheksreesaila/mxapp
+See it: abhisheksreesaila.github.io/mxapp
+Code: github.com/abhisheksreesaila/mxapp
 
 ---
 
@@ -126,6 +129,6 @@ machines use the CPU path. At 100M rows a median still runs on the UI thread (~0
 git clone https://github.com/abhisheksreesaila/mxapp && cd mxapp && pixi install && scripts/omxplorer.sh
 ```
 
-Repo: https://github.com/abhisheksreesaila/mxapp. MIT. Questions, and especially "you should have done X in Mojo", are very welcome.
+See it in action: https://abhisheksreesaila.github.io/mxapp/. Repo: https://github.com/abhisheksreesaila/mxapp. MIT. Questions, and especially "you should have done X in Mojo", are very welcome.
 
 [clip-sentence-gtk.mp4]
