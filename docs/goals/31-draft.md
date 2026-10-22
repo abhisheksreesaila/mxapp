@@ -1,4 +1,4 @@
-# GOAL 30: cards that tile, tiles with defaults, bars that switch smoothly
+# GOAL 31 (draft, parked 2026-10-21 for the island): cards that tile, tiles with defaults, bars that switch smoothly
 
 **Why (owner, 2026-10-21, after the alpha):** "help snap the object when it's added, like Hyprland in Omarchy Linux. Of
 course the user can move, but symmetry and snapping are satisfying… the chart controls on first creation are on the
