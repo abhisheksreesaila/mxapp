@@ -6,6 +6,7 @@ Each milestone's proof is written before its work starts (todo() until then: it 
 """
 
 import importlib.util
+import re
 import sys
 import time
 from pathlib import Path
@@ -46,6 +47,91 @@ def m0():
                                                       "platforms list); 6 charts through a job equal the same charts in place")
 
 
+OUT = BUILD / "g30"
+
+
+def big():
+    """Goal 20's 100M-row file (order, amount, region, day, paid): the main checkout's copy, else this one's."""
+    main = ROOT.parent / "mojo-ui" / "build" / "g20" / "big.parquet"
+    return main if main.exists() else BUILD / "g20" / "big.parquet"
+
+
+def gtk(steps, name, **more):
+    """omxplorer on the private headless display, traced (MOJOUI_TRACE: the jobs say what they do, frame gaps), fresh settings."""
+    home = OUT / name
+    for d in ("docs", "config", "uploads"):
+        (home / d).mkdir(parents=True, exist_ok=True)
+    for f in (home / "config").glob("*"):
+        f.unlink()
+    env = dict(g20.g19.env(), OMX_DOCUMENTS=str(home / "docs"), OMX_CONFIG=str(home / "config"), MOJOUI_TRACE="1",
+               MOJOUI_TEST=steps, MOJOUI_SHOT=str(OUT / f"{name}-gtk.png"), MOJOUI_WINDOW="1742x876", **more)
+    r = run([str(BUILD / "omxplorer" / "linux" / "omxplorer")], env=env, timeout=900)
+    out = r.stdout + r.stderr
+    (OUT / f"{name}.txt").write_text(out)
+    if r.returncode != 0 or "CRITICAL" in out or "TEST: " in out:
+        raise RuntimeError(f"GTK run {name} failed (exit {r.returncode}): {out[-600:]}")
+    return out
+
+
+def charts_in(out):
+    """Each chart's text as it landed (CHART: chartN, then its lines up to the next line that isn't a row)."""
+    got = []
+    lines = out.splitlines()
+    for i, l in enumerate(lines):
+        if l.startswith("CHART: "):
+            rows = []
+            for m in lines[i + 1:]:
+                if " | " not in m:
+                    break
+                rows.append(m)
+            got.append("\n".join(rows))
+    return got
+
+
+def gaps(out):
+    return [float(v) for v in re.findall(r"^GAPS: \d+ frames, longest ([\d.]+) ms$", out, re.M)]
+
+
+def m1():
+    """Queries off the window at 100M rows: opening, a median, a month chart, a column's figures; a newer pick cancels."""
+    problems = []
+    if not big().exists():
+        return False, f"no 100M-row file at {big()} (goal 20's big.parquet)"
+    b = run(["scripts/mxbuild.sh", "tests/bigchart_dump.mojo", "-o", str(BUILD / "bigchart_dump")], timeout=1800)
+    if b.returncode != 0:
+        return False, "bigchart_dump: " + (b.stdout + b.stderr)[-400:]
+    want = run([str(BUILD / "bigchart_dump"), str(big())], timeout=900).stdout
+    blocks = re.findall(r"^CHART (\w+)\n(.*?)(?=^CHART |^SUM )", want, re.M | re.S)
+    want_chart = {k: "\n".join(l for l in v.strip().splitlines() if " | " in l) for k, v in blocks}  # (rows only: the tool also prints timings)
+    want_sum = re.search(r"^SUM (.*)$", want, re.M).group(1)
+    opened = "gaps:start;pick:Choose a file={f};gaps:3500;tap:Create table;pause:300;tap:Chart;pause:1500".format(f=big())
+    a = gtk(opened + ";tap:Data;gaps:start;segment:1=Median;gaps:2000;tap:Back;gaps:start;" + g29.g28.ASK + "by month;gaps:5500", "g30-m1")
+    g = gaps(a)
+    if len(g) != 3 or max(g) > 50.0:
+        problems.append(f"frame gaps while opening, the median and the month chart ran: {g} ms (want 3, each ≤ 50)")
+    landed = charts_in(a)
+    if want_chart.get("median") not in landed:
+        problems.append(f"the median chart that landed isn't the in-place one: {landed[-2:] if landed else 'none'}")
+    if want_chart.get("month") not in landed:
+        problems.append(f"the month chart that landed isn't the in-place one (got {len(landed)} charts)")
+    for job in ("open big.parquet", "chart0 median amount by region", "chart0 median amount by month", "column amount"):
+        if f"JOB: start {job}" not in a:
+            problems.append(f"no background job for {job}")
+    if not re.search(r"^LABEL: Sum " + re.escape(want_sum) + "$", a, re.M):
+        problems.append(f"the status bar's sum isn't the in-place {want_sum}")
+    c = gtk(opened + ";tap:Data;gaps:start;segment:1=Median;pause:100;segment:1=Sum;gaps:2000", "g30-m1-cancel")
+    after = c.split("JOB: start chart0 median amount by region", 1)[-1]
+    if "JOB: start chart0 median amount by region" not in c or "landed chart0" not in after:
+        problems.append("the cancel run didn't start the median and then land a chart")
+    elif re.search(r"^region \| median amount$", after, re.M):
+        problems.append("the median landed though Sum was picked while it ran (want it cancelled)")
+    if max(gaps(c) or [999]) > 50.0:
+        problems.append(f"frame gaps around the cancel: {gaps(c)} ms")
+    return not problems, "; ".join(problems[:6]) or (f"at 100M rows on GTK the window kept drawing (longest frame gaps {', '.join(f'{v:.0f}' for v in g)} ms) "
+                                                      "while the file opened, a median and a month chart ran and the column's figures came; each "
+                                                      "equals the in-place answer; Sum picked during the median cancels it")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -62,7 +148,7 @@ def m5():
     return not problems, "; ".join(problems) or "goal 29's M0–M5 (goals 3–28 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", todo("queries off the window")), ("M2", todo("the Island component")),
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", todo("the Island component")),
               ("M3", todo("omxplorer wears the island")), ("M4", todo("the 100M demo")), ("M5", m5)]
 
 

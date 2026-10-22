@@ -3377,7 +3377,7 @@ def run_step[A: App](host_addr: Int, step: String):
         var worst = 0.0
         var until = perf_counter_ns() + 2_000_000_000
         var last = before
-        while perf_counter_ns() < until:
+        while Int(perf_counter_ns()) < until:
             _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
             if host[].key_draws != last:
                 last = host[].key_draws
@@ -3445,7 +3445,7 @@ def run_step[A: App](host_addr: Int, step: String):
               + " layers built " + String(host[].nodes_built) + " reused " + String(host[].nodes_reused) + " seconds " + one_decimal(Float32(secs)))
     elif verb == "pause":  # pause:3000: keep the main loop running that long (a screen grab of the display can catch popovers)
         var until = perf_counter_ns() + to_int(rest) * 1_000_000
-        while perf_counter_ns() < until:
+        while Int(perf_counter_ns()) < until:
             _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
             sleep(0.01)
     elif verb == "open":  # open:Format, open:Format>Text colour: pops the bar's menu (or its submenu) up and leaves it open, for screenshots
@@ -3740,6 +3740,17 @@ def run_step[A: App](host_addr: Int, step: String):
             var got = host[].canvases[ci].frames - start - 1
             var fps = Float64(got) / (ms / 1000.0) if ms > 0 else 0.0
             print("FRAMES: " + String(got) + " in " + one_decimal(Float32(ms)) + " ms = " + one_decimal(Float32(fps)) + " fps, draws " + String(host[].canvases[ci].draws - draws))
+    elif verb == "gaps":  # gaps:start forgets the frames painted so far; gaps:N runs the main loop N ms, then prints the longest gap between painted frames (MOJOUI_TRACE)
+        if rest == "start":
+            host[].frame_times = List[Int]()
+            return
+        var until = Int(perf_counter_ns()) + to_int(rest) * 1_000_000
+        while Int(perf_counter_ns()) < until:
+            _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
+        var worst = 0.0  # (every gap, the long ones too: intervals() leaves out a bench's pauses, which is what this looks for)
+        for k in range(1, len(host[].frame_times)):
+            worst = max(worst, Float64(host[].frame_times[k] - host[].frame_times[k - 1]) / 1e6)
+        print("GAPS: " + String(len(host[].frame_times)) + " frames, longest " + one_decimal(Float32(worst)) + " ms")
     elif verb == "move" or verb == "resize":  # a board object dragged by its header (or its corner), as a real drag sends it
         var kv = split_at(rest, "=")
         var xy = split_at(kv[1], ",")

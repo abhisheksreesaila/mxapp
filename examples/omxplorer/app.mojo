@@ -90,7 +90,8 @@ from mojoui.chartview import ChartView
 from mojoui.view import TAP, PAN, ZOOM, PRESS, RELEASE
 from mojoui.sample import sample_table
 from mojoui.island import Island, Activity, IslandView, HIT_BODY, HIT_ACTION, IDLE as ISLAND_IDLE, RUNNING as ISLAND_RUNNING, UNDO as ISLAND_UNDO, ERROR as ISLAND_ERROR
-from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers
+from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers, Opened, open_job
+from std.os.path import getsize
 from mojoui.clock import now_ns
 from mxframe import Job, JOB_RUNNING, JOB_DONE
 
@@ -198,6 +199,7 @@ comptime ISLAND_CANVAS = 7  # the island's canvas id (the menu bar's living stat
 comptime ISLAND_TAP = 86  # the island tapped (its action, or its panel)
 comptime ISLAND_FRAME = 87  # a display frame while the island moves or work runs: poll the jobs
 comptime PANEL_CLOSE = 85  # the island's panel closed
+comptime BIG_FILE = 256 * 1024 * 1024  # from this many bytes a file opens in a background job (the island shows its progress)
 comptime BIG_ROWS = 10_000_000  # from this many rows a chart's numbers and a column's figures come from background jobs
 comptime SKINS: List[String] = ["Liquid", "Ledger", "Graphite", "Blueprint"]
 comptime MAX_OBJECTS = 40  # per sheet, and tiles per report (canvas ids 10…49, 60…99, 120…159)
@@ -212,6 +214,13 @@ comptime COMPACT_W = 1440  # narrower windows: the toolbar's tools show only the
 comptime FX_H = 42  # the formula bar and its gap (the report has none: its page is that much taller)
 comptime SYMBOLS: List[String] = ["$", "€", "£", "₹"]
 comptime NEGATIVE_STYLES: List[String] = ["−1,234", "(1,234)"]
+
+
+def capital(s: String) -> String:
+    """s with its first letter a capital ("median amount by region" → "Median amount by region")."""
+    if s.byte_length() == 0:
+        return s
+    return String(s[byte=:1]).upper() + String(s[byte=1:])
 
 
 struct Main(App):
@@ -290,6 +299,8 @@ struct Main(App):
     var charts: ChartQueue  # charts waiting for their numbers (big tables: background jobs)
     var col_job: Optional[Job[ColumnFigures]]  # the selected column's figures, coming (big tables)
     var col_started: Int
+    var opening: Optional[Job[Opened]]  # a big file being read (its path in `source` once it lands)
+    var opening_path: String
     var trace: Bool  # MOJOUI_TRACE: the jobs say what they do (for scripts/check)
 
     def __init__(out self):
@@ -367,6 +378,8 @@ struct Main(App):
         self.charts = ChartQueue()
         self.col_job = None
         self.col_started = 0
+        self.opening = None
+        self.opening_path = ""
         self.trace = environment("MOJOUI_TRACE") != ""
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
@@ -471,26 +484,49 @@ struct Main(App):
                 self.message = String(e)
             self.version += 1
             return
+        var bytes = 0
+        try:
+            bytes = getsize(path)
+        except:
+            pass
+        if bytes >= BIG_FILE:  # (read in a job: the window stays live, the island shows how far it is)
+            self.opening = open_job(path)
+            self.opening_path = path
+            if self.trace:
+                print("JOB: start open " + file_name(path))
+            self.say(Activity.running("Opening " + file_name(path), 0.0, grouped(bytes // (1024 * 1024)) + " MB"))
+            self.version += 1
+            return
         try:
             var imp = read_table(path)
-            self.use_table(Sheet(imp.scan.value()) if imp.streamed() else Sheet(imp.table))
+            var sheet = Sheet(imp.scan.value()) if imp.streamed() else Sheet(imp.table)
             imp.let_go()  # (the sheet holds the table now; the import keeps only what it showed)
-            self.imp = imp^
-            self.source = path
-            self.name = file_stem(path)
-            self.preview = DataGrid()
-            self.preview.browse = True
-            self.preview.prepare(self.frame, self.font, self.pal)
-            if not self.frame.streamed():  # (a histogram reads every row: a streamed file's would take seconds a column)
-                for c in range(self.frame.stored()):
-                    self.preview.histograms.append(self.shape_of(c))
-            self.import_col = 0
-            self.screen = IMPORT
-            self.message = ""
-            remember(APP, path, self.recent)
+            var shapes = List[List[Float64]]()
+            if not sheet.streamed():  # (a histogram reads every row: a streamed file's would take seconds a column)
+                for c in range(sheet.stored()):
+                    try:
+                        shapes.append(shape_of(sheet, c))
+                    except:
+                        shapes.append(List[Float64]())
+            self.imported(path, imp^, sheet^, shapes^)
         except e:
             self.message = String(e)
         self.version += 1
+
+    def imported(mut self, path: String, var imp: CsvImport, var sheet: Sheet, var shapes: List[List[Float64]]):
+        """A file read (here or by a job): its Import step."""
+        self.use_table(sheet^)
+        self.imp = imp^
+        self.source = path
+        self.name = file_stem(path)
+        self.preview = DataGrid()
+        self.preview.browse = True
+        self.preview.prepare(self.frame, self.font, self.pal)
+        self.preview.histograms = shapes^
+        self.import_col = 0
+        self.screen = IMPORT
+        self.message = ""
+        remember(APP, path, self.recent)
 
     def shape_of(self, c: Int) -> List[Float64]:
         """A column's distribution over every row, for the header's small histogram."""
@@ -992,11 +1028,31 @@ struct Main(App):
         if self.trace:
             print("JOB: start chart" + String(cref) + " " + object_title(spec, self.frame))
         if self.charts.cref == cref:
-            self.say(Activity.running(object_title(spec, self.frame), 0.0, "starting"))
+            self.say(Activity.running(capital(object_title(spec, self.frame)), 0.0, "starting"))
 
     def poll_jobs(mut self):
         """Once a frame while work runs: landed charts move to their numbers, the column's figures arrive, the island
         follows (progress, then the time it took)."""
+        if self.opening:
+            var state = self.opening.value().poll()
+            if state == JOB_RUNNING:
+                var p = self.opening.value().progress()
+                var share = Float64(p.done) / Float64(p.total) if p.total > 0 else 0.0
+                self.island.progress(min(share, 1.0), String(Int(min(share, 1.0) * 100)) + "%")
+            else:
+                var job = self.opening.take()
+                var path = self.opening_path
+                try:
+                    var o = job.result()
+                    var ms = o.milliseconds
+                    self.imported(path, o.take_import(), o.take_sheet(), o.take_shapes())
+                    self.timed(ms)
+                    if self.trace:
+                        print("JOB: landed open " + file_name(path) + " " + fixed(ms, 1) + " ms")
+                    self.say(Activity.done(file_name(path), grouped(self.frame.rows()) + " rows ready · " + fixed(ms / 1000.0, 1) + " s"))
+                except e:
+                    self.say(Activity.error("Couldn't open " + file_name(path), String(e)))
+                self.version += 1
         var was = self.charts.cref
         while True:
             var got: Optional[Tuple[Int, SheetObject]] = None
@@ -1022,11 +1078,11 @@ struct Main(App):
                     print("JOB: landed chart" + String(cref) + " " + fixed(done.milliseconds, 1) + " ms")
                     print("CHART: chart" + String(cref) + "\n" + chart_text(self.objects[cref], self.frame).replace("\t", " | "))
                 if not self.charts.busy():
-                    self.say(Activity.done(object_title(self.objects[cref], self.frame), took))
+                    self.say(Activity.done(capital(object_title(self.objects[cref], self.frame)), took))
             self.version += 1
         if self.charts.busy():
             if self.charts.cref != was:
-                self.say(Activity.running(object_title(self.charts.spec, self.frame), 0.0, "starting"))
+                self.say(Activity.running(capital(object_title(self.charts.spec, self.frame)), 0.0, "starting"))
             var secs = self.charts.seconds()
             self.island.progress(self.charts.share(), String(Int(self.charts.share() * 100)) + "% · " + fixed(secs, 1) + " s")
         if self.col_job:
@@ -1872,7 +1928,7 @@ struct Main(App):
         var row: List[View] = [HStack(Icon("app-logo", 18), Text("omxplorer", HEADLINE), spacing=6).align(CENTER).tag("app-mark"), bar^, Spacer()]
         _ = doc
         var t = now_ns()
-        var moving = self.island.wants_frames(t) or self.charts.busy() or Bool(self.col_job)
+        var moving = self.island.wants_frames(t) or self.charts.busy() or Bool(self.col_job) or Bool(self.opening)
         var says = self.island.now.lead + (" · " + self.island.now.text if self.island.now.text != "" else String(""))
         row.append(IslandView(ISLAND_CANVAS, self.island_v, ISLAND_TAP, ISLAND_FRAME if moving else NO_MSG).tooltip(says))  # (the document, the GPU and what's happening, in one place: D-255)
         return HStack(row^, spacing=10).fill().align(CENTER).height(38).padding(2, 10).tag("menubar")

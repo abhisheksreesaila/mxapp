@@ -8,7 +8,7 @@
 # group at a time (mojoui.sheet).
 
 from mxframe import (read_csv as mx_read_csv, CsvOptions, CsvResult, Table, SharedTable, ColumnKind, read_parquet,
-                     scan_parquet, ParquetScan)
+                     scan_parquet, ParquetScan, JobCtl)
 from mojoui.sheet import INT, DECIMAL, TEXT, DATE, BOOL, FLOAT, float_cell
 from mojoui.numformat import date_text, decimal_text
 from mojoui.shared import environment, memory_bytes
@@ -67,11 +67,12 @@ def empty_import() -> CsvImport:
     return CsvImport("", 0, List[CsvColumn](), List[String](), 0, SharedTable(Table.empty()), 0, None, False)
 
 
-def read_csv(path: String) raises -> CsvImport:
-    """Reads the file into shared columns. Raises with a readable message if it isn't a table."""
+def read_csv(path: String, job: JobCtl = JobCtl()) raises -> CsvImport:
+    """Reads the file into shared columns. Raises with a readable message if it isn't a table. `job`: the background
+    job it runs for (progress in bytes, cancel; mojoui.sheetjobs)."""
     var r: CsvResult
     try:
-        r = mx_read_csv(path, CsvOptions())
+        r = mx_read_csv(path, CsvOptions(), job)
     except e:
         raise Error("couldn't read " + path + " as CSV: " + String(e))
     var info = List[CsvColumn]()
@@ -81,11 +82,11 @@ def read_csv(path: String) raises -> CsvImport:
     return CsvImport(path, r.rows, info^, skipped^, r.seconds, r.take_table().share(), r.seconds, None, False)
 
 
-def read_table(path: String) raises -> CsvImport:
+def read_table(path: String, job: JobCtl = JobCtl()) raises -> CsvImport:
     """A CSV or Parquet file (by its extension), as the Import step shows it."""
     if path.lower().endswith(".parquet"):
-        return read_parquet_file(path)
-    return read_csv(path)
+        return read_parquet_file(path, job)
+    return read_csv(path, job)
 
 
 def streams(rows: Int, columns: Int) -> Bool:
@@ -118,7 +119,7 @@ def cell_text(t: Table, c: Int, row: Int) -> String:
     return String(v)
 
 
-def read_parquet_file(path: String) raises -> CsvImport:
+def read_parquet_file(path: String, job: JobCtl = JobCtl()) raises -> CsvImport:
     """A Parquet file: read whole, or opened for streaming when it's too big (then its empty cells aren't counted)."""
     var t0 = perf_counter_ns()
     var scan: ParquetScan
@@ -147,7 +148,7 @@ def read_parquet_file(path: String) raises -> CsvImport:
             info.append(CsvColumn(scan.name(c), kind, scan.scale(c), -1, scan.word_count(c) if kind == TEXT else 0, sample^, 0))
         var seconds = Float64(perf_counter_ns() - t0) / 1e9
         return CsvImport(path, scan.rows(), info^, List[String](), seconds, SharedTable(Table.empty()), seconds, scan^, True)
-    var r = read_parquet(path)
+    var r = read_parquet(path, job)
     var t = r.take_table()
     for c in range(t.columns()):
         var sample = List[String]()

@@ -6,7 +6,9 @@
 
 from mxframe import Job, JobCtl, JobBody, JobProgress, start_job, JOB_RUNNING, JOB_DONE, JOB_FAILED, JOB_CANCELLED
 from mojoui.sheet import Sheet
-from mojoui.sheetpage import SheetObject, compute
+from mojoui.sheetpage import SheetObject, compute, shape_of
+from mojoui.csvio import CsvImport, read_table, empty_import
+from mojoui.sheet import placeholder_sheet
 from mojoui.clock import now_ns
 
 
@@ -190,3 +192,63 @@ struct ColumnJob(JobBody):
 def column_job(sheet: Sheet, col: Int, stats: Bool) -> Job[ColumnFigures]:
     """Column `col`'s total (and, with `stats`, its median and distinct count) off the caller's thread."""
     return start_job(ColumnJob(sheet.snapshot(), col, stats))
+
+
+struct Opened(Movable):
+    """What an open job made: the import (what the Import step shows), the sheet over its table (its GPU copy made),
+    and each column's distribution for the headers' histograms (none for a streamed file: they read every row)."""
+
+    var imp: CsvImport
+    var sheet: Sheet
+    var shapes: List[List[Float64]]
+    var milliseconds: Float64
+
+    def __init__(out self, var imp: CsvImport, var sheet: Sheet, var shapes: List[List[Float64]], milliseconds: Float64):
+        self.imp = imp^
+        self.sheet = sheet^
+        self.shapes = shapes^
+        self.milliseconds = milliseconds
+
+    def take_import(mut self) -> CsvImport:
+        var out = self.imp^
+        self.imp = empty_import()
+        return out^
+
+    def take_sheet(mut self) -> Sheet:
+        var out = self.sheet^
+        self.sheet = placeholder_sheet()
+        return out^
+
+    def take_shapes(mut self) -> List[List[Float64]]:
+        var out = self.shapes^
+        self.shapes = List[List[Float64]]()
+        return out^
+
+
+struct OpenJob(JobBody):
+    comptime Out = Opened
+    var path: String
+
+    def __init__(out self, var path: String):
+        self.path = path^
+
+    def run(mut self, ctl: JobCtl) raises -> Opened:
+        var t0 = now_ns()
+        var imp = read_table(self.path, ctl)
+        ctl.check()
+        var sheet = Sheet(imp.scan.value()) if imp.streamed() else Sheet(imp.table)
+        imp.let_go()  # (the sheet holds the table now; the import keeps only what it showed)
+        var shapes = List[List[Float64]]()
+        if not sheet.streamed():
+            for c in range(sheet.stored()):
+                ctl.check()
+                try:
+                    shapes.append(shape_of(sheet, c))
+                except:
+                    shapes.append(List[Float64]())
+        return Opened(imp^, sheet^, shapes^, Float64(now_ns() - t0) / 1e6)
+
+
+def open_job(path: String) -> Job[Opened]:
+    """Reads a CSV or Parquet file (as the Import step shows it) into a sheet, off the caller's thread."""
+    return start_job(OpenJob(path))
