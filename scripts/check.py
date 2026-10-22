@@ -136,7 +136,9 @@ def m1():
         problems.append("removing chart 0 while chart 1's median ran: the median didn't land on chart 1, now chart 0")
     swap = gtk(opened + ";tap:Data;segment:1=Median;pause:100;pick:Open={f};pause:2500".format(f=g15.CSV_1M), "g30-m1-swap")
     after = swap.split("JOB: start chart0 median amount by region", 1)[-1]
-    if "JOB: start chart0 median amount by region" not in swap or "JOB: landed" in after or "BUTTON: Create table" not in after:
+    dropped = after.split("JOB: dropped every job", 1)[-1]  # (an old job may land before the new file opens: the column's 2 s)
+    if ("JOB: start chart0 median amount by region" not in swap or "JOB: dropped every job" not in after or "JOB: landed" in dropped
+            or "landed chart0" in after.split("JOB: dropped every job", 1)[0] or "BUTTON: Create table" not in dropped):
         problems.append("opening another file during a median: the old document's jobs weren't dropped (or the new file didn't open)")
     return not problems, "; ".join(problems[:6]) or (f"at 100M rows on GTK the window kept drawing (longest frame gaps {', '.join(f'{v:.0f}' for v in g)} ms) "
                                                       "while the file opened, a median and a month chart ran and the column's figures came; each "

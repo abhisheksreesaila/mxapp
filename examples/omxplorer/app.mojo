@@ -1066,6 +1066,8 @@ struct Main(App):
             var old = self.col_orphans.pop()
             _ = old.wait()
         self.stop_opening()  # (a file still being read would land over the document opened since)
+        if self.trace:
+            print("JOB: dropped every job")  # (nothing of the old table lands after this line)
 
     def stop_opening(mut self):
         """A file still being read: cancelled, and forgotten once its thread has stopped."""
