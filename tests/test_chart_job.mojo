@@ -11,11 +11,11 @@ from mojoui.sheet import Sheet
 from mojoui.shared import make_dir
 from mojoui.sheetpage import (SheetObject, compute, chart_text, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT, COMBINE_MEDIAN, COMBINE_P90,
                               ORDER_LARGEST, PART_MONTH, NUM_OVER)
-from mojoui.sheetjobs import stopped, chart_job, take_numbers, progress_share, ChartQueue, column_job
+from mojoui.sheetjobs import Charted, stopped, chart_job, take_numbers, progress_share, ChartQueue, column_job
 
 
 struct Stubborn(JobBody):
-    """Runs on 300 ms after it's cancelled, then marks that its thread is done (a GPU block finishing after a cancel)."""
+    """Runs on 1 s after it's cancelled, then marks that its thread is done (a GPU block finishing after a cancel)."""
     comptime Out = Int
     var flag: Int  # an Int's address
 
@@ -24,10 +24,26 @@ struct Stubborn(JobBody):
 
     def run(mut self, ctl: JobCtl) raises -> Int:
         var t0 = now_ns()
-        while now_ns() - t0 < 300_000_000:
+        while now_ns() - t0 < 1_000_000_000:
             pass
         Pointer[Int, MutUntrackedOrigin](unsafe_from_address=self.flag)[] = 1
         return 1
+
+
+struct StubbornChart(JobBody):
+    """A chart job that runs on 1 s after its cancel (a GPU block finishing), then marks its thread done."""
+    comptime Out = Charted
+    var flag: Int
+
+    def __init__(out self, flag: Int):
+        self.flag = flag
+
+    def run(mut self, ctl: JobCtl) raises -> Charted:
+        var t0 = now_ns()
+        while now_ns() - t0 < 1_000_000_000:
+            pass
+        Pointer[Int, MutUntrackedOrigin](unsafe_from_address=self.flag)[] = 1
+        return Charted(SheetObject.chart(0, 2, 0, 0), False)
 
 
 def two(n: Int) -> String:
@@ -174,6 +190,21 @@ def main() raises:
     while not stopped(stub):
         pass
     assert_equal(mark[0], 1, "stopped only once the thread had finished its work")
+    # the queue lets an orphan go only once its thread has ended, and starts nothing on the GPU before then
+    var mark2 = List[Int](length=1, fill=0)
+    var rq = ChartQueue()
+    var orphan = start_job(StubbornChart(Int(mark2.unsafe_ptr())))
+    orphan.cancel()
+    rq.orphans.append(orphan^)
+    rq.ask(0, a, s)
+    _ = rq.poll(s)
+    assert_equal(len(rq.orphans), 1, "polled while the cancelled thread runs: still kept")
+    assert_false(rq.running(), "and the waiting chart hasn't started")
+    while len(rq.orphans) > 0:
+        _ = rq.poll(s)
+    assert_equal(mark2[0], 1, "let go only after its thread finished")
+    while rq.busy():
+        _ = rq.poll(s)
     # a column's figures through a job equal them in place
     var cj = column_job(s, 0, True)
     var fig = cj.result()
