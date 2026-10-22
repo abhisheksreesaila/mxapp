@@ -1,0 +1,578 @@
+[
+  {
+    "name": "Text",
+    "group": "Basics",
+    "blurb": "Words on screen, in one of four styles: title, headline, body or caption.",
+    "api": "Text(summary, style=CAPTION)",
+    "image": "img/components/Text.webp",
+    "image_web": "img/components/Text-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Button",
+    "group": "Basics",
+    "blurb": "Something to press; plain, prominent, subtle, destructive or with an icon.",
+    "api": "Button(\"Undo\", UNDO, SUBTLE)",
+    "image": "img/components/Button.webp",
+    "image_web": "img/components/Button-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Icon",
+    "group": "Basics",
+    "blurb": "A small picture from the shared icon set, the same on every platform.",
+    "api": "Icon(\"upload\", 28)",
+    "image": "img/components/Icon.webp",
+    "image_web": "img/components/Icon-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Image",
+    "group": "Basics",
+    "blurb": "Pixels your app made, shown as a picture.",
+    "api": "Image(swatch(self.volume), 120, 40)",
+    "image": "img/components/Image.webp",
+    "image_web": "img/components/Image-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  },
+  {
+    "name": "Divider",
+    "group": "Basics",
+    "blurb": "A thin line between groups of things.",
+    "api": "Divider().fill()",
+    "image": "img/components/Divider.webp",
+    "image_web": "img/components/Divider-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "VStack",
+    "group": "Layout",
+    "blurb": "Puts views in a column, one under the other.",
+    "api": "VStack(parts^, spacing=6).fill().grow()",
+    "image": "img/components/VStack.webp",
+    "image_web": "img/components/VStack-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "HStack",
+    "group": "Layout",
+    "blurb": "Puts views in a row, side by side.",
+    "api": "HStack(Text(\"Profile\", HEADLINE), Spacer(), spacing=8)",
+    "image": "img/components/HStack.webp",
+    "image_web": "img/components/HStack-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Spacer",
+    "group": "Layout",
+    "blurb": "Empty space that pushes the views around it apart.",
+    "api": "HStack(Button(\"Cancel\", SAVE, SUBTLE), Spacer(), Button(\"Save\", SAVE, PROMINENT))",
+    "image": "img/components/Spacer.webp",
+    "image_web": "img/components/Spacer-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "missing"
+    }
+  },
+  {
+    "name": "Card",
+    "group": "Layout",
+    "blurb": "A raised panel that groups related views.",
+    "api": "Card(VStack(recent^, spacing=8).fill(), spacing=8)",
+    "image": "img/components/Card.webp",
+    "image_web": "img/components/Card-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Grid",
+    "group": "Layout",
+    "blurb": "Lays views out in rows of a fixed number of columns.",
+    "api": "Grid(cards, 2, spacing=20)",
+    "image": "img/components/Grid.webp",
+    "image_web": "img/components/Grid-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  },
+  {
+    "name": "Scroll",
+    "group": "Layout",
+    "blurb": "A fixed-height area whose content scrolls when it's taller.",
+    "api": "Scroll(VStack(rows, spacing=8).fill(), height=260)",
+    "image": "img/components/Scroll.webp",
+    "image_web": "img/components/Scroll-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Tabs",
+    "group": "Layout",
+    "blurb": "Switches between a few sections of a screen.",
+    "api": "Tabs(sections, self.tab, on_select=TAB)",
+    "image": "img/components/Tabs.webp",
+    "image_web": "img/components/Tabs-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  },
+  {
+    "name": "NavBar",
+    "group": "Layout",
+    "blurb": "A screen's title bar, with a back button when there's somewhere to go back to.",
+    "api": "NavBar(\"Details\", on_back=BACK)",
+    "image": "img/components/NavBar.webp",
+    "image_web": "img/components/NavBar-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  },
+  {
+    "name": "TextField",
+    "group": "Input",
+    "blurb": "One line of text to type, with a placeholder.",
+    "api": "TextField(self.name, \"Your name\", on_change=NAME)",
+    "image": "img/components/TextField.webp",
+    "image_web": "img/components/TextField-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "TextArea",
+    "group": "Input",
+    "blurb": "Several lines of text to type, like notes.",
+    "api": "TextArea(self.notes, placeholder=\"Notes\", on_change=NOTES, height=140)",
+    "image": "img/components/TextArea.webp",
+    "image_web": "img/components/TextArea-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  },
+  {
+    "name": "Toggle",
+    "group": "Input",
+    "blurb": "An on/off switch with a label.",
+    "api": "Toggle(\"Notifications\", self.notify, on_toggle=NOTIFY)",
+    "image": "img/components/Toggle.webp",
+    "image_web": "img/components/Toggle-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Checkbox",
+    "group": "Input",
+    "blurb": "A box with a tick, for settings in a list.",
+    "api": "Checkbox(\"Snap to grid\", self.snap, SNAP)",
+    "image": "img/components/Checkbox.webp",
+    "image_web": "img/components/Checkbox-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Dropdown",
+    "group": "Input",
+    "blurb": "Pick one of several options from a list that opens.",
+    "api": "Dropdown([\"Small\", \"Medium\", \"Large\"], self.size, SIZE)",
+    "image": "img/components/Dropdown.webp",
+    "image_web": "img/components/Dropdown-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Segmented",
+    "group": "Input",
+    "blurb": "Pick one of a few options shown side by side.",
+    "api": "Segmented(styles, 0, CHART_STYLE)",
+    "image": "img/components/Segmented.webp",
+    "image_web": "img/components/Segmented-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Radio",
+    "group": "Input",
+    "blurb": "Pick one option from a short vertical list.",
+    "api": "Radio(sizes, self.size, on_select=SIZE)",
+    "image": "img/components/Radio.webp",
+    "image_web": "img/components/Radio-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Slider",
+    "group": "Input",
+    "blurb": "Choose a number from 0 to 100 by dragging.",
+    "api": "Slider(self.volume, on_change=VOLUME)",
+    "image": "img/components/Slider.webp",
+    "image_web": "img/components/Slider-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  },
+  {
+    "name": "DatePicker",
+    "group": "Input",
+    "blurb": "Choose a day from a calendar.",
+    "api": "DatePicker(self.date, on_change=DATE_CHANGED)",
+    "image": "img/components/DatePicker.webp",
+    "image_web": "img/components/DatePicker-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  },
+  {
+    "name": "ProgressBar",
+    "group": "Feedback",
+    "blurb": "Shows how far along something is, from 0 to 100.",
+    "api": "ProgressBar(percent).fill()",
+    "image": "img/components/ProgressBar.webp",
+    "image_web": "img/components/ProgressBar-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  },
+  {
+    "name": "Alert",
+    "group": "Feedback",
+    "blurb": "A modal question with a few answers, like confirming a delete.",
+    "api": "Alert(\"Delete everything?\", \"This can't be undone.\", buttons, on_choose=ANSWER)",
+    "image": "img/components/Alert.webp",
+    "image_web": "img/components/Alert-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "builds",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  },
+  {
+    "name": "Toast",
+    "group": "Feedback",
+    "blurb": "A short message at the bottom of the window, with one action like Undo.",
+    "api": "Toast(self.toast, \"Undo\", UNDO_SAVE, on_close=TOAST_CLOSE)",
+    "image": "img/components/Toast.webp",
+    "image_web": "img/components/Toast-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Clipboard",
+    "group": "Feedback",
+    "blurb": "Puts text on the system clipboard when its version changes; nothing on screen.",
+    "api": "Clipboard(self.clip_text, self.clip_version)",
+    "image": "img/components/Clipboard.webp",
+    "image_web": "img/components/Clipboard-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "missing",
+      "agent": "missing"
+    }
+  },
+  {
+    "name": "MenuBar",
+    "group": "Menus & overlays",
+    "blurb": "The row of menus along the top of the window (on a Mac, the system menu bar).",
+    "api": "MenuBar([Menu(\"File\", […]), Menu(\"Edit\", […])])",
+    "image": "img/components/MenuBar.webp",
+    "image_web": "img/components/MenuBar-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Menu",
+    "group": "Menus & overlays",
+    "blurb": "One menu of the bar, with its items.",
+    "api": "Menu(\"Edit\", [Item(\"Undo\", UNDO, icon=\"undo\", shortcut=\"Ctrl+Z\")])",
+    "image": "img/components/Menu.webp",
+    "image_web": "img/components/Menu-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Item",
+    "group": "Menus & overlays",
+    "blurb": "One line of a menu: icon, title, shortcut; checked, disabled, danger or a submenu.",
+    "api": "Item(\"Undo\", UNDO, icon=\"undo\", shortcut=\"Ctrl+Z\")",
+    "image": "img/components/Item.webp",
+    "image_web": "img/components/Item-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "ContextMenu",
+    "group": "Menus & overlays",
+    "blurb": "A menu opened where you right-clicked (or long-pressed).",
+    "api": "ContextMenu(\"canvas\", self.ctx_x, self.ctx_y, [Item(\"Sort A→Z\", SORT_AZ, icon=\"sort\"), …], on_close=MENU_CLOSE)",
+    "image": "img/components/ContextMenu.webp",
+    "image_web": "img/components/ContextMenu-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Popover",
+    "group": "Menus & overlays",
+    "blurb": "A small panel attached to a view, for a few extra controls.",
+    "api": "Popover(\"popover-button\", \"Formulas\", VStack(…), on_close=POP_CLOSE)",
+    "image": "img/components/Popover.webp",
+    "image_web": "img/components/Popover-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Dialog",
+    "group": "Menus & overlays",
+    "blurb": "A modal panel over a dimmed page, with its own buttons.",
+    "api": "Dialog(\"Settings\", VStack(…), on_close=DIALOG_CLOSE)",
+    "image": "img/components/Dialog.webp",
+    "image_web": "img/components/Dialog-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Canvas",
+    "group": "Data & GPU",
+    "blurb": "A surface your app draws itself (charts, grids, GPU pictures), with gestures.",
+    "api": "Canvas(1, self.version).fill().height(90)",
+    "image": "img/components/Canvas.webp",
+    "image_web": "img/components/Canvas-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Board",
+    "group": "Data & GPU",
+    "blurb": "Cards at free positions that can be dragged, resized and snapped.",
+    "api": "Board([table^, note^], 760, 320, on_move=MOVE)",
+    "image": "img/components/Board.webp",
+    "image_web": "img/components/Board-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "Overlay",
+    "group": "Data & GPU",
+    "blurb": "Floats small islands of controls over a view, pinned to an edge or corner.",
+    "api": "Overlay(board^, island^).width(760).height(320)",
+    "image": "img/components/Overlay.webp",
+    "image_web": "img/components/Overlay-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "missing",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "tested"
+    }
+  },
+  {
+    "name": "LazyList",
+    "group": "Data & GPU",
+    "blurb": "A long list that only builds the rows on screen (10,000 rows is fine).",
+    "api": "LazyList(10000, ROWS_LIST, on_tap=ROW, height=320)",
+    "image": "img/components/LazyList.webp",
+    "image_web": "img/components/LazyList-web.webp",
+    "status": {
+      "linux": "tested",
+      "web": "tested",
+      "android": "tested",
+      "mac": "builds",
+      "iphone": "builds",
+      "agent": "builds"
+    }
+  }
+]

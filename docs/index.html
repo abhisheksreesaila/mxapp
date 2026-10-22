@@ -1,244 +1,327 @@
 <!doctype html>
-<html lang="en" class="oq-root oq-night oq-family-dev">
+<html lang="en" class="oq-root oq-night oq-family-dev no-js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>omxcode · one Mojo file, every screen</title>
-<meta name="description" content="Write an app once, in Mojo. It runs natively on every screen, computes on the GPU, and any AI agent can use it. Public alpha, MIT.">
+<meta name="description" content="Write an app once, in Mojo. It runs natively on Linux, the web and Android, builds for Mac and iPhone, computes on an NVIDIA GPU, and AI agents can use it. Public alpha, MIT.">
 <meta property="og:title" content="omxcode: one Mojo file. Every screen. The GPU underneath. Agents built in.">
 <meta property="og:description" content="Native apps on Linux, the web and Android from one Mojo file, the GPU in the same language, and agent tools built in. Public alpha, MIT.">
 <meta property="og:image" content="https://abhisheksreesaila.github.io/omxcode/img/readme-report.jpg">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="img/logo.svg" type="image/svg+xml">
-<!-- omxqua v0.1.2 (docs/omxqua/VERSION): self-hosted fonts, tokens, parts and press. The landing layer below is this page's own, per omxqua's LANGUAGE.md. -->
+<!-- omxqua v0.1.2 (docs/omxqua/VERSION): fonts, tokens, parts. site.css is the landing layer the three pages share. -->
 <link rel="stylesheet" href="omxqua/src/fonts.css">
 <link rel="stylesheet" href="omxqua/src/tokens.css">
 <link rel="stylesheet" href="omxqua/src/components.css">
+<link rel="stylesheet" href="site.css">
 <style>
-/* =====================================================================
-   omxqua landing layer · Developer · Graphite · night
-   The app is quiet and dense; this page is loud, huge and moves with the scroll.
-   Colours, radii, shadows and curves are omxqua tokens; sizes are its landing layer's.
-   ===================================================================== */
-:root { --ease: var(--oq-ease-in);
-  --display: "Geist", system-ui, sans-serif; --sans: "Geist", system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
-  --hero: clamp(64px, 12vw, 168px); --h2: clamp(40px, 6.4vw, 88px); --lede: clamp(22px, 2.4vw, 30px); --read: clamp(28px, 3.6vw, 48px);
-  --bg: #000; --bg2: var(--oq-surface-1); --ink: var(--oq-ink); --ink2: var(--oq-ink-2); --line: var(--oq-line);
-  --word: var(--oq-data-1); }
-html, body { margin: 0; background: var(--bg); }
-html { scroll-padding-top: 72px; scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-body { font: 400 19px/1.55 var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
-a { color: inherit; }
-section { padding: 140px 24px; position: relative; }
-.wrap { max-width: 1120px; margin: 0 auto; }
-.center { text-align: center; }
-.eyebrow { font: 600 13px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink2); }
-h1 { font: 800 var(--hero)/.92 var(--display); letter-spacing: -.055em; margin: 18px 0 0; }
-h2 { font: 800 var(--h2)/1 var(--display); letter-spacing: -.045em; margin: 14px 0 0; }
-h3 { font: 650 22px/1.2 var(--sans); letter-spacing: -.02em; margin: 0; }
-.two { color: var(--ink2); }
-.lede { font: 500 var(--lede)/1.3 var(--sans); letter-spacing: -.015em; color: var(--ink2); margin: 22px auto 0; max-width: 780px; }
-.lede b, .lede.rise > span:not(.two) { color: var(--ink); font-weight: 600; }
-h1, h2, .lede, .body { text-wrap: balance; }
-.body { color: var(--ink2); max-width: 720px; margin: 26px 0 0; }
-.center .body { margin-left: auto; margin-right: auto; }
-.mono { font-family: var(--mono); }
-/* a source line under a number or a claim: where it came from */
-.srcline { font: 13px var(--mono); color: var(--ink2); margin-top: 22px; }
-.srcline::before { content: "↳ "; opacity: .6; }
+/* ---- hero: app.mojo pushes to every platform; a pulse rides each wire, the tile lights as it lands ---- */
+.iso .flow { fill: none; stroke: var(--word); stroke-width: 4; stroke-linecap: round; stroke-dasharray: .1 2; stroke-dashoffset: .1; filter: drop-shadow(0 0 4px var(--word)); }
+.iso .plate.send .pl.tp { animation: send .7s var(--ease); }
+.iso .tile.hit .tp { animation: hit 1.1s var(--ease); }
+@keyframes send { 40% { fill: color-mix(in srgb, var(--word) 40%, var(--oq-surface-2)); } }
+@keyframes hit { 25% { fill: color-mix(in srgb, var(--word) 45%, var(--oq-surface-3)); } }
 
-/* CTAs: one filled pill with a specific verb + a text link with › */
-.ctas { display: flex; gap: 22px; justify-content: center; align-items: center; margin-top: 36px; flex-wrap: wrap; }
-.cta { display: inline-flex; align-items: center; height: 50px; padding: 0 26px; border-radius: 999px; background: var(--oq-accent); color: var(--oq-on-accent); font: 600 17px var(--sans); text-decoration: none; box-shadow: var(--oq-shadow-1); transition: box-shadow .2s, transform .2s; }
-.cta:hover { box-shadow: var(--oq-shadow-2); transform: translateY(-1px); }
-.more { color: var(--ink); font: 500 17px var(--sans); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
-.more::after { content: " ›"; }
-.more:hover { text-decoration: underline; text-underline-offset: 4px; }
+/* ---- 1 · agents today: through the screen vs the app describing itself ---- */
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 56px; }
+.side { border-radius: 24px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.side .tag { font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); }
+.side .tag small { display: block; font: 500 15px/1.35 var(--sans); letter-spacing: -.01em; text-transform: none; color: var(--ink); margin-top: 6px; }
+.side.pain .tag { color: var(--oq-bad); } .side.fix .tag { color: var(--oq-ok); }
+.side .tally { grid-column: auto; margin: 0; }
+.mock { position: relative; border-radius: 16px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--oq-line-2); padding: 30px 14px 14px; height: 206px; overflow: hidden; }
+.mock .tb { display: flex; gap: 12px; align-items: center; padding-left: 22px; }
+.mock .tb span { position: relative; font: 500 12px var(--sans); padding: 6px 11px; border-radius: 9px; background: var(--oq-surface-3); color: var(--ink); white-space: nowrap;
+  transition: transform .43s cubic-bezier(.2,.9,.3,1.15), outline-color .3s; outline: 1.5px dashed transparent; outline-offset: 3px; }
+.mock .tb .ask { flex: 1; background: var(--oq-surface-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink2); }
+.mock .tb span.press { transform: scale(.96); }
+.mock .body { position: relative; margin-top: 32px; height: 112px; border-radius: 10px; outline: 1.5px dashed transparent; outline-offset: 3px; transition: outline-color .3s;
+  background: repeating-linear-gradient(to bottom, transparent 0 21px, var(--oq-line-2) 21px 22px), var(--oq-surface-1); }
+.mbars { position: absolute; inset: 10px 14px 6px; display: flex; align-items: flex-end; gap: 10px; }
+.mbars b { flex: 1; height: 0; border-radius: 5px 5px 2px 2px; background: var(--word); transition: height .7s cubic-bezier(.33,1,.68,1); }
+.mbars b:nth-child(2) { transition-delay: .06s } .mbars b:nth-child(3) { transition-delay: .12s } .mbars b:nth-child(4) { transition-delay: .18s } .mbars b:nth-child(5) { transition-delay: .24s }
+.mock.chart .mbars b { height: var(--h); }
+.mock [data-t]::after { content: attr(data-t); position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translate(-50%, 6px) scale(.7); opacity: 0;
+  font: 600 10.5px var(--mono); padding: 2px 6px; border-radius: 6px; background: var(--word); color: #000; white-space: nowrap; pointer-events: none;
+  transition: opacity .3s, transform .5s var(--oq-island-spring); }
+.mock .body[data-t]::after { left: 8px; bottom: auto; top: 6px; transform: translate(0, -4px) scale(.7); transform-origin: 0 0; }
+.mock.tagged [data-t] { outline-color: color-mix(in srgb, var(--word) 70%, transparent); }
+.mock.tagged [data-t]::after { opacity: 1; transform: translate(-50%, 0); }
+.mock.tagged .body[data-t]::after { transform: none; }
+.mock .tb span:nth-child(2)::after { bottom: auto; top: calc(100% + 6px); transform: translate(-50%, -6px) scale(.7); }
+.mock.tagged .tb span:nth-child(2)::after { transform: translate(-50%, 0); }
+.mock .body[data-t]::after { top: 6px; bottom: auto; left: auto; right: 8px; transform-origin: 100% 0; }
+.mock.tagged .tb span:nth-child(2)::after { transition-delay: .1s } .mock.tagged .tb span:nth-child(3)::after { transition-delay: .2s } .mock.tagged .tb span:nth-child(4)::after { transition-delay: .3s } .mock.tagged .body::after { transition-delay: .4s }
+.mock .cur { position: absolute; left: 70%; top: 78%; width: 20px; height: 20px; fill: var(--ink); stroke: var(--bg); stroke-width: 1.5; transition: left .9s cubic-bezier(.45,0,.3,1), top .9s cubic-bezier(.45,0,.3,1); z-index: 2; }
+.mock .rip { position: absolute; width: 30px; height: 30px; margin: -12px 0 0 -12px; border-radius: 50%; border: 2px solid var(--oq-bad); opacity: 0; pointer-events: none; }
+.mock .rip.go { animation: rip .6s var(--ease); }
+.mock .rip.ok { border-color: var(--oq-ok); }
+@keyframes rip { from { opacity: 1; transform: scale(.4); } to { opacity: 0; transform: scale(1.6); } }
+.mock .flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.mock .flash.go { animation: flash .5s ease-out; }
+@keyframes flash { 10% { opacity: .55; } }
+.log { height: 166px; overflow: hidden; border-radius: 12px; background: var(--oq-surface-2); padding: 10px 14px; font: 12px/1.7 var(--mono); color: var(--ink2); }
+.log div { opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .4s var(--ease); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log div.on { opacity: 1; transform: none; }
+.log .c { color: var(--ink); } .log .r { color: var(--word); } .log .bad { color: var(--oq-bad); } .log .ok { color: var(--oq-ok); }
+.how { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px 36px; margin-top: 16px; align-items: center; }
+.tools.rv > span { transition-delay: calc(var(--i) * 120ms); }
+.tools.rv.in > span { opacity: 1; transform: none; }
+.pts p { margin: 0 0 16px; font: 16px/1.5 var(--sans); color: var(--ink2); }
+.pts p b { color: var(--ink); font-weight: 600; } .pts code { font: 600 14px var(--mono); color: var(--word); }
+.head.next { margin-top: 120px; }
+@media (max-width: 860px) { .vs, .how { grid-template-columns: 1fr; } .mock .tb { padding-left: 30px; gap: 10px; } .mock .tb span { padding: 6px 8px; } .mock .tb .ask { min-width: 0; overflow: hidden; } }
 
-/* Top islands, lighter: brand left · a pill of section links centre · one filled CTA right. Solid, no blur. */
-.lnav { position: sticky; top: 0; z-index: 50; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 12px 20px; background: var(--bg); box-shadow: 0 1px 0 var(--line); }
-.brand { font: 700 17px var(--display); letter-spacing: -.02em; display: flex; align-items: center; gap: 9px; text-decoration: none; }
-.mark { width: 26px; height: 26px; border-radius: 8px; background: var(--oq-accent); color: var(--oq-on-accent); display: grid; place-items: center; font: 700 12px var(--mono); }
-.lnav .pill { position: relative; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); }
-.lnav .pill a { color: var(--ink2); text-decoration: none; font: 500 13.5px var(--sans); padding: 8px 14px; min-height: 34px; box-sizing: border-box; display: inline-flex; align-items: center; border-radius: 999px; transition: background .15s, color .15s; }
-.lnav .pill a:hover { color: var(--ink); background: rgb(var(--oq-state) / .08); }
-/* the selected section: one state-layer pill that slides between links on the island spring */
-.lnav .pill a { position: relative; z-index: 1; }
-.lnav .pill a.on { color: var(--ink); background: none; }
-.lnav .pill .ind { position: absolute; top: 4px; left: 0; height: calc(100% - 8px); border-radius: 999px; background: rgb(var(--oq-state) / .16); opacity: 0; pointer-events: none;
-  transition: transform var(--oq-spring-dur) var(--oq-island-spring), width var(--oq-spring-dur) var(--oq-island-spring), opacity .2s var(--ease); }
-.lnav .pill .ind.still { transition: opacity .2s var(--ease); }
-.lnav .right { justify-self: end; }
-.lnav .cta { height: 34px; padding: 0 16px; font-size: 13.5px; }
+/* ---- 1 · next: generative interfaces, a mock window ---- */
+.win { display: grid; grid-template-columns: 1.7fr 1fr; min-height: 470px; }
+.win > * { min-width: 0; }
+.win .app { position: relative; padding: 18px; border-right: 1px solid var(--oq-line-2); background: var(--bg); }
+.win .mbar { display: flex; align-items: center; gap: 10px; font: 600 13px var(--sans); color: var(--ink2); margin-bottom: 14px; }
+.win .mbar .m { width: 18px; height: 18px; border-radius: 6px; background: var(--oq-accent); }
+.win .mbar .sp { flex: 1; }
+.isl { height: 28px; border-radius: 999px; background: var(--oq-surface-2); box-shadow: 0 0 0 1px var(--line); display: inline-flex; align-items: center; gap: 8px; padding: 0 12px;
+  font: 500 12px var(--mono); color: var(--ink); white-space: nowrap; overflow: hidden; max-width: 330px;
+  transition: width .32s cubic-bezier(.33,1,.68,1), background .3s; }
+.isl i { width: 7px; height: 7px; border-radius: 50%; background: var(--oq-ok); flex: none; }
+.isl.busy i { background: var(--soon); animation: beat 1s infinite; }
+.isl.ai { background: color-mix(in srgb, var(--soon) 16%, var(--oq-surface-2)); }
+.empty { margin: 70px 0 0; text-align: center; font: 14px/1.6 var(--mono); color: var(--ink2); transition: opacity .4s; }
+.empty.off { opacity: 0; }
+.cards { position: absolute; left: 18px; right: 18px; top: 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.made { border-radius: 18px; background: var(--oq-surface-1); box-shadow: var(--oq-shadow-3), 0 0 0 1.5px color-mix(in srgb, var(--soon) 55%, transparent); padding: 14px 16px;
+  opacity: 0; transform: translateY(14px) scale(.94); transform-origin: 50% 0; transition: opacity .45s var(--ease), transform .55s var(--oq-island-spring); }
+.made.on { opacity: 1; transform: none; }
+.made h4 { margin: 0; font: 600 14px var(--sans); }
+.made .sub { font: 11.5px var(--mono); color: var(--ink2); margin-top: 2px; }
+.bars { display: flex; align-items: flex-end; gap: 10px; height: 110px; margin-top: 14px; }
+.bars b { flex: 1; border-radius: 6px 6px 2px 2px; background: var(--soon); height: 0; transition: height .7s cubic-bezier(.33,1,.68,1); }
+.bars b:nth-child(2) { transition-delay: .08s } .bars b:nth-child(3) { transition-delay: .16s } .bars b:nth-child(4) { transition-delay: .24s }
+.lab { display: flex; gap: 8px; font: 10.5px var(--mono); color: var(--ink2); margin-top: 6px; } .lab span { flex: 1; text-align: center; }
+.made svg { display: block; width: 100%; height: 110px; margin-top: 12px; overflow: visible; }
+.made svg path.ln { fill: none; stroke: var(--word); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.1s var(--ease); }
+.made svg .dip { fill: var(--soon); opacity: 0; transition: opacity .4s .9s; }
+.made svg .ring { fill: none; stroke: var(--soon); stroke-width: 1.5; opacity: 0; transition: opacity .4s 1s; }
+.made.drawn svg path.ln { stroke-dashoffset: 0; } .made.drawn svg .dip, .made.drawn svg .ring { opacity: 1; }
+.made .say { font: 600 14.5px/1.4 var(--sans); margin: 12px 0 0; opacity: 0; transition: opacity .5s; }
+.made .say u { text-decoration: none; color: var(--word); box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--word) 55%, transparent); }
+.made .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; opacity: 0; transition: opacity .5s; }
+.made .acts span { font: 500 12px var(--sans); padding: 7px 12px; border-radius: 999px; box-shadow: 0 0 0 1px var(--line); transition: transform .25s var(--oq-island-spring); }
+.made .acts span:first-child { background: var(--oq-accent); color: var(--oq-on-accent); box-shadow: none; }
+.made .acts span.press { transform: scale(.9); }
+.made.done .say, .made.done .acts { opacity: 1; }
+.what { display: grid; gap: 8px; margin-top: 14px; font: 12.5px var(--sans); color: var(--ink2); }
+.what b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.slider { position: relative; height: 6px; border-radius: 3px; background: var(--oq-surface-3); }
+.slider i { position: absolute; top: 50%; left: 100%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--oq-surface-1); box-shadow: var(--oq-shadow-2), 0 0 0 1.5px var(--soon);
+  transition: left 1.4s cubic-bezier(.65,0,.35,1); }
+.win .agentp { padding: 18px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.win .agentp .who { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); }
+.msg { align-self: flex-end; background: var(--oq-accent); color: var(--oq-on-accent); padding: 9px 13px; border-radius: 16px 16px 4px 16px; max-width: 90%; opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .35s var(--ease); }
+.msg.tapd { background: none; color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+.call { font: 12.5px/1.5 var(--mono); color: var(--ink2); opacity: 0; transform: translateX(-6px); transition: opacity .3s, transform .3s var(--ease); }
+.call b { color: var(--ink); font-weight: 500; }
+.call.r { color: var(--ink); font-family: var(--sans); font-size: 14px; background: var(--oq-surface-2); padding: 9px 13px; border-radius: 16px 16px 16px 4px; align-self: flex-start; max-width: 90%; }
+.msg.on, .call.on { opacity: 1; transform: none; }
+.stage .cap .badge { flex: none; }
 
-/* motion: hero words rise once on load; sections rise 28px as they enter. Nothing moves on idle. */
-.rise > span { display: inline-block; opacity: 0; transform: translateY(.35em); animation: rise .9s var(--ease) forwards; }
-@keyframes rise { to { opacity: 1; transform: none; } }
-.rv { opacity: 0; transform: translateY(28px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
-.rv.in { opacity: 1; transform: none; }
+.local { margin: 28px 0 0; max-width: 820px; font: 16px/1.55 var(--sans); color: var(--ink2); } .local b { color: var(--ink); font-weight: 600; }
+/* ---- 2 · everything in the same program: two lanes, the slow trip and the short one ---- */
+.lanes { display: grid; gap: 16px; margin-top: 56px; }
+.lane { border-radius: 24px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); padding: 22px 24px 18px; display: grid; grid-template-columns: 150px 1fr; gap: 24px; align-items: center; }
+.lane .tag { font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.lane .tag small { display: block; font: 500 15px/1.35 var(--sans); letter-spacing: -.01em; text-transform: none; color: var(--ink); margin-top: 6px; }
+.lane.pain .tag { color: var(--oq-bad); } .lane.fix .tag { color: var(--oq-ok); }
+.track { position: relative; height: 96px; }
+.node { position: absolute; top: 18px; height: 60px; border-radius: 14px; background: var(--oq-surface-2); box-shadow: 0 0 0 1px var(--line); display: grid; place-content: center; text-align: center; font: 600 14px var(--sans); }
+.node small { display: block; font: 500 11.5px var(--mono); color: var(--ink2); margin-top: 2px; }
+.pain .n1 { left: 0; width: 23%; } .pain .n2 { left: 38.5%; width: 23%; background: none; box-shadow: none; border: 1.5px dashed var(--line); color: var(--ink2); } .pain .n3 { right: 0; width: 23%; }
+.pain .wire { position: absolute; top: 47px; height: 2px; background: var(--line); } .pain .w1 { left: 23%; width: 15.5%; } .pain .w2 { left: 61.5%; width: 15.5%; }
+.pkt { position: absolute; top: 40px; width: 16px; height: 16px; border-radius: 50%; background: var(--oq-bad); box-shadow: 0 0 14px var(--oq-bad); left: 11%; opacity: 0; }
+.pkt span { position: absolute; top: -38px; left: 50%; transform: translateX(-50%); font: 500 11px var(--mono); color: var(--ink2); white-space: nowrap; }
+.wait { position: absolute; left: 0; width: 23%; bottom: -4px; text-align: center; font: 11.5px var(--mono); color: var(--oq-bad); opacity: 0; transition: opacity .3s; }
+.wait.on { opacity: 1; }
+.box { position: absolute; inset: 6px 0; border-radius: 18px; border: 1.5px solid color-mix(in srgb, var(--oq-ok) 55%, transparent); background: color-mix(in srgb, var(--oq-ok) 6%, transparent); }
+.box > em { position: absolute; top: -10px; left: 16px; padding: 0 8px; background: var(--oq-surface-1); font: 500 11.5px var(--mono); color: var(--oq-ok); font-style: normal; }
+.fix .node { top: 20px; height: 52px; width: 29%; }
+.fix .n1 { left: 2.5%; } .fix .n2 { left: 35.5%; } .fix .n3 { left: 68.5%; }
+.fix .node { transition: box-shadow .5s, background .5s; }
+.fix.lit .node { background: color-mix(in srgb, var(--oq-ok) 14%, var(--oq-surface-2)); box-shadow: 0 0 0 1.5px var(--oq-ok), 0 0 22px color-mix(in srgb, var(--oq-ok) 30%, transparent); }
+.fix .node.later { background: transparent; box-shadow: none; outline: 1.5px dashed color-mix(in srgb, var(--soon) 70%, transparent); outline-offset: -1.5px; } .fix .node.later small { color: var(--soon); }
+.fix.lit .node.later { background: color-mix(in srgb, var(--soon) 10%, transparent); box-shadow: 0 0 22px color-mix(in srgb, var(--soon) 25%, transparent); }
+.fix .done { position: absolute; right: 2.5%; bottom: -4px; font: 11.5px var(--mono); color: var(--oq-ok); opacity: 0; transition: opacity .4s; }
+.fix.lit .done { opacity: 1; }
+.tally { grid-column: 2; font: 13px var(--mono); color: var(--ink2); margin-top: -6px; }
+.tally b { color: var(--ink); font-weight: 500; }
 
-/* the product unfolds: the real app, scaling and squaring as you scroll into it */
-.unfold { height: 170vh; padding: 0; }
-.unfold .stick { position: sticky; top: 8vh; height: 84vh; display: grid; place-items: center; }
-.unfold .frame { width: min(1180px, 92vw); max-height: 74vh; aspect-ratio: 16 / 10; border-radius: 40px; overflow: hidden; box-shadow: var(--oq-shadow-4), 0 0 0 1px var(--line); transform-origin: 50% 40%; background: var(--bg2); will-change: transform; }
-.unfold img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
-.unfold .cap { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font: 13px var(--mono); color: var(--ink2); padding: 0 16px; }
+/* ---- 3 · what one language unlocks: four programs merge into one file ---- */
+.merge { position: relative; height: 150px; margin-top: 64px; }
+.piece { position: absolute; top: 0; width: 23.5%; height: 84px; border-radius: 16px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); display: grid; place-content: center; text-align: center; font: 600 16px var(--sans);
+  transition: left .9s cubic-bezier(.65,0,.35,1), width .9s cubic-bezier(.65,0,.35,1), opacity .5s, border-radius .9s; }
+.piece small { display: block; font: 500 12px var(--mono); color: var(--oq-bad); margin-top: 4px; transition: opacity .3s; }
+.piece:nth-child(1) { left: 0; } .piece:nth-child(2) { left: 25.5%; } .piece:nth-child(3) { left: 51%; } .piece:nth-child(4) { left: 76.5%; }
+.one { position: absolute; top: 0; left: 0; right: 0; height: 84px; border-radius: 22px; background: color-mix(in srgb, var(--word) 14%, var(--oq-surface-1)); box-shadow: 0 0 0 1.5px var(--word), var(--oq-shadow-3);
+  display: flex; align-items: center; justify-content: center; gap: 14px; font: 700 24px var(--mono); opacity: 0; transform: scale(.97); transition: opacity .5s .55s, transform .6s .55s var(--oq-island-spring); }
+.one small { font: 500 14px var(--sans); color: var(--ink2); }
+.merged .piece { left: 0 !important; width: 100%; opacity: 0; }
+.merged .piece small { opacity: 0; }
+.merged .one { opacity: 1; transform: none; }
+.replay { all: unset; cursor: pointer; position: absolute; right: 0; bottom: 8px; font: 12.5px var(--mono); color: var(--ink2); padding: 6px 10px; border-radius: 8px; }
+.replay:hover { color: var(--ink); background: rgb(var(--oq-state) / .06); }
+.gains { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.gain { border-radius: 20px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); padding: 20px 20px 18px; opacity: .18; transform: translateY(10px); transition: opacity .5s, transform .6s var(--ease); }
+.gain.on { opacity: 1; transform: none; }
+.gain b { display: block; font: 800 34px/1 var(--display); letter-spacing: -.04em; }
+.gain b small { font-size: .5em; color: var(--ink2); margin-left: 4px; letter-spacing: 0; }
+.gain h3 { font-size: 17px; margin-top: 12px; }
+.gain p { font: 12.5px/1.5 var(--mono); color: var(--ink2); margin: 8px 0 0; }
 
-/* four programs: stacked lines that fade, then the turn */
-.stack .line { font: 800 clamp(30px, 5vw, 68px)/1.06 var(--display); letter-spacing: -.045em; }
-.stack .line small { display: block; font: 500 clamp(17px, 1.6vw, 21px)/1.4 var(--sans); letter-spacing: -.01em; color: var(--ink2); margin: 6px 0 22px; }
-.stack .line:nth-child(n+4) { color: var(--ink2); }
-.stack .line:nth-child(n+5) { color: color-mix(in srgb, var(--ink2) 70%, var(--bg)); }
+/* ---- 4 · apps ---- */
+.apps { margin-top: 56px; }
+.appcard { display: grid; grid-template-columns: 1.5fr 1fr; align-items: center; text-decoration: none; border-radius: 28px; overflow: hidden; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); transition: box-shadow .25s, transform .25s; }
+.appcard:hover { box-shadow: 0 0 0 1px var(--line), var(--oq-shadow-3); transform: translateY(-2px); }
+.appcard img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: top left; border-right: 1px solid var(--oq-line-2); height: 100%; }
+.appcard .txt { padding: 28px 30px; }
+.appcard h3 { font: 700 30px/1.1 var(--display); letter-spacing: -.03em; display: flex; gap: 12px; align-items: center; }
+.appcard p { color: var(--ink2); margin: 10px 0 0; font-size: 17px; }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.tags span { font: 500 12px var(--mono); color: var(--ink2); padding: 5px 9px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line); }
+.appcard .go { display: inline-block; margin-top: 18px; font: 600 16px var(--sans); }
+.appcard .go::after { content: " ›"; }
 
-/* read-along: the turn lights up word by word as you scroll */
-/* hero: the introduction beside the isometric diagram, which builds itself once on load (data-o = its place in the build) */
-.hero { padding-top: 96px; padding-bottom: 110px; }
-.hero .wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 32px; align-items: center; }
-.hero h1 { font-size: clamp(64px, 8.6vw, 128px); }
-.hero .lede { margin-left: 0; max-width: 520px; }
-.hero .ctas { justify-content: flex-start; }
-.iso { display: block; width: 100%; max-height: 72vh; max-height: 72dvh; overflow: visible; }
-.iso polygon { stroke: var(--line); stroke-width: 1; stroke-linejoin: round; }
-.iso .tp { fill: var(--oq-surface-3); } .iso .fx { fill: var(--oq-surface-1); } .iso .fy { fill: var(--oq-surface-2); }
-.iso .pl.tp { fill: var(--oq-surface-2); }
-.iso .plate polygon { transition: stroke .5s var(--ease); }
-.iso .plate.on polygon { stroke: var(--word); }
-.iso .plate.on .pl.tp { fill: color-mix(in srgb, var(--word) 14%, var(--oq-surface-2)); }
-.iso text { font-family: var(--mono); fill: var(--ink2); }
-.iso .t-file { font-size: 11px; font-weight: 600; fill: var(--ink); dominant-baseline: middle; }
-.iso .t-side { font-size: 11px; letter-spacing: .1em; fill: var(--ink); dominant-baseline: middle; }
-.iso .t-tile { font-size: 12px; font-weight: 600; fill: var(--ink); font-family: var(--sans); dominant-baseline: middle; }
-.iso .t-st { font-size: 9px; dominant-baseline: middle; }
-.iso .t-st.ok { fill: var(--oq-ok); } .iso .t-st.info { fill: var(--oq-info); }
-.iso .slab, .iso .tile { opacity: 0; transform: translateY(-46px); transition: opacity .5s var(--ease), transform .7s var(--ease); }
-.iso .tile { transform: translateY(14px); }
-.iso .slab.on, .iso .tile.on { opacity: 1; transform: none; }
-.iso .wire path { fill: none; stroke: var(--word); stroke-width: 1.5; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .6s var(--ease); }
-.iso .wire.on path { stroke-dashoffset: 0; }
-.read p { font: 600 var(--read)/1.22 var(--sans); letter-spacing: -.03em; max-width: 980px; margin: 0 auto; }
-.read p span { color: color-mix(in srgb, var(--ink) 22%, var(--bg)); transition: color .25s; }
-.read p span.lit { color: var(--ink); }
+/* ---- 5 · components: every component on every platform, one square each ---- */
+.plats { display: grid; gap: 10px; margin-top: 56px; text-align: left; }
+.plat { display: grid; grid-template-columns: 150px 1fr 120px; gap: 18px; align-items: center; }
+.plat .nm { font: 600 15px var(--sans); }
+.plat .nm small { display: block; font: 500 11.5px var(--mono); color: var(--ink2); }
+.sq { display: grid; grid-template-columns: repeat(36, 1fr); gap: 4px; }
+.sq i { aspect-ratio: 1; border-radius: 3px; background: var(--oq-surface-2); transform: scale(.4); opacity: 0; transition: transform .4s var(--oq-island-spring), opacity .3s; }
+.sq i.tested { background: var(--oq-ok); } .sq i.builds { background: var(--oq-info); } .sq i.missing { background: var(--oq-surface-3); }
+.in .sq i, .sq.on i { transform: none; opacity: 1; }
+.plat .ct { font: 13px var(--mono); color: var(--ink2); text-align: right; }
+.key { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; margin-top: 26px; font: 13px var(--mono); color: var(--ink2); }
+.key span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; }
+.key .t::before { background: var(--oq-ok); } .key .b::before { background: var(--oq-info); } .key .m::before { background: var(--oq-surface-3); }
+.strip { display: flex; gap: 12px; margin-top: 48px; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.strip .row { display: flex; gap: 12px; animation: slide 60s linear infinite; }
+.strip a { flex: none; width: 180px; height: 124px; border-radius: 16px; background: var(--oq-surface-1) center / contain no-repeat; box-shadow: 0 0 0 1px var(--line); position: relative; text-decoration: none; }
+.strip a span { position: absolute; left: 10px; bottom: 8px; font: 500 11.5px var(--mono); color: var(--ink2); }
+@keyframes slide { to { transform: translateX(-50%); } }
 
-/* now possible: one before / now table; red dot = the old way, green dot = what runs today, amber = next */
-.cmp { margin-top: 64px; text-align: left; font-size: 15.5px; line-height: 1.5; overflow: hidden; }
-.cmp { padding: 0; }
-.cmp .tbl { font-size: inherit; }
-.cmp .tbl th, .cmp .tbl td { padding: 18px 20px; vertical-align: top; }
-.cmp thead th { padding-top: 16px; padding-bottom: 14px; }
-.cmp thead .badge { font-size: 11px; }
-.cmp tbody th { font: 600 16.5px/1.35 var(--sans); color: var(--ink); text-transform: none; letter-spacing: -.01em; width: 19%; border-bottom: 1px solid var(--oq-line-2); }
-.cmp .was { color: var(--ink2); width: 24%; box-shadow: inset 2px 0 0 color-mix(in srgb, var(--oq-bad) 55%, transparent); }
-.cmp .now { color: var(--ink); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--oq-ok) 70%, transparent); }
-.cmp .pf { font: 500 12.5px/1.5 var(--mono); color: var(--ink2); width: 14%; }
-.cmp .lead .sentence { font-size: clamp(20px, 2.2vw, 28px); margin: 18px 0 0; max-width: none; }
-.cmp .lead .asks { justify-content: flex-start; margin-top: 14px; gap: 8px; }
-.cmp .lead .asks span { font-size: 13px; padding: 6px 10px; }
-.cmp .lead .tail { color: var(--ink2); margin: 14px 0 0; }
-.cmp .next .now { color: var(--ink2); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--oq-warn) 70%, transparent); }
-.cmp .next .now .badge { margin-right: 6px; vertical-align: 1px; }
-.cmp .src { padding: 12px 20px; font-size: 12px; }
-
-/* numbers that count up once */
-.nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px 20px; margin-top: 70px; }
-.nums > div { border-top: 1px solid var(--line); padding-top: 22px; }
-.nums b { display: block; font: 800 clamp(44px, 6vw, 84px)/1 var(--display); letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
-.nums b small { font-size: .42em; letter-spacing: -.02em; color: var(--ink2); margin-left: 6px; }
-.nums > div > span { color: var(--ink2); font-size: 17px; }
-.edge { margin-top: 28px; padding-left: 18px; box-shadow: inset 2px 0 0 var(--oq-warn); color: var(--ink2); max-width: 760px; }
-.edge b { color: var(--ink); }
-
-/* platforms: status as a word + dot */
-
-/* the sentence: every underlined word is a setting */
-.sentence { font: 700 clamp(30px, 4.6vw, 60px)/1.25 var(--display); letter-spacing: -.035em; margin: 56px auto 0; max-width: 1000px; }
-.sentence u { text-decoration: none; color: var(--word); box-shadow: inset 0 -.08em 0 color-mix(in srgb, var(--word) 55%, transparent); }
-.asks { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 30px; }
-.asks span { font: 500 15px var(--mono); color: var(--ink2); padding: 8px 14px; border-radius: var(--oq-radius-xs); box-shadow: inset 0 0 0 1px var(--line); }
-
-/* agent: a real session, and three points */
-.agent .lede { margin-left: 0; max-width: 760px; }
-.agent .part { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 96px; }
-.agent .part h3 { font: 700 clamp(28px, 3.4vw, 44px)/1.1 var(--display); letter-spacing: -.035em; }
-.agent .part + .body { margin-top: 18px; }
-.agent .g2 { display: grid; grid-template-columns: 1.25fr 1fr; gap: 28px; margin-top: 56px; align-items: start; }
-.term { margin: 0; padding: 4px 22px 20px; font: 14.5px/1.75 var(--mono); color: var(--ink2); white-space: pre-wrap; overflow-x: auto; }
-.term .c { color: var(--ink); }
-.term .r { color: var(--ink); }
-.points { display: grid; gap: 26px; }
-.points p { margin: 6px 0 0; color: var(--ink2); font-size: 17px; }
-
-/* where it's going: today vs going */
-.flow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 56px; text-align: left; }
-.flow .card-b { padding: 6px 22px 20px; }
-.flow ol { list-style: none; margin: 0; padding: 0; font-size: 17px; }
-.flow li { padding: 12px 0; border-bottom: 1px solid var(--oq-line-2); color: var(--ink2); }
-.flow li:last-child { border-bottom: 0; }
-.flow li.hop { font: 13px var(--mono); padding: 8px 0 8px 14px; }
-.flow .sum { color: var(--ink); font-weight: 600; }
-
-/* get it */
-.install { max-width: 640px; margin: 48px auto 0; text-align: left; }
-.install pre { margin: 0; padding: 20px 22px; font: 15px/1.8 var(--mono); color: var(--ink); overflow-x: auto; }
-
-/* footer: quiet, mono, where everything came from */
-footer { padding: 72px 24px 64px; border-top: 1px solid var(--line); color: var(--ink2); font-size: 14px; }
-footer .note { max-width: 760px; font: 13px/1.7 var(--mono); margin: 0; }
-footer .cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 44px; }
-footer h4 { margin: 0 0 12px; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); }
-footer ul { list-style: none; margin: 0; padding: 0; display: grid; }
-footer li a, footer .fine a { display: inline-flex; align-items: center; min-height: 34px; }
-.install .src .cp { height: 34px; padding: 0 14px; }
-footer a { text-decoration: none; }
-footer a:hover { color: var(--ink); }
-footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--oq-line-2); display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; font: 12px var(--mono); }
+/* ---- 6 · FAQ: a chat. Tap a question; it flies into the thread and the answer types back with a picture ---- */
+.chat { margin-top: 48px; display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+.qs { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 96px; }
+.qs button { all: unset; cursor: pointer; font: 500 15.5px/1.3 var(--sans); padding: 12px 16px; border-radius: 16px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); color: var(--ink2);
+  transition: transform .25s var(--oq-island-spring), background .2s, color .2s; }
+.qs button:hover { color: var(--ink); transform: translateX(4px); }
+.qs button:active { transform: scale(.97); }
+.qs button.on { background: var(--oq-accent); color: var(--oq-on-accent); box-shadow: none; }
+.qs button.seen:not(.on) { color: var(--ink); }
+.qs button.seen:not(.on)::after { content: " ✓"; color: var(--oq-ok); }
+.qs button:focus-visible { outline: 2px solid var(--oq-accent); outline-offset: 3px; }
+.thread { min-height: 460px; border-radius: 28px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.thread .me, .thread .bot { max-width: 86%; padding: 12px 16px; font-size: 17px; line-height: 1.5; opacity: 0; transform: translateY(10px) scale(.96); transition: opacity .3s, transform .45s var(--oq-island-spring); }
+.thread .me { align-self: flex-end; background: var(--oq-accent); color: var(--oq-on-accent); border-radius: 20px 20px 6px 20px; font-weight: 600; transform-origin: 100% 100%; }
+.thread .bot { align-self: flex-start; background: var(--oq-surface-2); border-radius: 20px 20px 20px 6px; color: var(--ink); transform-origin: 0 100%; }
+.thread .bot b { font-weight: 650; } .thread .bot a { color: var(--word); }
+.thread .on { opacity: 1; transform: none; }
+.thread .typing { align-self: flex-start; display: flex; gap: 5px; padding: 14px 16px; border-radius: 20px 20px 20px 6px; background: var(--oq-surface-2); }
+.thread .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink2); animation: dot 1s infinite; }
+.thread .typing i:nth-child(2) { animation-delay: .15s } .thread .typing i:nth-child(3) { animation-delay: .3s }
+@keyframes dot { 0%, 60%, 100% { transform: none; opacity: .4 } 30% { transform: translateY(-5px); opacity: 1 } }
+.thread .viz { align-self: stretch; opacity: 0; transition: opacity .3s; } .thread .viz.on { opacity: 1; }
+.answers { display: none; }
+.no-js .answers { display: grid; gap: 28px; margin-top: 40px; } .no-js .chat { display: none; }
+/* the pictures */
+.viz { margin: 4px 0; }
+.fork { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fork .road { padding: 14px 16px; border-radius: 16px; box-shadow: 0 0 0 1px var(--line); font-size: 15px; color: var(--ink2); transform: translateY(12px); opacity: 0; transition: all .5s var(--oq-island-spring); }
+.fork .road b { display: block; color: var(--ink); font-size: 13px; font-family: var(--mono); margin-bottom: 4px; }
+.fork .road em { display: block; font: 500 12px var(--mono); font-style: normal; margin-top: 8px; color: var(--ink2); }
+.fork .road.b { box-shadow: 0 0 0 1.5px var(--word); background: color-mix(in srgb, var(--word) 10%, transparent); } .fork .road.b em { color: var(--word); }
+.viz.on .road { transform: none; opacity: 1; } .viz.on .road.b { transition-delay: .35s; transform: scale(1.03); }
+.pops { display: flex; flex-wrap: wrap; gap: 8px; }
+.pops span, .line span, .pack span, .doms span, .tools > span, .lanes2 > div { opacity: 0; transform: scale(.6); transition: opacity .3s, transform .5s var(--oq-island-spring); }
+.pops span { font: 600 15px var(--sans); padding: 10px 14px; border-radius: 999px; background: var(--oq-surface-3); }
+.viz.on span, .viz.on .lanes2 > div, .lanes2.on > div { opacity: 1; transform: none; }
+.line { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+.line span { font: 600 14px var(--mono); padding: 9px 14px; border-radius: 12px; background: var(--oq-surface-3); }
+.line span:not(:last-child)::after { content: ""; }
+.line span + span { margin-left: 26px; position: relative; }
+.line span + span::before { content: "→"; position: absolute; left: -20px; color: var(--ink2); }
+.line .mj { background: var(--word); color: #000; transform: scale(.6) rotate(-6deg); }
+.viz.on .line .mj, .line.on .mj { transform: rotate(-3deg) scale(1.08); }
+.pack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; position: relative; padding-bottom: 30px; }
+.pack span { padding: 12px 14px; border-radius: 14px; background: var(--oq-surface-3); font-size: 13.5px; color: var(--ink2); }
+.pack span b { display: block; color: var(--ink); font-size: 16px; margin-bottom: 2px; }
+.pack i { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; border-radius: 0 0 14px 14px; border: 1.5px solid var(--word); border-top: 0; font: 500 12px var(--mono); font-style: normal; color: var(--word); text-align: center; line-height: 30px; opacity: 0; transition: opacity .4s 1.1s; }
+.viz.on .pack i, .pack.on i { opacity: 1; }
+.lanes2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lanes2 > div { padding: 14px 16px; border-radius: 16px; box-shadow: 0 0 0 1px var(--line); font-size: 15px; color: var(--ink2); }
+.lanes2 b { display: block; color: var(--ink); margin-bottom: 2px; }
+.lanes2 .us { box-shadow: 0 0 0 1.5px var(--soon); } .lanes2 em { display: block; font: 500 12px var(--mono); font-style: normal; color: var(--soon); margin-top: 6px; }
+.morph { position: relative; height: 92px; border-radius: 18px; background: var(--oq-surface-3); overflow: hidden; }
+.viz.morph .w { position: absolute; inset: 0; display: grid; place-items: center; font: 800 44px var(--display); letter-spacing: -.04em; opacity: 0; transform: translateY(20px) scale(.9); transition: opacity .3s, transform .45s var(--oq-island-spring); }
+.morph .w.long { font: 500 26px var(--sans); letter-spacing: -.01em; color: var(--ink2); padding: 0 16px; text-align: center; }
+.morph .w b { color: var(--word); font-weight: 800; }
+.morph .w.long b { font-size: 1.25em; }
+.viz.morph .w.show { opacity: 1; transform: none; } .viz.morph .w.gone { opacity: 0; transform: translateY(-20px) scale(.9); }
+.morph .stamps { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; opacity: 1; transform: none; }
+.morph .stamps i { font: 700 20px var(--mono); font-style: normal; padding: 6px 12px; border-radius: 10px; border: 2px solid var(--word); color: var(--word); opacity: 0; transform: scale(2.2) rotate(-12deg); transition: opacity .2s, transform .4s cubic-bezier(.2,1.6,.4,1); }
+.morph .stamps i.show { opacity: 1; transform: rotate(-4deg); } .morph .stamps i.show:nth-child(2) { transform: rotate(3deg); }
+.wink { display: inline-block; animation: wink 1.6s var(--oq-island-spring) .4s 2; }
+@keyframes wink { 0%, 100% { transform: none; } 25% { transform: rotate(-14deg) scale(1.25); } 50% { transform: rotate(10deg) scale(1.1); } 75% { transform: rotate(-4deg); } }
+.tools { display: grid; gap: 8px; }
+.tools > span { display: grid; grid-template-columns: 130px 24px auto 1fr; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: var(--oq-surface-3); transform: translateX(-20px); }
+.tools .ui { font: 600 14px var(--sans); font-style: normal; padding: 6px 12px; border-radius: 10px; background: var(--oq-accent); color: var(--oq-on-accent); justify-self: start; }
+.tools .ui.fld { background: var(--oq-surface-1); color: var(--ink2); font-weight: 500; box-shadow: inset 0 0 0 1px var(--line); }
+.tools .ui.grid { background: var(--oq-surface-1); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.tools .ui.off { background: var(--oq-surface-2); color: var(--ink2); opacity: .6; }
+.tools b { color: var(--ink2); text-align: center; }
+.tools code { font: 600 14px var(--mono); color: var(--word); }
+.tools small { font: 12px var(--mono); color: var(--ink2); }
+.tools .no code { color: var(--ink2); text-decoration: line-through; }
+.viz.on .tools > span, .tools.on > span { transform: none; }
+@media (max-width: 860px) { .tools > span { grid-template-columns: auto 18px 1fr; } .tools small { grid-column: 1 / -1; } }
+.doms { display: grid; gap: 8px; }
+.doms span { padding: 12px 16px; border-radius: 14px; background: var(--oq-surface-3); color: var(--ink2); font-size: 14.5px; transform: translateX(-24px); }
+.doms span b { display: block; color: var(--ink); font-size: 16px; }
+.doms .d1 { box-shadow: 0 0 0 1.5px var(--word); }
+.viz.on .doms span, .doms.on span { transform: none; }
 
 @media (max-width: 860px) {
-  section { padding: 96px 20px; }
-  .lnav .pill { display: none; }
-  .nums, .flow, .agent .g2 { grid-template-columns: 1fr; }
-  .hero .wrap { grid-template-columns: 1fr; text-align: center; } .hero .lede { margin: 22px auto 0; } .hero .ctas { justify-content: center; }
-  .iso .t-tile { font-size: 21px; } .iso .t-side, .iso .t-file { font-size: 18px; } .iso .t-st { font-size: 17px; } .iso .agent .t-st { font-size: 12px; }
-  .cmp thead { display: none; }
-  .cmp .tbl, .cmp tbody, .cmp tr, .cmp tbody th, .cmp td { display: block; width: auto; }
-  .cmp tr { border-bottom: 1px solid var(--oq-line-2); padding: 6px 0 10px; }
-  .cmp .tbl tbody th { border: 0; padding: 14px 18px 6px; }
-  .cmp .tbl td { border: 0; padding: 6px 18px 6px 16px; margin-left: 18px; }
-  .cmp td::before { content: attr(data-k); display: block; font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }
-  .cmp .was::before { color: var(--oq-bad); } .cmp .now::before { color: var(--oq-ok); } .cmp .next .now::before { color: var(--oq-warn); }
-  .cmp .tbl .pf { padding-left: 2px; }
-  .cmp .pf::before { content: none; }
-  .cmp tbody th, .cmp .was, .cmp .now, .cmp .pf { width: auto; }
-  .cmp .next .now .badge { display: none; }
-  footer .cols { grid-template-columns: 1fr 1fr; }
-  .unfold { height: 120vh; }
+  .win { grid-template-columns: 1fr; } .win .app { border-right: 0; border-bottom: 1px solid var(--oq-line-2); min-height: 680px; } .cards { grid-template-columns: 1fr; }
+  .lane { grid-template-columns: 1fr; gap: 12px; } .tally { grid-column: 1; }
+  .node { font-size: 12px; } .node small { font-size: 10px; }
+  .gains, .appcard { grid-template-columns: 1fr; } .appcard img { border-right: 0; border-bottom: 1px solid var(--oq-line-2); height: auto; }
+  .chat { grid-template-columns: 1fr; } .qs { position: static; flex-direction: row; overflow-x: auto; padding-bottom: 6px; } .qs button { white-space: nowrap; }
+  .fork, .lanes2, .pack { grid-template-columns: 1fr; } .pack { padding-bottom: 32px; }
+  .merge { height: 140px; } .piece { font-size: 12px; } .piece small { font-size: 10px; }
+  .plat { grid-template-columns: 1fr; gap: 6px; } .plat .ct { text-align: left; } .sq { gap: 3px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .rise > span, .rv { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
-  .read p span { color: var(--ink); }
-  .iso .slab, .iso .tile, .iso .plate polygon { opacity: 1; transform: none; transition: none; } .iso .wire path { stroke-dashoffset: 0; transition: none; }
-}
+@media (prefers-reduced-motion: reduce) { .strip .row { animation: none; } }
 </style>
-<noscript><style>.rv { opacity: 1; transform: none; } .read p span { color: inherit; } .iso .slab, .iso .tile { opacity: 1; transform: none; } .iso .wire path { stroke-dashoffset: 0; }</style></noscript>
+<noscript><style>.rv { opacity: 1; transform: none; } .iso .slab, .iso .tile { opacity: 1; transform: none; } .iso .wire path { stroke-dashoffset: 0; }
+  .made { opacity: 1; transform: none; } .gain { opacity: 1; transform: none; } .msg, .call { opacity: 1; transform: none; }</style></noscript>
 </head>
 <body>
 
 <nav class="lnav">
   <a class="brand" href="#top"><span class="mark">ox</span>omxcode</a>
-  <div class="pill"><span class="ind" aria-hidden="true"></span><a href="#agents">Agents</a><a href="#speed">Speed</a><a href="#possible">Possible</a></div>
+  <div class="pill"><span class="ind" aria-hidden="true"></span><a href="#agents">Agents</a><a href="#model">One program</a><a href="#unlocks">Unlocks</a><a href="#apps">Apps</a><a href="#components">Components</a><a href="#faq">FAQ</a></div>
   <div class="right"><a class="cta" href="#get">Get the alpha</a></div>
 </nav>
 
 <main id="top">
 
-<!-- 1 · Hero -->
+<!-- Hero -->
 <section class="hero">
   <div class="wrap">
     <div class="intro">
     <div class="eyebrow rise"><span>Public alpha</span></div>
     <h1 class="rise" data-words data-step="0" data-d0="120">omxcode</h1>
-    <p class="lede rise"><span data-words data-step="55" data-d0="380">Write an app once, in Mojo.</span> <span class="two" data-words data-step="40" data-d0="560">It runs natively on every screen, computes on the GPU, and any AI agent can use it.</span></p>
-    <div class="ctas rise"><span style="animation-delay:1100ms"><a class="cta" href="#get">Get the alpha</a></span><span style="animation-delay:1180ms"><a class="more" href="#four">Read the story</a></span></div>
+    <p class="lede rise"><span data-words data-step="55" data-d0="380">Write an app once, in Mojo.</span> <span class="two" data-words data-step="40" data-d0="560">It runs natively on Linux, the web and Android, builds for Mac and iPhone, computes on an NVIDIA GPU, and AI agents can use it.</span></p>
+    <div class="ctas rise"><span style="animation-delay:1100ms"><a class="cta" href="#get">Get the alpha</a></span><span style="animation-delay:1180ms"><a class="more" href="#agents">See where it's going</a></span></div>
     </div>
     <svg class="iso" viewBox="-328 -227 818 515" role="img" aria-label="One app.mojo file holds three layers, the controls, the data engine and the GPU code. Wires run from it to Linux, Web and Android, which run, Mac and iPhone, which build, and to agent tools."><g class="wire" data-o="4"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L295.1,-12.0 L372.0,32.4"/></g><g class="wire" data-o="5"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L216.2,33.6 L293.1,78.0"/></g><g class="wire" data-o="6"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L137.2,79.2 L214.1,123.6"/></g><g class="wire" data-o="7"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L58.2,124.8 L135.1,169.2"/></g><g class="wire" data-o="8"><path pathLength="1" d="M87.3,50.4 L137.2,79.2 L-20.8,170.4 L56.1,214.8"/></g><g class="wire" data-o="9"><path pathLength="1" d="M-87.3,50.4 L-199.5,115.2"/></g><g class="plate" data-o="0"><polygon class="fy pl" points="-174.6,-8.4 0.0,92.4 0.0,100.8 -174.6,0.0"/><polygon class="fx pl" points="174.6,-8.4 0.0,92.4 0.0,100.8 174.6,0.0"/><polygon class="tp pl" points="0.0,-109.2 174.6,-8.4 0.0,92.4 -174.6,-8.4"/><text class="t-file" text-anchor="middle" transform="matrix(0.8660,0.5000,-0.8660,0.5000,-77.9,36.6)">app.mojo</text></g><g class="slab" data-o="1"><polygon class="fy sl" points="-137.2,-38.4 0.0,40.8 0.0,61.2 -137.2,-18.0"/><polygon class="fx sl" points="137.2,-38.4 0.0,40.8 0.0,61.2 137.2,-18.0"/><polygon class="tp sl" points="0.0,-117.6 137.2,-38.4 0.0,40.8 -137.2,-38.4"/><text class="t-side" text-anchor="middle" transform="matrix(0.8660,-0.5000,0,1,68.6,13.9)">GPU CODE</text></g><g class="slab" data-o="2"><polygon class="fy sl" points="-137.2,-67.2 0.0,12.0 0.0,32.4 -137.2,-46.8"/><polygon class="fx sl" points="137.2,-67.2 0.0,12.0 0.0,32.4 137.2,-46.8"/><polygon class="tp sl" points="0.0,-146.4 137.2,-67.2 0.0,12.0 -137.2,-67.2"/><text class="t-side" text-anchor="middle" transform="matrix(0.8660,-0.5000,0,1,68.6,-14.9)">DATA ENGINE</text></g><g class="slab" data-o="3"><polygon class="fy sl" points="-137.2,-96.0 0.0,-16.8 0.0,3.6 -137.2,-75.6"/><polygon class="fx sl" points="137.2,-96.0 0.0,-16.8 0.0,3.6 137.2,-75.6"/><polygon class="tp sl" points="0.0,-175.2 137.2,-96.0 0.0,-16.8 -137.2,-96.0"/><text class="t-side" text-anchor="middle" transform="matrix(0.8660,-0.5000,0,1,68.6,-43.7)">CONTROLS</text></g><g class="tile" data-o="4"><polygon class="fy tl" points="336.7,43.2 407.4,84.0 407.4,93.6 336.7,52.8"/><polygon class="fx tl" points="478.0,43.2 407.4,84.0 407.4,93.6 478.0,52.8"/><polygon class="tp tl" points="407.4,2.4 478.0,43.2 407.4,84.0 336.7,43.2"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,409.5,44.4)">Linux</text><text class="t-st ok" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,428.2,55.2)">runs</text></g><g class="tile" data-o="5"><polygon class="fy tl" points="257.7,88.8 328.4,129.6 328.4,139.2 257.7,98.4"/><polygon class="fx tl" points="399.1,88.8 328.4,129.6 328.4,139.2 399.1,98.4"/><polygon class="tp tl" points="328.4,48.0 399.1,88.8 328.4,129.6 257.7,88.8"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,330.5,90.0)">Web</text><text class="t-st ok" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,349.2,100.8)">runs</text></g><g class="tile" data-o="6"><polygon class="fy tl" points="178.7,134.4 249.4,175.2 249.4,184.8 178.7,144.0"/><polygon class="fx tl" points="320.1,134.4 249.4,175.2 249.4,184.8 320.1,144.0"/><polygon class="tp tl" points="249.4,93.6 320.1,134.4 249.4,175.2 178.7,134.4"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,251.5,135.6)">Android</text><text class="t-st ok" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,270.2,146.4)">runs</text></g><g class="tile" data-o="7"><polygon class="fy tl" points="99.8,180.0 170.4,220.8 170.4,230.4 99.8,189.6"/><polygon class="fx tl" points="241.1,180.0 170.4,220.8 170.4,230.4 241.1,189.6"/><polygon class="tp tl" points="170.4,139.2 241.1,180.0 170.4,220.8 99.8,180.0"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,172.5,181.2)">Mac</text><text class="t-st info" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,191.2,192.0)">builds</text></g><g class="tile" data-o="8"><polygon class="fy tl" points="20.8,225.6 91.5,266.4 91.5,276.0 20.8,235.2"/><polygon class="fx tl" points="162.1,225.6 91.5,266.4 91.5,276.0 162.1,235.2"/><polygon class="tp tl" points="91.5,184.8 162.1,225.6 91.5,266.4 20.8,225.6"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,93.5,226.8)">iPhone</text><text class="t-st info" text-anchor="middle" transform="matrix(0.8660,-0.5000,0.8660,0.5000,112.2,237.6)">builds</text></g><g class="tile agent" data-o="9"><polygon class="fy tl ag" points="-315.9,110.4 -207.8,172.8 -207.8,182.4 -315.9,120.0"/><polygon class="fx tl ag" points="-145.5,136.8 -207.8,172.8 -207.8,182.4 -145.5,146.4"/><polygon class="tp tl ag" points="-253.6,74.4 -145.5,136.8 -207.8,172.8 -315.9,110.4"/><text class="t-tile" text-anchor="middle" transform="matrix(0.8660,0.5000,-0.8660,0.5000,-228.6,122.4)">agent tools</text><text class="t-st" text-anchor="middle" transform="matrix(0.8660,0.5000,-0.8660,0.5000,-247.3,133.2)">buttons · fields</text></g></svg>
   </div>
@@ -247,135 +330,217 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
 <section class="unfold" data-unfold aria-label="omxplorer, the showcase app">
   <div class="stick">
     <div class="frame"><img src="img/readme-report.jpg" alt="omxplorer's report over a million orders: tiles and charts computed on the GPU, drawn by GTK on Linux"></div>
-    <div class="cap">omxplorer, the real app · 1,000,000 orders · every tile and chart recomputed in 0.3 ms · RTX 3090</div>
+    <div class="cap">omxplorer, the real app · 1,000,000 orders · the tiles in 0.3 ms, the chart in 0.7 ms · RTX 3090</div>
   </div>
 </section>
 
-<!-- 2 · Agents now, generative interfaces next -->
-<section id="agents" class="agent">
+<!-- 1 · Agents: today the app describes itself to an agent; next, the agent builds the screen -->
+<section id="agents">
   <div class="wrap">
-    <div class="eyebrow rv">Agent native · where it's going</div>
-    <h2 class="rv">GPU-native <span class="two">generative interfaces.</span></h2>
-    <p class="lede rv">It starts today: every app is already a set of agent tools. Next, the model moves into the same program, on the same GPU.</p>
-
-    <div class="part rv"><span class="badge ok"><i></i>runs today</span><h3>Every app is already a set of agent tools.</h3></div>
-    <p class="body rv">The agent is a platform, like Linux or the web. omxcode shows it the same app as a list of MCP tools: a button's tag names its tool, its tooltip describes it, and calling the tool is tapping the button. No API to write, no screenshots to read.</p>
-    <div class="g2">
-      <div class="card rv">
-        <div class="card-h"><h3>A real session</h3><span class="sp"></span><span class="badge">MCP · stdio</span></div>
-<pre class="term"><span class="c">→ choose-a-file</span>  {"path": "orders_1m.csv"}
-<span class="c">→ create-table</span>
-<span class="c">→ insert-chart</span>
-<span class="c">→ ask</span>  {"text": "revenue by product, largest first, top 5"}
-<span class="r">← Did ask.</span>
-  Now: chart0: 0.6 ms
-  Now: inspector: Sum of revenue by product, largest first, top 5, as bars</pre>
-        <div class="src note">omxplorer on the agent host, over stdio</div>
+    <div class="head">
+      <div class="eyebrow rv">Agents <span class="badge ok big"><i></i>works today</span></div>
+      <h2 class="rv">Agents don't click pixels. <span class="two">They call buttons.</span></h2>
+      <p class="lede rv">Today, an agent uses an app the way a stranger would: Playwright or computer use, a screenshot, a guess at where the button is, a click, another screenshot to check. <b>An omxcode app describes itself.</b> Its buttons, fields, menus and lists are named tools the agent can call.</p>
+    </div>
+    <div class="vs" id="vs">
+      <div class="side pain rv"><div class="tag">Other apps<small>The agent looks at the screen and guesses.</small></div>
+        <div class="mock" id="mockA" aria-hidden="true">
+            <div class="tb"><span data-t="choose-a-file">Open</span><span data-t="file-save">Save</span><span data-t="insert-chart" class="ch">Chart</span><span class="ask" data-t="ask {text}">Ask…</span></div>
+            <div class="body" data-t="read grid"><div class="mbars"><b style="--h:82%"></b><b style="--h:64%"></b><b style="--h:51%"></b><b style="--h:37%"></b><b style="--h:22%"></b></div></div>
+            <svg class="cur" viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.6L10 19z"/></svg><i class="rip"></i><i class="flash"></i>
+          </div>
+        <div class="log" id="logA"></div>
+        <div class="tally"><b>a picture</b> · <b>a guess</b> · <b>a picture</b> to check</div></div>
+      <div class="side fix rv"><div class="tag">omxcode<small>The app hands the agent its buttons, by name.</small></div>
+        <div class="mock" id="mockB" aria-hidden="true">
+            <div class="tb"><span data-t="choose-a-file">Open</span><span data-t="file-save">Save</span><span data-t="insert-chart" class="ch">Chart</span><span class="ask" data-t="ask {text}">Ask…</span></div>
+            <div class="body" data-t="read grid"><div class="mbars"><b style="--h:82%"></b><b style="--h:64%"></b><b style="--h:51%"></b><b style="--h:37%"></b><b style="--h:22%"></b></div></div>
+            
+          </div>
+        <div class="log" id="logB"></div>
+        <div class="tally"><b>names</b>, not pixels · <b>what changed</b>, in words</div></div>
+    </div>
+    <div class="how">
+      <div class="side rv"><div class="tag">Every component, as a tool</div>
+        <div class="tools rv"><span><em class="ui">Save</em><b>→</b><code>file-save</code></span><span><em class="ui fld">Search…</em><b>→</b><code>search {text}</code></span><span><em class="ui grid">▦ a grid</em><b>→</b><code>read</code><small>rows as text · omxplorer</small></span><span class="no"><em class="ui off">Delete</em><b>→</b><code>no tool</code><small>disabled</small></span></div></div>
+      <div class="pts">
+        <p class="rv"><b>No per-app work.</b> The agent is just another host, like GTK or the browser. A button's tag names its tool and its tooltip describes it. Every omxcode app is an MCP server already.</p>
+        <p class="rv"><b>The screen is the permission model.</b> A disabled button isn't a tool; a dialog's buttons exist only while it's open. An agent can't do anything you couldn't.</p>
+        <p class="rv"><b>It answers in words, and costs fewer tokens.</b> Each call returns what changed, in 60 to 650 tokens in omxplorer, where a screen-scraping agent spends about 1,600 on a fresh screenshot to see what happened. In omxplorer, <code>read</code> gives the grid's rows as text; <code>render</code> gives a picture, for agents that can see.</p>
       </div>
-      <div class="points">
-        <div class="rv"><h3>No per-app work.</h3><p>Every omxcode app is an MCP server from its first line.</p></div>
-        <div class="rv"><h3>Safe by construction.</h3><p>An agent can't do anything a person couldn't. A disabled button isn't a tool; a dialog's buttons exist only while it's open.</p></div>
-        <div class="rv"><h3>It hears what changed.</h3><p>Every call answers in words: the new texts, what opened or closed, which tools appeared.</p></div>
+    </div>
+    <p class="srcline rv">Running today: 29 components proven through the agent, with Claude Code or any MCP client over stdio (<a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/agent.md">agent host</a>). Agents build it too: one language from button to GPU kernel, docs as <a href="llms.txt">llms.txt</a>.</p>
+
+    <div class="head next">
+      <div class="eyebrow rv">Next · on the same tools <span class="badge soon big"><i></i>coming soon</span></div>
+      <h2 class="rv">GPU-native <span class="two">generative interfaces.</span></h2>
+      <p class="lede rv">An agent that can name, read and press every component can also put them on screen. With AG-UI, you chat and <b>the agent answers by building the screen</b>, from native components drawn on the GPU.</p>
+    </div>
+    <div class="stage rv" id="gen">
+      <div class="bar"><span>you ⇄ agent ⇄ omxplorer</span><span class="sp"></span><span class="badge soon"><i></i>a sketch</span></div>
+      <div class="win">
+        <div class="app">
+          <div class="mbar"><span class="m"></span>omxplorer<span class="sp"></span><span class="isl" id="isl"><i></i><span>orders · 1,000,000 rows</span></span></div>
+          <p class="empty" id="empty">Ask the agent anything about orders.csv.<br>It builds the answer here.</p>
+          <div class="cards">
+            <div class="made" id="madeA" aria-hidden="true"><h4>Margin by month</h4><div class="sub">built by the agent · line, marker, answer</div>
+              <svg viewBox="0 0 300 120" preserveAspectRatio="none"><path class="ln" pathLength="1" d="M5,40 L55,36 L105,44 L155,92 L205,52 L255,46 L295,42"/><circle class="ring" cx="155" cy="92" r="11"/><circle class="dip" cx="155" cy="92" r="4.5"/></svg>
+              <div class="lab"><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span></div>
+              <p class="say">Margin dipped in <u>March</u>: <u>Hardware</u> sold at a <u>discount</u>.</p>
+              <div class="acts"><span id="tap">Show the discounts</span><span>Pin to report</span></div></div>
+            <div class="made" id="madeB" aria-hidden="true"><h4>Hardware discounts · March</h4><div class="sub">built by the agent · bars and a what-if</div>
+              <div class="bars"><b data-h="38"></b><b data-h="62"></b><b data-h="100"></b><b data-h="54"></b></div>
+              <div class="lab"><span>wk 1</span><span>wk 2</span><span>wk 3</span><span>wk 4</span></div>
+              <div class="what"><span>Cap discounts at <b id="cap">25</b>%</span><div class="slider"><i id="knob"></i></div><span>March margin <b id="mg">34</b>%</span></div></div>
+          </div>
+        </div>
+        <div class="agentp" id="agentp"><div class="who">Chat</div></div>
       </div>
+      <div class="cap"><span class="badge soon"><i></i>coming soon</span> a sketch of AG-UI on omxcode: the agent puts real components on screen, not a picture of them. Not built yet; the figures are illustrative.</div>
     </div>
-
-    <div class="part rv" id="next"><span class="badge warn"><i></i>next</span><h3>The model in the same program.</h3></div>
-    <p class="body rv">Today an AI app is two programs: an interface on one side, a model behind an HTTP API on the other, and JSON in between. Mojo is the language of both: the GPU code that runs models, and the GPU code that draws and computes this app. So they can be one program, where the model reads the app's data where it already sits and the interface answers in the same frame.</p>
-    <div class="flow">
-      <div class="card today rv"><div class="card-h"><h3>An AI app today</h3></div><div class="card-b"><ol>
-        <li>Interface in JavaScript or Swift</li><li class="hop">→ HTTP request, JSON</li><li>Model server in Python</li><li class="hop">→ HTTP response, JSON</li><li class="sum">Three languages, two processes, a network hop per answer</li></ol></div><div class="src note">a typical AI app today</div></div>
-      <div class="card going rv"><div class="card-h"><h3>Where omxcode is going</h3><span class="sp"></span><span class="badge warn"><i></i>next</span></div><div class="card-b"><ol>
-        <li>Your app, in Mojo</li><li class="hop">→ the model: same process, same GPU</li><li>The data engine: same GPU</li><li class="hop">→ the interface, drawn on the GPU</li><li class="sum">One language, one program, no API in between</li></ol></div><div class="src note">not in the alpha</div></div>
-    </div>
-    <p class="srcline rv">Not in the alpha. Today the interface, the data and the drawing share one language and one GPU; the model is the next piece.</p>
   </div>
 </section>
 
-<!-- 3 · Data on the GPU -->
-<section id="speed" class="speed">
+<!-- 2 · Everything in the same program (live) -->
+<section id="model">
   <div class="wrap">
-    <div class="eyebrow rv">Data on the GPU</div>
-    <h2 class="rv">Instant <span class="two">at a million rows.</span></h2>
-    <p class="body rv">The code that sums your data is plain Mojo, running on the GPU next to the code that draws it. Nothing leaves the process.</p>
-    <div class="nums">
-      <div class="rv"><b><span data-count="0.6" data-dec="1">0.6</span><small>ms</small></b><span>a chart over 1M rows, grouped and sorted</span></div>
-      <div class="rv"><b><span data-count="0.3" data-dec="1">0.3</span><small>ms</small></b><span>the status bar's sum and average over 1M rows</span></div>
-      <div class="rv"><b><span data-count="0.8" data-dec="1">0.8</span><small>ms</small></b><span>a frame of 1M-row grid scrolling, p95</span></div>
-      <div class="rv"><b><span data-count="1.5" data-dec="1">1.5</span><small>ms</small></b><span>20M points counted and coloured, one 1080p frame (130 ms on the CPU)</span></div>
-      <div class="rv"><b><span data-count="0.2" data-dec="1">0.2</span><small>s</small></b><span>opening a 100M-row, 4 GB file, streamed</span></div>
+    <div class="head">
+      <div class="eyebrow rv">One program <span class="badge ok big"><i></i>works today</span></div>
+      <h2 class="rv">Everything <span class="two">in the same program.</span></h2>
+      <p class="lede rv">Most data apps are a front end and a server that talk over the network. Mojo is the language of the interface, the data and the GPU code, <b>so in omxcode they are one program.</b></p>
     </div>
-    <p class="srcline rv">one Linux machine · NVIDIA RTX 3090 · docs/goals/26, 29</p>
-    <p class="edge rv"><b>The honest edge.</b> At 100M rows in memory, a median chart takes about 0.7 s, and today the window waits for it. Moving that work off the window is the next piece of engine work.</p>
+    <div class="lanes" id="lanes">
+      <div class="lane pain rv"><div class="tag">Other apps<small>The data lives on a server. Every query is a round trip.</small></div>
+        <div class="track"><div class="node n1">Interface<small>JS · Swift</small></div><div class="wire w1"></div><div class="node n2">network<small>HTTP · JSON</small></div><div class="wire w2"></div><div class="node n3">Server<small>Python · C++</small></div>
+          <div class="pkt" id="pk1"><span>request</span></div><div class="wait" id="wait">waiting…</div></div>
+        <div class="tally"><b>3+</b> languages · <b>2</b> processes · <b>a network hop</b> per query</div></div>
+      <div class="lane fix rv"><div class="tag">omxcode<small>One program, one GPU. No trip.</small></div>
+        <div class="track"><div class="box"><em>app.mojo · one process · one GPU</em></div><div class="node n1">Interface<small>drawn on the GPU</small></div><div class="node n2">Data<small>in GPU memory</small></div><div class="node n3">GPU compute<small>same GPU</small></div>
+          <div class="done" id="done">✓ one program · no network</div></div>
+        <div class="tally"><b>1</b> language · <b>1</b> program · <b>no API</b> in between</div></div>
+    </div>
+    <p class="local rv"><b>And local apps?</b> They skip the network, but most glue two or three languages together, and using the GPU means adding a second toolchain beside the app. In omxcode the GPU code is in the same file, and the rows go to the GPU once and stay there; each query sends back only its answer.</p>
+    <p class="srcline rv">Live in the alpha on the desktop: omxplorer keeps 1,000,000 rows on the GPU and recomputes them in the same process that draws them. On the web, the same program runs on a server and the browser shows it, so there is a network hop until Mojo can build for WebAssembly. Next <span class="badge soon"><i></i>coming soon</span>: an AI model in the same program too.</p>
   </div>
 </section>
 
-<!-- 4 · Now possible -->
-<section id="possible" class="center">
+<!-- 3 · What one language unlocks -->
+<section id="unlocks">
   <div class="wrap">
-    <div class="eyebrow rv">Now possible</div>
-    <h2 class="rv">What one language <span class="two">makes possible.</span></h2>
-    <p class="lede rv">Each of these used to mean another language, another process, or another team.</p>
-    <div class="card cmp rv">
-      <table class="tbl">
-        <thead><tr><th></th><th><span class="badge bad"><i></i>before</span></th><th><span class="badge ok"><i></i>now</span></th><th>proof</th></tr></thead>
-        <tbody>
-          <tr class="lead"><th scope="row">An interface you can talk to</th>
-            <td class="was" data-k="before">A chart is a picture with a label; you change it in a settings panel.</td>
-            <td class="now" data-k="now">The chart is its sentence. Every underlined word is a setting: tap it to change it, or type what you want and it recomputes.
-              <p class="sentence"><u>Sum</u> of <u>revenue</u> by <u>product</u>, <u>largest first</u>, <u>top 5</u>, <u>every row</u>, as <u>bars</u></p>
-              <div class="asks"><span>"median"</span><span>"monthly, as a line"</span><span>"only paid and over 5,000"</span></div>
-              <p class="tail">It says what it understood and names what it skipped. A keyword reader, instant and offline, not a model.</p></td>
-            <td class="pf" data-k="proof">1M rows · answered in 0.7 ms</td></tr>
-          <tr><th scope="row">One source, real native controls</th>
-            <td class="was" data-k="before">A web page in a wrapper, or one codebase per platform.</td>
-            <td class="now" data-k="now">One <span class="mono">app.mojo</span> becomes GTK on Linux, HTML on the web, Android views, AppKit on the Mac and UIKit on iPhone.</td>
-            <td class="pf" data-k="proof">4 platforms run · 2 build</td></tr>
-          <tr><th scope="row">A million rows inside the interface</th>
-            <td class="was" data-k="before">A server or a notebook, then JSON back to the screen.</td>
-            <td class="now" data-k="now">The group-by runs on the GPU, in the app's own process. No request, no copy.</td>
-            <td class="pf" data-k="proof">1M rows · a chart in 0.6 ms</td></tr>
-          <tr><th scope="row">GPU drawing in your app's language</th>
-            <td class="was" data-k="before">Shaders in GLSL or Metal, an engine in C++, glue to the UI.</td>
-            <td class="now" data-k="now">A plain Mojo function colours the pixels. Without a GPU, the same function runs on the CPU.</td>
-            <td class="pf" data-k="proof">20M points · 1.5 ms a frame</td></tr>
-          <tr><th scope="row">Agents with no API</th>
-            <td class="was" data-k="before">Build an API, then an MCP server, or let the agent read screenshots.</td>
-            <td class="now" data-k="now">The app's buttons and fields are its tools, from the first line.</td>
-            <td class="pf" data-k="proof">29 components proven through the agent</td></tr>
-          <tr class="next"><th scope="row">The model in the same program</th>
-            <td class="was" data-k="before">The interface calls a model over HTTP, and waits.</td>
-            <td class="now" data-k="next"><span class="badge warn"><i></i>next</span> Mojo is the language Modular writes its AI kernels in. The model can live beside the interface, on the same GPU.</td>
-            <td class="pf" data-k="proof">not in the alpha</td></tr>
-        </tbody>
-      </table>
-      <div class="src note">one Linux machine · NVIDIA RTX 3090 · README, docs/goals/26, 29</div>
+    <div class="head">
+      <div class="eyebrow rv">Runs today</div>
+      <h2 class="rv">What one language <span class="two">unlocks.</span></h2>
+      <p class="lede rv">An interface, its data work, its GPU drawing and its agent API used to be four programs. <b>In omxcode you write all four in Mojo, in one file.</b></p>
+    </div>
+    <div class="merge rv" id="merge">
+      <div class="piece">Interface<small>Swift · Kotlin · JS</small></div>
+      <div class="piece">Data work<small>Python on a server</small></div>
+      <div class="piece">GPU drawing<small>GLSL · Metal · C++</small></div>
+      <div class="piece">Agent API<small>a separate server</small></div>
+      <div class="one">app.mojo <small>one file, one process</small></div>
+      <button class="replay" type="button" aria-label="Play it again">↻ replay</button>
+    </div>
+    <div class="gains" id="gains">
+      <div class="gain"><b>5<small>platforms</small></b><h3>Native on five platforms</h3><p>GTK, HTML, Android views run; AppKit and UIKit build</p></div>
+      <div class="gain"><b>0.6<small>ms</small></b><h3>A million rows in the interface</h3><p>a chart over 1M rows, grouped on the GPU, in-process</p></div>
+      <div class="gain"><b>1.5<small>ms</small></b><h3>GPU drawing in your app's language</h3><p>20M points coloured per frame, plain Mojo</p></div>
+      <div class="gain"><b>0<small>APIs</small></b><h3>Agent tools for free</h3><p>every button and field is an MCP tool</p></div>
+    </div>
+    <p class="srcline rv">one Linux machine · NVIDIA RTX 3090 · docs/goals/06, 26, 29</p>
+  </div>
+</section>
+
+<!-- 4 · Apps built on it -->
+<section id="apps">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow rv">Showcase <span class="badge soon big"><i></i>more apps coming</span></div>
+      <h2 class="rv">Apps built <span class="two">on omxcode.</span></h2>
+      <p class="lede rv">We build real apps on it, so the framework grows what real apps need.</p>
+    </div>
+    <div class="apps">
+      <a class="appcard rv" href="omxplorer.html">
+        <img src="goals/30/big-median-gtk.jpg" alt="omxplorer over 100 million rows: a median by region, the window live throughout" loading="lazy">
+        <div class="txt"><h3>omxplorer <span class="badge ok"><i></i>runs today</span></h3>
+          <p>A data explorer for big files. 100 million rows on the GPU, charts you edit by their sentence, and a window that never waits.</p>
+          <div class="tags"><span>100M rows</span><span>Liquid design</span><span>the island</span><span>agent tools</span><span>Linux · web · Mac builds</span></div>
+          <span class="go">See omxplorer</span></div>
+      </a>
     </div>
   </div>
 </section>
 
-<!-- 5 · The problem, then the turn -->
-<section class="stack" id="four">
+<!-- 5 · Components -->
+<section id="components" class="center">
   <div class="wrap">
-    <div class="eyebrow rv">The problem</div>
-    <h2 class="rv" style="margin-bottom:56px">Four programs. <span class="two">One file.</span></h2>
-    <div class="line rv">The interface<small>written again for each platform.</small></div>
-    <div class="line rv">The data work<small>in Python, on a server.</small></div>
-    <div class="line rv">The graphics<small>in a shader language.</small></div>
-    <div class="line rv">An API<small>so other software, and now AI agents, can use it.</small></div>
-    <p class="lede rv" style="margin-left:0">Every line between them is a rewrite, a network hop, or another team. <b>omxcode is one program.</b></p>
+    <div class="eyebrow rv">Components</div>
+    <h2 class="rv"><span id="ncomp">36</span> components. <span class="two">Their status on every platform.</span></h2>
+    <p class="lede rv">One square per component, one row per platform. Green means a script runs it there today.</p>
+    <div class="plats rv" id="plats"></div>
+    <div class="key rv"><span class="t">tested: a script runs it</span><span class="b">builds, not run on hardware yet</span><span class="m">not yet</span></div>
+    <div class="strip rv" id="strip" hidden><div class="row" id="stripRow"></div></div>
+    <div class="ctas rv"><a class="cta" href="components.html">Browse the components</a></div>
   </div>
 </section>
 
-<section class="read" data-read>
-  <div class="wrap center"><p data-read-words>Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.</p></div>
+<!-- 6 · FAQ: ask a question, get answered in bubbles, each with a little picture -->
+<section id="faq">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow rv">FAQ</div>
+      <h2 class="rv">Go on, <span class="two">ask.</span></h2>
+    </div>
+    <div class="chat rv" id="chat">
+      <div class="qs" role="tablist" aria-label="Questions">
+        <button type="button" data-q="why">Why build this at all?</button>
+        <button type="button" data-q="mojo">Why Mojo?</button>
+        <button type="button" data-q="rust">Why not Rust?</button>
+        <button type="button" data-q="used">Have you used it, or is it a claim?</button>
+        <button type="button" data-q="agui">Same AG-UI as CopilotKit's?</button>
+        <button type="button" data-q="name">Why "omxcode"?</button>
+        <button type="button" data-q="next">What's coming next?</button>
+      </div>
+      <div class="thread" id="thread" aria-live="polite"></div>
+    </div>
+
+    <!-- the answers: bubbles (p) and a picture (.viz); also what a reader without JavaScript sees -->
+    <div class="answers" id="answers">
+      <div data-a="why"><h3>Why build this at all?</h3>
+        <p>Cross-platform used to mean the lowest common denominator: every platform had its own company and language, so "one codebase" meant a web page in a wrapper.</p>
+        <div class="viz fork"><div class="road a"><b>Path 1</b>Agents write Swift, Kotlin and JS, and keep each app native.<em>works, and that's fine</em></div><div class="road b"><b>Path 2</b>One systems language, small touches per platform, built for the GPU and AI.<em>our bet ✦</em></div></div>
+        <p>Now agents write most of the code. We wanted to rethink it <b>from first principles</b>, and we use it ourselves.</p></div>
+      <div data-a="mojo"><h3>Why Mojo?</h3>
+        <p>Because one language can draw the interface, crunch the data, and one day run the model.</p>
+        <div class="viz pops"><span>⚡ GPU native</span><span>⚙️ systems speed</span><span>🐍 reads like Python</span><span>🧬 MLIR compiler</span><span>🤖 Modular's AI kernels</span></div></div>
+      <div data-a="rust"><h3>Why not Rust?</h3>
+        <p>Rust is great, but it wasn't designed around GPUs or AI. Mojo is being built for exactly that, right now, by <b>Chris Lattner</b> and Modular.</p>
+        <div class="viz line"><span>LLVM</span><span>Clang</span><span>Swift</span><span>MLIR</span><span class="mj">Mojo</span></div>
+        <p>We'd rather stand on that giant's shoulders. Modular's take: <a href="https://www.modular.com/blog/mojo-vs-rust">Mojo vs. Rust</a>.</p></div>
+      <div data-a="used"><h3>Have you used it, or is it a claim?</h3>
+        <p><b>We use it.</b> Every day, on Linux, and every number on this page comes from a script.</p>
+        <div class="viz pack"><span><b>omxplorer</b>a spreadsheet, a dashboard and data transforms, rethought on the GPU</span><span><b>omxframe</b>the dataframe engine, in Mojo</span><span><b>omxqua</b>the look</span><i>one package</i></div>
+        <p><a href="omxplorer.html">Meet omxplorer ›</a></p></div>
+      <div data-a="agui"><h3>Same AG-UI as CopilotKit's?</h3>
+        <p>That's the plan: the same open protocol, <a href="https://docs.ag-ui.com/">AG-UI</a>, defined by <a href="https://www.copilotkit.ai/ag-ui">CopilotKit</a>. It isn't built yet.</p>
+        <div class="viz lanes2"><div><b>Their clients</b>React · the web</div><div class="us"><b>Ours</b>GPU-native components in a native app<em>coming soon</em></div></div></div>
+      <div data-a="name"><h3>Why "omxcode"?</h3>
+        <p>It started as MX, for Modular, MAX and Mojo. Then we noticed MX is close to <i>everything</i> out there…</p>
+        <div class="viz morph"><span class="w">MX</span><span class="w long"><span><b>O</b>h <b>M</b>y, how do we solve this?</span></span><span class="w"><span><b>om</b>x</span></span><span class="stamps"><i>omxcode</i><i>omxplorer</i><i>omxqua</i></span></div>
+        <p>"<b>O</b>h <b>M</b>y, how do we solve this?" So <b>OM</b> met the <b>X</b>, became <b>omx</b>, and we stuck it on everything. <span class="wink" aria-hidden="true">🤷</span></p></div>
+      <div data-a="next"><h3>What's coming next?</h3>
+        <p>We're aiming at domains, not fixed apps. Each app goes wherever it leads.</p>
+        <div class="viz doms"><span class="d1"><b>1 · Data engineering</b>the least-loved tool in the stack; omxplorer grows data transforms</span><span class="d2"><b>2 · Simulations &amp; graphics</b>anything that computes and draws a lot</span><span class="d3"><b>3 · Robotics?</b>maybe: the same GPU, near the hardware</span></div>
+        <p>For the framework: <span class="badge info"><i></i>next</span> tiles that snap, labels that fit · <span class="badge soon"><i></i>soon</span> Mac and iPhone on hardware, AG-UI, an AI model in the same program.</p></div>
+    </div>
+  </div>
 </section>
 
-<!-- 6 · Get it -->
+<!-- Get it -->
 <section id="get" class="center">
   <div class="wrap">
     <div class="eyebrow rv">Get it</div>
     <h2 class="rv">Available today.</h2>
-    <p class="body rv">omxcode is a public alpha, free and open source under MIT. Linux with an NVIDIA GPU is the best place to start.</p>
+    <p class="body rv">A public alpha, free and open source under MIT. Linux with an NVIDIA GPU is the best place to start.</p>
     <div class="card install rv">
 <pre id="cmds">git clone https://github.com/abhisheksreesaila/omxcode
 cd omxcode &amp;&amp; pixi install
@@ -390,66 +555,164 @@ scripts/omxplorer.sh</pre>
 
 <footer>
   <div class="wrap">
-    <p class="note">Every number here is measured on one Linux machine with an NVIDIA RTX 3090, by a script in the repository. "Runs" means a script drives the app on that platform today. The model in the same program is the next step, not part of the alpha.</p>
+    <p class="note">Every number here is measured on one Linux machine with an NVIDIA RTX 3090, by a script in the repository. "Runs" and "tested" mean a script drives it on that platform today. Anything marked coming soon is not in the alpha.</p>
     <div class="cols">
-      <div><h4>Start</h4><ul><li><a href="https://github.com/abhisheksreesaila/omxcode">GitHub</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode#readme">README</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode#try-it">Install</a></li></ul></div>
-      <div><h4>Build</h4><ul><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/reference.md">Reference</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/components.md">Components</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/architecture.md">Architecture</a></li><li><a href="llms.txt">For agents: llms.txt</a></li></ul></div>
-      <div><h4>Platforms</h4><ul><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/agent.md">Agent host</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/android.md">Android</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/wasm.md">Web and wasm</a></li></ul></div>
-      <div><h4>Follow along</h4><ul><li><a href="gallery/">Gallery</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/decisions.md">Decision log</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/next.md">What's next</a></li></ul></div>
+      <div><h4>Start</h4><ul><li><a href="https://github.com/abhisheksreesaila/omxcode">GitHub</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode#readme">README</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/releases">Releases</a></li></ul></div>
+      <div><h4>See it</h4><ul><li><a href="omxplorer.html">omxplorer</a></li><li><a href="components.html">Components</a></li><li><a href="gallery/">Gallery</a></li></ul></div>
+      <div><h4>Build</h4><ul><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/reference.md">Reference</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/architecture.md">Architecture</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/agent.md">Agent host</a></li><li><a href="llms.txt">For agents: llms.txt</a></li></ul></div>
+      <div><h4>Follow along</h4><ul><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/decisions.md">Decision log</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/next.md">What's next</a></li><li><a href="https://github.com/abhisheksreesaila/omxcode/issues">Issues</a></li></ul></div>
     </div>
     <div class="fine"><span>omxcode · public alpha · MIT licence · built in Mojo, 2026 · styled with <a href="https://abhisheksreesaila.github.io/omxqua/">omxqua</a></span><a href="https://github.com/abhisheksreesaila/omxcode/issues">Report an issue</a></div>
   </div>
 </footer>
 
+<script>document.documentElement.classList.remove("no-js")</script>
+<script src="site.js"></script>
 <script>
 (() => {
-  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const esc = t => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  // hero words rise once, staggered
-  $$("[data-words]").forEach(el => { const step = +el.dataset.step, d0 = +el.dataset.d0, cls = el.classList.contains("two") ? ' class="two"' : "";
-    const html = el.textContent.trim().split(" ").map((w, i) => `<span${cls} style="animation-delay:${d0 + i * step}ms">${esc(w)}</span>`).join(" ");
-    if (el.matches("h1")) el.innerHTML = html; else el.outerHTML = html; });
-  // the read-along paragraph
-  $$("[data-read-words]").forEach(p => p.innerHTML = p.textContent.trim().split(" ").map(w => `<span>${esc(w)}</span>`).join(" "));
-  // sections rise as they enter; numbers count up once (the real value is in the HTML, so no-JS readers see it)
-  const count = el => $$("[data-count]", el).forEach(b => { if (reduce) return; const to = +b.dataset.count, dec = +(b.dataset.dec || 0), t0 = performance.now(), dur = 1400;
-    const step = t => { const p = Math.min(1, (t - t0) / dur), v = to * (1 - Math.pow(1 - p, 3)); b.textContent = v.toFixed(dec); if (p < 1) requestAnimationFrame(step); };
-    requestAnimationFrame(step); });
-  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); count(e.target); io.unobserve(e.target); } }), { threshold: .2 });
-  $$(".rv").forEach(el => reduce ? el.classList.add("in") : io.observe(el));
-  // scroll scenes: the product unfolds; the turn lights up word by word
-  // the hero diagram builds once: plate, layers bottom up, each platform's wire and tile, agent tools
-  $$(".iso [data-o]").forEach(g => reduce ? g.classList.add("on") : setTimeout(() => g.classList.add("on"), 700 + 170 * +g.dataset.o));
-  // the island: the section you're in is selected; a click selects at once and holds until the scroll lands
-  const ind = $(".lnav .ind"), links = $$(".lnav .pill a");
-  let cur = null, pinned = null, pinT;
-  function select(a) {
-    if (a === cur) return;
-    links.forEach(l => { l.classList.toggle("on", l === a); l === a ? l.setAttribute("aria-current", "location") : l.removeAttribute("aria-current"); });
-    if (!a) { ind.style.opacity = 0; cur = null; return; }
-    ind.classList.toggle("still", !cur || reduce);  // first appearance doesn't slide in from the left
-    ind.style.width = a.offsetWidth + "px"; ind.style.transform = `translateX(${a.offsetLeft}px)`; ind.style.opacity = 1;
-    if (!cur && !reduce) { void ind.offsetWidth; ind.classList.remove("still"); }  // flush, so only later moves animate
-    cur = a;
+  const { $, $$, reduce, scene, seg } = window.omx;
+
+  // hero: once the diagram has built (and every 9 s while it's on screen) app.mojo sends a pulse down each wire
+  const iso = $(".iso"), plate = $(".iso .plate");
+  if (iso && !reduce) {
+    const NS = "http://www.w3.org/2000/svg";
+    const flows = $$(".iso .wire").map(g => { const f = document.createElementNS(NS, "path"); f.setAttribute("d", $("path", g).getAttribute("d")); f.setAttribute("pathLength", "1");
+      f.setAttribute("class", "flow"); f.style.opacity = 0; g.after(f); return [f, $(`.iso .tile[data-o="${g.dataset.o}"]`)]; });
+    const push = () => { plate.classList.remove("send"); void plate.getBBox(); plate.classList.add("send");
+      flows.forEach(([f, tile], i) => setTimeout(() => {
+        f.animate([{ strokeDashoffset: .1, opacity: 1 }, { strokeDashoffset: -1, opacity: 1 }], { duration: 950, easing: "cubic-bezier(.45,0,.3,1)" }).onfinish = () => {
+          tile.classList.remove("hit"); void tile.getBBox(); tile.classList.add("hit"); };
+      }, 250 + i * 110)); };
+    let first = true;
+    scene(iso, async step => { await step(first ? 2700 : 9000); first = false; push(); });
   }
-  links.forEach(a => a.addEventListener("click", () => { select(a); pinned = a; clearTimeout(pinT);
-    pinT = setTimeout(() => { pinned = null; onScroll(); }, "onscrollend" in window ? 3000 : 1200); }));
-  addEventListener("scrollend", () => { if (pinned) { clearTimeout(pinT); pinned = null; onScroll(); } });
-  let raf;
-  function onScroll() {
-    const vh = innerHeight;
-    $$("[data-unfold]").forEach(s => { const r = s.getBoundingClientRect(), p = Math.min(1, Math.max(0, (vh - r.top) / r.height)), k = reduce ? 1 : Math.min(1, p * 1.6), f = $(".frame", s);
-      f.style.transform = `scale(${0.82 + 0.18 * k})`; f.style.borderRadius = `${40 - 26 * k}px`; });
-    $$("[data-read]").forEach(s => { const r = s.getBoundingClientRect(), p = Math.min(1, Math.max(0, (vh * .8 - r.top) / (r.height * .9))), sp = $$("p span", s), n = Math.round(p * sp.length);
-      sp.forEach((x, i) => x.classList.toggle("lit", reduce || i < n)); });
-    if (!pinned) select(links.filter(a => $(a.hash).getBoundingClientRect().top <= vh * .4).pop());
+
+  // 1 · agents today: on the left an agent screenshots, guesses and misses; on the right the app names its buttons and the agent calls one
+  $$(".tools.rv > span").forEach((e, i) => e.style.setProperty("--i", i));
+  const mA = $("#mockA"), mB = $("#mockB"), lA = $("#logA"), lB = $("#logB"), cur = $(".cur", mA), rip = $(".rip", mA), flash = $(".flash", mA);
+  const say = (log, cls, t) => { const e = document.createElement("div"); e.className = cls; e.innerHTML = t; log.append(e); while (log.children.length > 7) log.firstElementChild.remove();
+    requestAnimationFrame(() => requestAnimationFrame(() => e.classList.add("on"))); };
+  const kick = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+  const aim = el => { const r = el.getBoundingClientRect(), m = mA.getBoundingClientRect(); return [r.left - m.left + r.width * .5, r.top - m.top + r.height * .55]; };
+  const moveTo = ([x, y]) => { cur.style.left = x + "px"; cur.style.top = y + "px"; };
+  const click = ([x, y], ok) => { rip.style.left = x + "px"; rip.style.top = y + "px"; rip.classList.toggle("ok", ok); kick(rip, "go"); };
+  if (reduce) { mB.classList.add("tagged", "chart"); mA.classList.add("chart");
+    say(lA, "c", "→ screenshot · 1.4 MB"); say(lA, "bad", "→ click (412, 88) ✗ hit Save");
+    say(lB, "c", "→ insert-chart"); say(lB, "r", "← Now: chart0: 0.6 ms"); }
+  else scene($("#vs"), async step => {
+    lA.replaceChildren(); lB.replaceChildren(); mA.classList.remove("chart"); mB.classList.remove("tagged", "chart"); moveTo([mA.clientWidth * .7, mA.clientHeight * .78]);
+    const [, saveA, chartA] = $$(".tb span", mA), chartB = $(".ch", mB);
+    await step(700);
+    kick(flash, "go"); say(lA, "c", "→ screenshot · 1920×1080 · 1.4 MB");
+    say(lB, "c", "→ screen"); await step(500);
+    mB.classList.add("tagged"); say(lB, "r", "← tools: choose-a-file · file-save · insert-chart"); await step(250);
+    say(lB, "r", "&nbsp; ask {text, submit} · read grid · render"); await step(700);
+    say(lA, "", "&nbsp; model: “Chart” looks like it's at (412, 88)"); await step(500);
+    say(lB, "c", "→ insert-chart"); kick(chartB, "press"); await step(220); chartB.classList.remove("press"); mB.classList.add("chart"); await step(450);
+    say(lB, "r", "← Did insert-chart."); say(lB, "r", "&nbsp; Now: chart0: 0.6 ms");
+    moveTo(aim(saveA)); await step(950); click(aim(saveA), false); kick(saveA, "press"); await step(220); saveA.classList.remove("press");
+    say(lA, "bad", "→ click (412, 88) &nbsp;✗ hit Save"); await step(800);
+    say(lB, "ok", "✓ done · one call, no pixels"); kick(flash, "go"); say(lA, "c", "→ screenshot again, to check"); await step(900);
+    say(lA, "", "&nbsp; model: try (468, 88)?"); moveTo(aim(chartA)); await step(950); click(aim(chartA), true); kick(chartA, "press"); await step(220); chartA.classList.remove("press");
+    say(lA, "c", "→ click (468, 88)"); await step(400); mA.classList.add("chart"); await step(800);
+    kick(flash, "go"); say(lA, "", "→ screenshot · did it work? probably"); await step(4200);
+  });
+
+  // 1 · next, the agent builds the screen: you ask, it composes a card; you tap the card, it composes the next
+  const gen = $("#gen"), pane = $("#agentp"), isl = $("#isl"), A = $("#madeA"), B = $("#madeB"), empty = $("#empty"), tap = $("#tap"), knob = $("#knob");
+  const add = (cls, html) => { const e = document.createElement("div"); e.className = cls; e.innerHTML = html; pane.append(e); requestAnimationFrame(() => requestAnimationFrame(() => e.classList.add("on"))); return e; };
+  const islSay = (busy, t) => { isl.className = "isl ai" + (busy ? " busy" : ""); isl.lastElementChild.textContent = t; };
+  const count = (el, from, to, ms) => { const t0 = performance.now(), f = t => { const p = Math.min(1, (t - t0) / ms); el.textContent = Math.round(from + (to - from) * p); if (p < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); };
+  function reset() {
+    $$(".msg, .call", pane).forEach(e => e.remove()); [A, B].forEach(c => c.classList.remove("on", "drawn", "done")); $$(".bars b", B).forEach(b => b.style.height = 0);
+    $(".ln", A).style.transition = "none"; knob.style.transition = "none"; knob.style.left = "100%"; void A.offsetWidth; $(".ln", A).style.transition = ""; knob.style.transition = "";
+    $("#cap").textContent = 25; $("#mg").textContent = 34; empty.classList.remove("off"); isl.className = "isl"; isl.lastElementChild.textContent = "orders · 1,000,000 rows";
   }
-  addEventListener("scroll", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(onScroll); }, { passive: true });
-  addEventListener("resize", () => { const a = cur; cur = null; ind.classList.add("still"); select(a); onScroll(); }); onScroll();
-  // copy the three commands
-  document.addEventListener("click", e => { const b = e.target.closest("[data-copy]"); if (!b) return;
-    navigator.clipboard?.writeText($(b.dataset.copy).textContent).then(() => { b.textContent = "copied"; setTimeout(() => b.textContent = "copy", 1600); }); });
+  if (reduce) { empty.classList.add("off"); [A, B].forEach(c => c.classList.add("on", "drawn", "done")); $$(".bars b", B).forEach(b => b.style.height = b.dataset.h + "%"); knob.style.left = "40%";
+    $("#cap").textContent = 10; $("#mg").textContent = 41; add("msg", "Why did margin dip in March?"); }
+  else scene(gen, async step => {
+    reset(); await step(600);
+    add("msg", "Why did margin dip in March?"); await step(900);
+    islSay(true, "✦ composing a view"); add("call", "✦ <b>reading</b> margin by month, by product"); await step(700);
+    add("call", "✦ <b>composing</b> a line, the dip, an answer"); await step(700);
+    empty.classList.add("off"); A.classList.add("on"); await step(250); A.classList.add("drawn"); await step(1300); A.classList.add("done");
+    islSay(false, "✦ added a view · Undo"); add("call r", "Hardware was discounted in March. Tap the card to dig in."); await step(1800);
+    tap.classList.add("press"); await step(220); tap.classList.remove("press");
+    add("msg tapd", "Show the discounts"); await step(600);
+    islSay(true, "✦ composing a view"); add("call", "✦ <b>composing</b> bars and a what-if slider"); await step(800);
+    B.classList.add("on"); await step(200); $$(".bars b", B).forEach(b => b.style.height = b.dataset.h + "%"); await step(1100);
+    knob.style.left = "40%"; count($("#cap"), 25, 10, 1400); count($("#mg"), 34, 41, 1400); await step(1600);
+    islSay(false, "✦ added 2 views · Undo"); add("call r", "Capping at 10% would have kept March at 41%."); await step(5000);
+  });
+
+  // 2 · two lanes: other apps send one slow round trip; in omxcode the three parts light up together and it's answered
+  const pk1 = $("#pk1"), wait = $("#wait"), fix = $(".lane.fix");
+  if (!reduce) {
+    scene($("#lanes"), async step => {
+      const trip = (from, to, ms, label) => new Promise(res => { pk1.firstElementChild.textContent = label;
+        pk1.animate([{ left: from, opacity: 1 }, { left: to, opacity: 1 }], { duration: ms, easing: "cubic-bezier(.45,0,.55,1)", fill: "forwards" }).onfinish = res; });
+      fix.classList.remove("lit"); await step(600);
+      wait.classList.add("on"); setTimeout(() => fix.classList.add("lit"), 250);
+      await trip("11%", "48%", 900, "request · JSON"); await trip("48%", "86%", 900, "request · JSON");
+      pk1.firstElementChild.textContent = "the server computes"; await step(900);
+      await trip("86%", "48%", 900, "response · JSON"); await trip("48%", "11%", 900, "response · JSON");
+      wait.classList.remove("on"); pk1.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" }); await step(1800);
+    });
+  } else { pk1.style.opacity = 1; pk1.style.left = "48%"; fix.classList.add("lit"); }
+
+  // 3 · four programs merge into one file, then what it unlocks lights up
+  const merge = $("#merge"), gains = $$(".gain");
+  async function playMerge(step) {
+    merge.classList.remove("merged"); gains.forEach(g => g.classList.remove("on"));
+    await step(reduce ? 0 : 1200); merge.classList.add("merged");
+    await step(reduce ? 0 : 1300); for (const g of gains) { g.classList.add("on"); await step(reduce ? 0 : 260); }
+  }
+  let merged = false; const sleep = ms => new Promise(r => setTimeout(r, ms));
+  new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !merged) { merged = true; playMerge(sleep); } }), { threshold: .5 }).observe(merge);
+  $(".replay", merge).addEventListener("click", () => playMerge(sleep));
+
+  // 6 · FAQ: the question flies in as your message; the answer types back, bubble by bubble, its picture plays
+  const thread = $("#thread"), qbs = $$(".qs button"), sleep2 = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+  let ask = 0;
+  const pop = el => { thread.append(el); requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("on"))); return el; };
+  const bubble = (cls, html) => { const e = document.createElement("div"); e.className = cls; e.innerHTML = html; return pop(e); };
+  async function answer(q) {
+    const my = ++ask, live = () => my === ask, src = $(`[data-a="${q}"]`);
+    qbs.forEach(b => b.classList.toggle("on", b.dataset.q === q)); qbs.find(b => b.dataset.q === q).classList.add("seen");
+    thread.innerHTML = ""; bubble("me", src.querySelector("h3").textContent);
+    for (const part of [...src.children].slice(1)) {
+      const t = document.createElement("div"); t.className = "typing"; t.innerHTML = "<i></i><i></i><i></i>"; thread.append(t);
+      await sleep2(part.matches(".viz") ? 450 : 300 + Math.min(900, part.textContent.length * 6)); t.remove(); if (!live()) return;
+      if (part.matches(".viz")) { const v = part.cloneNode(true); pop(v); stagger(v); await play(v, live); }
+      else bubble("bot", part.innerHTML);
+      await sleep2(350); if (!live()) return;
+    }
+  }
+  const stagger = v => [...v.querySelectorAll("span:not(.w):not(.stamps), .road, .lanes2 > div")].forEach((e, i) => e.style.transitionDelay = (i * 0.14) + "s");
+  async function play(v, live) {
+    if (!v.matches(".morph")) { await sleep2(900); return; }
+    const ws = [...v.querySelectorAll(".w")], st = [...v.querySelectorAll(".stamps i")];
+    for (let i = 0; i < 3; i++) { if (i) ws[i - 1].classList.replace("show", "gone"); ws[i].classList.add("show"); await sleep2(i === 1 ? 2000 : 900); if (!live()) return; }
+    ws[2].classList.replace("show", "gone");
+    for (const s of st) { await sleep2(260); s.classList.add("show"); }
+  }
+  let asked = false;
+  qbs.forEach(b => b.addEventListener("click", () => { asked = true; answer(b.dataset.q); }));
+  new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !asked) { asked = true; answer("why"); } }), { threshold: .4 }).observe($("#chat"));
+
+  // 5 · components: one square each, per platform (docs/components.json, written from the code by scripts/catalog.py)
+  const PLATS = [["linux", "Linux", "GTK 4"], ["web", "Web", "HTML"], ["android", "Android", "emulator"], ["mac", "Mac", "AppKit"], ["iphone", "iPhone", "UIKit"], ["agent", "Agent", "MCP"]];
+  fetch("components.json").then(r => r.json()).then(list => {
+    $("#ncomp").textContent = list.length;
+    $("#plats").innerHTML = PLATS.map(([k, nm, sub]) => {
+      const n = list.filter(c => c.status[k] === "tested").length, b = list.filter(c => c.status[k] === "builds").length;
+      return `<div class="plat"><div class="nm">${nm}<small>${sub}</small></div><div class="sq">${list.map(c => `<i class="${c.status[k]}" title="${c.name}: ${c.status[k]}"></i>`).join("")}</div>
+        <div class="ct">${n ? n + " tested" : b + " build"}</div></div>`; }).join("");
+    $$(".sq i").forEach((s, i) => s.style.transitionDelay = (i % list.length) * 12 + "ms");
+    const pics = list.filter(c => c.image);
+    if (pics.length) { const one = pics.map(c => `<a href="components.html#${c.name}" style="background-image:url('${c.image}')"><span>${c.name}</span></a>`).join("");
+      $("#stripRow").innerHTML = one + one; $("#strip").hidden = false; }
+  }).catch(() => { $("#plats").innerHTML = '<p class="body">See the <a href="components.html">components page</a>.</p>'; });
 })();
 </script>
 <script src="omxqua/src/omxqua.js" defer></script>

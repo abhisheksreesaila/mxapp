@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en" class="oq-root oq-night oq-family-dev">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>omxcode components · see them, filter them, by platform</title>
+<meta name="description" content="Every omxcode component, pictured from the real framework, with where it runs today: Linux, the web, Android, Mac, iPhone and AI agents.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="omxqua/src/fonts.css">
+<link rel="stylesheet" href="omxqua/src/tokens.css">
+<link rel="stylesheet" href="omxqua/src/components.css">
+<link rel="stylesheet" href="site.css">
+<style>
+.chead { padding: 90px 24px 30px; }
+.chead h1 { font-size: clamp(56px, 8vw, 112px); }
+/* the legend: what each status means, said once */
+.legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 40px; }
+.legend div { border-radius: 18px; padding: 16px 18px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); font-size: 15px; color: var(--ink2); }
+.legend b { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; }
+.dot.tested { background: var(--oq-ok); } .dot.builds { background: var(--oq-info); } .dot.missing { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink2); }
+/* filters: a search, groups, platforms */
+.filters { position: sticky; top: 70px; z-index: 20; background: var(--bg); padding: 16px 0 14px; display: grid; gap: 10px; box-shadow: 0 1px 0 var(--oq-line-2); }
+.frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.frow .lbl { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); width: 76px; }
+.search { flex: 1; min-width: 220px; height: 42px; border-radius: 999px; border: 0; padding: 0 18px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); color: var(--ink); font: 500 15px var(--sans); }
+.search:focus { outline: 2px solid var(--oq-accent); outline-offset: 2px; }
+.fchip { all: unset; cursor: pointer; font: 500 13.5px var(--sans); color: var(--ink2); padding: 7px 13px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); transition: background .15s, color .15s, transform .2s var(--oq-island-spring); display: inline-flex; gap: 7px; align-items: center; }
+.fchip:hover { color: var(--ink); } .fchip:active { transform: scale(.95); }
+.fchip.on { background: var(--oq-accent); color: var(--oq-on-accent); box-shadow: none; }
+.fchip:focus-visible { outline: 2px solid var(--oq-accent); outline-offset: 2px; }
+.count { font: 13px var(--mono); color: var(--ink2); margin-left: auto; }
+/* the grid of components */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin-top: 24px; }
+.comp { all: unset; cursor: pointer; display: flex; flex-direction: column; border-radius: 22px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); overflow: hidden;
+  transition: transform .3s var(--oq-island-spring), box-shadow .2s, opacity .25s; animation: pop .45s var(--oq-island-spring) both; }
+.comp:hover { transform: translateY(-3px); box-shadow: 0 0 0 1px var(--line), var(--oq-shadow-3); }
+.comp:focus-visible { outline: 2px solid var(--oq-accent); outline-offset: 3px; }
+@keyframes pop { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+.pic { height: 170px; background: #f3f3f5; display: grid; place-items: center; overflow: hidden; }
+.pic img { max-width: 92%; max-height: 150px; object-fit: contain; transition: transform .4s var(--oq-island-spring); }
+.comp:hover .pic img { transform: scale(1.05); }
+.pic.none { background: var(--oq-surface-2); font: 600 28px var(--mono); color: var(--ink2); }
+.ct { padding: 14px 16px 16px; display: grid; gap: 6px; }
+.ct h3 { font: 650 18px var(--mono); letter-spacing: -.01em; }
+.ct p { margin: 0; font-size: 14px; color: var(--ink2); line-height: 1.4; }
+.pl { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.pl span { display: inline-flex; gap: 5px; align-items: center; font: 500 11.5px var(--mono); color: var(--ink2); }
+.empty { text-align: center; color: var(--ink2); padding: 80px 0; }
+/* the detail sheet */
+dialog.sheet { border: 0; padding: 0; border-radius: 28px; background: var(--oq-surface-1); color: var(--ink); width: min(880px, 94vw); max-height: 90vh; box-shadow: var(--oq-shadow-4), 0 0 0 1px var(--line); }
+dialog.sheet::backdrop { background: rgb(0 0 0 / .6); }
+dialog.sheet[open] { animation: rise2 .45s var(--oq-island-spring); }
+@keyframes rise2 { from { opacity: 0; transform: translateY(24px) scale(.97); } }
+.sh { display: grid; grid-template-columns: 1.2fr 1fr; }
+.sh .big { background: #f3f3f5; display: grid; place-items: center; min-height: 320px; padding: 20px; position: relative; }
+.sh .big img { max-width: 100%; max-height: 420px; object-fit: contain; }
+.sh .big .seg2 { position: absolute; top: 14px; left: 14px; }
+.sh .info { padding: 26px 26px 22px; display: grid; gap: 14px; align-content: start; }
+.sh h2 { font: 700 32px var(--mono); letter-spacing: -.03em; margin: 0; }
+.sh .grp { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--word); }
+.sh p { margin: 0; color: var(--ink2); }
+.api { position: relative; }
+.api pre { margin: 0; padding: 14px 16px; border-radius: 14px; background: var(--bg); font: 13.5px/1.6 var(--mono); white-space: pre-wrap; word-break: break-word; }
+.api .cp { position: absolute; top: 8px; right: 8px; all: unset; cursor: pointer; font: 500 11px var(--mono); color: var(--ink2); padding: 4px 8px; border-radius: 6px; background: var(--oq-surface-2); position: absolute; top: 8px; right: 8px; }
+.prow { display: grid; gap: 6px; }
+.prow div { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: center; font-size: 14.5px; }
+.prow div b { font-weight: 600; }
+.prow div span { color: var(--ink2); display: flex; gap: 8px; align-items: center; }
+.close { all: unset; cursor: pointer; position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--oq-surface-2); font-size: 18px; z-index: 2; }
+.close:focus-visible { outline: 2px solid var(--oq-accent); }
+@media (max-width: 860px) {
+  .legend, .sh { grid-template-columns: 1fr; } .sh .big { min-height: 220px; } .frow .lbl { width: 100%; } .filters { top: 64px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="lnav">
+  <a class="brand" href="index.html"><span class="mark">ox</span>omxcode <span class="sub">/ components</span></a>
+  <div class="pill"><span class="ind" aria-hidden="true"></span><a href="index.html#agents">Agents</a><a href="omxplorer.html">omxplorer</a><a href="index.html#faq">FAQ</a></div>
+  <div class="right"><a class="cta" href="index.html#get">Get the alpha</a></div>
+</nav>
+
+<main>
+<section class="chead">
+  <div class="wrap">
+    <div class="eyebrow rise"><span>Components</span></div>
+    <h1 class="rise" data-words data-step="80" data-d0="120">See them first.</h1>
+    <p class="lede rise"><span data-words data-step="30" data-d0="420">Every picture comes from the real framework running. Tap one for its line of code and where it runs.</span></p>
+    <div class="legend rv">
+      <div><b><i class="dot tested"></i>Tested</b>A script runs it on that platform on every check.</div>
+      <div><b><i class="dot builds"></i>Builds</b>Compiles (and signs, for Apple); not run there yet. Try it and tell us.</div>
+      <div><b><i class="dot missing"></i>Not yet</b>Not on that platform yet.</div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="filters">
+      <div class="frow"><input class="search" id="q" type="search" placeholder="Search: button, menu, chart…" aria-label="Search components"><span class="count" id="count"></span></div>
+      <div class="frow" id="groups"><span class="lbl">Kind</span></div>
+      <div class="frow" id="plats"><span class="lbl">Tested on</span></div>
+    </div>
+    <div class="grid" id="grid" aria-live="polite"></div>
+  </div>
+</section>
+</main>
+
+<dialog class="sheet" id="sheet" aria-labelledby="sname">
+  <button class="close" type="button" aria-label="Close">✕</button>
+  <div class="sh">
+    <div class="big"><img id="simg" alt=""><div class="seg2" id="sseg" hidden><span class="knob"></span><button type="button">Linux</button><button type="button">Web</button></div></div>
+    <div class="info">
+      <div class="grp" id="sgrp"></div>
+      <h2 id="sname"></h2>
+      <p id="sblurb"></p>
+      <div class="api"><pre id="sapi"></pre><button class="cp" type="button" data-copy="#sapi">copy</button></div>
+      <div class="prow" id="splats"></div>
+    </div>
+  </div>
+</dialog>
+
+<footer>
+  <div class="wrap">
+    <p class="note">Statuses are generated from the code and the checks by scripts/components.py, the same source as docs/components.md. Pictures: scripts/catalog.py, from the real framework on Linux (GTK 4).</p>
+    <div class="fine"><span>omxcode · components · MIT licence</span><a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/components.md">The full matrix on GitHub</a></div>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script>
+(() => {
+  const { $, $$, esc, seg } = window.omx;
+  const PLATS = [["linux", "Linux"], ["web", "Web"], ["android", "Android"], ["mac", "Mac"], ["iphone", "iPhone"], ["agent", "Agent"]];
+  const WORD = { tested: "tested", builds: "builds, not run yet", missing: "not yet" };
+  let all = [], group = "All", plat = null, q = "";
+  const grid = $("#grid");
+
+  fetch("components.json").then(r => r.json()).then(list => {
+    all = list;
+    const groups = ["All", ...new Set(list.map(c => c.group))];
+    $("#groups").insertAdjacentHTML("beforeend", groups.map(g => `<button class="fchip${g === "All" ? " on" : ""}" type="button" data-g="${esc(g)}">${esc(g)}</button>`).join(""));
+    $("#plats").insertAdjacentHTML("beforeend", `<button class="fchip on" type="button" data-p="">Any</button>` +
+      PLATS.map(([k, n]) => `<button class="fchip" type="button" data-p="${k}"><i class="dot tested"></i>${n} <span style="opacity:.6">${list.filter(c => c.status[k] === "tested").length}</span></button>`).join(""));
+    draw(); if (location.hash) openSheet(decodeURIComponent(location.hash.slice(1)));
+  }).catch(() => grid.innerHTML = '<p class="empty">Couldn\'t load the components. The matrix is on <a href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/components.md">GitHub</a>.</p>');
+
+  document.addEventListener("click", e => {
+    const g = e.target.closest("[data-g]"), p = e.target.closest("[data-p]"), c = e.target.closest(".comp");
+    if (g) { group = g.dataset.g; $$("[data-g]").forEach(b => b.classList.toggle("on", b === g)); draw(); }
+    if (p) { plat = p.dataset.p || null; $$("[data-p]").forEach(b => b.classList.toggle("on", b === p)); draw(); }
+    if (c) openSheet(c.dataset.name);
+  });
+  $("#q").addEventListener("input", e => { q = e.target.value.trim().toLowerCase(); draw(); });
+
+  function draw() {
+    const shown = all.filter(c => (group === "All" || c.group === group) && (!plat || c.status[plat] === "tested") &&
+      (!q || (c.name + " " + c.blurb + " " + c.group).toLowerCase().includes(q)));
+    $("#count").textContent = `${shown.length} of ${all.length}`;
+    grid.innerHTML = shown.length ? shown.map((c, i) => `<button class="comp" type="button" data-name="${esc(c.name)}" style="animation-delay:${Math.min(i, 16) * 25}ms">
+      <div class="pic${c.image ? "" : " none"}">${c.image ? `<img src="${c.image}" alt="${esc(c.name)}, drawn by omxcode on Linux" loading="lazy">` : esc(c.name.slice(0, 2))}</div>
+      <div class="ct"><h3>${esc(c.name)}</h3><p>${esc(c.blurb)}</p>
+        <div class="pl">${PLATS.map(([k, n]) => `<span title="${n}: ${WORD[c.status[k]]}"><i class="dot ${c.status[k]}"></i>${n}</span>`).join("")}</div></div></button>`).join("")
+      : '<p class="empty">Nothing matches. Try another word, or "Any" platform.</p>';
+  }
+
+  // the sheet: a big picture (Linux, or the web when there is one), the line of code, every platform in words
+  const sheet = $("#sheet"); let pick = null, cur = null;
+  pick = seg($("#sseg"), i => { if (cur) $("#simg").src = i ? cur.image_web : cur.image; });
+  function openSheet(name) {
+    const c = all.find(x => x.name === name); if (!c) return; cur = c;
+    $("#simg").src = c.image || ""; $("#simg").alt = c.image ? `${c.name}, drawn by omxcode` : ""; $(".big", sheet).style.display = c.image ? "" : "none";
+    $("#sseg").hidden = !c.image_web;
+    $("#sgrp").textContent = c.group; $("#sname").textContent = c.name; $("#sblurb").textContent = c.blurb; $("#sapi").textContent = c.api || "";
+    $("#splats").innerHTML = PLATS.map(([k, n]) => `<div><b>${n}</b><span><i class="dot ${c.status[k]}"></i>${WORD[c.status[k]]}</span></div>`).join("");
+    if (!sheet.open) sheet.showModal(); if (c.image_web) requestAnimationFrame(() => pick(0, false));
+    history.replaceState(null, "", "#" + encodeURIComponent(c.name));
+  }
+  sheet.addEventListener("close", () => history.replaceState(null, "", location.pathname));
+  $(".close", sheet).addEventListener("click", () => sheet.close());
+  sheet.addEventListener("click", e => { if (e.target === sheet) sheet.close(); });
+})();
+</script>
+<script src="omxqua/src/omxqua.js" defer></script>
+</body>
+</html>

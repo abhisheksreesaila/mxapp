@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en" class="oq-root oq-night oq-family-dev">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>omxplorer · 100 million rows, a window that never waits</title>
+<meta name="description" content="omxplorer, the data explorer built on omxcode: 100 million rows on the GPU or the CPU, charts you edit by their sentence, and a window that never waits.">
+<meta property="og:title" content="omxplorer: 100 million rows, a window that never waits">
+<meta property="og:image" content="https://abhisheksreesaila.github.io/omxcode/goals/30/big-median-gtk.jpg">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="omxqua/src/fonts.css">
+<link rel="stylesheet" href="omxqua/src/tokens.css">
+<link rel="stylesheet" href="omxqua/src/components.css">
+<link rel="stylesheet" href="site.css">
+<style>
+.ohero { padding-top: 90px; padding-bottom: 40px; text-align: center; }
+.ohero h1 { font-size: clamp(60px, 10vw, 140px); }
+.film { margin: 56px auto 0; width: min(1180px, 94vw); border-radius: 28px; overflow: hidden; box-shadow: var(--oq-shadow-4), 0 0 0 1px var(--line); background: #111; }
+.film video, .film img { display: block; width: 100%; height: auto; }
+.film + .srcline { text-align: center; }
+.dog { font: 600 clamp(24px, 3vw, 38px)/1.25 var(--sans); letter-spacing: -.025em; max-width: 900px; margin: 0 auto; text-align: center; }
+.dog .two { font-weight: 500; }
+.split { display: grid; grid-template-columns: 1fr 1.35fr; gap: 48px; align-items: center; }
+.split.flip { grid-template-columns: 1.35fr 1fr; }
+.split.flip > :first-child { order: 2; }
+.shot { border-radius: 22px; overflow: hidden; box-shadow: var(--oq-shadow-3), 0 0 0 1px var(--line); background: #f4f4f4; }
+.shot img, .shot video { display: block; width: 100%; height: auto; }
+.shot.pad { padding: 18px; }
+.sentence { font: 700 clamp(22px, 2.6vw, 32px)/1.35 var(--display); letter-spacing: -.02em; margin: 22px 0 0; }
+.sentence u { text-decoration: none; color: var(--word); box-shadow: inset 0 -.08em 0 color-mix(in srgb, var(--word) 55%, transparent); cursor: default; transition: background .2s; border-radius: 4px; }
+.sentence u:hover { background: color-mix(in srgb, var(--word) 18%, transparent); }
+.asks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.asks span { font: 500 14px var(--mono); color: var(--ink2); padding: 7px 12px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--line); }
+.faces { display: grid; gap: 10px; margin-top: 22px; }
+.faces div { display: flex; gap: 12px; align-items: baseline; color: var(--ink2); font-size: 16px; }
+.faces b { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; min-width: 74px; color: var(--ink); }
+.twin { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 48px; }
+.twin figure { margin: 0; }
+.twin .shot img { aspect-ratio: 16 / 9; object-fit: cover; object-position: top left; }
+.twin figcaption { font: 13px var(--mono); color: var(--ink2); margin-top: 10px; text-align: center; }
+.stack3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 48px; text-align: left; }
+.layer { border-radius: 22px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); padding: 22px; }
+.layer .k { font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--word); }
+.layer h3 { font: 700 26px/1.1 var(--display); letter-spacing: -.03em; margin-top: 10px; }
+.layer p { color: var(--ink2); font-size: 16px; margin: 10px 0 0; }
+.reads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+.reads a { display: block; text-decoration: none; border-radius: 16px; padding: 16px 18px; box-shadow: inset 0 0 0 1px var(--line); transition: background .2s, transform .2s; }
+.reads a:hover { background: var(--oq-surface-1); transform: translateY(-2px); }
+.reads b { display: block; font: 600 16px var(--sans); }
+.reads span { font: 12.5px var(--mono); color: var(--ink2); }
+.edges { max-width: 760px; margin: 40px auto 0; display: grid; gap: 10px; text-align: left; }
+.edges div { padding: 14px 18px; border-radius: 14px; box-shadow: inset 2px 0 0 var(--oq-warn), 0 0 0 1px var(--oq-line-2); color: var(--ink2); font-size: 16px; }
+.edges b { color: var(--ink); }
+/* the island, live: a strip of omxplorer in Liquid light, a cursor, the capsule growing and settling */
+.lq { position: relative; border-radius: 22px; overflow: hidden; background: linear-gradient(#eef2f7, #e6ebf2); box-shadow: var(--oq-shadow-3), 0 0 0 1px var(--line); padding: 16px 18px 20px; color: #0f172a; font-family: var(--sans); }
+.lqbar { display: flex; align-items: center; gap: 12px; height: 40px; }
+.lqlogo { width: 18px; height: 18px; border-radius: 6px; background: #0e7c86; flex: none; }
+.lqmenu { font-size: 13px; color: #64748b; white-space: nowrap; }
+.lqsp { flex: 1; }
+.cap2 { position: relative; height: 34px; border-radius: 999px; background: #fff; box-shadow: 0 4px 18px rgba(15,23,42,.10), 0 0 0 1px rgba(15,23,42,.07); overflow: hidden; flex: none;
+  transition: width .32s cubic-bezier(.33,1,.68,1), background-color .32s; }
+.cap2.run, .cap2.undo { background: #dbe7f3; } .cap2.done { background: #dcebdc; } .cap2.err { background: #f5dcdc; }
+.face { position: absolute; left: 0; top: 0; height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 14px; white-space: nowrap; font-size: 14px; transition: opacity .16s; }
+.face.out { opacity: 0; }
+.face small { color: #64748b; font-size: 14px; font-variant-numeric: tabular-nums; }
+.face .dot { width: 8px; height: 8px; border-radius: 50%; background: #16803c; }
+.face .spin { width: 13px; height: 13px; box-sizing: border-box; border-radius: 50%; border: 2px solid #1d6fd0; border-right-color: transparent; animation: spin .8s linear infinite; }
+.face .chk { color: #16803c; font-weight: 700; } .face .bad { width: 16px; height: 16px; border-radius: 50%; background: #c81e1e; color: #fff; display: grid; place-items: center; font: 700 11px var(--sans); }
+.face .btn { background: #fff; border-radius: 999px; padding: 3px 10px; color: #1d6fd0; font-weight: 600; transition: transform .43s cubic-bezier(.2,.9,.3,1.15); }
+.face .btn.r { color: #c81e1e; } .face .btn.p { transform: scale(.9); }
+.prog { position: absolute; left: 14px; right: 14px; bottom: 4px; height: 2px; border-radius: 2px; background: #1d6fd0; transform-origin: left; transform: scaleX(0); opacity: 0; }
+.lqtools { display: flex; gap: 8px; margin-top: 12px; }
+.lqb { font-size: 13px; padding: 7px 12px; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px rgba(15,23,42,.07); transition: transform .43s cubic-bezier(.2,.9,.3,1.15), background .2s; }
+.lqb.sq { width: 14px; text-align: center; } .lqb.p { transform: scale(.94); background: #e3f1f2; }
+.lqsheet { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: 14px; border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 0 0 1px rgba(15,23,42,.07); }
+.lqsheet i { height: 26px; border-right: 1px solid rgba(15,23,42,.06); border-bottom: 1px solid rgba(15,23,42,.06); }
+.lqsheet i.sel { background: rgba(14,124,134,.10); }
+.cur { position: absolute; width: 22px; height: 22px; left: 0; top: 0; fill: #0f172a; stroke: #fff; stroke-width: 1.5; transition: transform .7s cubic-bezier(.65,0,.35,1); pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+.cur.tap { animation: tap .25s; }
+@keyframes tap { 50% { scale: .82; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.faces div { padding-left: 12px; box-shadow: inset 2px 0 0 transparent; transition: color .25s, box-shadow .25s; }
+.faces div.on { color: var(--ink); box-shadow: inset 2px 0 0 var(--word); }
+/* up close: four micro-interactions, magnified */
+h3.close { font: 700 28px var(--display); letter-spacing: -.03em; margin: 72px 0 0; display: flex; gap: 12px; align-items: baseline; justify-content: center; }
+h3.close span { font: 600 13px var(--mono); color: var(--word); }
+.micro { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 24px; }
+.mi { margin: 0; text-align: left; }
+.lens { position: relative; height: 190px; border-radius: 22px; background: linear-gradient(#eef2f7, #e6ebf2); box-shadow: 0 0 0 1px var(--line); display: grid; place-items: center; overflow: hidden; color: #0f172a; font-family: var(--sans); }
+.mi figcaption { font: 13px/1.45 var(--mono); color: var(--ink2); margin-top: 10px; }
+.mi figcaption b { display: block; font: 600 16px var(--sans); color: var(--ink); margin-bottom: 2px; }
+.mbtn { font: 600 22px var(--sans); padding: 14px 24px; border-radius: 16px; background: #0e7c86; color: #fff; transition: transform .15s cubic-bezier(.22,1,.36,1); }
+.mbtn.p { transform: scale(.97); }
+.mbtn.ghost { background: #fff; color: #0f172a; box-shadow: 0 0 0 1px rgba(15,23,42,.08); position: absolute; top: 22px; font-size: 18px; padding: 10px 18px; }
+.mseg { position: relative; display: flex; padding: 5px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgba(15,23,42,.08); font: 600 20px var(--sans); }
+.mseg span { position: relative; flex: 1; text-align: center; padding: 10px 22px; z-index: 1; transition: color .3s; }
+.mseg i { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc(50% - 5px); border-radius: 999px; background: #0e7c86; transition: transform .15s cubic-bezier(.22,1,.36,1); }
+.mseg span:first-of-type { color: #fff; } .mseg.r i { transform: translateX(100%); } .mseg.r span:first-of-type { color: #0f172a; } .mseg.r span:last-of-type { color: #fff; }
+.mpop { position: absolute; top: 74px; display: grid; gap: 2px; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 8px 32px rgba(15,23,42,.14), 0 0 0 1px rgba(15,23,42,.06); font: 500 15px var(--sans);
+  transform-origin: 50% 0; transform: scale(.98) translateY(-4px); opacity: 0; transition: transform .2s cubic-bezier(.22,1,.36,1), opacity .2s cubic-bezier(.22,1,.36,1); }
+.mpop span { padding: 5px 14px; border-radius: 8px; } .mpop span:first-child { background: rgba(14,124,134,.10); }
+.mpop.on { transform: none; opacity: 1; }
+.mgrid { position: relative; display: grid; grid-template-columns: repeat(4, 52px); grid-template-rows: repeat(3, 36px); background: #fff; border-radius: 10px; box-shadow: 0 0 0 1px rgba(15,23,42,.08); }
+.mgrid i { border-right: 1px solid rgba(15,23,42,.06); border-bottom: 1px solid rgba(15,23,42,.06); }
+.mgrid b { position: absolute; left: 0; top: 0; width: 52px; height: 36px; border-radius: 4px; box-shadow: inset 0 0 0 2.5px #0e7c86; background: rgba(14,124,134,.08); transition: transform .14s cubic-bezier(.25,1,.5,1); }
+@media (max-width: 1080px) { .micro { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 860px) { .lqmenu { display: none; } .face .opt { display: none; } }
+@media (max-width: 860px) {
+  .split, .split.flip, .twin, .stack3, .reads { grid-template-columns: 1fr; } .split.flip > :first-child { order: 0; }
+}
+</style>
+<noscript><style>.rv { opacity: 1; transform: none; }</style></noscript>
+</head>
+<body>
+
+<nav class="lnav">
+  <a class="brand" href="index.html"><span class="mark">ox</span>omxcode <span class="sub">/ omxplorer</span></a>
+  <div class="pill"><span class="ind" aria-hidden="true"></span><a href="#speed">Speed</a><a href="#ask">Ask</a><a href="#island">Island</a><a href="#look">Look</a><a href="#inside">Inside</a></div>
+  <div class="right"><a class="cta" href="#run">Run it</a></div>
+</nav>
+
+<main>
+<section class="ohero">
+  <div class="wrap">
+    <div class="eyebrow rise"><span>Showcase · built on omxcode</span></div>
+    <h1 class="rise" data-words data-step="0" data-d0="120">omxplorer</h1>
+    <p class="lede rise"><span data-words data-step="45" data-d0="380">A data explorer that never makes you wait.</span> <span class="two" data-words data-step="35" data-d0="620">100 million rows in a native window, on the GPU or the CPU, whichever is faster.</span></p>
+  </div>
+  <div class="film rv"><video src="img/clip-island-100m.mp4" poster="img/clip-island-100m.jpg" autoplay muted loop playsinline aria-label="omxplorer opening 100 million rows, running a median and a median by month; the island at the top right shows the progress while the window stays live"></video></div>
+  <p class="srcline rv">the real app, recorded on Linux · 100,000,000 rows · RTX 3090 · 22 s, not sped up</p>
+</section>
+
+<section style="padding-top:70px;padding-bottom:70px">
+  <p class="dog rv">We eat our own dog food. <span class="two">omxplorer pushes the framework: if the app can't do something smoothly, the framework isn't done.</span></p>
+</section>
+
+<section id="speed" class="center">
+  <div class="wrap">
+    <div class="eyebrow rv">Speed</div>
+    <h2 class="rv">The window <span class="two">never waits.</span></h2>
+    <p class="lede rv">Big queries run beside the window, not in it. The longest pause while 100 million rows are crunched is two frames.</p>
+    <div class="nums" style="text-align:left">
+      <div class="rv"><b><span data-count="1.8" data-dec="1">1.8</span><small>s</small></b><span>open 100M rows from Parquet</span></div>
+      <div class="rv"><b><span data-count="0.77" data-dec="2">0.77</span><small>s</small></b><span>median by region over 100M rows, on the CPU</span></div>
+      <div class="rv"><b><span data-count="33">33</span><small>ms</small></b><span>the longest the window paused meanwhile</span></div>
+      <div class="rv"><b><span data-count="0.6" data-dec="1">0.6</span><small>ms</small></b><span>a chart over 1M rows, grouped and sorted</span></div>
+      <div class="rv"><b><span data-count="0.3" data-dec="1">0.3</span><small>ms</small></b><span>the status bar's sum and average, 1M rows</span></div>
+      <div class="rv"><b><span data-count="0.8" data-dec="1">0.8</span><small>ms</small></b><span>a frame of 1M-row grid scrolling, p95</span></div>
+    </div>
+    <p class="srcline rv">one Linux machine · NVIDIA RTX 3090 · measured by scripts/check, goals 26, 29 and 30</p>
+  </div>
+</section>
+
+<section id="ask">
+  <div class="wrap split">
+    <div>
+      <div class="eyebrow rv">Ask the chart</div>
+      <h2 class="rv" style="font-size:clamp(36px,4.6vw,64px)">A chart is <span class="two">its sentence.</span></h2>
+      <p class="sentence rv"><u>Sum</u> of <u>revenue</u> by <u>month</u>, <u>every row</u>, as <u>a line</u></p>
+      <p class="body rv">Every coloured word is a setting: tap it to change it, or type what you want; at a million rows it recomputes in under a millisecond.</p>
+      <div class="asks rv"><span>"median"</span><span>"by region, top 5"</span><span>"only paid, as bars"</span></div>
+    </div>
+    <div class="shot rv"><video src="img/clip-sentence-gtk.mp4" poster="img/omxplorer-sentence-gtk.jpg" autoplay muted loop playsinline aria-label="Editing a chart by tapping the words of its title"></video></div>
+  </div>
+</section>
+
+<section id="island">
+  <div class="wrap split flip">
+    <div>
+      <div class="eyebrow rv">The island</div>
+      <h2 class="rv" style="font-size:clamp(36px,4.6vw,64px)">One capsule <span class="two">tells you everything.</span></h2>
+      <div class="faces rv" id="faces"><div data-f="rest"><b>at rest</b>the file, its rows, the GPU</div><div data-f="run"><b>running</b>what, how far, how fast</div><div data-f="done"><b>done</b>how long it took, and where</div><div data-f="undo"><b>undo</b>what changed, one tap back</div><div data-f="err"><b>error</b>stays until you've seen it</div></div>
+      <p class="body rv">It rests small. When something happens it grows to say what, in 320 ms on a calm curve, then settles back. Tapping it opens your recent work and the GPU's timings.</p>
+    </div>
+    <div class="lq rv" id="isdemo" role="img" aria-label="The island at the top of omxplorer: at rest it shows the file, its rows and the GPU; it grows to show a median running, then how long it took, an undo and an error, and shrinks back to rest each time">
+      <div class="lqbar"><span class="lqlogo"></span><span class="lqmenu">File&nbsp;&nbsp;Edit&nbsp;&nbsp;View&nbsp;&nbsp;Data</span><span class="lqsp"></span>
+        <div class="cap2" id="cap2"><div class="face" id="face"></div><i class="prog" id="prog"></i></div></div>
+      <div class="lqtools"><span class="lqb" id="bMed">Median by region</span><span class="lqb sq" id="bBold"><b>B</b></span><span class="lqb" id="bType">region as text</span></div>
+      <div class="lqsheet" aria-hidden="true"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="sel"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="sel"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="sel"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div>
+      <svg class="cur" id="cur" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 8-6 1.6L10 19z"/></svg>
+    </div>
+  </div>
+</section>
+
+<section id="look" class="center">
+  <div class="wrap">
+    <div class="eyebrow rv">The look</div>
+    <h2 class="rv">Liquid, <span class="two">on every screen.</span></h2>
+    <p class="lede rv">Calm surfaces, motion that settles and never bounces, and three more skins a tap away: Ledger, Graphite and Blueprint. The same app, natively drawn.</p>
+    <div class="twin">
+      <figure class="rv"><div class="shot"><img src="img/omxplorer-sentence-gtk.jpg" alt="omxplorer on Linux, drawn by GTK" loading="lazy"></div><figcaption>Linux · GTK 4</figcaption></figure>
+      <figure class="rv"><div class="shot"><img src="img/omxplorer-sentence-web.jpg" alt="The same omxplorer on the web" loading="lazy"></div><figcaption>the web · the same app.mojo</figcaption></figure>
+    </div>
+    <h3 class="close rv">Up close <span>magnified</span></h3>
+    <div class="micro" id="micro">
+      <figure class="mi rv"><div class="lens"><span class="mbtn" id="mPress">Insert chart</span></div><figcaption><b>Press</b>shrinks to 97%, eases back · 150 ms</figcaption></figure>
+      <figure class="mi rv"><div class="lens"><div class="mseg" id="mSeg"><i></i><span>Bars</span><span>Line</span></div></div><figcaption><b>Switch</b>the selection slides and settles · 150 ms</figcaption></figure>
+      <figure class="mi rv"><div class="lens"><span class="mbtn ghost" id="mOpen">Format ▾</span><div class="mpop" id="mPop"><span>Bold</span><span>Currency</span><span>Percent</span></div></div><figcaption><b>Arrive</b>menus rise into place, no bounce · 200 ms</figcaption></figure>
+      <figure class="mi rv"><div class="lens"><div class="mgrid" id="mGrid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b id="mRing"></b></div></div><figcaption><b>Select</b>the ring glides between cells · damped, ~140 ms</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="inside" class="center">
+  <div class="wrap">
+    <div class="eyebrow rv">Inside</div>
+    <h2 class="rv">Three pieces, <span class="two">one package.</span></h2>
+    <div class="stack3">
+      <div class="layer rv"><div class="k">framework</div><h3>omxcode</h3><p>Native controls on each platform, the GPU canvas, the agent tools.</p></div>
+      <div class="layer rv"><div class="k">engine</div><h3>omxframe</h3><p>A dataframe engine in Mojo: SQL, joins and group-bys on the GPU or the CPU, queries as background jobs.</p></div>
+      <div class="layer rv"><div class="k">design</div><h3>omxqua</h3><p>The design language: tonal surfaces, one soft shadow, calm motion.</p></div>
+    </div>
+    <p class="srcline rv" style="text-align:left">the research behind it</p>
+    <div class="reads">
+      <a class="rv" href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/research/rendering.md"><b>Rendering</b><span>how to draw fast and still feel native</span></a>
+      <a class="rv" href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/design/liquid.md"><b>Liquid</b><span>the design, its curves and why</span></a>
+      <a class="rv" href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/report.md"><b>100M rows</b><span>the island and background queries</span></a>
+      <a class="rv" href="https://github.com/abhisheksreesaila/omxcode/blob/main/docs/decisions.md"><b>Decisions</b><span>every call we made, with reasons</span></a>
+    </div>
+  </div>
+</section>
+
+<section id="run" class="center">
+  <div class="wrap">
+    <div class="eyebrow rv">Run it</div>
+    <h2 class="rv">Try it <span class="two">on your data.</span></h2>
+    <div class="card install rv">
+<pre id="cmds">git clone https://github.com/abhisheksreesaila/omxcode
+cd omxcode &amp;&amp; pixi install
+scripts/omxplorer.sh path/to/your.csv</pre>
+      <div class="src">Linux · NVIDIA GPU (the CPU works too, slower)<button class="cp" data-copy="#cmds">copy</button></div>
+    </div>
+    <div class="edges">
+      <div><b>Honest edges.</b> It's an alpha.</div>
+      <div>New pivots and charts can land on top of each other. <b>Next:</b> they tile into place.</div>
+      <div>On the Mac (built, not yet run on hardware), big queries would hold the window while they run; Linux runs them beside it.</div>
+    </div>
+    <div class="ctas rv"><a class="cta" href="https://github.com/abhisheksreesaila/omxcode">Get it on GitHub</a><a class="more" href="index.html">Back to omxcode</a></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="note">Every number here is measured on one Linux machine with an NVIDIA RTX 3090, by a script in the repository.</p>
+    <div class="fine"><span>omxplorer · built on omxcode · MIT licence</span><a href="https://github.com/abhisheksreesaila/omxcode/issues">Report an issue</a></div>
+  </div>
+</footer>
+<script src="site.js"></script>
+<script>
+(() => {
+  const { $, $$, reduce, scene } = window.omx;
+
+  // the island: rest → (a tap) → it grows to the new face → settles back to rest
+  const cap = $("#cap2"), face = $("#face"), prog = $("#prog"), cur = $("#cur"), demo = $("#isdemo"), fl = $$("#faces div");
+  const FACES = {
+    rest: '<i class="dot"></i><b>big</b><small>100,000,000 rows · RTX 3090</small>',
+    run:  '<i class="spin"></i>Median of revenue by region <small><span id="pct">0</span>% <span class="opt">· 1.4B rows/s</span></small>',
+    done: '<span class="chk">✓</span>Median of revenue by region <small>0.77 s · 100M rows</small>',
+    undo: '<span style="color:#1d6fd0">←</span>Bold applied to 21 cells <span class="btn">Undo</span>',
+    err:  '<span class="bad">!</span>region: 3 rows aren\'t text <span class="btn r">Show</span>' };
+  function show(k) {
+    fl.forEach(d => d.classList.toggle("on", d.dataset.f === k));
+    const m = document.createElement("div"); m.className = "face"; m.style.visibility = "hidden"; m.innerHTML = FACES[k]; cap.append(m);
+    const w = m.offsetWidth; m.remove();
+    face.classList.add("out");
+    setTimeout(() => { face.innerHTML = FACES[k]; face.classList.remove("out"); }, reduce ? 0 : 140);
+    cap.className = "cap2 " + k; cap.style.width = w + "px";
+  }
+  const at = el => { const a = el.getBoundingClientRect(), d = demo.getBoundingClientRect(); return [a.left - d.left + a.width * .55, a.top - d.top + a.height * .6]; };
+  const move = (el, step) => { const [x, y] = at(el); cur.style.transform = `translate(${x}px, ${y}px)`; return step(750); };
+  const tap = async (el, step) => { cur.classList.remove("tap"); void cur.offsetWidth; cur.classList.add("tap"); el.classList.add("p"); await step(160); el.classList.remove("p"); };
+  show("rest");
+  if (!reduce) {
+    cur.style.transform = "translate(260px, 170px)";
+    scene(demo, async step => {
+      show("rest"); prog.style.opacity = 0; await step(1400);
+      await move($("#bMed"), step); await tap($("#bMed"), step);
+      show("run"); await step(200); prog.style.opacity = 1;
+      await new Promise(res => { const t0 = performance.now(), D = 770, f = t => { const p = Math.min(1, (t - t0) / D), e = $("#pct"); prog.style.transform = `scaleX(${p})`; if (e) e.textContent = Math.round(p * 100); p < 1 ? requestAnimationFrame(f) : res(); }; requestAnimationFrame(f); });
+      prog.style.opacity = 0; prog.style.transform = "scaleX(0)"; show("done"); await step(2200);
+      show("rest"); await step(1400);
+      await move($("#bBold"), step); await tap($("#bBold"), step); show("undo"); await step(2400);
+      show("rest"); await step(1400);
+      await move($("#bType"), step); await tap($("#bType"), step); show("err"); await step(1600);
+      const b = $(".btn.r", face); if (b) { await move(b, step); await tap(b, step); }
+      await step(300);
+    });
+  }
+
+  // up close: each lens loops its one gesture
+  const mP = $("#mPress"), mS = $("#mSeg"), mO = $("#mOpen"), mPop = $("#mPop"), ring = $("#mRing");
+  if (!reduce) scene($("#micro"), async step => {
+    mP.classList.add("p"); await step(180); mP.classList.remove("p");
+    await step(500); mS.classList.toggle("r");
+    await step(500); mO.classList.add("p"); await step(120); mO.classList.remove("p"); mPop.classList.toggle("on");
+    for (const [c, r] of [[1, 0], [2, 0], [2, 1], [2, 2], [1, 2]]) { await step(260); ring.style.transform = `translate(${c * 52}px, ${r * 36}px)`; }
+    await step(900); ring.style.transform = "none";
+  });
+  else { mPop.classList.add("on"); }
+})();
+</script>
+
+<script src="omxqua/src/omxqua.js" defer></script>
+</body>
+</html>

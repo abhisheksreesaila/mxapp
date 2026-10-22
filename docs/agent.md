@@ -57,3 +57,17 @@ a design change, and the tools that appeared or went. Enough to carry on without
 - Read cells on any app but omxplorer (the others don't `describe` their canvases); omxplorer reads the shown rows, not a range.
 - Move Board objects, drag, or scroll a grid by gesture beyond what `pan` sends.
 - Generate UI: that is AG-UI, after MX frame (the operations log is its state).
+
+## What it costs in tokens
+Measured 2026-10-22 on omxplorer with `build/data/orders_1m.csv`, through `scripts/agent_client.py` (tokens estimated as characters ÷ 4):
+
+| Call | Characters | ≈ Tokens |
+|---|---|---|
+| `ask` "revenue by product, largest first, top 5" (what changed) | 256 | 60 |
+| `read` (the screen's texts) | 916 | 230 |
+| `insert-chart` | 1,063 | 270 |
+| `create-table`, `choose-a-file` | 2,500–2,600 | 650 |
+| `screen` (everything, a busy screen with 100 tools) | 11,393 | 2,800 |
+| `tools/list` (104 tools, as JSON) | 17,437 | 4,400 |
+
+For comparison, one screenshot costs a vision model about 1,600 tokens (Claude: width × height ÷ 750, after resizing to about 1.15 megapixels), and a screen-scraping agent takes one after every action to see what happened. So a call that answers in words is 2–25× cheaper than that screenshot; a full `screen` or a fresh tool list is not, and is worth asking for only when the screen changed a lot.
