@@ -298,7 +298,7 @@ def colour_count(png, hexcol, tol=6):
 
 
 def m7():
-    """Stitch's details on both hosts: the menu bar's name and GPU chip, yes/no pills, stat cards, tile footers; the page."""
+    """Stitch's details on both hosts: the menu bar's name and the island (the GPU at rest), yes/no pills, stat cards, tile footers; the page."""
     problems = []
     for host, fn in (("GTK", gtk), ("web", web)):
         out = fn(SHEET, f"stitch-sheet-{host}")
@@ -324,7 +324,7 @@ def m7():
                    for s in ("start", "import", "sheet", "report"))
     (OUT / "compare.html").write_text("<!doctype html><meta charset=utf-8><title>goal 24: Stitch vs GTK vs web</title><style>body{background:#111;color:#ddd;font:14px Inter,sans-serif;padding:20px}"
                                       ".r{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}img{width:100%;border-radius:8px}</style><p>Stitch · GTK · web</p>" + rows)
-    return not problems, "; ".join(problems) or "the menu bar's name and GPU chip, yes/no pills, 4 stat cards, tile footers (matched, p50 exact, of N values, % of rows) on GTK and the web; build/g24/compare.html"
+    return not problems, "; ".join(problems) or "the menu bar's name and the island (the GPU at rest), yes/no pills, 4 stat cards, tile footers (matched, p50 exact, of N values, % of rows) on GTK and the web; build/g24/compare.html"
 
 
 def m6():

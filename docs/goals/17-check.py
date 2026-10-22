@@ -223,7 +223,7 @@ def m3():
         d = differ(name, r[0], r[1])
         if d:
             problems.append(d)
-    return not problems, "; ".join(problems[:6]) or "Settings dialog (skin picker, checkboxes) switches the skin live and saves it; a sort's toast undoes it; every toolbar button has a tooltip; ƒx opens and closes a popover; identical on GTK and web"
+    return not problems, "; ".join(problems[:6]) or "Settings dialog (skin picker, checkboxes) switches the skin live and saves it; the island's Undo undoes a sort; every toolbar button has a tooltip; ƒx opens and closes a popover; identical on GTK and web"
 
 
 def m4():
