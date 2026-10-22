@@ -37,8 +37,8 @@ COMPONENTS = [
 # Which examples each platform's checks actually run (docs/goals/*-check.py): GTK and the web run every
 # example; the Android checks (goal 7) drive these on the emulator; Mac and iPhone only build and sign.
 RUN_ON = {
-    "Linux (GTK)": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer", "themes"],
-    "Web": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer", "themes"],
+    "Linux (GTK)": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer", "themes", "kit"],
+    "Web": ["hello", "gallery", "todo", "gpu", "kitchen", "expenses", "layout", "lens", "analytics", "workbook", "mxstudio", "omxplorer", "themes", "kit"],  # (kit: goal 18 runs it on GTK and the web)
     "Android": ["hello", "gallery", "layout", "lens", "todo"],
     "Mac (AppKit)": [],
     "iPhone (UIKit)": [],

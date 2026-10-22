@@ -4,6 +4,7 @@
 # scrolling and editing meanwhile. Builds without job threads (the Mac's, unless built with -D MXFRAME_JOB_THREADS) do the
 # work inside the start call: the job comes back done and the app reads it on the next frame, as before.
 
+# (Job and its states are also what apps take from here: an app imports mojoui, never the engine, goal 5's rule)
 from mxframe import Job, JobCtl, JobBody, JobProgress, start_job, JOB_RUNNING, JOB_DONE, JOB_FAILED, JOB_CANCELLED
 from mojoui.sheet import Sheet
 from mojoui.sheetpage import SheetObject, compute, shape_of

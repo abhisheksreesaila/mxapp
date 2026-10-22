@@ -66,7 +66,7 @@ from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GR
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
 from mojoui.sheet import Sheet, placeholder_sheet, blank_table, INT, DECIMAL, TEXT, DATE, BOOL
 from mojoui.shared import environment, make_dir
-from mojoui.files import file_name, file_stem, read_recent, remember, read_setting, write_setting
+from mojoui.files import file_name, file_stem, file_size, read_recent, remember, read_setting, write_setting
 from mojoui.csvio import read_table, empty_import, CsvImport, CsvColumn, kind_name
 from mojoui.omxfile import save_omx, open_document
 from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
@@ -90,11 +90,9 @@ from mojoui.chartview import ChartView
 from mojoui.view import TAP, PAN, ZOOM, PRESS, RELEASE
 from mojoui.sample import sample_table
 from mojoui.island import Island, Activity, IslandView, HIT_BODY, HIT_ACTION, IDLE as ISLAND_IDLE, RUNNING as ISLAND_RUNNING, UNDO as ISLAND_UNDO, ERROR as ISLAND_ERROR
-from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers, Opened, open_job, pace, stopped
-from std.os.path import getsize
+from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers, Opened, open_job, pace, stopped, Job, JOB_RUNNING, JOB_DONE
 from mojoui.clock import now_ns
 from mojoui.draw import rect as draw_rect, with_alpha
-from mxframe import Job, JOB_RUNNING, JOB_DONE
 
 # screens
 comptime START_SCREEN = 0
@@ -492,7 +490,7 @@ struct Main(App):
             return
         var bytes = 0
         try:
-            bytes = getsize(path)
+            bytes = file_size(path)
         except:
             pass
         if bytes >= BIG_FILE:  # (read in a job: the window stays live, the island shows how far it is)

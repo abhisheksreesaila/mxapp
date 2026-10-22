@@ -2,6 +2,7 @@
 # (one path per line in <config>/recent.txt, newest first, at most 10) and settings (key=value lines in
 # <config>/settings.txt).
 
+from std.os.path import getsize
 from mojoui.shared import environment, make_dir
 
 
@@ -14,6 +15,11 @@ def file_stem(path: String) -> String:
     var name = file_name(path)
     var dot = name.rfind(".")
     return String(name[byte=:dot]) if dot > 0 else name
+
+
+def file_size(path: String) raises -> Int:
+    """The file's size in bytes."""
+    return getsize(path)
 
 
 def config_dir(app: String) -> String:
