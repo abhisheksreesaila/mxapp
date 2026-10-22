@@ -42,3 +42,4 @@ One line per rule that prevents a mistake that happened.
 - 2026-10-21 · Moving work onto frames (polled jobs) needs every host that drives the app to send frames, the agent host included: goal 30 checked GTK and the web, and the agent's opens never landed. A new mechanism names each host it must reach in its check.
 - 2026-10-21 · A check runner that catches a crash prints its traceback (scripts/check now does): a bare IndexError from ten goals deep cost a 10-minute rerun.
 - 2026-10-21 · Dropping an MX frame `Job` detaches its thread, it doesn't stop it: every cancelled handle that may still read shared data (a table, its GPU copy) is kept and waited for before that data goes (reviewer round 2, D-284).
+- A wait loop with a deadline must never block inside the loop (a blocking main-loop turn, a join, a read): the deadline is only read between turns. Guarded by scripts/check M5 for the GTK host (D-286).

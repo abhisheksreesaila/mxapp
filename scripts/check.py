@@ -289,8 +289,13 @@ def todo(what):
 
 
 def m5():
-    """Goal 29's checks (every earlier goal's inside them)."""
+    """Goal 29's checks (every earlier goal's inside them), and no host's test wait that can sleep past its deadline."""
     problems = []
+    import re
+    for f in sorted((ROOT / "mojoui" / "hosts").glob("*.mojo")):  # (D-286: a blocking main-loop turn hung a run 15 minutes)
+        for i, line in enumerate(f.read_text().splitlines(), 1):
+            if re.search(r'g_main_context_iteration", c_int\]\(\s*\w+\s*,\s*c_int\(1\)\)', line):
+                problems.append(f"{f.name}:{i} turns the main loop blocking: use pump(), which never sleeps past a deadline")
     for name, fn in [(f"29-M{i}", getattr(g29, f"m{i}")) for i in range(6)]:
         ok, msg = fn()
         if not ok:

@@ -3248,6 +3248,14 @@ def to_int(s: String) -> Int:
         return 0
 
 
+def pump():
+    """One turn of the main loop for a test's wait, never sleeping past its caller's deadline: a blocking turn waits
+    for the next event, and with nothing scheduled (no timer, no frame asked for, as when the island has settled) that
+    is forever, so the caller's deadline is never read again (a 15-minute hang in goal 14's save run, D-286)."""
+    if external_call["g_main_context_iteration", c_int](0, c_int(0)) == 0:
+        sleep(0.001)
+
+
 def wait_frame(window: Int):
     """Lets the shown window's frame clock tick once (up to 300 ms), so a step's layout (a new tab
     page, a rebuilt board) is allocated before the next step or the report measures it. On X11 the
@@ -3259,7 +3267,7 @@ def wait_frame(window: Int):
     external_call["gdk_frame_clock_request_phase", NoneType](clock, c_int(1 << 3))  # GDK_FRAME_CLOCK_PHASE_LAYOUT
     var deadline = perf_counter_ns() + 300_000_000
     while external_call["gdk_frame_clock_get_frame_counter", Int64](clock) == before and perf_counter_ns() < deadline:
-        _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+        pump()
 
 
 def wait_allocated(widget: Int):
@@ -3749,7 +3757,7 @@ def run_step[A: App](host_addr: Int, step: String):
             var first = 0
             var deadline = perf_counter_ns() + 20_000_000_000
             while perf_counter_ns() < deadline:
-                _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+                pump()
                 if ci >= len(host[].canvases):
                     break
                 var done = host[].canvases[ci].frames - start
@@ -4014,7 +4022,7 @@ def save_png(window: Int, path: String):
     for _ in range(500):  # wait until the window is on screen
         if external_call["gtk_widget_get_mapped", c_int](window) != 0:
             break
-        _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+        pump()
     for _ in range(60):  # let layout and drawing settle (~300 ms of frames)
         settle()
         external_call["g_usleep", NoneType](c_uint(5000))
@@ -4086,7 +4094,7 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
         # isn't pending yet: block for it, up to 3 s, so steps and measurements see a laid-out window.
         var up_by = perf_counter_ns() + 3_000_000_000
         while external_call["gtk_widget_get_width", c_int](host[].window) == 0 and perf_counter_ns() < up_by:
-            _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+            pump()
         settle()
     if testing:
         for step in steps.split(";"):
@@ -4097,11 +4105,11 @@ def on_activate[A: App](gapp: Int, host_addr: Int) abi("C"):
                 wait_frame(host[].window)
                 var by = perf_counter_ns() + 1_000_000_000
                 while host[].reveal_pending >= 0 and perf_counter_ns() < by:  # a scroll into view waits for layout
-                    _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+                    pump()
         if shot != "" and len(host[].canvases) > 0:  # on screen: let canvases draw what they show now
             var deadline = perf_counter_ns() + 5_000_000_000
             while not host[].canvases_drawn() and perf_counter_ns() < deadline:
-                _ = external_call["g_main_context_iteration", c_int](0, c_int(1))
+                pump()
             settle()
         report[A](host_addr)
     if shot != "":
