@@ -157,11 +157,11 @@
 /* ---- 3 · what one language unlocks: four programs merge into one file ---- */
 .merge { position: relative; height: 150px; margin-top: 64px; }
 .piece { position: absolute; top: 0; width: 23.5%; height: 84px; border-radius: 16px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); display: grid; place-content: center; text-align: center; font: 600 16px var(--sans);
-  transition: left .9s cubic-bezier(.65,0,.35,1), width .9s cubic-bezier(.65,0,.35,1), opacity .5s, border-radius .9s; }
-.piece small { display: block; font: 500 12px var(--mono); color: var(--oq-bad); margin-top: 4px; transition: opacity .3s; }
+  transition: left 1.8s cubic-bezier(.65,0,.35,1), width 1.8s cubic-bezier(.65,0,.35,1), opacity .8s 1s, border-radius 1.8s; }
+.piece small { display: block; font: 500 12px var(--mono); color: var(--oq-bad); margin-top: 4px; transition: opacity .6s; }
 .piece:nth-child(1) { left: 0; } .piece:nth-child(2) { left: 25.5%; } .piece:nth-child(3) { left: 51%; } .piece:nth-child(4) { left: 76.5%; }
 .one { position: absolute; top: 0; left: 0; right: 0; height: 84px; border-radius: 22px; background: color-mix(in srgb, var(--word) 14%, var(--oq-surface-1)); box-shadow: 0 0 0 1.5px var(--word), var(--oq-shadow-3);
-  display: flex; align-items: center; justify-content: center; gap: 14px; font: 700 24px var(--mono); opacity: 0; transform: scale(.97); transition: opacity .5s .55s, transform .6s .55s var(--oq-island-spring); }
+  display: flex; align-items: center; justify-content: center; gap: 14px; font: 700 24px var(--mono); opacity: 0; transform: scale(.97); transition: opacity .8s 1.3s, transform 1s 1.3s var(--oq-island-spring); }
 .one small { font: 500 14px var(--sans); color: var(--ink2); }
 .merged .piece { left: 0 !important; width: 100%; opacity: 0; }
 .merged .piece small { opacity: 0; }
@@ -169,7 +169,7 @@
 .replay { all: unset; cursor: pointer; position: absolute; right: 0; bottom: 8px; font: 12.5px var(--mono); color: var(--ink2); padding: 6px 10px; border-radius: 8px; }
 .replay:hover { color: var(--ink); background: rgb(var(--oq-state) / .06); }
 .gains { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.gain { border-radius: 20px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); padding: 20px 20px 18px; opacity: .18; transform: translateY(10px); transition: opacity .5s, transform .6s var(--ease); }
+.gain { border-radius: 20px; background: var(--oq-surface-1); box-shadow: 0 0 0 1px var(--line); padding: 20px 20px 18px; opacity: .18; transform: translateY(10px); transition: opacity .8s, transform .9s var(--ease); }
 .gain.on { opacity: 1; transform: none; }
 .gain b { display: block; font: 800 34px/1 var(--display); letter-spacing: -.04em; }
 .gain b small { font-size: .5em; color: var(--ink2); margin-left: 4px; letter-spacing: 0; }
@@ -662,10 +662,14 @@ scripts/omxplorer.sh</pre>
 
   // 3 · four programs merge into one file, then what it unlocks lights up
   const merge = $("#merge"), gains = $$(".gain");
+  let run = 0;   // a replay stops the run already playing
   async function playMerge(step) {
+    const me = ++run, wait = async ms => { await step(ms); if (me !== run) throw 0; };
     merge.classList.remove("merged"); gains.forEach(g => g.classList.remove("on"));
-    await step(reduce ? 0 : 1200); merge.classList.add("merged");
-    await step(reduce ? 0 : 1300); for (const g of gains) { g.classList.add("on"); await step(reduce ? 0 : 260); }
+    try {
+      await wait(reduce ? 0 : 2400); merge.classList.add("merged");
+      await wait(reduce ? 0 : 3000); for (const g of gains) { g.classList.add("on"); await wait(reduce ? 0 : 700); }
+    } catch (_) {}
   }
   let merged = false; const sleep = ms => new Promise(r => setTimeout(r, ms));
   new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !merged) { merged = true; playMerge(sleep); } }), { threshold: .5 }).observe(merge);
