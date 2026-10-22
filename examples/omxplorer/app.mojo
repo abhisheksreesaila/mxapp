@@ -89,6 +89,10 @@ from mojoui.reportpage import (ReportTile, ReportFilter, ReportPage, new_tile, c
 from mojoui.chartview import ChartView
 from mojoui.view import TAP, PAN, ZOOM, PRESS, RELEASE
 from mojoui.sample import sample_table
+from mojoui.island import Island, Activity, IslandView, HIT_BODY, HIT_ACTION, IDLE as ISLAND_IDLE, RUNNING as ISLAND_RUNNING, UNDO as ISLAND_UNDO, ERROR as ISLAND_ERROR
+from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers
+from mojoui.clock import now_ns
+from mxframe import Job, JOB_RUNNING, JOB_DONE
 
 # screens
 comptime START_SCREEN = 0
@@ -190,6 +194,11 @@ comptime NUM_KINDS: List[String] = ["Any", "Over", "Under", "At least", "At most
 comptime SET_INK = 600  # + 0 (automatic) … 8: the Format menu's text colours
 comptime SET_FILL = 610  # + 0 (none) … 8
 comptime SWATCH_CANVAS = 5  # the swatches' canvas id
+comptime ISLAND_CANVAS = 7  # the island's canvas id (the menu bar's living status, mojoui.island)
+comptime ISLAND_TAP = 86  # the island tapped (its action, or its panel)
+comptime ISLAND_FRAME = 87  # a display frame while the island moves or work runs: poll the jobs
+comptime PANEL_CLOSE = 85  # the island's panel closed
+comptime BIG_ROWS = 10_000_000  # from this many rows a chart's numbers and a column's figures come from background jobs
 comptime SKINS: List[String] = ["Liquid", "Ledger", "Graphite", "Blueprint"]
 comptime MAX_OBJECTS = 40  # per sheet, and tiles per report (canvas ids 10…49, 60…99, 120…159)
 comptime TABLE_H = 400  # the table's height once objects share the sheet
@@ -272,6 +281,16 @@ struct Main(App):
     var chart_undo: List[Tuple[Int, Int, SheetObject]]  # chart changes Undo can take back: (the table's undo depth then, the chart's ref, the chart before)
     var insp_page: Int  # the chart inspector's page (0: the chart; 1 Data, 2 Order, 3 Rows, 4 Style)
     var word_slot: Int
+    var island: Island  # the menu bar's living status (D-255): the document at rest, work running, results, undo, errors
+    var island_v: Int  # its canvas's version (a new picture each frame it moves)
+    var island_undo: Int  # what its Undo does (NO_MSG: none)
+    var panel_open: Bool  # its panel: the document, Recent, Device
+    var ops: List[Tuple[String, String, Int]]  # Recent: what was done, its time ("0.69 s on …", or ""), its Undo message (NO_MSG: none), newest last
+    var timings: List[Float64]  # the last queries' milliseconds (Device: the last 12, p50, p95)
+    var charts: ChartQueue  # charts waiting for their numbers (big tables: background jobs)
+    var col_job: Optional[Job[ColumnFigures]]  # the selected column's figures, coming (big tables)
+    var col_started: Int
+    var trace: Bool  # MOJOUI_TRACE: the jobs say what they do (for scripts/check)
 
     def __init__(out self):
         self.screen = START_SCREEN
@@ -339,6 +358,16 @@ struct Main(App):
         self.lit = List[Int]()
         self.insp_page = 0
         self.chart_undo = List[Tuple[Int, Int, SheetObject]]()
+        self.island = Island()
+        self.island_v = 0
+        self.island_undo = NO_MSG
+        self.panel_open = False
+        self.ops = List[Tuple[String, String, Int]]()
+        self.timings = List[Float64]()
+        self.charts = ChartQueue()
+        self.col_job = None
+        self.col_started = 0
+        self.trace = environment("MOJOUI_TRACE") != ""
         self.version = 1
         var auto_open = environment("OMX_OPEN")  # a file to open straight away (the launcher's argument)
         if auto_open != "":
@@ -580,6 +609,9 @@ struct Main(App):
         self.seen_edits = self.frame.edits()
         try:
             for k in range(len(self.objects)):
+                if self.big():
+                    self.ask_chart(k, self.objects[k].copy())
+                    continue
                 compute(self.objects[k], self.frame)
             for k in range(len(self.tiles)):
                 compute_tile(self.tiles[k], self.frame, self.filter)
@@ -618,6 +650,13 @@ struct Main(App):
                 compute_tile(t, self.frame, self.filter)
                 self.message = object_title(t.chart, self.frame)  # (the chart's short title: its sentence and its time are on it)
                 self.tiles[cref - TILE_REF] = t^
+            elif self.big():  # (its words change now; its numbers come from a job and the bars move when they land)
+                self.message = object_title(c, self.frame)
+                self.ask_chart(cref, c)
+                var keep = self.objects[cref].copy()
+                take_numbers(c, keep)  # (until then it shows what it had)
+                c.moved = MOVE_FRAMES
+                self.objects[cref] = c^
             else:
                 compute(c, self.frame)
                 self.message = object_title(c, self.frame)
@@ -668,6 +707,14 @@ struct Main(App):
             self.sum = 0
             self.count = self.frame.rows()
             self.column_stats()
+            return
+        if self.big():  # (a column job: the status bar and the inspector fill in when it lands; the window stays live)
+            self.col_job = column_job(self.frame, col, self.inspector_open)
+            self.col_started = now_ns()
+            self.stats = List[Tuple[String, String]]()
+            self.stats_key = ""
+            if self.trace:
+                print("JOB: start column " + self.frame.name(col))
             return
         try:
             var r = self.frame.totals(col)
@@ -904,6 +951,112 @@ struct Main(App):
         self.handle(event)
         if self.has_table and self.frame.edits() != self.seen_edits:  # the table changed (any way): every object and tile again
             self.refresh()
+        self.island.still = environment("MOJOUI_REDUCE_MOTION") != ""
+        var rest = self.rest_face()
+        if rest.lead != self.island.rest.lead or rest.text != self.island.rest.text:
+            self.island.set_rest(rest^, self.font, now_ns())
+            self.island_v += 1
+
+    def big(self) -> Bool:
+        """A table big enough that its queries run in the background (the window stays live meanwhile)."""
+        return self.has_table and self.frame.rows() >= BIG_ROWS
+
+    def rest_face(self) -> Activity:
+        """The island at rest: the document and where its queries run (nothing before there's a document)."""
+        var device = (self.frame.device_name + " · ready") if self.frame.device else String("CPU")
+        if self.screen != SHEET or not self.has_table:
+            return Activity.idle(device, "")
+        return Activity.idle(self.sheet_name, grouped(self.frame.rows()) + " rows · " + device)
+
+    def say(mut self, var a: Activity, undo: Int = NO_MSG):
+        """Something for the island to show now (and, when it's done or undoable, for Recent)."""
+        if a.kind != ISLAND_RUNNING:
+            self.ops.append((a.lead, a.text, undo))
+            if len(self.ops) > 40:
+                _ = self.ops.pop(0)
+        self.island_undo = undo
+        self.island.show(a^, self.font, now_ns())
+        self.island_v += 1
+
+    def timed(mut self, ms: Float64):
+        self.timings.append(ms)
+        if len(self.timings) > 12:
+            _ = self.timings.pop(0)
+
+    def device_words(self, on_gpu: Bool) -> String:
+        return self.frame.device_name if on_gpu and self.frame.device else String("CPU")
+
+    def ask_chart(mut self, cref: Int, spec: SheetObject):
+        """Chart `cref`'s numbers from a background job (the island shows it running; poll_jobs puts them in)."""
+        self.charts.ask(cref, spec, self.frame)
+        if self.trace:
+            print("JOB: start chart" + String(cref) + " " + object_title(spec, self.frame))
+        if self.charts.cref == cref:
+            self.say(Activity.running(object_title(spec, self.frame), 0.0, "starting"))
+
+    def poll_jobs(mut self):
+        """Once a frame while work runs: landed charts move to their numbers, the column's figures arrive, the island
+        follows (progress, then the time it took)."""
+        var was = self.charts.cref
+        while True:
+            var got: Optional[Tuple[Int, SheetObject]] = None
+            try:
+                got = self.charts.poll(self.frame)
+            except e:
+                self.say(Activity.error("Couldn't compute the chart", String(e)))
+                break
+            if not got:
+                break
+            var cref = got.value()[0]
+            var done = got.value()[1].copy()
+            if 0 <= cref < len(self.objects):
+                var obj = self.objects[cref].copy()
+                var before = obj.copy()
+                take_numbers(obj, done)
+                if obj.kind == OBJ_CHART:
+                    start_move(obj, before)  # (the bars move from what they showed to the answer)
+                self.objects[cref] = obj^
+                self.timed(done.milliseconds)
+                var took = fixed(done.milliseconds / 1000.0, 2) + " s on " + self.device_words(self.frame.notes[].last_gpu or self.frame.mode != 0)
+                if self.trace:
+                    print("JOB: landed chart" + String(cref) + " " + fixed(done.milliseconds, 1) + " ms")
+                    print("CHART: chart" + String(cref) + "\n" + chart_text(self.objects[cref], self.frame).replace("\t", " | "))
+                if not self.charts.busy():
+                    self.say(Activity.done(object_title(self.objects[cref], self.frame), took))
+            self.version += 1
+        if self.charts.busy():
+            if self.charts.cref != was:
+                self.say(Activity.running(object_title(self.charts.spec, self.frame), 0.0, "starting"))
+            var secs = self.charts.seconds()
+            self.island.progress(self.charts.share(), String(Int(self.charts.share() * 100)) + "% · " + fixed(secs, 1) + " s")
+        if self.col_job:
+            var state = self.col_job.value().poll()
+            if state != JOB_RUNNING:
+                var job = self.col_job.take()
+                if state == JOB_DONE:
+                    try:
+                        var f = job.result()
+                        if f.col == self.grid.cur_col:
+                            self.sum = f.sum
+                            self.count = f.present
+                            self.milliseconds = f.milliseconds
+                            self.ran_gpu = f.on_gpu
+                            self.stats = self.figures_cards(f)
+                            self.timed(f.milliseconds)
+                            if self.trace:
+                                print("JOB: landed column " + self.frame.name(f.col) + " " + fixed(f.milliseconds, 1) + " ms")
+                    except e:
+                        self.message = "Couldn't total: " + String(e)
+                self.version += 1
+
+    def figures_cards(self, f: ColumnFigures) -> List[Tuple[String, String]]:
+        """The inspector's cards from a column job's figures."""
+        var out = List[Tuple[String, String]]()
+        out.append(("Mean", self.frame.format_average(f.col, f.sum, f.present)))
+        out.append(("Median", self.frame.format_median(f.col, Int64(f.median)) if f.has_median else String("—")))
+        out.append(("Empty", grouped(self.frame.rows() - f.present)))
+        out.append(("Distinct", grouped(f.distinct) if f.distinct >= 0 else String("—")))
+        return out^
 
     def handle(mut self, event: Event):
         var m = event.message
@@ -975,6 +1128,27 @@ struct Main(App):
             self.grid.clear_order()
             self.toast = ""
             self.message = "Sort undone"
+            self.say(Activity.done("Sort undone", ""))
+            self.version += 1
+        elif m == ISLAND_FRAME:
+            self.poll_jobs()
+            if self.island.tick(self.font, now_ns()):
+                self.island_undo = NO_MSG
+            self.island_v += 1
+        elif m == ISLAND_TAP and event.number == TAP:
+            var hit = self.island.hit(event.x, event.y, t=now_ns())
+            if hit == HIT_ACTION and self.island.now.kind == ISLAND_UNDO and self.island_undo != NO_MSG:
+                var undo = self.island_undo
+                self.island_undo = NO_MSG
+                self.handle(Event(undo, "", 0))
+            elif hit == HIT_ACTION and self.island.now.kind == ISLAND_ERROR:
+                self.island.seen(self.font, now_ns())
+            elif hit != 0:
+                self.panel_open = not self.panel_open
+            self.island_v += 1
+            self.version += 1
+        elif m == PANEL_CLOSE:
+            self.panel_open = False
             self.version += 1
         elif m == PREVIEW:  # (only scrolling: the preview selects and edits nothing)
             if event.number == PAN or event.number == ZOOM or event.number == PRESS or event.number == RELEASE:  # (browse: no selecting)
@@ -1102,8 +1276,7 @@ struct Main(App):
                 try:
                     self.grid.set_order(self.frame.permutation(col, desc), col, desc)
                     self.message = "Sorted by " + self.frame.name(col) + (" (largest first)" if desc else "")
-                    self.toast = "Sorted by " + self.frame.name(col) + (", largest first" if desc else ", smallest first")
-                    self.toast_undo = UNDO_SORT
+                    self.say(Activity.undo("Sorted by " + self.frame.name(col), "largest first" if desc else "smallest first"), UNDO_SORT)
                 except e:
                     self.message = "Couldn't sort: " + String(e)
             self.version += 1
@@ -1155,10 +1328,14 @@ struct Main(App):
                 var spot = free_spot(self.objects, self.table_y + (self.table_h_set if self.table_h_set > 0 else TABLE_H), width, w, 340)  # (below the table as it'll be once objects share the sheet, wherever it is)
                 var obj = SheetObject.chart(value, texts[0], spot[0], spot[1], w, 340) if m == INSERT_CHART else SheetObject.pivot(value, texts[0], texts[1] if len(texts) > 1 else -1, spot[0], spot[1], w, 340)
                 var problem = String("")
+                var later = self.big()
                 try:
-                    compute(obj, self.frame)
+                    if not later:
+                        compute(obj, self.frame)
                 except e:
                     problem = String(e)
+                if later:
+                    self.ask_chart(len(self.objects), obj)
                 self.objects.append(obj^)
                 self.active = len(self.objects) - 1
                 if m == INSERT_CHART:
@@ -1205,6 +1382,7 @@ struct Main(App):
             var k = m - OBJ_CLOSE
             if k < len(self.objects):
                 _ = self.objects.pop(k)
+                self.charts.forget()  # (refs after it moved: their jobs would land on the wrong object)
                 self.chart_undo = List[Tuple[Int, Int, SheetObject]]()  # (refs after it moved: its changes can't be undone any more)
                 self.asking = -1
                 if self.active == k:
@@ -1518,6 +1696,9 @@ struct Main(App):
             self.grid.draw(surface, self.frame, self.font, self.pal)
         elif canvas == 1:
             self.preview.draw(surface, self.frame, self.font, self.pal)
+        elif canvas == ISLAND_CANVAS:
+            self.island.still = self.island.still or surface.still
+            self.island.draw(surface, self.font, self.pal, now_ns())
         elif canvas == SWATCH_CANVAS:
             var col = self.grid.cur_col
             var st = self.frame.style_of(col, self.grid.cur_row) if col >= 0 else CellStyle()
@@ -1689,9 +1870,11 @@ struct Main(App):
         ])
         var doc = (self.sheet_name + " · " + grouped(self.frame.rows()) + " rows") if on_sheet else String("")
         var row: List[View] = [HStack(Icon("app-logo", 18), Text("omxplorer", HEADLINE), spacing=6).align(CENTER).tag("app-mark"), bar^, Spacer()]
-        if doc != "":  # (no empty chip before there's a document)
-            row.append(Text(doc, CAPTION).tag("doc-chip"))
-        row.append(Text(self.gpu_chip(), CAPTION).tag("gpu-chip"))  # (the one place the GPU's state shows)
+        _ = doc
+        var t = now_ns()
+        var moving = self.island.wants_frames(t) or self.charts.busy() or Bool(self.col_job)
+        var says = self.island.now.lead + (" · " + self.island.now.text if self.island.now.text != "" else String(""))
+        row.append(IslandView(ISLAND_CANVAS, self.island_v, ISLAND_TAP, ISLAND_FRAME if moving else NO_MSG).tooltip(says))  # (the document, the GPU and what's happening, in one place: D-255)
         return HStack(row^, spacing=10).fill().align(CENTER).height(38).padding(2, 10).tag("menubar")
 
     def context_menu(self) -> View:
@@ -1747,9 +1930,50 @@ struct Main(App):
                 rows.append(Button(choices[k], CHOICE + k, SUBTLE, icon="check" if k == now else "").fill().align(START).tag("choice"))
             out.append(Popover("word-" + String(self.word_ref) + "-" + String(self.word_slot), materialize[SLOT_NAMES]()[self.word_slot],
                                VStack(rows^, spacing=2).align(STRETCH).max_width(260), on_close=WORD_CLOSE))
-        if self.toast != "":
-            out.append(Toast(self.toast, "Undo" if self.toast_undo != NO_MSG else "", self.toast_undo, on_close=TOAST_CLOSE))
+        if self.panel_open:
+            out.append(Popover("island", "Activity", self.island_panel(), on_close=PANEL_CLOSE))
         return out^
+
+    def island_panel(self) -> View:
+        """The island opened: the document, what's running now, Recent (with times, Undo on the undoable) and Device
+        (the GPU and the last queries' times)."""
+        var parts = List[View]()
+        if self.has_table:
+            parts.append(Text("Document", HEADLINE))
+            parts.append(Row("Name", Text(self.sheet_name)))
+            parts.append(Row("Rows", Text(grouped(self.frame.rows()))))
+            parts.append(Row("Columns", Text(String(self.frame.columns()))))
+        if self.charts.busy():
+            parts.append(Text("Now", HEADLINE))
+            parts.append(Text(object_title(self.charts.spec, self.frame) + " · " + String(Int(self.charts.share() * 100)) + "% · " + fixed(self.charts.seconds(), 1) + " s", CAPTION).tag("island-now"))
+        parts.append(Text("Recent", HEADLINE))
+        if len(self.ops) == 0:
+            parts.append(Text("Nothing yet: queries, edits and results show here", CAPTION))
+        var shown = 0
+        var k = len(self.ops) - 1
+        while k >= 0 and shown < 8:
+            var op = self.ops[k].copy()
+            var line: List[View] = [Text(op[0], CAPTION), Spacer()]
+            if op[1] != "":
+                line.append(Text(op[1], CAPTION).tone(TONE_ACCENT))
+            if op[2] != NO_MSG and k == len(self.ops) - 1:
+                line.append(Button("Undo", op[2], SUBTLE))
+            parts.append(HStack(line^, spacing=8).fill().align(CENTER).tag("recent"))
+            shown += 1
+            k -= 1
+        parts.append(Text("Device", HEADLINE))
+        parts.append(Row("Runs on", Text(self.frame.device_name if self.frame.device else "CPU")))
+        if len(self.timings) > 0:
+            var sorted_ms = self.timings.copy()
+            sort(sorted_ms)
+            var p50 = sorted_ms[len(sorted_ms) // 2]
+            var p95 = sorted_ms[min(len(sorted_ms) - 1, Int(Float64(len(sorted_ms)) * 0.95))]
+            var last = String("")
+            for v in self.timings:
+                last += (" · " if last != "" else "") + fixed(v, 1)
+            parts.append(Row("Last " + String(len(self.timings)), Text(last + " ms", CAPTION)))
+            parts.append(Row("p50 · p95", Text(fixed(p50, 1) + " ms · " + fixed(p95, 1) + " ms").tag("island-p50")))
+        return VStack(parts^, spacing=8).align(STRETCH).width(380)
 
     def toolbar(self) -> View:
         """The tools for the tab you're on: the sheet's (edit, data, formats, insert) or the Report's (tiles, filter)."""
