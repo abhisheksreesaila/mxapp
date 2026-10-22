@@ -5,7 +5,7 @@ Three drafts for the public alpha: a GitHub release, an X thread, a Modular foru
 for checking, not for posting). The owner approved them on 2026-10-21 as omxapp, then renamed it **omxcode** the same day (D-285: omxapp is a common business suite). The GitHub release is published; the X thread and the forum post are for the owner to post.
 
 Before posting, the owner decides:
-1. **Name.** The posts say *omxcode* and link the `mxapp` repo (copy.md, open question 1).
+1. **Name.** Settled 2026-10-22: the repo is `omxcode` too (copy.md, open question 1).
 2. **Clips.** Two are recorded (`scripts/clips.py` records them again): `docs/img/clip-sentence-gtk.mp4` (17 s, the native
    window: three asks over 1M rows, bars moving) and `docs/img/clip-sentence-web.mp4` (15 s, the same app in Chromium: an
    ask, then "Sum" → Average and "bars" → a line picked from the words' popovers). Attach them by hand.
@@ -17,7 +17,7 @@ Before posting, the owner decides:
 
 **Tag:** `v0.1.0-alpha` · **Title:** omxcode 0.1 alpha: one Mojo file, native on Linux, the web and Android, the GPU underneath, agents built in
 
-**See it in action: https://abhisheksreesaila.github.io/mxapp/**
+**See it in action: https://abhisheksreesaila.github.io/omxcode/**
 
 omxcode is a framework for writing an app once, in Mojo, and running it natively on Linux, the web and Android, with Mac and
 iPhone building today. The same file computes on the GPU, and any AI agent can use the app as a set of MCP tools.
@@ -44,8 +44,8 @@ Its showcase, **omxplorer**, is a data app in the spirit of Numbers and Power BI
 
 **Try it** (x86-64 Linux, GTK 4, libadwaita 1.7+, [pixi](https://pixi.sh); an NVIDIA GPU for the GPU path)
 ```bash
-git clone https://github.com/abhisheksreesaila/mxapp
-cd mxapp && pixi install
+git clone https://github.com/abhisheksreesaila/omxcode
+cd omxcode && pixi install
 scripts/omxplorer.sh            # native window
 scripts/omxplorer.sh web        # the same app at http://127.0.0.1:5001
 ```
@@ -60,7 +60,7 @@ MIT licence. Every number above comes from `scripts/check` or its benchmarks on 
 I wrote one app in Mojo. It runs as a real GTK app on Linux, in the browser, and as real Android views. The same file sums
 a million rows on the GPU. And an AI agent can use it with no API.
 
-It's called omxcode. Public alpha, MIT. abhisheksreesaila.github.io/mxapp
+It's called omxcode. Public alpha, MIT. abhisheksreesaila.github.io/omxcode
 [clip-sentence-gtk.mp4]
 
 **2/**
@@ -93,8 +93,8 @@ up: background queries). Mojo is young: no official phone target, no Windows yet
 **6/**
 Built on Mojo 1.1, one small step at a time, with every claim proven by a script in the repo.
 
-See it: abhisheksreesaila.github.io/mxapp
-Code: github.com/abhisheksreesaila/mxapp
+See it: abhisheksreesaila.github.io/omxcode
+Code: github.com/abhisheksreesaila/omxcode
 
 ---
 
@@ -126,9 +126,9 @@ machines use the CPU path. At 100M rows a median still runs on the UI thread (~0
 
 **Try it:**
 ```bash
-git clone https://github.com/abhisheksreesaila/mxapp && cd mxapp && pixi install && scripts/omxplorer.sh
+git clone https://github.com/abhisheksreesaila/omxcode && cd omxcode && pixi install && scripts/omxplorer.sh
 ```
 
-See it in action: https://abhisheksreesaila.github.io/mxapp/. Repo: https://github.com/abhisheksreesaila/mxapp. MIT. Questions, and especially "you should have done X in Mojo", are very welcome.
+See it in action: https://abhisheksreesaila.github.io/omxcode/. Repo: https://github.com/abhisheksreesaila/omxcode. MIT. Questions, and especially "you should have done X in Mojo", are very welcome.
 
 [clip-sentence-gtk.mp4]

@@ -4,7 +4,7 @@ The owner paused feature work after goal 29: "100M no one will try on day 1. I w
 
 ## 1. The launch (released 2026-10-21)
 - Done: the README, the launch page, llms.txt; two clips and stills (docs/img/clip-sentence-gtk.mp4, clip-sentence-web.mp4; `scripts/clips.py` records them again); drafts for a GitHub release, an X thread and a Modular forum post (docs/launch/posts.md).
-- Released: `v0.1.0-alpha` (pre-release, released as omxapp; renamed omxcode the same day, D-285) at github.com/abhisheksreesaila/mxapp/releases, with both clips and the native still attached.
+- Released: `v0.1.0-alpha` (pre-release, released as omxapp; renamed omxcode the same day, D-285) at github.com/abhisheksreesaila/omxcode/releases, with both clips and the native still attached.
 - **Owner:** post the X thread and the Modular forum post from docs/launch/posts.md (no access to either from here); attach the clips by hand.
 - Seen while recording, web only: during an ask one frame shows the grid and the chart blank (the page swaps them); the ask field doesn't widen with a widened chart.
 

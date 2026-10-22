@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://abhisheksreesaila.github.io/mxapp/"><b>See it in action → abhisheksreesaila.github.io/mxapp</b></a>
+  <a href="https://abhisheksreesaila.github.io/omxcode/"><b>See it in action → abhisheksreesaila.github.io/omxcode</b></a>
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
   <img alt="Mojo 1.1" src="https://img.shields.io/badge/Mojo-1.1-1d1d21?labelColor=0b0b0d">
   <img alt="Linux · Web · Android · Mac · iPhone · Agent" src="https://img.shields.io/badge/hosts-Linux%20%C2%B7%20Web%20%C2%B7%20Android%20%C2%B7%20Mac%20%C2%B7%20iPhone%20%C2%B7%20Agent-1d1d21?labelColor=0b0b0d">
   <img alt="Public alpha" src="https://img.shields.io/badge/status-public%20alpha-1d1d21?labelColor=0b0b0d">
-  <a href="https://abhisheksreesaila.github.io/mxapp/"><img alt="Website" src="https://img.shields.io/badge/website-omxcode-1d1d21?labelColor=0b0b0d"></a>
+  <a href="https://abhisheksreesaila.github.io/omxcode/"><img alt="Website" src="https://img.shields.io/badge/website-omxcode-1d1d21?labelColor=0b0b0d"></a>
 </p>
 
 <p align="center">
@@ -222,11 +222,11 @@ struct Main(App):
 - **[How it works](docs/architecture.md):** the view tree, the update loop, how each platform is reached.
 - **[The agent host](docs/agent.md):** the tools, what an agent gets back, what it can't do yet.
 - **[Components × platforms](docs/components.md):** what exists where, generated from the code.
-- **[llms.txt](https://abhisheksreesaila.github.io/mxapp/llms.txt):** these docs for an agent; [llms-full.txt](https://abhisheksreesaila.github.io/mxapp/llms-full.txt) is all of them in one file.
+- **[llms.txt](https://abhisheksreesaila.github.io/omxcode/llms.txt):** these docs for an agent; [llms-full.txt](https://abhisheksreesaila.github.io/omxcode/llms-full.txt) is all of them in one file.
 - **[Decisions](docs/decisions.md):** every one, with reasons.
 - **[Experiments](EXPERIMENTS.md)** and the **[goal reports](docs/goals/):** what was tried, what broke, what was learned. The latest is [docs/report.md](docs/report.md).
 - **[The long view](ROADMAP.md):** the original vision.
-- **[Gallery](https://abhisheksreesaila.github.io/mxapp/gallery/):** the earlier showcases (analytics, the Workbook, the Data Lens).
+- **[Gallery](https://abhisheksreesaila.github.io/omxcode/gallery/):** the earlier showcases (analytics, the Workbook, the Data Lens).
 
 ## License
 

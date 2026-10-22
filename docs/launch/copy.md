@@ -5,7 +5,7 @@ The words for the launch page, the README's top half, the tweet and the forum po
 **Voice:** plain, confident, a builder talking to builders. Short sentences. No borrowed keynote lines. What makes it ours: every claim shows where it came from (the mono line under a number), and we say what doesn't work yet.
 
 **Open questions for the owner**
-1. **Name.** The page and README say *omxcode*; the repo is `mxapp`. One name everywhere?
+1. **Name.** Settled 2026-10-22: one name everywhere, the repo renamed to `omxcode` (GitHub redirects the old repo links; the old site address does not redirect).
 2. **Who reads it first.** Mojo developers (Modular forum) want the GPU and one language; app developers (Twitter) want "one app, every screen" and agents. The hero below leads with the app developer; the forum post leads with Mojo.
 3. **Section 2.** Draft 1 had "A native app. A GPU engine. An agent's toolbox. These are not three things." That's the 2007 keynote's shape. Draft 2 replaces it with our own: "Four programs, one file."
 
@@ -138,8 +138,8 @@ omxcode is one program. Mojo writes the controls, the data engine and the GPU co
 **Body:** omxcode is a public alpha, free and open source under MIT. Linux with an NVIDIA GPU is the best place to start.
 
 ```
-git clone https://github.com/abhisheksreesaila/mxapp
-cd mxapp && pixi install
+git clone https://github.com/abhisheksreesaila/omxcode
+cd omxcode && pixi install
 scripts/omxplorer.sh
 ```
 

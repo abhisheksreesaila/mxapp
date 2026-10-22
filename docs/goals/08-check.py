@@ -27,7 +27,7 @@ EXAMPLES = g7.EXAMPLES + ["analytics"]
 CLICKS = "segment:0=2024;select:0=Online;tapat:5=500,320;tapat:6=300,700;tapat:4=600,500"
 SHOWN = r"^(LABEL|SEGMENTED|DROPDOWN|BUTTON): "
 TIMING = ("LABEL: Recomputed",)
-PAGES_URL = "https://abhisheksreesaila.github.io/mxapp/gallery/"
+PAGES_URL = "https://abhisheksreesaila.github.io/omxcode/gallery/"
 
 
 def shown(out):
