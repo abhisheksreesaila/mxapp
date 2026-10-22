@@ -12,6 +12,7 @@ from std.memory.alloc import alloc, Layout
 
 from mojoui.menus import items_text, CHECKED, DISABLED, DANGER
 from mojoui.view import (
+    SECRET, secret_dots, WEBVIEW,
     CLIPBOARD, View, TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, SECONDARY, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD,
@@ -889,6 +890,9 @@ struct GtkHost[A: App](Movable):
             w = external_call["gtk_entry_new", Int]()
             if node.value >= 1:
                 add_class(w, "mui-cell-editor")
+            if node.style == SECRET:
+                external_call["gtk_entry_set_visibility", NoneType](w, c_int(0))
+                external_call["gtk_entry_set_input_purpose", NoneType](w, c_int(8))  # GTK_INPUT_PURPOSE_PASSWORD
             if node.size != 0:  # on_cancel: Escape
                 var esc = external_call["gtk_event_controller_key_new", Int]()
                 set_node(esc, i)
@@ -1160,6 +1164,18 @@ struct GtkHost[A: App](Movable):
             self.dialog = dlg
             self.widgets[i] = dlg
             w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))  # nothing in the layout itself
+        elif node.kind == WEBVIEW:
+            var lib = String("libwebkitgtk-6.0.so.4")
+            if external_call["dlopen", Int](lib.as_c_string_span(), c_int(0x102)) != 0:  # RTLD_NOW | RTLD_GLOBAL
+                w = ccall("webkit_web_view_new")
+                var url = node.hint
+                _ = ccall[Int]("webkit_web_view_load_uri", w, url.as_c_string_span())
+            else:
+                var note = String("This page needs WebKitGTK 6 (libwebkitgtk-6.0), which isn't installed. Open it in your browser instead.")
+                w = external_call["gtk_label_new", Int](note.as_c_string_span())
+                external_call["gtk_label_set_wrap", NoneType](w, c_int(1))
+            if not sized:
+                external_call["gtk_widget_set_size_request", NoneType](w, c_int(320), c_int(240))
         elif node.kind == CLIPBOARD:  # nothing on screen; apply() copies its text when its version changes
             w = external_call["gtk_box_new", Int](c_int(VERTICAL), c_int(0))
         elif node.kind == TOAST:
@@ -1844,7 +1860,8 @@ struct GtkHost[A: App](Movable):
             var slash = exe.rfind("/")
             dir = (String(exe[byte=:slash]) if slash > 0 else String(".")) + "/fonts"
         var config = external_call["FcConfigGetCurrent", Int]()
-        for name in ["Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "JetBrainsMono-Regular.ttf", "JetBrainsMono-Bold.ttf"]:
+        for name in ["Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "JetBrainsMono-Regular.ttf", "JetBrainsMono-Bold.ttf",
+                     "Geist-Regular.ttf", "Geist-Medium.ttf", "Geist-SemiBold.ttf", "GeistMono-Regular.ttf", "GeistMono-Medium.ttf"]:
             var path = dir + "/" + name
             if external_call["FcConfigAppFontAddFile", c_int](config, path.as_c_string_span()) != 0:
                 self.fonts = True
@@ -3876,7 +3893,8 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
             if n.tip != "":
                 print("TIP: " + n.text + " = " + n.tip)
         elif n.kind == FIELD:
-            print("FIELD: " + c_str(external_call["gtk_editable_get_text", Int](w)))
+            var shown = c_str(external_call["gtk_editable_get_text", Int](w))
+            print("FIELD: " + (secret_dots(shown) if n.style == SECRET else shown))
         elif n.kind == TOGGLE:
             var on = external_call["gtk_check_button_get_active", c_int](w) != 0
             print(("CHECK: " if n.style == 1 else "TOGGLE: ") + c_str(external_call["gtk_check_button_get_label", Int](w)) + ("=on" if on else "=off"))

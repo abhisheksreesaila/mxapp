@@ -12,6 +12,7 @@ from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
+    SECRET,
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY,
     MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, PAN, ZOOM, TAP, PRESS, RELEASE, DOUBLE, SECONDARY, KEY,
@@ -347,6 +348,8 @@ struct UIKitHost[A: App](Movable):
             _ = msg(w, "setBorderStyle:", 3)  # rounded rect
             _ = msg(w, "setText:", ns_string(node.text))
             _ = msg(w, "setPlaceholder:", ns_string(node.hint))
+            if node.style == SECRET:
+                _ = msg(w, "setSecureTextEntry:", 1)
             _ = msg(w, "setReturnKeyType:", 9)  # Done
             self.wire(w, i, self_addr, "changed:", EDITING_CHANGED)
             _ = msg(w, "addTarget:action:forControlEvents:", self.target, sel("submit:"), EDITING_DID_END_ON_EXIT)
@@ -1122,7 +1125,8 @@ def make_toast(text: String, action: String, tag: Int, target: Int, pal: Palette
 def register_fonts():
     """The app's own fonts (fonts/ in the bundle, D-155), registered for this process through CoreText."""
     var bundle = msg(cls("NSBundle"), "mainBundle")
-    for name in ["Inter-Regular", "Inter-Medium", "Inter-SemiBold", "JetBrainsMono-Regular", "JetBrainsMono-Bold"]:
+    for name in ["Inter-Regular", "Inter-Medium", "Inter-SemiBold", "JetBrainsMono-Regular", "JetBrainsMono-Bold",
+                 "Geist-Regular", "Geist-Medium", "Geist-SemiBold", "GeistMono-Regular", "GeistMono-Medium"]:
         var url = msg(bundle, "URLForResource:withExtension:subdirectory:", ns_string(name), ns_string("ttf"), ns_string("fonts"))
         if url != 0:
             _ = cfunc[Int8]("CTFontManagerRegisterFontsForURL", url, 1, 0)  # kCTFontManagerScopeProcess

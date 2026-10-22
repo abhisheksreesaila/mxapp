@@ -11,6 +11,7 @@ from std.memory.alloc import alloc, Layout
 from std.math import sqrt
 
 from mojoui.view import (
+    SECRET,
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, PAN, ZOOM, TAP,
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node,
@@ -172,6 +173,8 @@ struct AndroidHost[A: App](Movable):
             self.jni.drop(hint)
             if node.kind == FIELD:
                 _ = self.jni.call(v, "android/widget/TextView", "setSingleLine", "(Z)V", [1])
+                if node.style == SECRET:  # TYPE_CLASS_TEXT | TYPE_TEXT_VARIATION_PASSWORD
+                    _ = self.jni.call(v, "android/widget/TextView", "setInputType", "(I)V", [0x81])
                 _ = self.jni.call(v, "android/widget/TextView", "setImeOptions", "(I)V", [6])  # Done
                 self.listen(v, "android/widget/TextView", "setOnEditorActionListener", "android/widget/TextView$OnEditorActionListener")
             else:

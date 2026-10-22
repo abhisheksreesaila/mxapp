@@ -39,6 +39,7 @@ comptime DIALOG = 30  # a modal panel over a dimmed page (mojoui.overlays): text
 comptime TOAST = 31  # a short message at the bottom: text, options[0] = action title, msg = on_action, msg2 = on_close, size = seconds
 comptime CLIPBOARD = 33  # puts `text` on the system clipboard whenever `value` (a version, from 1) changes; nothing on screen (mojoui.overlays.Clipboard)
 comptime POPOVER = 32  # a panel attached to the view tagged `text`: hint = title, child = content, msg2 = on_close, x/y = where in the anchor
+comptime WEBVIEW = 34  # a web page shown inside the window: hint = its address (a new address is a new view)
 comptime ITEM = 29  # a menu item: text = title, msg, hint = icon, options[0] = shortcut, value = flags (1 checked, 2 disabled, 4 danger); style 1 = separator, 2 = section label; children = a submenu
 
 # Canvas gestures (event.number)
@@ -99,6 +100,9 @@ comptime TOOL_INLINE = 8  # a toolbar button: its icon beside a small title, on 
 comptime TOOL_INLINE_ON = 9  # the same, shown as the active tool
 comptime TOKEN = 10  # a word inside a sentence that opens its choices (mojoui.sentence): inline, the accent's colour, no fill
 comptime TOKEN_LIT = 11  # the same, just changed: themes mark it for a moment
+
+# TextField styles
+comptime SECRET = 1  # a password or token: hosts show dots, never read it out (.secret())
 
 
 def as_tool(style: Int) -> Int:
@@ -322,6 +326,12 @@ struct View(Copyable, Movable):
         self.nodes[0].value = 1
         return self^
 
+    def secret(var self) -> View:
+        """A TextField for a password or token: each platform's own secure field (dots, no copying out); hosts never
+        print it or read it to an agent (an agent may still type into it, as a person can)."""
+        self.nodes[0].style = SECRET
+        return self^
+
     def echo(var self) -> View:
         """An in-place editor that shows text another view types into it (a grid that keeps the keyboard while you
         type a value): it doesn't take the keyboard until it's clicked."""
@@ -333,6 +343,14 @@ struct View(Copyable, Movable):
         self.nodes[0].x = x
         self.nodes[0].y = y
         return self^
+
+
+def secret_dots(text: String) -> String:
+    """What a secret field shows instead of its text: one dot per character."""
+    var out = String()
+    for _ in text.codepoint_slices():
+        out += "•"
+    return out
 
 
 def _one(var node: Node) -> View:
@@ -453,6 +471,14 @@ def Canvas(id: Int, version: Int, on_gesture: Int = NO_MSG, on_frame: Int = NO_M
     key (a canvas without it never holds the keyboard: Tab moves on past it).
     Size it with layout settings, e.g. `Canvas(0, v).grow().fill()`."""
     return _one(Node(CANVAS, "", on_gesture, style=id, value=version, msg2=on_frame, size=1 if keys else 0))
+
+
+def WebView(url: String) -> View:
+    """A web page inside the window (a notebook, a local tool's page): WKWebView on a Mac, WebKitGTK on Linux (when
+    libwebkitgtk-6.0 is installed; otherwise a note saying so), an iframe on the web. Size it with .grow()/.fill()."""
+    var n = Node(WEBVIEW)
+    n.hint = url
+    return _one(n^)
 
 
 def Divider() -> View:

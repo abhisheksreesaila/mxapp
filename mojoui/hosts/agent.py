@@ -30,11 +30,20 @@ from PIL import Image
 (TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE, SEGMENTED, RADIO,
  TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY, MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER) = range(1, 33)
 CHECKED, DISABLED = 1, 2  # menu item flags (mojoui/menus.mojo)
+SECRET = 1  # a TextField's style: a password or token (.secret())
 GESTURES = {"pan": 1, "zoom": 2, "tap": 3, "press": 4, "release": 5, "double": 6, "key": 7, "secondary": 8}
 MODIFIERS = {"shift": 1, "ctrl": 2, "alt": 4}
 PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18")
 CORE = ("screen", "act", "read", "render")
 NO_ARGS = {"type": "object", "properties": {}}
+
+
+def hide_secrets(nodes):
+    """A secret field's text as dots: an agent may type a token in (a person can) but never reads one back."""
+    for n in nodes:
+        if n["kind"] == FIELD and n["style"] == SECRET:
+            n["text"] = "•" * len(n["text"])
+    return nodes
 
 
 def slug(text):
@@ -74,7 +83,7 @@ class Host:
     # ---------- the tree ----------
 
     def reload(self):
-        self.nodes = json.loads(self.mod.view(self.handle))
+        self.nodes = hide_secrets(json.loads(self.mod.view(self.handle)))
         self.design = (self.mod.theme(self.handle).split("\x1f")[0] or "native").capitalize()  # the theme's id (D-260)
         self.actions = []
         self.names = set(CORE)

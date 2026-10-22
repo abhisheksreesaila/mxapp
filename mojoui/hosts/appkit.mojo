@@ -6,11 +6,12 @@
 # functions. AppKit doesn't send actions when we set values ourselves, so there's
 # no echo to guard against (unlike GTK).
 
-from std.ffi import c_int
+from std.ffi import c_int, external_call
 from std.memory import Pointer
 from std.memory.alloc import alloc, Layout
 
 from mojoui.view import (
+    SECRET, WEBVIEW,
     TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
     SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY,
     MENUBAR, MENU, ITEM, DIALOG, TOAST, POPOVER, CLIPBOARD, PAN, ZOOM, TAP, PRESS, RELEASE, DOUBLE, SECONDARY, KEY,
@@ -415,7 +416,11 @@ struct AppKitHost[A: App](Movable):
             if self.skinned and node.style != TOOL_ON and node.style != ICON_ON and node.style != DESTRUCTIVE and node.style != PROMINENT:
                 _ = msg(w, "setContentTintColor:", self.ink())
         elif node.kind == FIELD:
-            w = msg(cls("NSTextField"), "textFieldWithString:", ns_string(node.text))
+            if node.style == SECRET:  # (alloc/init on the subclass itself: a convenience constructor may hand back a plain field)
+                w = msg(msg(cls("NSSecureTextField"), "alloc"), "init")
+                _ = msg(w, "setStringValue:", ns_string(node.text))
+            else:
+                w = msg(cls("NSTextField"), "textFieldWithString:", ns_string(node.text))
             _ = msg(w, "setPlaceholderString:", ns_string(node.hint))
             _ = msg(w, "setDelegate:", self.target)  # controlTextDidChange: as you type
             self.wire(w, i, self_addr, "submit:")  # the action fires on Return
@@ -670,6 +675,20 @@ struct AppKitHost[A: App](Movable):
                 _ = msg(content, "addArrangedSubview:", self.build(c, self_addr))
             self.show_sheet(i, content, self_addr)
             w = new("NSView")
+        elif node.kind == WEBVIEW:
+            var framework = String("/System/Library/Frameworks/WebKit.framework/WebKit")
+            _ = external_call["dlopen", Int](framework.as_c_string_span(), c_int(1))  # RTLD_LAZY
+            var wk = cls("WKWebView")
+            if wk == 0:
+                w = msg(cls("NSTextField"), "labelWithString:", ns_string("WebKit isn't available: open the page in your browser."))
+            else:
+                w = msg(msg(wk, "alloc"), "initWithFrame:", Float64(0), Float64(0), Float64(640), Float64(480))
+                var url = msg(cls("NSURL"), "URLWithString:", ns_string(node.hint))
+                if url != 0:
+                    _ = msg(w, "loadRequest:", msg(cls("NSURLRequest"), "requestWithURL:", url))
+                if not sized:
+                    prefer(w, "widthAnchor", Float64(320))
+                    prefer(w, "heightAnchor", Float64(240))
         elif node.kind == TOAST:
             if self.toast != 0 and self.toast_text == node.text:  # the same toast, still up: keep it
                 _ = msg(self.toast, "setIdentifier:", ns_string(String(tag_for(self_addr, i))))
@@ -1262,7 +1281,8 @@ def make_toast(text: String, action: String, tag: Int, target: Int, pal: Palette
 def register_fonts():
     """The app's own fonts (Contents/Resources/fonts, D-155), registered for this process through CoreText."""
     var bundle = msg(cls("NSBundle"), "mainBundle")
-    for name in ["Inter-Regular", "Inter-Medium", "Inter-SemiBold", "JetBrainsMono-Regular", "JetBrainsMono-Bold"]:
+    for name in ["Inter-Regular", "Inter-Medium", "Inter-SemiBold", "JetBrainsMono-Regular", "JetBrainsMono-Bold",
+                 "Geist-Regular", "Geist-Medium", "Geist-SemiBold", "GeistMono-Regular", "GeistMono-Medium"]:
         var url = msg(bundle, "URLForResource:withExtension:subdirectory:", ns_string(name), ns_string("ttf"), ns_string("fonts"))
         if url != 0:
             _ = cfunc[Int8]("CTFontManagerRegisterFontsForURL", url, 1, 0)  # kCTFontManagerScopeProcess

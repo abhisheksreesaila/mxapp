@@ -28,7 +28,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 from fasthtml.common import (
-    Button, Canvas, Dialog, Div, FastHTML, Form, H1, H2, H3, H4, Header, Hr, I, Img, Input, Label, Link, Main, Meta, NotStr,
+    Button, Canvas, Dialog, Div, FastHTML, Form, H1, H2, H3, H4, Header, Hr, I, Iframe, Img, Input, Label, Link, Main, Meta, NotStr,
     Option, P, Progress, Response, Script, Select, Span, Style, Textarea, Title, UploadFile,
 )
 from PIL import Image
@@ -36,7 +36,7 @@ from PIL import Image
 # Mirrors mojoui/view.mojo and mojoui/diff.mojo.
 (TEXT, BUTTON, VSTACK, HSTACK, SPACER, FIELD, TOGGLE, DROPDOWN, SLIDER, PROGRESS, DIVIDER, SCROLL, IMAGE,
  SEGMENTED, RADIO, TEXTAREA, ALERT, TABS, NAVBAR, DATE, ICON, GRID, LAZYLIST, CANVAS, BOARD, OVERLAY, MENUBAR, MENU, ITEM,
- DIALOG, TOAST, POPOVER, CLIPBOARD) = range(1, 34)
+ DIALOG, TOAST, POPOVER, CLIPBOARD, WEBVIEW) = range(1, 35)
 CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, ICON_ON, TOOL_INLINE, TOOL_INLINE_ON, TOKEN, TOKEN_LIT = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
@@ -45,6 +45,7 @@ SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE, SET_SIZE, SET_TI
 KEY = 7  # a canvas gesture: a key pressed while it had focus (text = the key, dx = modifiers)
 SECONDARY = 8  # a right click on a canvas (x, y): where a context menu opens
 CHECKED, DISABLED, DANGER = 1, 2, 4  # menu item flags (mojoui/menus.mojo)
+SECRET = 1  # a TextField's style: a password or token (.secret())
 EVENT_DELAY = float(os.environ.get("MOJOUI_EVENT_DELAY_MS", "0")) / 1000  # checks only: answers events this much later
 JPEG_QUALITY = 85
 MAX_SESSIONS = 200  # oldest tabs are closed beyond this
@@ -746,7 +747,7 @@ def render_node(s, i, sid):
         cancel = (f"if (event.key === 'Escape') {{ event.preventDefault(); htmx.ajax('POST', '{post}', "
                   f"{{ values: {{ n: {i}, second: 2, text: this.value, v: document.getElementById('mojoui-v').value }}, swap: 'none', source: document.body }}); }}"  # (not the input: its hx-vals would win)
                   if n["size"] else None)
-        field = Input(type="text", name="text", value=n["text"], placeholder=n["hint"], data_kind="field",
+        field = Input(type="password" if n["style"] == SECRET else "text", name="text", value=n["text"], placeholder=n["hint"], data_kind="field",
                       cls="cell-editor" if editor else None, onfocus=(at_end if n["value"] == 3 else "this.select()") if editor else None,
                       onkeydown=cancel,
                       autocomplete="off", autofocus=(s.focus == i or n["value"] == 1), hx_trigger="input",
@@ -764,6 +765,8 @@ def render_node(s, i, sid):
     if kind == SLIDER:
         return Input(type="range", min="0", max="100", value=str(n["value"]), name="number", id=nid,
                      data_kind="slider", hx_trigger="input changed delay:60ms", **common)
+    if kind == WEBVIEW:
+        return Iframe(src=n["hint"], id=nid, cls="webview", data_kind="webview", title="web page")
     if kind == PROGRESS:
         return Progress(value=str(n["value"]), max="100", id=nid, data_kind="progress")
     if kind == IMAGE:
