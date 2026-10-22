@@ -90,7 +90,7 @@ from mojoui.chartview import ChartView
 from mojoui.view import TAP, PAN, ZOOM, PRESS, RELEASE
 from mojoui.sample import sample_table
 from mojoui.island import Island, Activity, IslandView, HIT_BODY, HIT_ACTION, IDLE as ISLAND_IDLE, RUNNING as ISLAND_RUNNING, UNDO as ISLAND_UNDO, ERROR as ISLAND_ERROR
-from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers, Opened, open_job, pace
+from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers, Opened, open_job, pace, stopped
 from std.os.path import getsize
 from mojoui.clock import now_ns
 from mojoui.draw import rect as draw_rect, with_alpha
@@ -1124,7 +1124,7 @@ struct Main(App):
             var kept = List[Job[ColumnFigures]]()
             while len(self.col_orphans) > 0:
                 var job = self.col_orphans.pop()
-                if job.poll() == JOB_RUNNING:
+                if not stopped(job):
                     kept.append(job^)
             self.col_orphans = kept^
         var was = self.charts.cref
@@ -1153,7 +1153,7 @@ struct Main(App):
                 if self.trace:
                     print("JOB: landed chart" + String(cref) + " " + fixed(done.milliseconds, 1) + " ms")
                     print("CHART: chart" + String(cref) + "\n" + chart_text(self.objects[cref], self.frame).replace("\t", " | "))
-                if not self.charts.busy():
+                if not self.charts.running() and len(self.charts.waiting) == 0:  # (a cancelled thread still stopping isn't more work)
                     self.say(Activity.done(capital(object_title(self.objects[cref], self.frame)), took))
             self.version += 1
         if self.charts.running():

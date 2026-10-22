@@ -10,6 +10,26 @@ from mojoui.sheetpage import SheetObject, compute, shape_of
 from mojoui.csvio import CsvImport, read_table, empty_import
 from mojoui.sheet import placeholder_sheet
 from mojoui.clock import now_ns
+from mxframe.job import THREADS
+from std.ffi import external_call, c_int
+from std.sys import CompilationTarget, is_defined
+
+comptime TRYJOIN = CompilationTarget.is_linux() and not is_defined["MOJOUI_ANDROID"]()  # (glibc's pthread_tryjoin_np)
+
+
+def stopped[T: Movable & Deinitable](mut job: Job[T]) -> Bool:
+    """Whether the job's thread has ended, not only been asked to: a cancelled job reads JOB_CANCELLED at once, while its
+    thread runs on to its next check, reading what it holds (D-284). Never blocks on Linux; elsewhere a threaded build
+    waits for it (a cancel lands within a block of rows)."""
+    comptime if THREADS:
+        if job.threaded and not job.joined:
+            comptime if TRYJOIN:
+                if external_call["pthread_tryjoin_np", c_int](job.tid, Int(0)) != 0:
+                    return False  # (EBUSY: still running)
+                job.joined = True
+            else:
+                _ = job.wait()
+    return True
 
 
 struct Charted(Movable):
@@ -144,7 +164,7 @@ struct ChartQueue(Movable):
             var job = self.orphans.pop()
             if wait:
                 _ = job.wait()
-            elif job.poll() == JOB_RUNNING:
+            elif not stopped(job):  # (not poll(): it reads CANCELLED from the cancel on, the thread still running)
                 kept.append(job^)
         self.orphans = kept^
 

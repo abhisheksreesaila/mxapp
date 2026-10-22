@@ -3,13 +3,31 @@
 # GPU; a cancelled job ends cancelled, and the sheet can be edited while a job holds its snapshot.
 #   scripts/mxbuild.sh tests/test_chart_job.mojo -o build/test_chart_job && build/test_chart_job
 from std.testing import assert_equal, assert_true, assert_false
-from mxframe import gpu_available, GPU as MX_GPU, CPU as MX_CPU, JOB_DONE, JOB_CANCELLED
+from mxframe import gpu_available, GPU as MX_GPU, CPU as MX_CPU, JOB_DONE, JOB_CANCELLED, JobBody, JobCtl, start_job
+from std.memory import Pointer
+from mojoui.clock import now_ns
 from mojoui.csvio import read_csv
 from mojoui.sheet import Sheet
 from mojoui.shared import make_dir
 from mojoui.sheetpage import (SheetObject, compute, chart_text, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT, COMBINE_MEDIAN, COMBINE_P90,
                               ORDER_LARGEST, PART_MONTH, NUM_OVER)
-from mojoui.sheetjobs import chart_job, take_numbers, progress_share, ChartQueue, column_job
+from mojoui.sheetjobs import stopped, chart_job, take_numbers, progress_share, ChartQueue, column_job
+
+
+struct Stubborn(JobBody):
+    """Runs on 300 ms after it's cancelled, then marks that its thread is done (a GPU block finishing after a cancel)."""
+    comptime Out = Int
+    var flag: Int  # an Int's address
+
+    def __init__(out self, flag: Int):
+        self.flag = flag
+
+    def run(mut self, ctl: JobCtl) raises -> Int:
+        var t0 = now_ns()
+        while now_ns() - t0 < 300_000_000:
+            pass
+        Pointer[Int, MutUntrackedOrigin](unsafe_from_address=self.flag)[] = 1
+        return 1
 
 
 def two(n: Int) -> String:
@@ -147,6 +165,15 @@ def main() raises:
     r5.ask(0, b, s)
     r5.forget(wait=True)
     assert_false(r5.busy(), "forgotten")
+    # stopped(): a cancelled job reads CANCELLED at once, but its thread isn't over until it says so
+    var mark = List[Int](length=1, fill=0)
+    var stub = start_job(Stubborn(Int(mark.unsafe_ptr())))
+    stub.cancel()
+    assert_equal(stub.poll(), JOB_CANCELLED, "cancelled at once")
+    assert_false(stopped(stub), "its thread still runs")
+    while not stopped(stub):
+        pass
+    assert_equal(mark[0], 1, "stopped only once the thread had finished its work")
     # a column's figures through a job equal them in place
     var cj = column_job(s, 0, True)
     var fig = cj.result()
