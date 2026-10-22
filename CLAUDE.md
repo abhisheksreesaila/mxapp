@@ -4,7 +4,7 @@ Mode: experiment
 Ship: direct
 Design language: omxplorer = Liquid light (docs/design/liquid.md; owner 2026-10-18: "liquid, smooth, a showcase"), Ledger/Graphite/Blueprint as switchable skins; Omarchy for MX Studio and the Workbook; Fluent 2 for the analytics showcase
 
-Current experiment: `GOAL.md` (goal 29: charts ask MX frame 321870f more: median and p90 per group, number conditions, months, quarters and weekdays; done 2026-10-20). **Paused after goal 29 (owner):** next is the launch: docs and a story for GitHub, X and the Modular forum (nothing public without the owner's yes). Parked: goal 30 = the island (D-255, `docs/design/island/`) with MX frame 23edc59's background queries; plan and the polish list in `docs/next.md`. The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
+Current experiment: `GOAL.md` (goal 30, done 2026-10-22: the island and background queries over MX frame 23edc59, 100M rows that never freeze the window; next: goal 31, docs/goals/31-draft.md: tiles that snap, labels that fit, bars that switch smoothly; then the omxcode rename, D-285, branch rename-omxcode). The owner tests Apple builds from the frozen worktree `../mojo-ui-apple-test`: don't touch it. Check with `scripts/check`; decisions in `docs/decisions.md`, attempts in `docs/journal.md`.
 
 You are helping build **mojo-ui**: a long-term, experimental side project to write apps once in **Mojo** and run them natively on Linux, Mac, iPhone and the web. The owner is an app developer (Python/FastHTML background), not a systems programmer. They want to develop this **slowly and organically**: one small, verified step per session.
 
