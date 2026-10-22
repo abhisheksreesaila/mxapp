@@ -3435,8 +3435,14 @@ def run_step[A: App](host_addr: Int, step: String):
             print("TEST: no canvas takes keys")
             return
         var ready_by = perf_counter_ns() + 2_000_000_000
-        while host[].canvases[gi].drawn != host[].rt.shown.nodes[host[].canvases[gi].node].value and perf_counter_ns() < ready_by:
-            _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
+        while perf_counter_ns() < ready_by:  # (from a quiet window: the grid drawn, and no canvas still moving, such as the
+            var quiet = host[].canvases[gi].drawn == host[].rt.shown.nodes[host[].canvases[gi].node].value  # island's morph to the
+            for ref cv in host[].canvases:  # document after Create table, whose frames would count as the bench's uploads)
+                if cv.armed:
+                    quiet = False
+            if quiet:
+                break
+            pump()
         var paints = List[Float64]()
         var uploads = List[Float64]()
         host[].frame_paints = List[Float64]()

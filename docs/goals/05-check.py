@@ -33,7 +33,7 @@ ALLOWED = {
     "_objc_registerClassPair", "_class_addMethod", "_class_addProtocol", "_objc_autoreleasePoolPush",
     # libSystem
     "_dlsym", "_dup", "_fclose", "_fdopen", "_fflush", "_memcpy", "_memmove", "_memset", "_bzero",
-    "_strlen", "_write", "_posix_memalign", "_free",
+    "_strlen", "_write", "_posix_memalign", "_free", "_sin", "_cos", "___sincos_stret",  # (sin and cos: the island's spinner, goal 30)
     # libSystem, for the MX frame package (files, mmap, time)
     "___error", "_close", "_getpid", "_lseek", "_lstat", "_mkdir", "_mmap", "_munmap", "_open", "_read", "_rename", "_stat", "_strerror", "_unlink", "_clock_gettime_nsec_np", "_getenv", "_log10", "_sysconf", "_memset_pattern16", "_strtod", "_strtod_l", "_newlocale", "_freelocale",
     # UIKit

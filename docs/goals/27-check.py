@@ -234,7 +234,8 @@ def m5():
         g25.gtk(g25.OPEN, f"import-{tag}", size=size)  # (shots for the eye: the import screen and a menu)
         g25.gtk(g25.SHEET + ";open:Format;pause:300", f"menu-{tag}", size=size)
         sheet, _ = g25.gtk(g25.SHEET, f"sheet-{tag}", size=size)
-        chips = [l for l in labels(sheet) if ("ready" in l or l.endswith("CPU")) and " ms on " not in l]  # (the status bar's timing is a measurement, not the state)
+        shown = labels(sheet) + re.findall(r"^TIP: island = (.*)$", sheet, re.M)  # (goal 30, D-287: the GPU's state is the island's, at rest)
+        chips = [l for l in shown if ("ready" in l or l.endswith("CPU")) and " ms on " not in l]  # (the status bar's timing is a measurement, not the state)
         if len(chips) != 1:
             problems.append(f"{tag} sheet: the GPU's state shows {len(chips)} times: {chips} (P5)")
         report, shot = g25.gtk(g25.REPORT + ";tap:Chart tile;pause:400", f"report-{tag}", size=size)

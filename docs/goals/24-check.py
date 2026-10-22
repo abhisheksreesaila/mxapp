@@ -304,10 +304,13 @@ def m7():
         out = fn(SHEET, f"stitch-sheet-{host}")
         png = OUT / f"stitch-sheet-{host}-{'gtk' if host == 'GTK' else 'web'}.png"
         bar = boxes(out, "menubar")
-        for tag in ("app-mark", "gpu-chip"):
+        for tag in ("app-mark", "island"):  # (goal 30, D-287: the GPU chip became the island, which shows the GPU at rest)
             b = boxes(out, tag)
             if not b or not bar or not (bar[0][1] <= b[0][1] <= bar[0][1] + bar[0][3]):
                 problems.append(f"{host}: no {tag} in the menu bar")
+        rest = re.findall(r"^TIP: island = (.*)$", out, re.M)
+        if not rest or not re.search(r"· (NVIDIA|AMD|Apple|CPU)", rest[-1]):
+            problems.append(f"{host}: the island at rest doesn't name the GPU or the CPU ({rest[-1:]})")
         greens, reds = colour_count(png, "#e3f4e9"), colour_count(png, "#fbe5e5")
         if greens < 300 or reds < 100:
             problems.append(f"{host}: yes/no cells aren't green and red pills ({greens} green, {reds} red pixels)")

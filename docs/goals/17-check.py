@@ -180,8 +180,9 @@ def m3():
     dlg = both(OPEN + ";menu:File>Settings…", "settings", split=True)
     swapped = both(OPEN + ";menu:File>Settings…;radio:0=Graphite", "settings-graphite", split=True)
     done = both(OPEN + ";menu:File>Settings…;radio:0=Graphite;tap:Done", "settings-done", split=True)
-    toast = both(OPEN + ";menu:Data>Sort largest first", "toast")
-    undone = both(OPEN + ";menu:Data>Sort largest first;toast:Undo", "toast-undo")
+    # (goal 30, D-287: the toast became the island's undo face; Undo is its right end)
+    toast = both(OPEN + ";menu:Data>Sort largest first;say:island", "toast")
+    undone = both(OPEN + ";menu:Data>Sort largest first;tapat:island=995,500;pause:300;say:island", "toast-undo")
     pop = both(OPEN + ";tap:ƒx", "popover")
     closed = both(OPEN + ";tap:ƒx;dismiss:", "popover-closed")
     for r in (dlg, swapped, done, toast, undone, pop, closed):
@@ -198,11 +199,12 @@ def m3():
             problems.append(f"{host}: Done didn't close the Settings dialog")
         if "DESIGN: graphite" not in done[k]:
             problems.append(f"{host}: the skin didn't stay after Done")
-        toasts = lines(toast[k], "TOAST: ")
-        if not toasts or "Undo" not in toasts[0] or "largest first" not in toasts[0]:
-            problems.append(f"{host}: no toast with Undo after the sort ({toasts})")
-        if any(l.startswith("sorted by ") for l in labels(undone[k])) or lines(undone[k], "TOAST: "):
-            problems.append(f"{host}: the toast's Undo didn't undo the sort (or the toast stayed)")
+        says = re.findall(r"^SAYS: island = (.*)$", toast[k], re.M)
+        if not says or "largest first" not in says[0] or lines(toast[k], "TOAST: "):
+            problems.append(f"{host}: the island didn't say the sort ({says})")
+        undo_says = re.findall(r"^SAYS: island = (.*)$", undone[k], re.M)
+        if any(l.startswith("sorted by ") for l in labels(undone[k])) or not undo_says or not undo_says[-1].startswith("Sort undone"):
+            problems.append(f"{host}: the island's Undo didn't undo the sort ({undo_says})")
         tips = lines(toast[k], "TIP: ")
         if len(tips) < 6 or not any(t.startswith("Save = ") and "Ctrl+S" in t for t in tips):
             problems.append(f"{host}: the toolbar's tooltips are missing ({tips[:3]})")
