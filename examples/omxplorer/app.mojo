@@ -447,6 +447,7 @@ struct Main(App):
     def use_table(mut self, var sheet: Sheet):
         """The new table takes over; only then is the old one's memory given back (CPU and GPU: ~26 GB at 100M
         rows). A file that fails to open never gets here, so the sheet on screen stays intact."""
+        self.drop_jobs()  # (they read the old table and its GPU copy: stopped before those are given back)
         swap(self.frame, sheet)  # (sheet is the old one now)
         sheet.release()
         self.has_table = True
@@ -570,6 +571,8 @@ struct Main(App):
 
     def to_sheet(mut self):
         self.screen = SHEET
+        self.charts.forget()  # (the objects go: their jobs would land on the new ones)
+        self.held = List[Tuple[Int, SheetObject]]()
         self.objects = List[SheetObject]()
         self.active = -1
         self.tiles = List[ReportTile]()
@@ -999,8 +1002,16 @@ struct Main(App):
             self.island_v += 1
 
     def big(self) -> Bool:
-        """A table big enough that its queries run in the background (the window stays live meanwhile)."""
-        return self.has_table and self.frame.rows() >= BIG_ROWS
+        """A table big enough that its queries run in the background (the window stays live meanwhile); OMX_BIG_ROWS
+        moves the line (checks run the background paths on small files with it)."""
+        var line = BIG_ROWS
+        var asked = environment("OMX_BIG_ROWS")
+        if asked != "":
+            try:
+                line = Int(asked)
+            except:
+                pass
+        return self.has_table and self.frame.rows() >= line
 
     def rest_face(self) -> Activity:
         """The island at rest: the document and where its queries run (nothing before there's a document)."""
@@ -1034,6 +1045,16 @@ struct Main(App):
             print("JOB: start chart" + String(cref) + " " + object_title(spec, self.frame))
         if self.charts.cref == cref:
             self.say(Activity.running(capital(object_title(spec, self.frame)), 0.0, "starting"))
+
+    def drop_jobs(mut self):
+        """Every background job on the current table stopped and forgotten, waiting until each has really stopped (the
+        table and its GPU copy are about to be given back; a cancel is seen between blocks of rows)."""
+        self.charts.forget(wait=True)
+        self.held = List[Tuple[Int, SheetObject]]()
+        if self.col_job:
+            self.col_job.value().cancel()
+            _ = self.col_job.value().wait()
+            self.col_job = None
 
     def hold(mut self, cref: Int):
         """Chart `cref` keeps showing what it shows now (faded) until its new numbers land (the first hold wins: a second
@@ -1082,12 +1103,12 @@ struct Main(App):
                 self.version += 1
         var was = self.charts.cref
         while True:
-            var got: Optional[Tuple[Int, SheetObject]] = None
-            try:
-                got = self.charts.poll(self.frame)
-            except e:
-                self.say(Activity.error("Couldn't compute the chart", String(e)))
-                break
+            var got = self.charts.poll(self.frame)
+            if self.charts.failed >= 0:  # (its old picture goes too: the chart shows what it has, and the island why)
+                self.let_go(self.charts.failed)
+                self.say(Activity.error("Couldn't compute the chart", self.charts.failure))
+                self.version += 1
+                continue
             if not got:
                 break
             var cref = got.value()[0]
@@ -1102,7 +1123,7 @@ struct Main(App):
                     start_move(obj, before)  # (the bars move from what they showed to the answer)
                 self.objects[cref] = obj^
                 self.timed(done.milliseconds)
-                var took = fixed(done.milliseconds / 1000.0, 2) + " s on " + self.device_words(self.frame.notes[].last_gpu or self.frame.mode != 0)
+                var took = fixed(done.milliseconds / 1000.0, 2) + " s on " + self.device_words(self.charts.landed_gpu)
                 if self.trace:
                     print("JOB: landed chart" + String(cref) + " " + fixed(done.milliseconds, 1) + " ms")
                     print("CHART: chart" + String(cref) + "\n" + chart_text(self.objects[cref], self.frame).replace("\t", " | "))
@@ -1468,8 +1489,12 @@ struct Main(App):
             var k = m - OBJ_CLOSE
             if k < len(self.objects):
                 _ = self.objects.pop(k)
-                self.charts.forget()  # (refs after it moved: their jobs would land on the wrong object)
-                self.held = List[Tuple[Int, SheetObject]]()
+                self.charts.remove(k, self.frame)  # (its job goes; the ones after it move down a ref and carry on)
+                var held = List[Tuple[Int, SheetObject]]()
+                for h in self.held:
+                    if h[0] != k:
+                        held.append((h[0] - 1 if h[0] > k else h[0], h[1].copy()))
+                self.held = held^
                 self.chart_undo = List[Tuple[Int, Int, SheetObject]]()  # (refs after it moved: its changes can't be undone any more)
                 self.asking = -1
                 if self.active == k:

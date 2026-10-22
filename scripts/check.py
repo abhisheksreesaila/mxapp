@@ -129,9 +129,19 @@ def m1():
         problems.append("the median landed though Sum was picked while it ran (want it cancelled)")
     if max(gaps(c) or [999]) > 50.0:
         problems.append(f"frame gaps around the cancel: {gaps(c)} ms")
+    # the jobs' lifecycle (reviewer, round 1): a chart removed while another's job runs; another file opened mid-job
+    rm = gtk(opened + ";tap:Chart;pause:800;tap:Data;segment:1=Median;pause:100;tap:Remove;pause:2000", "g30-m1-remove")
+    after = rm.split("JOB: start chart1 median amount by region", 1)[-1]
+    if "JOB: start chart1 median amount by region" not in rm or "JOB: landed chart0" not in after or want_chart.get("median") not in charts_in(after):
+        problems.append("removing chart 0 while chart 1's median ran: the median didn't land on chart 1, now chart 0")
+    swap = gtk(opened + ";tap:Data;segment:1=Median;pause:100;pick:Open={f};pause:2500".format(f=g15.CSV_1M), "g30-m1-swap")
+    after = swap.split("JOB: start chart0 median amount by region", 1)[-1]
+    if "JOB: start chart0 median amount by region" not in swap or "JOB: landed" in after or "BUTTON: Create table" not in after:
+        problems.append("opening another file during a median: the old document's jobs weren't dropped (or the new file didn't open)")
     return not problems, "; ".join(problems[:6]) or (f"at 100M rows on GTK the window kept drawing (longest frame gaps {', '.join(f'{v:.0f}' for v in g)} ms) "
                                                       "while the file opened, a median and a month chart ran and the column's figures came; each "
-                                                      "equals the in-place answer; Sum picked during the median cancels it")
+                                                      "equals the in-place answer; Sum picked during the median cancels it; a chart removed mid-job leaves the others' jobs "
+                                                      "landing on their new places; another file opened mid-job drops the old jobs")
 
 
 def said(out, tag="island"):
