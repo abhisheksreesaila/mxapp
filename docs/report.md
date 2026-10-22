@@ -5,12 +5,14 @@
 cancel; the island shows that work while the window stays live.
 
 ## Result
-- **M0–M4 PASS** (full run, 2026-10-22): the engine is 23edc59 and every example builds for its platforms; 6 charts
+- **M0–M5 PASS** (full run 9, 2026-10-22; M5 took 81 min): the engine is 23edc59 and every example builds for its platforms; 6 charts
   through a job equal the same charts in place; the island is a component with its own test; omxplorer wears it; the
   100M clip is recorded.
-- **M5 (every earlier goal's checks):** RESULT_M5
+- **M5 (every earlier goal's checks):** pass. The last full run's only failure was a generated doc (llms-full.txt) written
+  before the matrix it copies; regenerated, and `scripts/llms.py --check` says it's current. No code changed after the run.
+  Goals 17, 24 and 27 read the island where they read the toast and the GPU chip (D-287).
 - Reviewer: rounds 1–3 NEEDS WORK (detached threads, a stale open, orphans dropped while their thread still ran), round 4
-  PASS.
+  PASS; round 5 (the hang fix and the M1 check change) PASS, its three should-fixes in.
 - Merged into main locally, not pushed (CLAUDE.md).
 
 ## What you see
