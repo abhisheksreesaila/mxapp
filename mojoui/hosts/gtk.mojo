@@ -4019,9 +4019,8 @@ def painted(pixels: List[UInt32]) -> Int:
 
 def save_png(window: Int, path: String):
     """Asks GTK to render the window (as drawn on screen) into a PNG file."""
-    for _ in range(500):  # wait until the window is on screen
-        if external_call["gtk_widget_get_mapped", c_int](window) != 0:
-            break
+    var by = perf_counter_ns() + 5_000_000_000  # wait until the window is on screen (up to 5 s: a loaded display)
+    while external_call["gtk_widget_get_mapped", c_int](window) == 0 and perf_counter_ns() < by:
         pump()
     for _ in range(60):  # let layout and drawing settle (~300 ms of frames)
         settle()

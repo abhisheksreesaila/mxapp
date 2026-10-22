@@ -134,6 +134,7 @@ def m1():
     after = rm.split("JOB: start chart1 median amount by region", 1)[-1]
     if "JOB: start chart1 median amount by region" not in rm or "JOB: landed chart0" not in after or want_chart.get("median") not in charts_in(after):
         problems.append("removing chart 0 while chart 1's median ran: the median didn't land on chart 1, now chart 0")
+    # (CSV_1M is under BIG_FILE, so it opens at once, with no job of its own landing after the drop)
     swap = gtk(opened + ";tap:Data;segment:1=Median;pause:100;pick:Open={f};pause:2500".format(f=g15.CSV_1M), "g30-m1-swap")
     after = swap.split("JOB: start chart0 median amount by region", 1)[-1]
     dropped = after.split("JOB: dropped every job", 1)[-1]  # (an old job may land before the new file opens: the column's 2 s)
@@ -294,10 +295,13 @@ def m5():
     """Goal 29's checks (every earlier goal's inside them), and no host's test wait that can sleep past its deadline."""
     problems = []
     import re
-    for f in sorted((ROOT / "mojoui" / "hosts").glob("*.mojo")):  # (D-286: a blocking main-loop turn hung a run 15 minutes)
-        for i, line in enumerate(f.read_text().splitlines(), 1):
-            if re.search(r'g_main_context_iteration", c_int\]\(\s*\w+\s*,\s*c_int\(1\)\)', line):
-                problems.append(f"{f.name}:{i} turns the main loop blocking: use pump(), which never sleeps past a deadline")
+    for f in sorted(list((ROOT / "mojoui").rglob("*.mojo")) + list((ROOT / "examples").rglob("*.mojo"))):  # (D-286: a blocking main-loop turn hung a run 15 minutes)
+        text = f.read_text()
+        for m in re.finditer(r'g_main_context_iteration"[^\]]*\]\(([^;\n]*(?:\n[^;\n]*)?)', text):  # (a call may span two lines)
+            if not re.match(r'\s*\w+\s*,\s*c_int\(0\)\s*\)', m.group(1)):
+                problems.append(f"{f.relative_to(ROOT)}:{text[:m.start()].count(chr(10)) + 1} turns the main loop blocking (may_block isn't c_int(0)): use pump(), which never sleeps past a deadline")
+        for m in re.finditer(r'"(g_main_loop_run|gtk_main_iteration|gtk_main)"', text):
+            problems.append(f"{f.relative_to(ROOT)}:{text[:m.start()].count(chr(10)) + 1} runs a blocking main loop ({m.group(1)})")
     for name, fn in [(f"29-M{i}", getattr(g29, f"m{i}")) for i in range(6)]:
         ok, msg = fn()
         if not ok:
