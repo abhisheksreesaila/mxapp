@@ -1,8 +1,8 @@
-# Launch posts (drafts, not posted)
+# Launch posts
 
 Three drafts for the public alpha: a GitHub release, an X thread, a Modular forum post. Words and numbers come from
 `docs/launch/copy.md` and the README; every number is measured on one Linux machine with an RTX 3090 (sources in brackets,
-for checking, not for posting). **Nothing here is posted or pushed without the owner's yes.**
+for checking, not for posting). The owner approved them on 2026-10-21 with the name **omxapp**. The GitHub release is published; the X thread and the forum post are for the owner to post.
 
 Before posting, the owner decides:
 1. **Name.** The posts say *omxapp* and link the `mxapp` repo (copy.md, open question 1).

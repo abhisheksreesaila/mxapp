@@ -4,6 +4,15 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 29c (2026-10-21): clips, two ask fixes, the public alpha
+- **Setup:** the launch needed moving pictures of omxplorer; the owner approved the posts and the name omxapp.
+- **Worked:** `scripts/clips.py` records two clips over 1M rows: the native window (ffmpeg on the private headless display, real XTest typing through `scripts/live.py`) and the browser (Chromium's screencast). Stills beside them. Release `v0.1.0-alpha` on GitHub with both clips attached.
+- **Broke and fixed:** recording found the ask's reply still saying "by month of day", and "every month" not understood; the first fix for the second broke "amount every month" (caught by the reviewer, round 2 PASS). Tests first in tests/test_chartask.mojo.
+- **Means:** recording a real session is a test too: it found two bugs no check had.
+- **Next:** the owner posts the X thread and the forum post (no access from here); goal 30, background queries and the island.
+
+---
+
 ## Experiment 29b (2026-10-21): polish from goal 29's screenshots
 - **Setup:** the owner's five notes on goal 29's shots (docs/next.md §2).
 - **Worked:** "by month" without the column's name when there's one date column; an ask's reply said once (status bar); a chart's time once (its card); the "$" note was a column without a currency format (now a guard test).
