@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>omxapp · one Mojo file, every screen</title>
+<title>omxcode · one Mojo file, every screen</title>
 <meta name="description" content="Write an app once, in Mojo. It runs natively on every screen, computes on the GPU, and any AI agent can use it. Public alpha, MIT.">
-<meta property="og:title" content="omxapp: one Mojo file. Every screen. The GPU underneath. Agents built in.">
+<meta property="og:title" content="omxcode: one Mojo file. Every screen. The GPU underneath. Agents built in.">
 <meta property="og:description" content="Native apps on Linux, the web and Android from one Mojo file, the GPU in the same language, and agent tools built in. Public alpha, MIT.">
 <meta property="og:image" content="https://abhisheksreesaila.github.io/mxapp/img/readme-report.jpg">
 <meta name="theme-color" content="#000000">
@@ -224,7 +224,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
 <body>
 
 <nav class="lnav">
-  <a class="brand" href="#top"><span class="mark">ox</span>omxapp</a>
+  <a class="brand" href="#top"><span class="mark">ox</span>omxcode</a>
   <div class="pill"><span class="ind" aria-hidden="true"></span><a href="#agents">Agents</a><a href="#speed">Speed</a><a href="#possible">Possible</a></div>
   <div class="right"><a class="cta" href="#get">Get the alpha</a></div>
 </nav>
@@ -236,7 +236,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   <div class="wrap">
     <div class="intro">
     <div class="eyebrow rise"><span>Public alpha</span></div>
-    <h1 class="rise" data-words data-step="0" data-d0="120">omxapp</h1>
+    <h1 class="rise" data-words data-step="0" data-d0="120">omxcode</h1>
     <p class="lede rise"><span data-words data-step="55" data-d0="380">Write an app once, in Mojo.</span> <span class="two" data-words data-step="40" data-d0="560">It runs natively on every screen, computes on the GPU, and any AI agent can use it.</span></p>
     <div class="ctas rise"><span style="animation-delay:1100ms"><a class="cta" href="#get">Get the alpha</a></span><span style="animation-delay:1180ms"><a class="more" href="#four">Read the story</a></span></div>
     </div>
@@ -259,7 +259,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
     <p class="lede rv">It starts today: every app is already a set of agent tools. Next, the model moves into the same program, on the same GPU.</p>
 
     <div class="part rv"><span class="badge ok"><i></i>runs today</span><h3>Every app is already a set of agent tools.</h3></div>
-    <p class="body rv">The agent is a platform, like Linux or the web. omxapp shows it the same app as a list of MCP tools: a button's tag names its tool, its tooltip describes it, and calling the tool is tapping the button. No API to write, no screenshots to read.</p>
+    <p class="body rv">The agent is a platform, like Linux or the web. omxcode shows it the same app as a list of MCP tools: a button's tag names its tool, its tooltip describes it, and calling the tool is tapping the button. No API to write, no screenshots to read.</p>
     <div class="g2">
       <div class="card rv">
         <div class="card-h"><h3>A real session</h3><span class="sp"></span><span class="badge">MCP · stdio</span></div>
@@ -273,7 +273,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
         <div class="src note">omxplorer on the agent host, over stdio</div>
       </div>
       <div class="points">
-        <div class="rv"><h3>No per-app work.</h3><p>Every omxapp app is an MCP server from its first line.</p></div>
+        <div class="rv"><h3>No per-app work.</h3><p>Every omxcode app is an MCP server from its first line.</p></div>
         <div class="rv"><h3>Safe by construction.</h3><p>An agent can't do anything a person couldn't. A disabled button isn't a tool; a dialog's buttons exist only while it's open.</p></div>
         <div class="rv"><h3>It hears what changed.</h3><p>Every call answers in words: the new texts, what opened or closed, which tools appeared.</p></div>
       </div>
@@ -284,7 +284,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
     <div class="flow">
       <div class="card today rv"><div class="card-h"><h3>An AI app today</h3></div><div class="card-b"><ol>
         <li>Interface in JavaScript or Swift</li><li class="hop">→ HTTP request, JSON</li><li>Model server in Python</li><li class="hop">→ HTTP response, JSON</li><li class="sum">Three languages, two processes, a network hop per answer</li></ol></div><div class="src note">a typical AI app today</div></div>
-      <div class="card going rv"><div class="card-h"><h3>Where omxapp is going</h3><span class="sp"></span><span class="badge warn"><i></i>next</span></div><div class="card-b"><ol>
+      <div class="card going rv"><div class="card-h"><h3>Where omxcode is going</h3><span class="sp"></span><span class="badge warn"><i></i>next</span></div><div class="card-b"><ol>
         <li>Your app, in Mojo</li><li class="hop">→ the model: same process, same GPU</li><li>The data engine: same GPU</li><li class="hop">→ the interface, drawn on the GPU</li><li class="sum">One language, one program, no API in between</li></ol></div><div class="src note">not in the alpha</div></div>
     </div>
     <p class="srcline rv">Not in the alpha. Today the interface, the data and the drawing share one language and one GPU; the model is the next piece.</p>
@@ -362,7 +362,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
     <div class="line rv">The data work<small>in Python, on a server.</small></div>
     <div class="line rv">The graphics<small>in a shader language.</small></div>
     <div class="line rv">An API<small>so other software, and now AI agents, can use it.</small></div>
-    <p class="lede rv" style="margin-left:0">Every line between them is a rewrite, a network hop, or another team. <b>omxapp is one program.</b></p>
+    <p class="lede rv" style="margin-left:0">Every line between them is a rewrite, a network hop, or another team. <b>omxcode is one program.</b></p>
   </div>
 </section>
 
@@ -375,7 +375,7 @@ footer .fine { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--
   <div class="wrap">
     <div class="eyebrow rv">Get it</div>
     <h2 class="rv">Available today.</h2>
-    <p class="body rv">omxapp is a public alpha, free and open source under MIT. Linux with an NVIDIA GPU is the best place to start.</p>
+    <p class="body rv">omxcode is a public alpha, free and open source under MIT. Linux with an NVIDIA GPU is the best place to start.</p>
     <div class="card install rv">
 <pre id="cmds">git clone https://github.com/abhisheksreesaila/mxapp
 cd mxapp &amp;&amp; pixi install
@@ -397,7 +397,7 @@ scripts/omxplorer.sh</pre>
       <div><h4>Platforms</h4><ul><li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/agent.md">Agent host</a></li><li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/android.md">Android</a></li><li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/wasm.md">Web and wasm</a></li></ul></div>
       <div><h4>Follow along</h4><ul><li><a href="gallery/">Gallery</a></li><li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/decisions.md">Decision log</a></li><li><a href="https://github.com/abhisheksreesaila/mxapp/blob/main/docs/next.md">What's next</a></li></ul></div>
     </div>
-    <div class="fine"><span>omxapp · public alpha · MIT licence · built in Mojo, 2026 · styled with <a href="https://abhisheksreesaila.github.io/omxqua/">omxqua</a></span><a href="https://github.com/abhisheksreesaila/mxapp/issues">Report an issue</a></div>
+    <div class="fine"><span>omxcode · public alpha · MIT licence · built in Mojo, 2026 · styled with <a href="https://abhisheksreesaila.github.io/omxqua/">omxqua</a></span><a href="https://github.com/abhisheksreesaila/mxapp/issues">Report an issue</a></div>
   </div>
 </footer>
 

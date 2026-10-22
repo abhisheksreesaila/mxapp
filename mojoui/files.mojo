@@ -27,6 +27,30 @@ def config_dir(app: String) -> String:
     return environment("OMX_CONFIG", environment("HOME", ".") + "/.config/" + app)
 
 
+def adopt_config(app: String, old: String):
+    """An app that changed its name keeps its settings and recent files: each of ~/.config/<old>'s files is copied into
+    ~/.config/<app> when <app> has no such file yet (the old folder stays, for an older build)."""
+    if environment("OMX_CONFIG", "") != "":
+        return
+    var was = environment("HOME", ".") + "/.config/" + old
+    for name in ["recent.txt", "settings.txt"]:
+        try:
+            with open(config_dir(app) + "/" + name, "r") as f:
+                _ = f.read()
+            continue  # (already there)
+        except:
+            pass
+        try:
+            var text: String
+            with open(was + "/" + name, "r") as f:
+                text = f.read()
+            make_dir(config_dir(app))
+            with open(config_dir(app) + "/" + name, "w") as f:
+                f.write(text)
+        except:
+            pass
+
+
 def read_recent(app: String) -> List[String]:
     var out = List[String]()
     try:

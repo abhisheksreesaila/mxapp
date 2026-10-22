@@ -1,4 +1,4 @@
-# kit: every omxapp component on one screen, on every host (D-157): the proving ground for the menu bar, menus and a
+# kit: every omxcode component on one screen, on every host (D-157): the proving ground for the menu bar, menus and a
 # context menu, tool buttons with tooltips, a dialog, a toast, a popover, checkboxes, a Board with an Overlay island,
 # a canvas with the keyboard, and the three skins. On Linux and the web it's driven by scripts/check; on iPad and Mac
 # it builds, bundles and signs here and runs on the owner's devices.
@@ -222,7 +222,7 @@ struct Main(App):
                 Checkbox("Show grid lines", self.grid_lines, GRID_LINES), Checkbox("Snap to grid", self.snap, SNAP),
                 HStack(Spacer(), Button("Done", DIALOG_CLOSE, PROMINENT), spacing=10).fill(), spacing=12).align(START), on_close=DIALOG_CLOSE))
         if self.about_open:
-            out.append(Dialog("About kit", VStack(Text("kit", TITLE).tone(TONE_ACCENT), Text("every omxapp component, on every host", CAPTION),
+            out.append(Dialog("About kit", VStack(Text("kit", TITLE).tone(TONE_ACCENT), Text("every omxcode component, on every host", CAPTION),
                                                    HStack(Spacer(), Button("Done", ABOUT_CLOSE, PROMINENT), spacing=10).fill(), spacing=10).align(START), on_close=ABOUT_CLOSE, width=440))
         if self.pop_open:
             out.append(Popover("popover-button", "Formulas", VStack(Text("margin = revenue - cost", CAPTION), Text("+  −  ×  ÷   min   max", CAPTION), spacing=6).align(START), on_close=POP_CLOSE))
@@ -257,7 +257,7 @@ struct Main(App):
         parts.append(self.toolbar().height(64))
         parts.append(body^)
         parts.append(Spacer())
-        parts.append(StatusBar([self.last, "Skin " + self.look.id], "kit · omxapp"))
+        parts.append(StatusBar([self.last, "Skin " + self.look.id], "kit · omxcode"))
         if self.ctx_x >= 0:
             parts.append(ContextMenu("canvas", self.ctx_x, self.ctx_y, [Item("Sort A→Z", SORT_AZ, icon="sort"), Item("Sort Z→A", SORT_ZA), Separator(),
                                                                        Submenu("Format as", [Item("Number", NO_MSG), Item("Currency", NO_MSG, checked=True)], icon="format"),

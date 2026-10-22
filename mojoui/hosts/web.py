@@ -990,7 +990,7 @@ def make_app(module_dir):
                     old.closed = True
                     mod.close(old.handle)
                 import shutil  # (its uploads go with it)
-                shutil.rmtree(Path(os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxapp" / "uploads")) / old_sid, ignore_errors=True)
+                shutil.rmtree(Path(os.environ.get("OMXCODE_UPLOADS", os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxcode" / "uploads"))) / old_sid, ignore_errors=True)
         s.theme_key = mod.theme_key(s.handle)
         s.theme_id = None
         if hasattr(mod, "logo") and "app-logo" not in ICONS:
@@ -1166,7 +1166,7 @@ def make_app(module_dir):
 
     @app.post("/upload/{sid}")
     async def upload(sid: str, n: int, file: UploadFile, v: int = -1):
-        """A FilePicker's file: saved where the app runs (~/.cache/omxapp/uploads), then on_pick gets its path."""
+        """A FilePicker's file: saved where the app runs (~/.cache/omxcode/uploads), then on_pick gets its path."""
         s = sessions.get(sid)
         if s is None:
             return Main(P("This page expired: reload it.", cls="text caption"), id="mojoui-root", hx_swap_oob="true")
@@ -1174,13 +1174,13 @@ def make_app(module_dir):
             if v != s.shape or not 0 <= n < len(s.nodes) or not s.nodes[n]["msg2"]:
                 return ""
         # each page its own folder; only a plain file name (no folders, no "..")
-        folder = Path(os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxapp" / "uploads")) / sid
+        folder = Path(os.environ.get("OMXCODE_UPLOADS", os.environ.get("OMXAPP_UPLOADS", Path.home() / ".cache" / "omxcode" / "uploads"))) / sid
         folder.mkdir(parents=True, exist_ok=True)
         name = Path(file.filename or "").name
         if name in ("", ".", ".."):
             name = "upload"
         path = folder / name
-        limit = int(os.environ.get("OMXAPP_UPLOAD_MAX", str(32 << 30)))  # (32 GB by default: a 100M-row CSV is ~10 GB)
+        limit = int(os.environ.get("OMXCODE_UPLOAD_MAX", os.environ.get("OMXAPP_UPLOAD_MAX", str(32 << 30))))  # (32 GB by default: a 100M-row CSV is ~10 GB)
         size = 0
         with open(path, "wb") as out:
             while chunk := await file.read(1 << 20):

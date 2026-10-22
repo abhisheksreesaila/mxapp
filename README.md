@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/img/logo.svg" width="88" alt="omxapp">
+  <img src="docs/img/logo.svg" width="88" alt="omxcode">
 </p>
 
-<h1 align="center">omxapp</h1>
+<h1 align="center">omxcode</h1>
 
 <p align="center">
   <b>One Mojo file. Every screen. The GPU underneath. Agents built in.</b>
@@ -17,12 +17,12 @@
   <img alt="Mojo 1.1" src="https://img.shields.io/badge/Mojo-1.1-1d1d21?labelColor=0b0b0d">
   <img alt="Linux · Web · Android · Mac · iPhone · Agent" src="https://img.shields.io/badge/hosts-Linux%20%C2%B7%20Web%20%C2%B7%20Android%20%C2%B7%20Mac%20%C2%B7%20iPhone%20%C2%B7%20Agent-1d1d21?labelColor=0b0b0d">
   <img alt="Public alpha" src="https://img.shields.io/badge/status-public%20alpha-1d1d21?labelColor=0b0b0d">
-  <a href="https://abhisheksreesaila.github.io/mxapp/"><img alt="Website" src="https://img.shields.io/badge/website-omxapp-1d1d21?labelColor=0b0b0d"></a>
+  <a href="https://abhisheksreesaila.github.io/mxapp/"><img alt="Website" src="https://img.shields.io/badge/website-omxcode-1d1d21?labelColor=0b0b0d"></a>
 </p>
 
 <p align="center">
   <img src="docs/img/readme-report.jpg" alt="omxplorer: a report over 1,000,000 orders. Sum, median, average and count tiles, and a chart, recomputed in 0.3 ms on the GPU" width="100%">
-  <br><sub>omxplorer, written in Mojo with omxapp: a million orders, every tile and chart recomputed in 0.3 ms on the GPU. A native Linux window.</sub>
+  <br><sub>omxplorer, written in Mojo with omxcode: a million orders, every tile and chart recomputed in 0.3 ms on the GPU. A native Linux window.</sub>
 </p>
 
 <table>
@@ -44,7 +44,7 @@ Imagine writing an app once, in a language that reads like Python.
 
 It opens as a real app on Linux, in the browser, on Android, on a Mac and on an iPhone. Each one uses that platform's own buttons, menus and text fields, not an imitation of them. The heavy lifting, a million rows summed, sorted or charted, runs on the GPU, in the same language and the same file. And when an AI agent wants to use the app, it doesn't scrape pixels or guess at buttons. The app is already a set of tools the agent can call.
 
-That's **omxapp**. Its showcase, **omxplorer**, is a data app in the spirit of Numbers and Power BI, and the app itself is about 2,100 lines of Mojo, built from the framework's components.
+That's **omxcode**. Its showcase, **omxplorer**, is a data app in the spirit of Numbers and Power BI, and the app itself is about 2,100 lines of Mojo, built from the framework's components.
 
 ## What it feels like
 
@@ -71,11 +71,11 @@ The toolbar only inserts things; the inspector sets them up, and shows only the 
 
 ## Agent native, from the first line
 
-Most apps meet AI agents through the screen: screenshots, pixel coordinates, an accessibility tree written for screen readers, or an API someone added later. omxapp takes a different route. **The agent is a host**, the same way GTK and the browser are.
+Most apps meet AI agents through the screen: screenshots, pixel coordinates, an accessibility tree written for screen readers, or an API someone added later. omxcode takes a different route. **The agent is a host**, the same way GTK and the browser are.
 
 The view tree that GTK turns into widgets and the web turns into HTML, the agent host turns into **tools** ([docs/agent.md](docs/agent.md)):
 
-- **No per-app work.** A button's tag names its tool, its tooltip describes it, and tapping it is calling it. A menu item becomes `file-save`. A text field becomes a tool that takes `text`. Every app built with omxapp is an MCP server already (29 components are proven through the agent so far; the matrix below has the rest).
+- **No per-app work.** A button's tag names its tool, its tooltip describes it, and tapping it is calling it. A menu item becomes `file-save`. A text field becomes a tool that takes `text`. Every app built with omxcode is an MCP server already (29 components are proven through the agent so far; the matrix below has the rest).
 - **An agent can do nothing a person couldn't.** A disabled button is no tool. A dialog's buttons are tools only while it is open. The screen is the permission model.
 - **It gets back what changed, in words.** It doesn't have to compare two screenshots. Each call returns the new texts, what opened or closed, and the tools that appeared or went.
 - **It reads, not just clicks.** `read` gives the screen's text grouped by area, or a grid's rows as tab-separated text. `render` gives a drawn view as a PNG for agents that can see.
@@ -98,13 +98,13 @@ This is a real session, run today against omxplorer and a 1M-row file. It uses n
   status-bar: Rows 1,000,000 · Columns 12 · Sum 114,007,922.00 …
 ```
 
-Give any omxapp app to Claude Code with one command:
+Give any omxcode app to Claude Code with one command:
 
 ```bash
 scripts/agent.sh omxplorer     # prints: claude mcp add omxplorer -- pixi run python mojoui/hosts/agent.py build/omxplorer/web
 ```
 
-The charts speak an agent's language too. They are [Flint](https://microsoft.github.io/flint-chart/) specs, the chart format Microsoft designed for AI agents. omxapp draws them natively, and the same specs run through Flint's own renderer as a cross-check.
+The charts speak an agent's language too. They are [Flint](https://microsoft.github.io/flint-chart/) specs, the chart format Microsoft designed for AI agents. omxcode draws them natively, and the same specs run through Flint's own renderer as a cross-check.
 
 > [!NOTE]
 > **What the agent can't do yet:** read a chart's figures as text (it reads the sentence and can `render` the picture), read a drawn grid's cells in apps other than omxplorer, drag objects on a page, or generate new UI. Generated UI over AG-UI is next, built on the same operations log.
@@ -181,7 +181,7 @@ All on one Linux machine with an RTX 3090, and all from the checks or their benc
 
 The GPU path is NVIDIA today. Apple and phone GPUs use the CPU path, which runs the same functions.
 
-**Why Mojo, honestly.** Mojo is young (1.1). It has a small ecosystem, no official iPhone, Android or WebAssembly target (omxapp cross-compiles with two hand-written runtime functions), and no Windows release yet. Flutter, React Native and the Rust kits are far ahead on maturity, tooling and production users. What none of them has is one readable language from the button to the GPU kernel, with native controls on every platform and an agent built in as a host.
+**Why Mojo, honestly.** Mojo is young (1.1). It has a small ecosystem, no official iPhone, Android or WebAssembly target (omxcode cross-compiles with two hand-written runtime functions), and no Windows release yet. Flutter, React Native and the Rust kits are far ahead on maturity, tooling and production users. What none of them has is one readable language from the button to the GPU kernel, with native controls on every platform and an agent built in as a host.
 
 ## Try it
 

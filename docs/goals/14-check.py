@@ -36,7 +36,7 @@ def env_for(tag):
     home = BUILD / "omx-test" / tag
     for d in ("docs", "config", "uploads"):
         (home / d).mkdir(parents=True, exist_ok=True)
-    return {"OMX_DOCUMENTS": str(home / "docs"), "OMX_CONFIG": str(home / "config"), "OMXAPP_UPLOADS": str(home / "uploads")}
+    return {"OMX_DOCUMENTS": str(home / "docs"), "OMX_CONFIG": str(home / "config"), "OMXCODE_UPLOADS": str(home / "uploads")}
 
 
 def shown(out):

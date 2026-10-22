@@ -1,6 +1,6 @@
-# MX frame: the Mojo API omxapp needs
+# MX frame: the Mojo API omxcode needs
 
-**For:** the MX frame project. **From:** omxapp (the framework) and omxplorer (the Numbers-style data app), as of goal 15 (2026-10-17).
+**For:** the MX frame project. **From:** omxcode (the framework) and omxplorer (the Numbers-style data app), as of goal 15 (2026-10-17).
 **Replaces:** the goal 8–9 wish list that was here (items 1–22, kept in git history). Everything in it is folded in below.
 
 ## Why
@@ -139,7 +139,7 @@ dictionary code (the order values first appeared), a known gap. Today: a radix s
 - Later: Apple GPUs (Metal) without Python.
 
 ## 7a. Data bigger than memory (being built in MX frame)
-MX frame is implementing out-of-core execution itself; omxapp doesn't need to know how. What the app relies on, so
+MX frame is implementing out-of-core execution itself; omxcode doesn't need to know how. What the app relies on, so
 the same screens work on a 1B-row file as on a 1M-row one:
 
 | The app does | It needs from MX frame |

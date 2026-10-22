@@ -1,4 +1,4 @@
-# The agent host: an omxapp app as MCP tools
+# The agent host: an omxcode app as MCP tools
 
 The agent is a fifth host (D-160). GTK, the web, the iPad and the Mac each turn an app's tree of views into their own
 widgets; `mojoui/hosts/agent.py` turns it into tools for an agent, over MCP on stdio, from the same `mojoui_app` module

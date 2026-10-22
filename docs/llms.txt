@@ -1,4 +1,4 @@
-# omxapp
+# omxcode
 
 > Write an app once in Mojo and run it natively on Linux (GTK 4), the web, Android, Mac and iPhone, with the heavy data work on the GPU in the same file. Every running app is also a set of MCP tools an AI agent can call, with no per-app work. Public alpha, MIT licence, Mojo 1.1.
 

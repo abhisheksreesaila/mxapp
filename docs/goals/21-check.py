@@ -42,7 +42,7 @@ def env(tag, **more):
     home = OUT / tag
     for d in ("docs", "config", "uploads"):
         (home / d).mkdir(parents=True, exist_ok=True)
-    return dict(g19.env(), OMX_DOCUMENTS=str(home / "docs"), OMX_CONFIG=str(home / "config"), OMXAPP_UPLOADS=str(home / "uploads"),
+    return dict(g19.env(), OMX_DOCUMENTS=str(home / "docs"), OMX_CONFIG=str(home / "config"), OMXCODE_UPLOADS=str(home / "uploads"),
                 **{k: str(v) for k, v in more.items()})
 
 

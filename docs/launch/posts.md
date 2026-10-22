@@ -2,10 +2,10 @@
 
 Three drafts for the public alpha: a GitHub release, an X thread, a Modular forum post. Words and numbers come from
 `docs/launch/copy.md` and the README; every number is measured on one Linux machine with an RTX 3090 (sources in brackets,
-for checking, not for posting). The owner approved them on 2026-10-21 with the name **omxapp**. The GitHub release is published; the X thread and the forum post are for the owner to post.
+for checking, not for posting). The owner approved them on 2026-10-21 as omxapp, then renamed it **omxcode** the same day (D-285: omxapp is a common business suite). The GitHub release is published; the X thread and the forum post are for the owner to post.
 
 Before posting, the owner decides:
-1. **Name.** The posts say *omxapp* and link the `mxapp` repo (copy.md, open question 1).
+1. **Name.** The posts say *omxcode* and link the `mxapp` repo (copy.md, open question 1).
 2. **Clips.** Two are recorded (`scripts/clips.py` records them again): `docs/img/clip-sentence-gtk.mp4` (17 s, the native
    window: three asks over 1M rows, bars moving) and `docs/img/clip-sentence-web.mp4` (15 s, the same app in Chromium: an
    ask, then "Sum" → Average and "bars" → a line picked from the words' popovers). Attach them by hand.
@@ -15,11 +15,11 @@ Before posting, the owner decides:
 
 ## 1 · GitHub release
 
-**Tag:** `v0.1.0-alpha` · **Title:** omxapp 0.1 alpha: one Mojo file, native on Linux, the web and Android, the GPU underneath, agents built in
+**Tag:** `v0.1.0-alpha` · **Title:** omxcode 0.1 alpha: one Mojo file, native on Linux, the web and Android, the GPU underneath, agents built in
 
 **See it in action: https://abhisheksreesaila.github.io/mxapp/**
 
-omxapp is a framework for writing an app once, in Mojo, and running it natively on Linux, the web and Android, with Mac and
+omxcode is a framework for writing an app once, in Mojo, and running it natively on Linux, the web and Android, with Mac and
 iPhone building today. The same file computes on the GPU, and any AI agent can use the app as a set of MCP tools.
 
 Its showcase, **omxplorer**, is a data app in the spirit of Numbers and Power BI, about 2,100 lines of Mojo.
@@ -38,7 +38,7 @@ Its showcase, **omxplorer**, is a data app in the spirit of Numbers and Power BI
 **Known limits**
 - At 100M rows in memory, a median chart takes about 0.7 s and the window waits for it. Moving that work off the window is next.
 - The GPU path is NVIDIA. Apple and phone GPUs use the CPU path, which runs the same functions.
-- Mojo 1.1 has no official iPhone, Android or WebAssembly target; omxapp cross-compiles with two hand-written runtime
+- Mojo 1.1 has no official iPhone, Android or WebAssembly target; omxcode cross-compiles with two hand-written runtime
   functions (`spike/kgen_shim.c`). There's no Windows build.
 - The agent can't yet read a chart's figures as text or drag objects on a page.
 
@@ -60,7 +60,7 @@ MIT licence. Every number above comes from `scripts/check` or its benchmarks on 
 I wrote one app in Mojo. It runs as a real GTK app on Linux, in the browser, and as real Android views. The same file sums
 a million rows on the GPU. And an AI agent can use it with no API.
 
-It's called omxapp. Public alpha, MIT. abhisheksreesaila.github.io/mxapp
+It's called omxcode. Public alpha, MIT. abhisheksreesaila.github.io/mxapp
 [clip-sentence-gtk.mp4]
 
 **2/**
@@ -100,7 +100,7 @@ Code: github.com/abhisheksreesaila/mxapp
 
 ## 3 · Modular forum post
 
-**Category:** Community Showcase · **Title:** omxapp: native apps on Linux, web and Android from one Mojo file, with the data on the GPU
+**Category:** Community Showcase · **Title:** omxcode: native apps on Linux, web and Android from one Mojo file, with the data on the GPU
 
 Hi all. I've been building a UI framework in Mojo and it's reached a public alpha, so I'd like to
 share it and hear what you think.

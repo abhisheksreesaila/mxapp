@@ -37,7 +37,7 @@ def env():
     d = BUILD / "agent-home"
     (d / "documents").mkdir(parents=True, exist_ok=True)
     (d / "config").mkdir(parents=True, exist_ok=True)
-    return {"OMX_DOCUMENTS": str(d / "documents"), "OMX_CONFIG": str(d / "config"), "OMXAPP_UPLOADS": str(d / "uploads")}
+    return {"OMX_DOCUMENTS": str(d / "documents"), "OMX_CONFIG": str(d / "config"), "OMXCODE_UPLOADS": str(d / "uploads")}
 
 
 def png_size(image):

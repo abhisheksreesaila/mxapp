@@ -1,5 +1,5 @@
 # omxplorer: open your data, shape it, report on it, on your GPU. A Numbers-style data app built only from
-# omxapp (mojoui) components, following the Stitch "classic" designs (docs/design/mxstudio-app/):
+# omxcode (mojoui) components, following the Stitch "classic" designs (docs/design/mxstudio-app/):
 #   Start  → choose a file (or the sample, or a blank table)
 #   Import → the columns as read, with their types and shapes, before the table exists
 #   Sheet  → a toolbar for the tab you're on (the sheet's tools and formats, or the Report's tiles and filter), the formula
@@ -66,7 +66,7 @@ from mojoui.datagrid import (DataGrid, GRID_SELECTED, GRID_COLUMN, GRID_EDIT, GR
                              GRID_TYPED, GRID_CLEAR, GRID_CANCEL, GRID_COMMIT)
 from mojoui.sheet import Sheet, placeholder_sheet, blank_table, INT, DECIMAL, TEXT, DATE, BOOL
 from mojoui.shared import environment, make_dir
-from mojoui.files import file_name, file_stem, file_size, read_recent, remember, read_setting, write_setting
+from mojoui.files import file_name, file_stem, file_size, read_recent, remember, read_setting, write_setting, adopt_config
 from mojoui.csvio import read_table, empty_import, CsvImport, CsvColumn, kind_name
 from mojoui.omxfile import save_omx, open_document
 from mojoui.numformat import (ColumnFormat, format_number, AUTO, NUMBER, CURRENCY, PERCENT, COMPACT, DATE_LONG, DATE_MONTH, DATE_ISO,
@@ -205,7 +205,7 @@ comptime MAX_OBJECTS = 40  # per sheet, and tiles per report (canvas ids 10…49
 comptime TABLE_H = 400  # the table's height once objects share the sheet
 
 comptime OMX_LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="24" height="24"><g transform="translate(6 6) scale(.97)"><defs><clipPath id="L1c"><circle cx="42.0" cy="42.0" r="20.5"/></clipPath></defs><circle cx="42.0" cy="42.0" r="25.0" fill="none" stroke="#4f46e5" stroke-width="9.0"/><g clip-path="url(#L1c)"><rect x="28.5" y="47" width="7.5" height="60" rx="2" fill="#4f46e5"/><rect x="38.3" y="37.5" width="7.5" height="60" rx="2" fill="#4f46e5"/><rect x="48" y="28" width="7.5" height="60" rx="2" fill="#4f46e5"/></g><line x1="59.68" y1="59.68" x2="80" y2="80" stroke="#4f46e5" stroke-width="12" stroke-linecap="round"/></g></svg>'  # logo 1, the lens over bars (docs/design/brand/, D-254)
-comptime APP = "omxapp"  # (settings live in ~/.config/omxapp)
+comptime APP = "omxcode"  # (settings live in ~/.config/omxcode; ~/.config/omxapp's are adopted, D-285)
 comptime W = 1440  # the window (Stitch's artboards; the web check's viewport)
 comptime INSPECTOR_W = 300
 comptime CHROME_H = 252  # the menu bar, toolbar, formula bar, bottom tabs, status bar and the gaps between them (goal 25: measured)
@@ -316,6 +316,7 @@ struct Main(App):
         self.preview = DataGrid()
         self.font = Font()
         self.looks = List[Theme]()
+        adopt_config(APP, "omxapp")
         self.skin = skin_of(read_setting(APP, "skin", "liquid"))
         self.win_w = W
         self.win_h = 900
@@ -1920,7 +1921,7 @@ struct Main(App):
         var parts = List[View]()
         parts.append(self.menu_bar())
         parts.append(body^)
-        parts.append(StatusBar(["Ready"], "omxplorer · omxapp"))
+        parts.append(StatusBar(["Ready"], "omxplorer · omxcode"))
         for o in self.overlays():
             parts.append(o.copy())
         return VStack(parts^, spacing=0).fill().grow()
@@ -2047,7 +2048,7 @@ struct Main(App):
             out.append(Dialog("About omxplorer", VStack(
                 Text("omxplorer", TITLE).tone(TONE_ACCENT), Text("open data, shape it, report on it, on your GPU", CAPTION),
                 Text(self.gpu_chip(), CAPTION).tone(TONE_GOOD),
-                Text("Written once in Mojo with omxapp: the same app, the same look, on Linux, the web, Mac, iPhone and Android.", CAPTION),
+                Text("Written once in Mojo with omxcode: the same app, the same look, on Linux, the web, Mac, iPhone and Android.", CAPTION),
                 HStack(Spacer(), Button("Done", ABOUT_CLOSE, PROMINENT), spacing=10).fill(),
                 spacing=10).align(START), on_close=ABOUT_CLOSE, width=480))
         if self.picking != 0 and self.screen == SHEET:

@@ -520,8 +520,8 @@ def serve(host):
             send({"jsonrpc": "2.0", "id": rid, "result": {
                 "protocolVersion": v if v in PROTOCOLS else PROTOCOLS[-1],
                 "capabilities": {"tools": {"listChanged": True}},
-                "serverInfo": {"name": f"omxapp · {host.title}", "version": "0.1"},
-                "instructions": (f"{host.title} is an omxapp app. Call screen to see what it shows and which tools a person could use right now; "
+                "serverInfo": {"name": f"omxcode · {host.title}", "version": "0.1"},
+                "instructions": (f"{host.title} is an omxcode app. Call screen to see what it shows and which tools a person could use right now; "
                                  "call a tool by its name (or act) to use it; read for the texts, a drawn view's rows, or a list's rows; render for a picture of a drawn view. "
                                  "The tools change with the screen (a dialog's or a menu's items exist while it is open): call screen again after acting.")}})
         elif method == "notifications/initialized" or method.startswith("notifications/"):

@@ -63,7 +63,7 @@ That's about 15 new components and 10 extended ones. Each one goes into `mojoui/
 
 ## Open decisions (the owner's, before the build)
 1. **Mac, iPhone and Android: draw our own controls, or keep native ones?**
-   - To be identical everywhere, omxapp would draw buttons, fields and menus on its canvas there, as Flutter and Office do. That's more work, and it loses some native behaviour: accessibility, text input and the system spell-check.
+   - To be identical everywhere, omxcode would draw buttons, fields and menus on its canvas there, as Flutter and Office do. That's more work, and it loses some native behaviour: accessibility, text input and the system spell-check.
    - Keeping native controls means a Ledger-coloured near-match.
    - *Recommendation:* draw our own for omxplorer's chrome on every platform except text input and the system menu bar and file dialogs. Do it after Linux and the web are done.
 2. **Windows:** it isn't a host yet. The web host covers it until there's one.

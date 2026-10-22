@@ -1,11 +1,11 @@
-# omxapp launch copy (draft 2)
+# omxcode launch copy (draft 2)
 
 The words for the launch page, the README's top half, the tweet and the forum post. Design comes later, from the owner's design language; this file is only what we say. Every number has a source line; if a number has no source, it doesn't go in.
 
 **Voice:** plain, confident, a builder talking to builders. Short sentences. No borrowed keynote lines. What makes it ours: every claim shows where it came from (the mono line under a number), and we say what doesn't work yet.
 
 **Open questions for the owner**
-1. **Name.** The page and README say *omxapp*; the repo is `mxapp`. One name everywhere?
+1. **Name.** The page and README say *omxcode*; the repo is `mxapp`. One name everywhere?
 2. **Who reads it first.** Mojo developers (Modular forum) want the GPU and one language; app developers (Twitter) want "one app, every screen" and agents. The hero below leads with the app developer; the forum post leads with Mojo.
 3. **Section 2.** Draft 1 had "A native app. A GPU engine. An agent's toolbox. These are not three things." That's the 2007 keynote's shape. Draft 2 replaces it with our own: "Four programs, one file."
 
@@ -15,7 +15,7 @@ The words for the launch page, the README's top half, the tweet and the forum po
 
 **Eyebrow:** Public alpha
 
-**Name:** omxapp
+**Name:** omxcode
 
 **Line:** Write an app once, in Mojo. It runs natively on every screen, computes on the GPU, and any AI agent can use it.
 
@@ -41,7 +41,7 @@ The words for the launch page, the README's top half, the tweet and the forum po
 
 **Part 1 · `runs today` badge, heading:** Every app is already a set of agent tools.
 
-**Body:** The agent is a platform, like Linux or the web. omxapp shows it the same app as a list of MCP tools: a button's tag names its tool, its tooltip describes it, and calling the tool is tapping the button. No API to write, no screenshots to read.
+**Body:** The agent is a platform, like Linux or the web. omxcode shows it the same app as a list of MCP tools: a button's tag names its tool, its tooltip describes it, and calling the tool is tapping the button. No API to write, no screenshots to read.
 
 **A real session:**
 ```
@@ -55,7 +55,7 @@ The words for the launch page, the README's top half, the tweet and the forum po
 ```
 
 **Three points:**
-- **No per-app work.** Every omxapp app is an MCP server from its first line.
+- **No per-app work.** Every omxcode app is an MCP server from its first line.
 - **Safe by construction.** An agent can't do anything a person couldn't. A disabled button isn't a tool; a dialog's buttons exist only while it's open.
 - **It hears what changed.** Every call answers in words: the new texts, what opened or closed, which tools appeared.
 
@@ -64,7 +64,7 @@ The words for the launch page, the README's top half, the tweet and the forum po
 
 **Body:** Today an AI app is two programs: an interface on one side, a model behind an HTTP API on the other, and JSON in between. Mojo is the language of both: the GPU code that runs models, and the GPU code that draws and computes this app. So they can be one program, where the model reads the app's data where it already sits and the interface answers in the same frame.
 
-| An AI app today | Where omxapp is going |
+| An AI app today | Where omxcode is going |
 |---|---|
 | interface in JavaScript or Swift | your app, in Mojo |
 | → HTTP request, JSON | → the model: same process, same GPU |
@@ -127,7 +127,7 @@ Then the other rows: *what it took before → what you do now → the measured p
 
 **Body:** A serious app today is really four programs. The interface, written again for each platform. The data work, in Python on a server. The graphics, in a shader language. And an API, so other software, now AI agents, can use it. Every line between them is a rewrite, a network hop, or another team.
 
-omxapp is one program. Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.
+omxcode is one program. Mojo writes the controls, the data engine and the GPU code. The same file runs as a native app on each platform, and it's a set of agent tools the moment it runs.
 
 ---
 
@@ -135,7 +135,7 @@ omxapp is one program. Mojo writes the controls, the data engine and the GPU cod
 
 **Headline:** Available today.
 
-**Body:** omxapp is a public alpha, free and open source under MIT. Linux with an NVIDIA GPU is the best place to start.
+**Body:** omxcode is a public alpha, free and open source under MIT. Linux with an NVIDIA GPU is the best place to start.
 
 ```
 git clone https://github.com/abhisheksreesaila/mxapp

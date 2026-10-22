@@ -21,7 +21,7 @@ class Client:
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
         self.next_id = 1
         self.notifications = []
-        self.init = self.request("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "omxapp-check", "version": "0"}})
+        self.init = self.request("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "omxcode-check", "version": "0"}})
         self.notify("notifications/initialized")
 
     def send(self, obj):
