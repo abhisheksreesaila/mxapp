@@ -342,3 +342,11 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - Clips: scripts/live.py gained type:, record: and stoprecord (ffmpeg x11grab on the private display); scripts/clips.py records the native clip that way and the web one from Chromium's screencast (Playwright's own recorder wants a downloaded ffmpeg). A word's popover draws a black box on Xvfb (no compositor; turning Composite off didn't help), so the native clip uses only the ask field and the web clip shows the popovers.
 - Found while recording: the ask's reply still said "by month of day" (the parser's own words: now part_text too), and "every month", a month chart's own Top word, wasn't understood (now it is). Tests first, in tests/test_chartask.mojo.
 
+
+## 2026-10-21/22 (goal 30, end)
+- Check M5 hung 15 min in goal 14's save run, twice in two full runs; 25 runs alone: 2 s each. A watchdog (`/tmp/watchdog.sh`) dumped stuck runs; gdb couldn't attach (ptrace scope), /proc/<pid>/task/*/wchan and the main thread's context-switch count (unchanged over 20 s) showed a blocking poll with nothing scheduled.
+- The check run 4 that M1 failed (67 ms gap) shared the machine with my packaging tests; quiet reruns: 17/33/17 ms.
+- A leftover web server from a killed check held 512 MB of GPU memory for two hours: kill a check's children when its runner is killed.
+- `pkill -f` with a path pattern killed its own shell again (exit 144): match the binary, not the command line.
+- M1's swap run failed once the waits stopped stalling: the old column job (2 s at 100M) landed after the median started but before the new file opened. The app now traces "JOB: dropped every job" and the check reads from there.
+- Goal 26's bench counted the island's morph (a pixel canvas) as the grid's uploads: the bench starts from a quiet window.

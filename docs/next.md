@@ -12,10 +12,13 @@ The owner paused feature work after goal 29: "100M no one will try on day 1. I w
 - Done: "by month"; the ask's reply once (status bar); a chart's time once (its card); "$" was a column without a currency format (guard test).
 - **Owner's call:** a new chart filling its row's width breaks goal 15's layout (a chart at 520 with a pivot beside it, kept across reopen). Charts resize from the corner today (the clips drag it as wide as the table first: compare docs/img/omxplorer-sentence-gtk.jpg). Say "fill it" and goal 15's check changes with it.
 
-## 3. Goal 30, parked: the island with background queries (6–10 h)
-- MX frame 23edc59 (issue #2): `start_job`/`Job` with poll, cancel, progress; `range_aggregate` for the status bar; `read_block` for the grid. The engine job's vendoring is uncommitted on an old base (~/.abode/home/worktrees/mojo-ui/t3-828a9b57): vendor it ourselves (D-270).
-- Why: on the UI thread at 100M rows a median takes 657 ms, a month chart 481 ms, a sum 46 ms (`docs/goals/29/bench.txt`). The status bar's sum at 100M isn't measured yet.
-- The island (D-255, option B, `docs/design/island/README.md`): an `Island` component that morphs, one activity queue that replaces Toasts, an expanded panel; remove the document and GPU chips. A query runs in the background and shows in the island; the chart animates in when it lands.
+## 3. Goal 30: done 2026-10-22 (docs/report.md)
+- The island and background queries over MX frame 23edc59; 100M rows never freeze the window. Packages: `scripts/package.sh omxplorer linux|mac`.
+
+## 3b. Goal 31, next: tiles that snap, labels that fit, bars that switch smoothly (docs/goals/31-draft.md)
+- The owner, trying the package: pivots land over each other and the table; the inspector reads "Ave… Co… Me…".
+- Then: the island drawn as a Scene (today a pixel canvas: it uploads a texture per frame while it moves); the Mac's jobs off the start call.
+- The rename to omxcode (D-285, branch rename-omxcode): in the repo first, then the release's title and notes and the site (the owner said yes).
 
 ## 4. Later, parked by the owner (2026-10-21)
 - `AGENTS.md` plus a "build an omxapp app" skill, so a coding agent writes a working app from one sentence (follows llms.txt, e4e929d).

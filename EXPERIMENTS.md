@@ -4,6 +4,22 @@ A dated record of what was tried, what happened, and what it means. Newest first
 
 ---
 
+## Experiment 30 (2026-10-21/22): the island, and 100M rows that never freeze the window (goal 30)
+- **Setup:** MX frame 23edc59 (`start_job`/`Job`: a query on its own thread, with progress and cancel); the island (D-255, direction B) in place of the document chip, the GPU chip and the toasts.
+- **Worked:**
+  - At 100M rows on GTK the window keeps drawing while the file opens (1.8 s), a median (0.77 s) and a median by month (3.3 s) run: the longest frame gap 33 ms. Each answer equals the in-place one; a second pick cancels the first; a removed chart or another file drops the old jobs.
+  - `mojoui/island.mojo`, a component with its own test: five faces, a 320 ms morph on the calm curve, hit areas; GTK and the web draw it alike. omxplorer's panel shows Recent and Device (p50, p95).
+  - The 100M clip (docs/img/clip-island-100m.mp4): the island changes in every frame for 3.6 s straight.
+  - `scripts/package.sh`: a Linux tarball and a Mac zip; the owner ran the Linux one (screenshots: pivots and the inspector).
+- **Broke and fixed:**
+  - The agent host sent no frames, so jobs polled on frames never landed (D-283). Cancelled jobs were dropped while their thread still ran; three reviewer rounds to "kept until joined" (D-284).
+  - A test run hung 15 minutes, twice, never alone: the GTK test waits turned the main loop blocking, and once the island stopped asking for frames nothing woke it. /proc showed it (ptrace isn't allowed here): main thread in poll, zero wake-ups in 20 s. `pump()` and a check that fails on a blocking turn (D-286).
+  - Earlier goals' checks looked for the toast and the GPU chip: they read the island now (D-287). omxplorer had imported the engine directly: Job comes through mojoui again (goal 5's rule).
+- **Means:** background work changes when a window sleeps; every wait in a test needs a deadline it can actually read.
+- **Next:** goal 31: tiles that snap (charts and pivots, never over the table), inspector labels that never truncate, bars that switch without a jitter; then the omxcode rename goes public (owner's yes, 2026-10-21).
+
+---
+
 ## Experiment 29c (2026-10-21): clips, two ask fixes, the public alpha
 - **Setup:** the launch needed moving pictures of omxplorer; the owner approved the posts and the name omxapp.
 - **Worked:** `scripts/clips.py` records two clips over 1M rows: the native window (ffmpeg on the private headless display, real XTest typing through `scripts/live.py`) and the browser (Chromium's screencast). Stills beside them. Release `v0.1.0-alpha` on GitHub with both clips attached.
