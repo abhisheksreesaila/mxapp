@@ -333,6 +333,8 @@ def main():
         try:
             ok, msg = fn()
         except Exception as e:
+            import traceback
+            traceback.print_exc()  # (where it crashed, not only what: a bare IndexError cost a 10-minute rerun)
             ok, msg = False, f"crashed: {e!r}"
         results.append(ok)
         print(f"{'PASS' if ok else 'FAIL'}  {name}  {msg}  ({time.time() - t0:.0f} s)", flush=True)

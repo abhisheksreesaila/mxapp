@@ -21,6 +21,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 from PIL import Image
@@ -377,6 +378,7 @@ class Host:
         before_texts, before_over, before_design, before_names = self.texts(), self.overlays(), self.design, {x.name for x in self.actions}
         self.dispatch(a, args)
         self.reload()
+        self.settle()
         out = [f"Did {name}."]
         gone = [t for t in before_texts if t not in self.texts()]
         new = [t for t in self.texts() if t not in before_texts]
@@ -397,6 +399,30 @@ class Host:
             added, removed = sorted(names - before_names), sorted(before_names - names)
             out.append(f"Tools now {len(names)}" + (f"; new: {', '.join(added)}" if added else "") + (f"; gone: {', '.join(removed)}" if removed else ""))
         return "\n".join(out)
+
+    def settle(self):
+        """Display frames to the canvases that ask for them, until none does: an agent gets the settled screen. Work
+        an app polls on its frames (a background job behind the island, D-283) lands before the tool answers. A canvas
+        that animates for good gets 2 s; the island waits for its job (up to MOJOUI_AGENT_SETTLE_S, 300 s)."""
+        if not hasattr(self.mod, "frame"):
+            return
+        t0 = last = time.perf_counter()
+        cap = float(os.environ.get("MOJOUI_AGENT_SETTLE_S", "300"))
+        while True:
+            wanting = [j for j, n in enumerate(self.nodes) if n["kind"] == CANVAS and n["msg2"]]
+            if not wanting:
+                return
+            now = time.perf_counter()
+            island = any(self.nodes[j]["name"] == "island" for j in wanting)
+            if now - t0 > (cap if island else 2.0):
+                return
+            us = int((now - last) * 1e6) or 16667
+            last = now
+            for j in wanting:
+                if j < len(self.nodes) and self.nodes[j]["kind"] == CANVAS:
+                    self.mod.frame(self.handle, j, us)
+            self.reload()
+            time.sleep(0.016)
 
     def read(self, name, first, count):
         if not name:
