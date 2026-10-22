@@ -22,6 +22,6 @@ The owner paused feature work after goal 29: "100M no one will try on day 1. I w
 - The rename to omxcode (D-285, branch rename-omxcode): in the repo first, then the release's title and notes and the site (the owner said yes).
 
 ## 4. Later, parked by the owner (2026-10-21)
-- `AGENTS.md` plus a "build an omxapp app" skill, so a coding agent writes a working app from one sentence (follows llms.txt, e4e929d).
+- `AGENTS.md` plus a "build an omxcode app" skill, so a coding agent writes a working app from one sentence (follows llms.txt, e4e929d).
 - A measured comparison against a familiar tool (pandas or DuckDB, same machine) for the launch table.
-- "Drop one Mojo app next to your Python": mounting an omxapp web app inside a FastHTML site.
+- "Drop one Mojo app next to your Python": mounting an omxcode web app inside a FastHTML site.
