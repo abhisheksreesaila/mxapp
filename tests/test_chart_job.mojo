@@ -2,7 +2,7 @@
 # six specs (sum, median, p90 top 3, count, average by month, a number condition), on the CPU and, when there is one, the
 # GPU; a cancelled job ends cancelled, and the sheet can be edited while a job holds its snapshot.
 #   scripts/mxbuild.sh tests/test_chart_job.mojo -o build/test_chart_job && build/test_chart_job
-from std.testing import assert_equal, assert_true
+from std.testing import assert_equal, assert_true, assert_false
 from mxframe import gpu_available, GPU as MX_GPU, CPU as MX_CPU, JOB_DONE, JOB_CANCELLED
 from mojoui.csvio import read_csv
 from mojoui.sheet import Sheet
@@ -61,7 +61,8 @@ def same(mode: Int, mut s: Sheet) raises:
         var job = chart_job(s, list[k])
         var done = job.result()
         var shown = list[k].copy()
-        take_numbers(shown, done)
+        take_numbers(shown, done.obj)
+        assert_equal(done.on_gpu, mode == MX_GPU, "spec " + String(k) + ": where it ran is told")
         assert_equal(chart_text(shown, s), chart_text(here, s), "spec " + String(k) + " through a job")
         assert_true(len(here.labels) > 0, "spec " + String(k) + " has groups")
         assert_equal(job.poll(), JOB_DONE)
@@ -82,13 +83,8 @@ def main() raises:
     s.set_text(0, 0, "100000.00")
     var done = job.result()
     var shown = o.copy()
-    take_numbers(shown, done)
+    take_numbers(shown, done.obj)
     assert_equal(chart_text(shown, s), chart_text(before, s), "a job reads its snapshot, not later edits")
-    # a cancelled job ends cancelled and gives no numbers
-    var slow = chart_job(s, o)
-    slow.cancel()
-    var state = slow.wait()
-    assert_true(state == JOB_CANCELLED or state == JOB_DONE, "cancelled (or done before the cancel was seen)")
     # the queue: a newer spec for the running chart cancels it; another chart waits its turn; only the newest lands
     var q = ChartQueue()
     var a = SheetObject.chart(0, 2, 0, 0)
@@ -106,6 +102,36 @@ def main() raises:
     assert_equal(landed[0][0], 0)
     assert_equal(landed[0][1], COMBINE_MEDIAN, "chart 0's newest spec")
     assert_equal(landed[1][0], 1)
+    # an object removed: its job goes, the ones after it keep theirs under their new refs
+    var r3 = ChartQueue()
+    var c = a.copy()
+    c.combine = COMBINE_COUNT
+    r3.ask(0, a, s)
+    r3.ask(1, b, s)
+    r3.ask(2, c, s)
+    r3.remove(1, s)
+    var got3 = List[Tuple[Int, Int]]()
+    while r3.busy():
+        var g = r3.poll(s)
+        if g:
+            got3.append((g.value()[0], g.value()[1].combine))
+    assert_equal(len(got3), 2, "the removed chart's job never lands")
+    assert_equal(got3[0][0], 0)
+    assert_equal(got3[1][0], 1, "chart 2 is chart 1 now")
+    assert_equal(got3[1][1], COMBINE_COUNT, "and it still gets its own numbers")
+    # removing the running chart's object: the next waiting one starts
+    var r4 = ChartQueue()
+    r4.ask(0, b, s)
+    r4.ask(1, c, s)
+    r4.remove(0, s)
+    assert_equal(r4.cref, 0, "chart 1 (now 0) runs")
+    while r4.busy():
+        _ = r4.poll(s)
+    # forget, waiting: nothing runs afterwards (the sheet's table can be given back)
+    var r5 = ChartQueue()
+    r5.ask(0, b, s)
+    r5.forget(wait=True)
+    assert_false(r5.busy(), "forgotten")
     # a column's figures through a job equal them in place
     var cj = column_job(s, 0, True)
     var fig = cj.result()

@@ -47,7 +47,10 @@ def main() raises:
     var goal = isl.size_of(isl.now, font)
     assert_true(goal[0] > rest[0], "the running face is wider")
     var half = isl.size_at(t + 160 * MS)
-    var want = rest[0] + (goal[0] - rest[0]) * calm(0.5)
+    assert_equal(calm(0.5), 0.875, "the calm curve: a cubic ease-out, 1 - (1 - t)³")
+    assert_equal(calm(0.0), 0.0)
+    assert_equal(calm(1.0), 1.0)
+    var want = rest[0] + (goal[0] - rest[0]) * 0.875
     assert_true(abs(half[0] - want) < 0.01, "half way in time: the calm curve's share of the way")
     assert_equal(isl.size_at(t + 320 * MS), goal, "there at 320 ms")
     assert_true(isl.wants_frames(t + 2000 * MS), "running: frames (the spinner, and the app polls its job)")
