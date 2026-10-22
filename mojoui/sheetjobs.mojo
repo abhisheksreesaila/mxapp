@@ -22,12 +22,11 @@ struct ChartJob(JobBody):
         self.obj = obj^
 
     def run(mut self, ctl: JobCtl) raises -> SheetObject:
-        ctl.add_total(1)
         ctl.check()
+        self.sheet.job = ctl  # (each query the chart runs counts its rows into the job's progress, and stops when it's cancelled)
         var t0 = now_ns()
         compute(self.obj, self.sheet)
         self.obj.milliseconds = Float64(now_ns() - t0) / 1e6  # (the whole compute, as the person waited for it)
-        ctl.advance(1)
         return self.obj.copy()
 
 
@@ -116,6 +115,12 @@ struct ChartQueue(Movable):
             return 0.0
         return progress_share(self.job.value().progress())
 
+    def rows_done(self) -> Int:
+        """Rows the running job's queries have read so far."""
+        if not self.job:
+            return 0
+        return self.job.value().progress().done
+
     def seconds(self) -> Float64:
         """How long the running job has run."""
         return Float64(now_ns() - self.started) / 1e9 if self.cref >= 0 else 0.0
@@ -172,20 +177,17 @@ struct ColumnJob(JobBody):
         self.stats = stats
 
     def run(mut self, ctl: JobCtl) raises -> ColumnFigures:
-        ctl.add_total(3 if self.stats else 1)
+        self.sheet.job = ctl
         var t0 = now_ns()
         var r = self.sheet.totals(self.col)
-        ctl.advance(1)
         var med = (0, False)
         var distinct = -1
         if self.stats and not self.sheet.streamed():  # (a streamed file's median and distinct read every row group: they wait for a tile)
             ctl.check()
             var m = self.sheet.median(self.col)
             med = (Int(m[0]), m[1])
-            ctl.advance(1)
             ctl.check()
             distinct = self.sheet.distinct(self.col)
-            ctl.advance(1)
         return ColumnFigures(self.col, r.sums[0], r.present[0], med[0], med[1], distinct, Float64(now_ns() - t0) / 1e6, r.on_gpu)
 
 
@@ -252,3 +254,16 @@ struct OpenJob(JobBody):
 def open_job(path: String) -> Job[Opened]:
     """Reads a CSV or Parquet file (as the Import step shows it) into a sheet, off the caller's thread."""
     return start_job(OpenJob(path))
+
+
+def pace(rows: Int, seconds: Float64) -> String:
+    """Rows a second, short: "1.4B rows/s", "820M rows/s" ("" before there's a measure)."""
+    if seconds <= 0.05 or rows <= 0:
+        return ""
+    var r = Float64(rows) / seconds
+    if r >= 1e9:
+        var tenths = Int(r / 1e8)
+        return String(tenths // 10) + ("." + String(tenths % 10) if tenths % 10 != 0 else "") + "B rows/s"
+    if r >= 1e6:
+        return String(Int(r / 1e6)) + "M rows/s"
+    return String(Int(r / 1e3)) + "K rows/s"

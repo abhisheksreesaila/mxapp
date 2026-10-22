@@ -90,7 +90,7 @@ from mojoui.chartview import ChartView
 from mojoui.view import TAP, PAN, ZOOM, PRESS, RELEASE
 from mojoui.sample import sample_table
 from mojoui.island import Island, Activity, IslandView, HIT_BODY, HIT_ACTION, IDLE as ISLAND_IDLE, RUNNING as ISLAND_RUNNING, UNDO as ISLAND_UNDO, ERROR as ISLAND_ERROR
-from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers, Opened, open_job
+from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers, Opened, open_job, pace
 from std.os.path import getsize
 from mojoui.clock import now_ns
 from mxframe import Job, JOB_RUNNING, JOB_DONE
@@ -1084,7 +1084,8 @@ struct Main(App):
             if self.charts.cref != was:
                 self.say(Activity.running(capital(object_title(self.charts.spec, self.frame)), 0.0, "starting"))
             var secs = self.charts.seconds()
-            self.island.progress(self.charts.share(), String(Int(self.charts.share() * 100)) + "% · " + fixed(secs, 1) + " s")
+            var speed = pace(self.charts.rows_done(), secs)
+            self.island.progress(self.charts.share(), String(Int(self.charts.share() * 100)) + "% · " + (speed if speed != "" else fixed(secs, 1) + " s"))
         if self.col_job:
             var state = self.col_job.value().poll()
             if state != JOB_RUNNING:

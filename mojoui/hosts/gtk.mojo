@@ -2446,8 +2446,10 @@ def pct(xs: List[Float64], q: Float64) -> Float64:
 
 
 def settle():
-    """Runs pending GTK work (such as a deferred rebuild) before the next test step."""
-    while external_call["g_main_context_pending", c_int](0) != 0:
+    """Runs pending GTK work (such as a deferred rebuild) before the next test step; at most a second of it, so a view
+    that draws every frame (an island while work runs in the background) doesn't hold the steps until the work ends."""
+    var by = perf_counter_ns() + 1_000_000_000
+    while external_call["g_main_context_pending", c_int](0) != 0 and perf_counter_ns() < by:
         _ = external_call["g_main_context_iteration", c_int](0, c_int(0))
 
 def on_reveal_tick[A: App](widget: Int, clock: Int, host_addr: Int) abi("C") -> c_int:
@@ -3740,6 +3742,15 @@ def run_step[A: App](host_addr: Int, step: String):
             var got = host[].canvases[ci].frames - start - 1
             var fps = Float64(got) / (ms / 1000.0) if ms > 0 else 0.0
             print("FRAMES: " + String(got) + " in " + one_decimal(Float32(ms)) + " ms = " + one_decimal(Float32(fps)) + " fps, draws " + String(host[].canvases[ci].draws - draws))
+    elif verb == "say":  # say:TAG: what the view tagged TAG says now (its tooltip, a drawn view's words), mid-run
+        var said = False
+        for ref n in host[].rt.shown.nodes:
+            if n.name == rest:
+                print("SAYS: " + rest + " = " + n.tip)
+                said = True
+                break
+        if not said:
+            print("TEST: nothing tagged", rest)
     elif verb == "gaps":  # gaps:start forgets the frames painted so far; gaps:N runs the main loop N ms, then prints the longest gap between painted frames (MOJOUI_TRACE)
         if rest == "start":
             host[].frame_times = List[Int]()
@@ -3926,6 +3937,8 @@ def report_pass[A: App](host_addr: Int, alerts: Bool):
                     print("CANVAS: " + String(Int(external_call["gtk_widget_get_width", c_int](w))) + "x" + String(Int(external_call["gtk_widget_get_height", c_int](w)))
                           + " pt " + String(c.wpx) + "x" + String(c.hpx) + " px scale " + one_decimal(Float32(c.scale)) + " colours "
                           + String(colours(c.pixels)) + " draws " + String(c.draws) + " painted " + String(painted(c.pixels)))
+            if n.tip != "":  # (a drawn view's words: its tooltip, which is also its accessible name)
+                print("TIP: " + n.name + " = " + n.tip)
         elif n.kind == IMAGE:
             var paintable = external_call["gtk_picture_get_paintable", Int](w)
             print("IMAGE: " + String(external_call["gdk_texture_get_width", c_int](paintable)) + "x" + String(external_call["gdk_texture_get_height", c_int](paintable)))

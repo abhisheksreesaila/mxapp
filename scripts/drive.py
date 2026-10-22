@@ -71,7 +71,8 @@ DUMP = """() => [...document.querySelectorAll('#mojoui-root [data-kind], #mojoui
       const far = c => Math.abs((c >> 16 & 255) - (bg >> 16 & 255)) + Math.abs((c >> 8 & 255) - (bg >> 8 & 255)) + Math.abs((c & 255) - (bg & 255)) > 30;
       painted = Math.floor(100 * sample.filter(far).length / sample.length); }
     return 'CANVAS: ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' pt ' + cv.width + 'x' + cv.height + ' px scale '
-      + (window.devicePixelRatio || 1).toFixed(1) + ' colours ' + colours + ' draws ' + (st ? st.count : 0) + ' painted ' + painted; }
+      + (window.devicePixelRatio || 1).toFixed(1) + ' colours ' + colours + ' draws ' + (st ? st.count : 0) + ' painted ' + painted
+      + (e.dataset.tip ? String.fromCharCode(10) + 'TIP: ' + e.dataset.tag + ' = ' + e.dataset.tip : ''); }
   if (k === 'list') { const r0 = e.querySelector('[data-row="0"]');
     return 'LIST: ' + e.querySelector('.rows').dataset.count + ' rows' + String.fromCharCode(10) + 'LISTROWS: ' + e.querySelectorAll('.row').length
       + (r0 ? String.fromCharCode(10) + 'LISTROW: ' + r0.textContent : ''); }

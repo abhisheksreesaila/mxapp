@@ -18,7 +18,7 @@ from std.collections import Dict
 from mxframe import float_text
 from mxframe import (Frame as MxFrame, Table, SharedTable, DeviceTable, Query, Expr, col, sum, count, min_of, max_of, count_distinct, median, percentile,
                      AUTO as MX_AUTO, GPU as MX_GPU, CPU as MX_CPU, TEXT as MX_TEXT, DECIMAL as MX_DECIMAL, DATE as MX_DATE,
-                     gpu_available, ParquetScan, frame_snapshot)
+                     gpu_available, ParquetScan, frame_snapshot, JobCtl)
 from mojoui.datagrid import GridSource
 from mojoui.cellstyle import CellStyle, ALL_PARTS
 from mojoui.shared import memory_bytes
@@ -138,6 +138,7 @@ struct Sheet(Movable, GridSource):
     var cell_styles: Dict[Int, Int]  # row * STYLE_COLS + column → the cell's own style, over its column's (sparse)
     var style_log: List[StyleChange]  # format changes and new formula columns Undo can take back, newest last (the package logs the rest)
     var last_undone: String  # what the last undo took back ("a format change", "the formula column x", "an edit")
+    var job: JobCtl  # the background job this sheet's queries run for (a snapshot's: progress in rows, cancel); JobCtl() for plain calls
 
     def __init__(out self, table: SharedTable, use_gpu: Bool = True):
         self.frame = MxFrame(table)
@@ -146,6 +147,7 @@ struct Sheet(Movable, GridSource):
         self.cell_styles = Dict[Int, Int]()
         self.style_log = List[StyleChange]()
         self.last_undone = ""
+        self.job = JobCtl()
         self.device = None
         self.device_name = "CPU"
         self.mode = MX_AUTO
@@ -168,6 +170,7 @@ struct Sheet(Movable, GridSource):
         self.cell_styles = Dict[Int, Int]()
         self.style_log = List[StyleChange]()
         self.last_undone = ""
+        self.job = JobCtl()
         self.device = None
         self.device_name = "CPU"
         self.mode = MX_AUTO if use_gpu else MX_CPU  # (the package picks per machine and plan: F-146; the CPU on many cores, the GPU on few)
@@ -604,7 +607,7 @@ struct Sheet(Movable, GridSource):
             q = q^.group_by(key.value().copy(), groups)
         var v = col(self.name(value))
         q = q^.agg(sum(v), count(), count(v))
-        var r = q^.compute(self.mode)
+        var r = q^.compute(self.mode, self.job)
         var sums = Sums(r.values(0), r.counts.copy(), r.values(2), r.milliseconds, r.device == MX_GPU)
         self.notes[].last_gpu = sums.on_gpu
         if plain:
@@ -620,7 +623,7 @@ struct Sheet(Movable, GridSource):
         var q = self.query()
         if filter:
             q = q^.where(filter.value().copy())
-        var r = q^.agg(count_distinct(col(self.name(c)))).compute(MX_CPU)  # (CPU only in the package)
+        var r = q^.agg(count_distinct(col(self.name(c)))).compute(MX_CPU, self.job)  # (CPU only in the package)
         return Int(r.values(0)[0])
 
     def median(self, c: Int, filter: Optional[Expr] = None) raises -> Tuple[Int64, Bool]:
@@ -632,7 +635,7 @@ struct Sheet(Movable, GridSource):
         var q = self.query()
         if filter:
             q = q^.where(filter.value().copy())
-        var r = q^.agg(median(col(self.name(c)))).compute(MX_CPU)  # (CPU only in the package)
+        var r = q^.agg(median(col(self.name(c)))).compute(MX_CPU, self.job)  # (CPU only in the package)
         return (Int64(r.values(0)[0]), r.present(0, 0))
 
     def group_median(self, c: Int, key: Expr, groups: Int, p: Float64 = -1.0, filter: Optional[Expr] = None) raises -> Tuple[List[Int], List[Bool]]:
@@ -645,7 +648,7 @@ struct Sheet(Movable, GridSource):
         if filter:
             q = q^.where(filter.value().copy())
         q = q^.group_by(key.copy(), groups)
-        var r = q^.agg(median(col(self.name(c))) if p < 0 else percentile(col(self.name(c)), p)).compute(MX_CPU)
+        var r = q^.agg(median(col(self.name(c))) if p < 0 else percentile(col(self.name(c)), p)).compute(MX_CPU, self.job)
         var vals = r.values(0)
         var present = List[Bool]()
         for g in range(groups):
@@ -666,7 +669,7 @@ struct Sheet(Movable, GridSource):
     def span(self, c: Int) raises -> Tuple[Int64, Int64, Bool]:
         """The smallest and largest value of column c over its non-empty rows (False: there are none)."""
         var v = col(self.name(c))
-        var r = self.query().agg(min_of(v), max_of(v)).compute(self.mode)
+        var r = self.query().agg(min_of(v), max_of(v)).compute(self.mode, self.job)
         if not r.present(0, 0):
             return (Int64(0), Int64(0), False)
         return (Int64(r.values(0)[0]), Int64(r.values(1)[0]), True)
