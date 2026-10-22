@@ -17,7 +17,7 @@ from mojoui.view import (
     START, CENTER, END, STRETCH, BETWEEN, AUTO, Node, CARD, CARD_WARN, CARD_GOOD,
     TITLE, HEADLINE, CAPTION, PROMINENT, DESTRUCTIVE, OVERLAY, PRESS, RELEASE, DOUBLE, SUBTLE, ICON_ONLY, ICON_ON, TOOL, TOOL_ON, TOOL_INLINE, TOOL_INLINE_ON, TOKEN, TOKEN_LIT, KEY, SHIFT, CTRL, ALT,
 )
-from mojoui.diff import Diff, Patch, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE, SET_SIZE
+from mojoui.diff import Diff, Patch, SET_TEXT, SET_VALUE, SET_IMAGE, SET_PLACE, SET_SIZE, SET_TIP
 from mojoui.app import App, Event, Runtime, ms
 from mojoui.canvas import Surface, rgba
 from mojoui.scene import Scene, OP_RECT, OP_CIRCLE, OP_LINE, OP_TEXT, OP_FILL, OP_CLIP, OP_UNCLIP, OP_IMAGE
@@ -1983,6 +1983,9 @@ struct GtkHost[A: App](Movable):
                 external_call["g_object_unref", NoneType](tex)
             elif p.op == SET_SIZE:
                 self.resize_widget(p.node)
+            elif p.op == SET_TIP:  # a canvas's words (its tooltip and accessible name), in place: the picture stays
+                var tip = p.text
+                external_call["gtk_widget_set_tooltip_text", NoneType](w, tip.as_c_string_span())
             elif p.op == SET_PLACE and not self.board_list:  # (a list ignores positions)
                 ref n = self.rt.shown.nodes[p.node]
                 if kind == BOARD:
@@ -3145,15 +3148,32 @@ def on_slid[A: App](scale: Int, host_addr: Int) abi("C"):
 # ---------- test mode ----------
 
 def find(host: GtkHost, kind: Int, label: String, nth: Int, by_hint: Bool = False) -> Int:
-    """The nth node of `kind` whose text (or hint) is `label` ("" = any)."""
+    """The nth node of `kind` whose text (or hint) is `label` ("" = any). Canvases count the content's: the island
+    (window chrome, mojoui.island) is left out of the numbers and found by its tag (canvas_node)."""
     var seen = 0
     for i in range(len(host.rt.shown.nodes)):
         ref n = host.rt.shown.nodes[i]
         var name = n.hint if by_hint else n.text
+        if kind == CANVAS and n.name == "island":
+            continue
         if n.kind == kind and (label == "" or name == label):
             if seen == nth:
                 return i
             seen += 1
+    return -1
+
+
+def canvas_node(host: GtkHost, which: String) -> Int:
+    """A canvas step's target: the nth content canvas ("0", "1"…) or the canvas tagged `which` ("island")."""
+    var digits = which != ""
+    for c in which.codepoints():
+        if c < Codepoint.ord("0") or c > Codepoint.ord("9"):
+            digits = False
+    if digits:
+        return find(host, CANVAS, "", to_int(which))
+    for i in range(len(host.rt.shown.nodes)):
+        if host.rt.shown.nodes[i].kind == CANVAS and host.rt.shown.nodes[i].name == which:
+            return i
     return -1
 
 
@@ -3519,7 +3539,7 @@ def run_step[A: App](host_addr: Int, step: String):
         _ = len(handled)
     elif verb == "rightclick":  # rightclick:K=fx,fy: the right button's click gesture's own signal at (x, y) thousandths
         var kv = split_at(rest, "=")
-        var node = find(host[], CANVAS, "", to_int(kv[0]))
+        var node = canvas_node(host[], kv[0])
         var ci = -1
         for k in range(len(host[].canvases)):
             if host[].canvases[k].node == node:
@@ -3586,7 +3606,7 @@ def run_step[A: App](host_addr: Int, step: String):
             external_call["g_signal_emit_by_name", NoneType, num_fixed_args=2](host[].widgets[i], s.as_c_string_span(), c_uint(position))
     elif verb == "key" or verb == "typekeys":  # the key controller's own signal, as a real key press sends it
         var kv = split_at(rest, "=")
-        var node = find(host[], CANVAS, "", to_int(kv[0]))
+        var node = canvas_node(host[], kv[0])
         var ci = -1
         for k in range(len(host[].canvases)):
             if host[].canvases[k].node == node:
@@ -3663,7 +3683,7 @@ def run_step[A: App](host_addr: Int, step: String):
             settle()
     elif verb == "drag" or verb == "dragat" or verb == "doubletap" or verb == "zoom" or verb == "frames" or verb == "tapat":
         var kv = split_at(rest, "=")
-        var node = find(host[], CANVAS, "", to_int(kv[0]))
+        var node = canvas_node(host[], kv[0])
         var ci = -1
         for k in range(len(host[].canvases)):
             if host[].canvases[k].node == node:

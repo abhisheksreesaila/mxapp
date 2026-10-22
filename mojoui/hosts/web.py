@@ -41,7 +41,7 @@ CHOICES = (DROPDOWN, SEGMENTED, RADIO, TABS)  # value = selected index
 BODY, TITLE, HEADLINE, CAPTION = 0, 1, 2, 3
 PLAIN, PROMINENT, DESTRUCTIVE, SUBTLE, ICON_ONLY, TOOL, TOOL_ON, ICON_ON, TOOL_INLINE, TOOL_INLINE_ON, TOKEN, TOKEN_LIT = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 START, CENTER, END = 1, 2, 3
-SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE = 1, 2, 3, 4, 5, 6
+SET_TEXT, SET_MSG, SET_VALUE, SET_IMAGE, SET_FRAMES, SET_PLACE, SET_SIZE, SET_TIP = 1, 2, 3, 4, 5, 6, 7, 8
 KEY = 7  # a canvas gesture: a key pressed while it had focus (text = the key, dx = modifiers)
 SECONDARY = 8  # a right click on a canvas (x, y): where a context menu opens
 CHECKED, DISABLED, DANGER = 1, 2, 4  # menu item flags (mojoui/menus.mojo)
@@ -483,6 +483,7 @@ CANVAS_JS = r"""
           div.dataset.frame = `${st.count} ${cv.width}x${cv.height} ${r.width.toFixed(0)}x${r.height.toFixed(0)} ${dpr}`;
           if (res.headers.get('X-Mojoui-Pending') === '1') update();
           if (meta() && meta().dataset.version !== String(st.drawn)) st.want = true;
+          if (meta() && (meta().dataset.tip || '') !== (div.dataset.tip || '')) { div.dataset.tip = meta().dataset.tip || ''; div.title = div.dataset.tip; }  // (SET_TIP: a drawn view's words)
           if (res.headers.get('X-Mojoui-Again') === '1') { st.want = true; await new Promise(ok => requestAnimationFrame(ok)); }  // mid-animation (a gliding ring): the next frame
         }
       } finally { st.busy = false; }
@@ -892,7 +893,7 @@ def render_node(s, i, sid):
 def canvas_meta(n, i):
     """What the canvas adapter needs to know (version, whether it wants frames), kept beside
     the <canvas> so a patch can replace it without clearing the picture."""
-    return I(id=f"n{i}-meta", hidden=True, data_version=str(n["value"]), data_frames=str(n["msg2"]))
+    return I(id=f"n{i}-meta", hidden=True, data_version=str(n["value"]), data_frames=str(n["msg2"]), data_tip=n.get("tip", ""))
 
 
 def render_alert(s, i, sid):

@@ -98,6 +98,13 @@ def exact(text):
     return re.compile("^" + re.escape(text) + "$")
 
 
+def canvas_at(page, k):
+    """A canvas by number (counting the content's canvases: the island, window chrome, is left out) or by its tag."""
+    if not k.isdigit():
+        return page.locator(f"[data-kind=canvas][data-tag={k}]").first
+    return page.locator("[data-kind=canvas]:not([data-tag=island])").nth(int(k))
+
+
 CANVASES_DRAWN = """() => [...document.querySelectorAll('[data-kind=canvas]')].every(div => {
   const st = div.mojoui, m = document.getElementById('n' + div.dataset.node + '-meta');
   if (!st || !m) return false;
@@ -119,6 +126,9 @@ def settle(page):
 
 def step(page, s):
     verb, _, rest = s.partition(":")
+    if verb == "say":  # say:TAG: what the view tagged TAG says now (its tooltip: a drawn view's words), mid-run
+        el = page.locator(f"[data-tag={rest}]").first
+        return f"SAYS: {rest} = " + (el.get_attribute("data-tip") or "")
     if verb == "tap":
         title, _, nth = rest.partition("@")
         page.locator("[data-kind=button]").filter(has_text=exact(title)).nth(int(nth or 0)).click()
@@ -160,7 +170,7 @@ def step(page, s):
         page.keyboard.press("+".join([{"Ctrl": "Control"}.get(m, m) for m in mods] + [key.lower() if len(key) == 1 else key]))
     elif verb == "rightclick":  # rightclick:K=fx,fy: a right click at (x, y) thousandths of canvas K
         k, _, arg = rest.partition("=")
-        box = page.locator("[data-kind=canvas]").nth(int(k)).bounding_box()
+        box = canvas_at(page, k).bounding_box()
         fx, fy = (int(v) / 1000 for v in arg.split(","))
         page.mouse.click(box["x"] + fx * box["width"], box["y"] + fy * box["height"], button="right")
     elif verb == "alert":
@@ -198,7 +208,7 @@ def step(page, s):
                 page.keyboard.type(part.replace("⏎", "\n"), delay=30)
     elif verb in ("drag", "dragat", "doubletap", "zoom", "frames", "tapat", "shifttapat"):  # canvas steps: real mouse input on the canvas
         k, _, arg = rest.partition("=")
-        canvas = page.locator("[data-kind=canvas]").nth(int(k))
+        canvas = canvas_at(page, k)
         box = canvas.bounding_box()
         cx, cy = round(box["x"] + box["width"] / 2), round(box["y"] + box["height"] / 2)
         if verb == "doubletap":  # a double click at (x, y) thousandths of the canvas

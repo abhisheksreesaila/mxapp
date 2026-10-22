@@ -196,9 +196,9 @@ comptime SET_INK = 600  # + 0 (automatic) … 8: the Format menu's text colours
 comptime SET_FILL = 610  # + 0 (none) … 8
 comptime SWATCH_CANVAS = 5  # the swatches' canvas id
 comptime ISLAND_CANVAS = 7  # the island's canvas id (the menu bar's living status, mojoui.island)
-comptime ISLAND_TAP = 86  # the island tapped (its action, or its panel)
-comptime ISLAND_FRAME = 87  # a display frame while the island moves or work runs: poll the jobs
-comptime PANEL_CLOSE = 85  # the island's panel closed
+comptime ISLAND_TAP = 3100  # the island tapped (its action, or its panel)
+comptime ISLAND_FRAME = 3101  # a display frame while the island moves or work runs: poll the jobs
+comptime PANEL_CLOSE = 3102  # the island's panel closed
 comptime BIG_FILE = 256 * 1024 * 1024  # from this many bytes a file opens in a background job (the island shows its progress)
 comptime BIG_ROWS = 10_000_000  # from this many rows a chart's numbers and a column's figures come from background jobs
 comptime SKINS: List[String] = ["Liquid", "Ledger", "Graphite", "Blueprint"]
@@ -511,6 +511,7 @@ struct Main(App):
             self.imported(path, imp^, sheet^, shapes^)
         except e:
             self.message = String(e)
+            self.say(Activity.error("Couldn't open " + file_name(path), "it isn't a table"))  # (stays until it's seen: the reason is in the status bar)
         self.version += 1
 
     def imported(mut self, path: String, var imp: CsvImport, var sheet: Sheet, var shapes: List[List[Float64]]):

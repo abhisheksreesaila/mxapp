@@ -42,7 +42,7 @@ Mac and iPhone builds are signed but haven't run on hardware yet; Android runs o
 | `Item` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
 | `ContextMenu` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
 | `Dialog` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
-| `Toast` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
+| `Toast` | 🔨 | 🔨 | ❌ | 🔨 | 🔨 | ✅ | — |
 | `Popover` | ✅ | ✅ | ❌ | 🔨 | 🔨 | ✅ | omxplorer |
 | `Checkbox` | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer, themes |
 | `Clipboard` | ✅ | ✅ | ❌ | 🔨 | ❌ | ❌ | omxplorer |
@@ -97,6 +97,7 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 | `Format toggles (Bold, Italic, Align…)` | `mojoui/sheetchrome.mojo` | Icon toggle shown pressed, Lucide icon set, Tooltips, Divider | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | omxplorer |
 | `Bottom tabs, renamed in place` | `mojoui/sheetchrome.mojo` | Button, In-place editor, Quiet buttons | ✅ | ✅ | ❌ | ❌ | 🔨 | ❌ | omxplorer |
 | `Cell styles (bold, italic, underline, strikethrough, colours, alignment)` | `mojoui/cellstyle.mojo` | Canvas | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
+| `Island (the window's living status: work, results, undo, errors)` | `mojoui/island.mojo` | Canvas, Canvas: pan, zoom, tap, Canvas frames (animation) | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ❌ | omxplorer |
 | `Swatch picker` | `mojoui/swatches.mojo` | Canvas, Canvas: pan, zoom, tap, Popover | ✅ | ✅ | ❌ | 🔨 | 🔨 | ❌ | omxplorer |
 | `Column number formats` | `mojoui/numformat.mojo` | Canvas, Text | ✅ | ✅ | 🔨 | 🔨 | 🔨 | ✅ | omxplorer |
 | `Sheet objects (charts, pivots)` | `mojoui/sheetpage.mojo` | Board: drag, resize, snap, Canvas, Card, Grid | ✅ | ✅ | ❌ | 🔨 | 🔨 | 🔨 | omxplorer |
@@ -106,12 +107,12 @@ A composite is only as far along on a platform as the least-proven piece it's ma
 
 | Platform | ✅ | 🔨 | ❌ |
 |---|---|---|---|
-| Linux (GTK) | 78 | 1 | 0 |
-| Web | 79 | 0 | 0 |
-| Android | 19 | 16 | 44 |
-| Mac (AppKit) | 0 | 60 | 19 |
-| iPhone (UIKit) | 0 | 61 | 18 |
-| Agent (MCP) | 29 | 17 | 33 |
+| Linux (GTK) | 78 | 2 | 0 |
+| Web | 79 | 1 | 0 |
+| Android | 19 | 17 | 44 |
+| Mac (AppKit) | 0 | 61 | 19 |
+| iPhone (UIKit) | 0 | 62 | 18 |
+| Agent (MCP) | 29 | 17 | 34 |
 
 ## Inside one app, not components yet (the debt)
 

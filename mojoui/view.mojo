@@ -223,7 +223,7 @@ struct Node(Copyable, Movable, Equatable, Writable):
             and self.justify_items == other.justify_items and self.name == other.name
             and self.width_from_parent == other.width_from_parent
             and self.height_from_parent == other.height_from_parent
-            and (place or (self.x == other.x and self.y == other.y)) and self.tip == other.tip
+            and (place or (self.x == other.x and self.y == other.y)) and (self.tip == other.tip or (self.kind == CANVAS and other.kind == CANVAS))  # (a canvas's tooltip, its words, is a patch: SET_TIP)
         )
 
     def sized_width(self) -> Bool:

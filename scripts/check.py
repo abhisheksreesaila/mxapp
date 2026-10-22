@@ -23,9 +23,11 @@ def load(name, path):
 
 
 g29 = load("goal29", "docs/goals/29-check.py")
+g15 = load("goal15", "docs/goals/15-check.py")
 g20 = g29.g20
 run, BUILD = g20.run, g20.BUILD
 APPS = g29.APPS
+labels = g15.labels
 
 
 def m0():
@@ -132,6 +134,107 @@ def m1():
                                                       "equals the in-place answer; Sum picked during the median cancels it")
 
 
+def said(out, tag="island"):
+    """What `say:TAG` steps read, in order."""
+    return re.findall(rf"^SAYS: {tag} = (.*)$", out or "", re.M)
+
+
+def crop(png, box):
+    from PIL import Image
+    x, y, w, h = (int(round(v)) for v in box)
+    return Image.open(png).convert("RGB").crop((x, y, x + w, y + h))
+
+
+def m2():
+    """The Island component: its own test, in the component matrix, and drawn alike by GTK and the web."""
+    problems = []
+    err = g20.mojo_test("tests/test_island.mojo", "PASSED", "test_island", "tests")
+    if err:
+        problems.append(err)
+    comps = run(["pixi", "run", "python", "scripts/components.py", "--check"], timeout=120)
+    if comps.returncode != 0 or "Island" not in (ROOT / "docs/components.md").read_text():
+        problems.append("docs/components.md doesn't list the Island (or is stale): " + comps.stdout.strip()[-200:])
+    ok, msg = g15.ensure_csv()
+    if not ok:
+        return False, msg
+    r = g15.both(g15.OPEN + ";pause:900", "g30-island")
+    if r[0] is None:
+        return False, r[1]
+    from PIL import ImageChops, ImageStat
+    shots = []
+    for host, k in (("gtk", 0), ("web", 1)):
+        b = g29.g28.g25.boxes(r[k], "island")
+        if not b:
+            problems.append(f"{host}: no island on screen")
+            continue
+        shots.append(crop(BUILD / "omxplorer" / f"g30-island-{host}.png", b[0]))
+    if len(shots) == 2:
+        if shots[0].size != shots[1].size:
+            problems.append(f"the island's size differs: GTK {shots[0].size}, web {shots[1].size}")
+        else:
+            diff = ImageStat.Stat(ImageChops.difference(shots[0], shots[1])).mean
+            if max(diff) > 4.0:
+                problems.append(f"GTK and the web draw the island differently (mean difference {[round(v, 1) for v in diff]})")
+            shots[0].save(OUT / "island-gtk.png")
+            shots[1].save(OUT / "island-web.png")
+    return not problems, "; ".join(problems[:6]) or ("tests/test_island.mojo (faces, the 320 ms morph on the calm curve, less motion, expiry, hit areas, every "
+                                                      "face drawn differently); in docs/components.md; GTK and the web draw the island alike")
+
+
+def m3():
+    """omxplorer wears the island: no chips or toast; Sort's Undo; an error stays; the panel; at 100M a running, a done and a resting face."""
+    problems = []
+    msgs = run(["pixi", "run", "python", "scripts/msgs.py"] + sorted(str(p) for p in (ROOT / "examples").glob("*/app.mojo")), timeout=120)
+    if msgs.returncode != 0:
+        problems.append("message collisions: " + msgs.stdout.strip()[-300:])  # (goal 30: the island's messages once sat inside STYLE_ALIGN's)
+    ok, msg = g15.ensure_csv()
+    if not ok:
+        return False, msg
+    bad = OUT / "bad.csv"
+    OUT.mkdir(parents=True, exist_ok=True)
+    bad.write_bytes(b"\x00\x01\x02 not a table \xff\xfe")
+    sort = g15.both(g15.OPEN + ";tap:Sort;say:island;tapat:island=995,500;pause:300;say:island", "g30-sort")
+    panel = g15.both(g15.OPEN + ";tap:Sort;pause:5500;tapat:island=995,500;pause:400", "g30-panel")
+    error = g15.both(f"pick:Choose a file={bad};pause:6000;say:island;tapat:island=995,500;pause:400;say:island", "g30-error")
+    for r in (sort, panel, error):
+        if r[0] is None:
+            return False, r[1]
+    for host, k in (("GTK", 0), ("web", 1)):
+        s, p, e = sort[k], panel[k], error[k]
+        for tag in ("doc-chip", "gpu-chip"):
+            if f"BOX: {tag} " in s:
+                problems.append(f"{host}: the {tag} is still there")
+        if "TOAST: " in s:
+            problems.append(f"{host}: Sort still shows a toast")
+        w = said(s)
+        if len(w) != 2 or not w[0].startswith("Sorted by ") or not w[1].startswith("Sort undone"):
+            problems.append(f"{host}: Sort's island and its Undo said {w} (want \"Sorted by …\", then \"Sort undone\")")
+        if any(l.startswith("sorted by ") for l in labels(s)):
+            problems.append(f"{host}: the island's Undo didn't undo the sort")
+        if "POPOVER: Activity" not in p or not {"Recent", "Device"} <= set(labels(p)) or not any(l.startswith("Sorted by ") for l in labels(p)):
+            problems.append(f"{host}: tapping the island didn't open its panel with Recent (the sort) and Device")
+        w = said(e)
+        if len(w) != 2 or not w[0].startswith("Couldn't open bad.csv") or w[1].startswith("Couldn't"):
+            problems.append(f"{host}: the error face {w} (want it still there after 6 s, gone once its Show is tapped)")
+    if not big().exists():
+        return False, f"no 100M-row file at {big()}"
+    a = gtk("pick:Choose a file={f};pause:3500;tap:Create table;pause:300;tap:Chart;pause:1500;tap:Data;segment:1=Median;pause:250;say:island;"
+            "pause:1500;say:island;pause:4500;say:island;tapat:island=995,500;pause:400".format(f=big()), "g30-m3-big")
+    w = said(a)
+    gpu = re.search(r"on (NVIDIA[^·]*)", "\n".join(w))
+    if len(w) != 3 or not re.match(r"Median amount by region · \d+% · ", w[0]):
+        problems.append(f"GTK 100M: the running face read {w[:1]} (want \"Median amount by region · N% · …\")")
+    elif not re.match(r"Median amount by region · [\d.]+ s on \S", w[1]):
+        problems.append(f"GTK 100M: the done face read {w[1]} (want \"Median amount by region · 0.7 s on <GPU>\")")
+    elif not w[2].startswith("big · 100,000,000 rows · "):
+        problems.append(f"GTK 100M: 4 s after it landed the island read {w[2]} (want the document at rest)")
+    if "POPOVER: Activity" not in a or "p50 · p95" not in labels(a) or not any(re.match(r"[\d.]+ s on ", l) for l in labels(a)):
+        problems.append("GTK 100M: the panel has no Recent time or Device p50 · p95")
+    return not problems, "; ".join(problems[:6]) or ("no document or GPU chip, no toast: Sort says so in the island and its Undo undoes it; a bad file's "
+                                                      "error stays 6 s, until its Show is tapped; the island's panel has Recent and Device; GTK and the "
+                                                      "web; at 100M on GTK the island reads \"" + (w[0] if w else "") + "\", then the time on the GPU, then the document")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -148,8 +251,8 @@ def m5():
     return not problems, "; ".join(problems) or "goal 29's M0–M5 (goals 3–28 inside them) pass"
 
 
-MILESTONES = [("M0", m0), ("M1", m1), ("M2", todo("the Island component")),
-              ("M3", todo("omxplorer wears the island")), ("M4", todo("the 100M demo")), ("M5", m5)]
+MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2),
+              ("M3", m3), ("M4", todo("the 100M demo")), ("M5", m5)]
 
 
 def build_all():
