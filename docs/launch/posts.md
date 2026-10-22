@@ -6,14 +6,16 @@ for checking, not for posting). **Nothing here is posted or pushed without the o
 
 Before posting, the owner decides:
 1. **Name.** The posts say *omxapp* and link the `mxapp` repo (copy.md, open question 1).
-2. **Clips.** The X thread and the forum post want the short clips (`docs/img/clip-*.mp4`); attach them by hand.
+2. **Clips.** Two are recorded (`scripts/clips.py` records them again): `docs/img/clip-sentence-gtk.mp4` (17 s, the native
+   window: three asks over 1M rows, bars moving) and `docs/img/clip-sentence-web.mp4` (15 s, the same app in Chromium: an
+   ask, then "Sum" → Average and "bars" → a line picked from the words' popovers). Attach them by hand.
 3. **Tag.** The release is `v0.1.0-alpha` from whatever commit is on `main` when it's pushed.
 
 ---
 
 ## 1 · GitHub release
 
-**Tag:** `v0.1.0-alpha` · **Title:** omxapp 0.1 alpha: one Mojo file, every screen, the GPU underneath, agents built in
+**Tag:** `v0.1.0-alpha` · **Title:** omxapp 0.1 alpha: one Mojo file, native on Linux, the web and Android, the GPU underneath, agents built in
 
 omxapp is a framework for writing an app once, in Mojo, and running it natively on Linux, the web and Android, with Mac and
 iPhone building today. The same file computes on the GPU, and any AI agent can use the app as a set of MCP tools.
@@ -57,7 +59,7 @@ I wrote one app in Mojo. It runs as a real GTK app on Linux, in the browser, and
 a million rows on the GPU. And an AI agent can use it with no API.
 
 It's called omxapp. Public alpha, MIT.
-[clip: omxplorer, a chart edited by its sentence]
+[clip-sentence-gtk.mp4]
 
 **2/**
 A chart's title isn't a label. It is the chart:
@@ -65,7 +67,7 @@ A chart's title isn't a label. It is the chart:
 "Sum of revenue by product, largest first, top 5, as bars"
 
 Every coloured word is a setting. Tap one, pick another. Or type "median" or "by month, as a line". The bars move to the new answer.
-[clip: tap Sum → Median; ask "top 3, as a line"]
+[clip-sentence-web.mp4: the same app in the browser, tapping words]
 
 **3/**
 The data never leaves the app. A Mojo dataframe engine runs on the GPU next to the code that draws it.
@@ -126,4 +128,4 @@ git clone https://github.com/abhisheksreesaila/mxapp && cd mxapp && pixi install
 
 Repo: https://github.com/abhisheksreesaila/mxapp. MIT. Questions, and especially "you should have done X in Mojo", are very welcome.
 
-[clip: omxplorer, a chart edited by its sentence]
+[clip-sentence-gtk.mp4]

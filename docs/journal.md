@@ -339,4 +339,6 @@ Owner asked how omxapp/omxplorer become agent-native. Drew `docs/design/agent/bo
 - Cleaning orphaned displays with `pgrep -f 'Xvfb :9'` killed the check's own shell (exit 144), the second time that lesson bit: scripts/stop-check now stops this checkout's Xvfb too.
 - scripts/check M0–M5 PASS (M5: goal 28's M0–M7, goals 3–27 inside, 85 min); reviewer PASS (three should-fixes in the guard test, fixed).
 - Launch drafts (GitHub release, X thread, Modular forum post) in docs/launch/posts.md; nothing posted.
+- Clips: scripts/live.py gained type:, record: and stoprecord (ffmpeg x11grab on the private display); scripts/clips.py records the native clip that way and the web one from Chromium's screencast (Playwright's own recorder wants a downloaded ffmpeg). A word's popover draws a black box on Xvfb (no compositor; turning Composite off didn't help), so the native clip uses only the ask field and the web clip shows the popovers.
+- Found while recording: the ask's reply still said "by month of day" (the parser's own words: now part_text too), and "every month", a month chart's own Top word, wasn't understood (now it is). Tests first, in tests/test_chartask.mojo.
 

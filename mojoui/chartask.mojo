@@ -11,7 +11,7 @@ from mojoui.numformat import parse_decimal
 from mojoui.sheetpage import (SheetObject, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT, COMBINE_MEDIAN, COMBINE_P90, ORDER_TABLE, ORDER_LARGEST, ORDER_SMALLEST, ORDER_AZ,
                               CHART_BAR, CHART_LINE, SLOT_COMBINE, SLOT_VALUE, SLOT_GROUP, SLOT_ORDER, SLOT_TOP, SLOT_FILTER, SLOT_MARK,
                               FILTER_WORDS, SLOTS, number_columns, text_columns, slot_text, number_words, NUM_OVER, NUM_UNDER, NUM_BETWEEN, NUM_ANY, NUM_AT_LEAST, NUM_AT_MOST,
-                              PART_NONE, PART_MONTH, PART_QUARTER, PART_WEEKDAY, PARTS, date_columns)
+                              PART_NONE, PART_MONTH, PART_QUARTER, PART_WEEKDAY, date_columns, part_text)
 
 comptime QUIET: List[String] = ["of", "the", "a", "an", "and", "show", "me", "please", "with", "for", "in", "on", "to", "as", "chart",
                                 "only", "just", "make", "it", "per", "each", "into", "then", "now", "values", "value"]
@@ -362,8 +362,8 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
             took = 2 if two == "how many" or two == "number of" else 1
             what = "count"
             mark(said, SLOT_COMBINE)
-        elif date_part(one) > 0 or (one == "by" and i + 1 < len(w) and date_part(w[i + 1]) > 0):
-            var by = 1 if one == "by" else 0
+        elif date_part(one) > 0 or ((one == "by" or one == "every") and i + 1 < len(w) and date_part(w[i + 1]) > 0):
+            var by = 0 if date_part(one) > 0 else 1  # ("every month": by month, and every one of them: a date chart's own Top word)
             var part = date_part(w[i + by])
             var dc = -1
             var named = 0
@@ -377,10 +377,13 @@ def ask(mut obj: SheetObject, sheet: Sheet, phrase: String) -> AskResult:
             if dc >= 0:
                 spec.group = dc
                 spec.part = part
+                if one == "every":
+                    spec.top = 0
+                    mark(said, SLOT_TOP)
                 if spec.order == ORDER_AZ:
                     spec.order = ORDER_TABLE
                 took = by + 1 + named
-                what = "by " + materialize[PARTS]()[part] + " of " + sheet.name(dc)
+                what = ("every " if one == "every" else "by ") + part_text(part, dc, sheet)  # (as the sentence says it)
         elif one == "line" or one == "lines" or two == "line chart":
             spec.style = CHART_LINE
             took = 2 if two == "line chart" else 1

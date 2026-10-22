@@ -16,6 +16,9 @@ Commands, separated by ';':
   release            let button 1 go
   wheel:X,Y,N        N notches of the scroll wheel down there (negative: up)
   report             the app prints its widgets' state (as a MOJOUI_TEST run's end does: LABEL:, BOX:, …)
+  type:TEXT          type TEXT key by key, ~25 a second (letters, capitals too, digits, space and , . - $)
+  record:PATH        start recording the window's area to PATH (ffmpeg, 30 fps, H.264) until stoprecord or the end
+  stoprecord         stop the recording
 The app's stdout (TRACE: lines with MOJOUI_TRACE=1) is printed at the end.
 """
 import os
@@ -79,6 +82,13 @@ def main():
         d.sync()
 
     pointer = [0.0, 0.0]
+    recorder = [None]
+    names = {" ": "space", ",": "comma", ".": "period", "-": "minus", "$": "Shift+dollar"}
+
+    def stop_recording():
+        if recorder[0] is not None:
+            recorder[0].communicate(b"q", timeout=30)  # (ffmpeg finishes the file on "q")
+            recorder[0] = None
     for cmd in commands.split(";"):
         if not cmd:
             continue
@@ -143,11 +153,24 @@ def main():
             import signal
             app.send_signal(signal.SIGUSR1)
             time.sleep(1.0)
+        elif verb == "type":
+            for ch in rest:
+                key(names.get(ch, "Shift+" + ch if ch.isupper() else ch))
+                time.sleep(0.04)
+        elif verb == "record":
+            stop_recording()
+            recorder[0] = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "x11grab", "-draw_mouse", "1", "-video_size", f"{w}x{h}",
+                                            "-framerate", "30", "-i", os.environ["DISPLAY"] + "+0,0", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                                            "-crf", "20", "-preset", "veryfast", rest], stdin=subprocess.PIPE)
+            time.sleep(0.5)
+        elif verb == "stoprecord":
+            stop_recording()
         elif verb == "shot":
             raw = d.screen().root.get_image(0, 0, w, h, X.ZPixmap, 0xFFFFFFFF)
             Image.frombytes("RGB", (w, h), raw.data, "raw", "BGRX").save(rest)
         else:
             print("live: unknown command " + cmd)
+    stop_recording()
     app.terminate()
     try:
         app.wait(timeout=5)
