@@ -81,7 +81,8 @@ struct Island(Copyable, Movable):
     var rest: Activity  # what it shows when nothing's happening
     var now: Activity
     var was: Activity  # the face before (cross-fading out)
-    var since: Int  # ns: when `now` began
+    var since: Int  # ns: when `now` began (its cross-fade, its countdown, its time to give way)
+    var morph_at: Int  # ns: when the capsule's size last set off for a new one (a new face, or a running face's words growing)
     var from_w: Float64  # the capsule's size (points) when `now` began, and where it's going
     var from_h: Float64
     var to_w: Float64
@@ -93,6 +94,7 @@ struct Island(Copyable, Movable):
         self.now = self.rest.copy()
         self.was = self.rest.copy()
         self.since = 0
+        self.morph_at = 0
         self.from_w = 120.0
         self.from_h = 28.0
         self.to_w = 120.0
@@ -114,7 +116,7 @@ struct Island(Copyable, Movable):
 
     def size_at(self, t: Int) -> Tuple[Float64, Float64]:
         """The capsule's size at time t (ns)."""
-        var f = 1.0 if self.still else calm(Float64(t - self.since) / 1e6 / MORPH_MS)
+        var f = 1.0 if self.still else calm(Float64(t - self.morph_at) / 1e6 / MORPH_MS)
         return (self.from_w + (self.to_w - self.from_w) * f, self.from_h + (self.to_h - self.from_h) * f)
 
     def show(mut self, var a: Activity, font: Font, t: Int):
@@ -128,6 +130,7 @@ struct Island(Copyable, Movable):
         self.was = self.now.copy()
         self.now = a^
         self.since = t
+        self.morph_at = t
 
     def set_rest(mut self, var a: Activity, font: Font, t: Int):
         """The resting face (the document); shown now if the island is resting."""
@@ -136,11 +139,20 @@ struct Island(Copyable, Movable):
         if resting and (self.rest.lead != self.now.lead or self.rest.text != self.now.text):
             self.show(self.rest.copy(), font, t)
 
-    def progress(mut self, share: Float64, text: String):
-        """A running face's share done and pace, without a new morph (its width follows on the next show)."""
-        if self.now.kind == RUNNING:
-            self.now.progress = share
-            self.now.text = text
+    def progress(mut self, share: Float64, text: String, font: Font, t: Int):
+        """A running face's share done and pace; when its words need more room the capsule grows to fit (on the
+        calm curve, from where it is), never shrinking while the work runs (a pace that loses a digit doesn't jiggle it)."""
+        if self.now.kind != RUNNING:
+            return
+        self.now.progress = share
+        self.now.text = text
+        var need = self.size_of(self.now, font)
+        if need[0] > self.to_w + 0.5:  # (a resize, not a new face: no cross-fade)
+            var size = self.size_at(t)
+            self.from_w = size[0]
+            self.from_h = size[1]
+            self.to_w = need[0]
+            self.morph_at = t
 
     def tick(mut self, font: Font, t: Int) -> Bool:
         """Time passing: a result or an undo that has stayed its time gives way to the rest. True when it changed."""
@@ -158,7 +170,7 @@ struct Island(Copyable, Movable):
         the countdown) or waits to give way (a result)."""
         if self.still:
             return self.now.kind == RUNNING or self.now.kind == DONE or self.now.kind == UNDO  # (no motion, but still polled and timed)
-        if Float64(t - self.since) / 1e6 < max(MORPH_MS, FADE_OUT_MS + FADE_IN_MS):
+        if Float64(t - self.since) / 1e6 < FADE_OUT_MS + FADE_IN_MS or Float64(t - self.morph_at) / 1e6 < MORPH_MS:
             return True
         return self.now.kind == RUNNING or self.now.kind == DONE or self.now.kind == UNDO
 
@@ -169,7 +181,7 @@ struct Island(Copyable, Movable):
 
     def hit(self, x: Float64, y: Float64, canvas_w: Float64 = Float64(ISLAND_W), canvas_h: Float64 = Float64(ISLAND_H), t: Int = -1) -> Int:
         """What a tap at (x, y) points touched: the action (its right end), the capsule, or nothing."""
-        var c = self.capsule(t if t >= 0 else self.since + 321_000_000, canvas_w, canvas_h)
+        var c = self.capsule(t if t >= 0 else self.morph_at + 321_000_000, canvas_w, canvas_h)
         if x < c[0] or x > c[0] + c[2] or y < c[1] - 4 or y > c[1] + c[3] + 4:
             return HIT_NONE
         if self.now.action != "" and x > c[0] + c[2] - self.action_w():
@@ -199,7 +211,7 @@ struct Island(Copyable, Movable):
         var y = c[1] * k
         var w = c[2] * k
         var h = c[3] * k
-        var f = 1.0 if self.still else calm(Float64(t - self.since) / 1e6 / MORPH_MS)
+        var f = 1.0 if self.still else calm(Float64(t - self.since) / 1e6 / MORPH_MS)  # (the tint follows the face)
         var old = self.tint(self.was.kind, p)
         var new = self.tint(self.now.kind, p)
         var fill = blend(old[0], new[0], f)

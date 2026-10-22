@@ -51,8 +51,14 @@ def main() raises:
     assert_true(abs(half[0] - want) < 0.01, "half way in time: the calm curve's share of the way")
     assert_equal(isl.size_at(t + 320 * MS), goal, "there at 320 ms")
     assert_true(isl.wants_frames(t + 2000 * MS), "running: frames (the spinner, and the app polls its job)")
-    isl.progress(0.43, "43% · 1.2B rows/s")
+    var before = isl.size_at(t + 400 * MS)[0]
+    isl.progress(0.43, "43% · 1.2B rows/s, and a longer pace", font, t + 400 * MS)
     assert_equal(isl.now.progress, 0.43)
+    assert_equal(isl.size_at(t + 400 * MS)[0], before, "growing words: the capsule sets off from where it is (no jump)")
+    assert_equal(isl.size_at(t + 720 * MS), isl.size_of(isl.now, font), "and fits them 320 ms later")
+    var wide = isl.to_w
+    isl.progress(0.5, "50%", font, t + 800 * MS)
+    assert_equal(isl.to_w, wide, "shorter words while running: it doesn't shrink")
     # done: it stays 4 s, then gives way to the rest
     t += 1000 * MS
     isl.show(Activity.done("Median of revenue by region", "0.69 s on RTX 3090"), font, t)

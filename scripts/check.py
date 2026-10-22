@@ -235,6 +235,43 @@ def m3():
                                                       "web; at 100M on GTK the island reads \"" + (w[0] if w else "") + "\", then the time on the GPU, then the document")
 
 
+def m4():
+    """The 100M demo: scripts/clips.py island records it; through the 3 s query the island changes in every frame (its
+    spinner, drawn by the window's thread: the window never stops); the clip and a still go to docs/img."""
+    import shutil
+    import numpy as np
+    problems = []
+    if not big().exists():
+        return False, f"no 100M-row file at {big()}"
+    r = run(["pixi", "run", "python", "scripts/clips.py", "island"], timeout=900)
+    clip, still = BUILD / "clips" / "island-100m.mp4", BUILD / "clips" / "island-100m.png"
+    if r.returncode != 0 or not clip.exists() or not still.exists():
+        return False, "scripts/clips.py island: " + (r.stdout + r.stderr)[-400:]
+    x, y, w, h = 1262, 10, 460, 40  # (the island's place in the 1742 × 876 window: BOX island)
+    import subprocess
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(clip), "-vf", f"crop={w}:{h}:{x}:{y},format=gray", "-f", "rawvideo", "-"],
+                         capture_output=True, timeout=300)
+    frames = np.frombuffer(raw.stdout, dtype=np.uint8)
+    n = frames.size // (w * h)
+    if n < 300:
+        problems.append(f"the clip has {n} frames (want 10 s or more at 30 fps)")
+    else:
+        f = frames[: n * w * h].reshape(n, h, w).astype(np.int16)
+        moving = [int(np.abs(f[k + 1] - f[k]).max()) > 24 for k in range(n - 1)]
+        best = run_len = 0
+        for m in moving:
+            run_len = run_len + 1 if m else 0
+            best = max(best, run_len)
+        if best < 75:
+            problems.append(f"the island's longest stretch changing in every frame is {best / 30:.1f} s (want ≥ 2.5 s: the 3 s query, the window never stopping)")
+    img = ROOT / "docs" / "img"
+    shutil.copy(clip, img / "clip-island-100m.mp4")
+    from PIL import Image
+    Image.open(still).convert("RGB").save(img / "clip-island-100m.jpg", quality=88)
+    return not problems, "; ".join(problems[:6]) or (f"docs/img/clip-island-100m.mp4 ({n / 30:.0f} s) and .jpg: open 100M rows, a median, a 3 s median by "
+                                                      f"month; through it the island changed in every frame for {best / 30:.1f} s straight")
+
+
 def todo(what):
     def fn():
         return False, f"not built yet: {what}"
@@ -252,7 +289,7 @@ def m5():
 
 
 MILESTONES = [("M0", m0), ("M1", m1), ("M2", m2),
-              ("M3", m3), ("M4", todo("the 100M demo")), ("M5", m5)]
+              ("M3", m3), ("M4", m4), ("M5", m5)]
 
 
 def build_all():

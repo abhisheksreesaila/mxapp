@@ -1,6 +1,10 @@
 """Record omxplorer's launch clips (docs/launch/posts.md): the native window and the browser, from a separate build folder.
 
   pixi run python scripts/clips.py [native|web|all]      → build/clips/sentence-gtk.mp4, sentence-web.mp4 (+ stills)
+  pixi run python scripts/clips.py island                → build/clips/island-100m.mp4 (+ a still mid-query): goal 30's demo
+
+island: the native window over goal 20's 100M-row file, from launch: it opens in the background (the island counts),
+Create table, a chart, "median by region" (0.7 s), "by month, as a line" (3 s), the island running and landing each time.
 
 native: GTK on the private headless display through scripts/live.py (real XTest input); only the ask field, because a
 popover's shadow draws black on Xvfb (no compositor). web: headless Chromium, where a word's
@@ -31,6 +35,31 @@ NATIVE = ";".join([
     "click:280,507", "wait:300", "type:sum by month, every month, in data order, as a line", "wait:500", "key:Return", "wait:2800",
     "shot:{out}/sentence-gtk.png", "stoprecord",
 ])
+
+
+BIG = ROOT.parent / "mojo-ui" / "build/g20/big.parquet"
+ISLAND = ";".join([
+    "record:{out}/island-100m.mp4", "wait:3200",  # launch: the 100M-row file opens in a job (the island: "Opening big.parquet · N%")
+    "click:1352,819", "wait:1500",  # Import → Create table
+    "click:737,75", "wait:1200",  # toolbar Chart (sum by region: 50 ms)
+    "drag:537,761,1390,761", "wait:900", "move:900,300", "wait:500",  # the chart's corner: as wide as the table
+    "click:280,507", "wait:300", "type:median by region", "wait:400", "key:Return", "wait:2600",
+    "click:280,507", "wait:300", "type:by month, as a line", "wait:400", "key:Return", "wait:1500",
+    "shot:{out}/island-100m.png", "wait:4200",  # (the still: mid-query, the island with its share done and pace)
+    "shot:{out}/island-100m-done.png", "stoprecord",
+])
+
+
+def island():
+    shutil.rmtree(OUT / "gtk", ignore_errors=True)
+    shutil.copytree(ROOT / "build/omxplorer/linux", OUT / "gtk")
+    big = BIG if BIG.exists() else ROOT / "build/g20/big.parquet"
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/live.py"), str(OUT / "gtk/omxplorer"), ISLAND.format(out=OUT),
+                        "--size", f"{SIZE[0]}x{SIZE[1]}", "--env", f"OMX_OPEN={big}", "--env", f"OMX_DOCUMENTS={OUT / 'docs'}"],
+                       cwd=ROOT, capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.exit("island: " + (r.stdout + r.stderr)[-800:])
+    print(f"island: {OUT / 'island-100m.mp4'}")
 
 
 def native():
@@ -144,3 +173,5 @@ if __name__ == "__main__":
         native()
     if what in ("web", "all"):
         web()
+    if what == "island":
+        island()

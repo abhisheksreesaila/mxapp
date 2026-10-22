@@ -93,6 +93,7 @@ from mojoui.island import Island, Activity, IslandView, HIT_BODY, HIT_ACTION, ID
 from mojoui.sheetjobs import ChartQueue, ColumnFigures, column_job, take_numbers, Opened, open_job, pace
 from std.os.path import getsize
 from mojoui.clock import now_ns
+from mojoui.draw import rect as draw_rect, with_alpha
 from mxframe import Job, JOB_RUNNING, JOB_DONE
 
 # screens
@@ -297,6 +298,7 @@ struct Main(App):
     var ops: List[Tuple[String, String, Int]]  # Recent: what was done, its time ("0.69 s on …", or ""), its Undo message (NO_MSG: none), newest last
     var timings: List[Float64]  # the last queries' milliseconds (Device: the last 12, p50, p95)
     var charts: ChartQueue  # charts waiting for their numbers (big tables: background jobs)
+    var held: List[Tuple[Int, SheetObject]]  # what a waiting chart showed before its change: drawn (faded) until its numbers land
     var col_job: Optional[Job[ColumnFigures]]  # the selected column's figures, coming (big tables)
     var col_started: Int
     var opening: Optional[Job[Opened]]  # a big file being read (its path in `source` once it lands)
@@ -376,6 +378,7 @@ struct Main(App):
         self.ops = List[Tuple[String, String, Int]]()
         self.timings = List[Float64]()
         self.charts = ChartQueue()
+        self.held = List[Tuple[Int, SheetObject]]()
         self.col_job = None
         self.col_started = 0
         self.opening = None
@@ -689,9 +692,10 @@ struct Main(App):
                 self.tiles[cref - TILE_REF] = t^
             elif self.big():  # (its words change now; its numbers come from a job and the bars move when they land)
                 self.message = object_title(c, self.frame)
+                self.hold(cref)
                 self.ask_chart(cref, c)
                 var keep = self.objects[cref].copy()
-                take_numbers(c, keep)  # (until then it shows what it had)
+                take_numbers(c, keep)  # (its own numbers stay the old ones until the new land: the picture is the held one)
                 c.moved = MOVE_FRAMES
                 self.objects[cref] = c^
             else:
@@ -1031,6 +1035,28 @@ struct Main(App):
         if self.charts.cref == cref:
             self.say(Activity.running(capital(object_title(spec, self.frame)), 0.0, "starting"))
 
+    def hold(mut self, cref: Int):
+        """Chart `cref` keeps showing what it shows now (faded) until its new numbers land (the first hold wins: a second
+        change while it waits still moves from the picture on screen)."""
+        for h in self.held:
+            if h[0] == cref:
+                return
+        if 0 <= cref < len(self.objects):
+            self.held.append((cref, self.objects[cref].copy()))
+
+    def held_of(self, cref: Int) -> Optional[SheetObject]:
+        for h in self.held:
+            if h[0] == cref:
+                return h[1].copy()
+        return None
+
+    def let_go(mut self, cref: Int):
+        var kept = List[Tuple[Int, SheetObject]]()
+        for h in self.held:
+            if h[0] != cref:
+                kept.append(h.copy())
+        self.held = kept^
+
     def poll_jobs(mut self):
         """Once a frame while work runs: landed charts move to their numbers, the column's figures arrive, the island
         follows (progress, then the time it took)."""
@@ -1039,7 +1065,7 @@ struct Main(App):
             if state == JOB_RUNNING:
                 var p = self.opening.value().progress()
                 var share = Float64(p.done) / Float64(p.total) if p.total > 0 else 0.0
-                self.island.progress(min(share, 1.0), String(Int(min(share, 1.0) * 100)) + "%")
+                self.island.progress(min(share, 1.0), String(Int(min(share, 1.0) * 100)) + "%", self.font, now_ns())
             else:
                 var job = self.opening.take()
                 var path = self.opening_path
@@ -1068,7 +1094,9 @@ struct Main(App):
             var done = got.value()[1].copy()
             if 0 <= cref < len(self.objects):
                 var obj = self.objects[cref].copy()
-                var before = obj.copy()
+                var shown = self.held_of(cref)
+                var before = shown.value().copy() if shown else obj.copy()
+                self.let_go(cref)
                 take_numbers(obj, done)
                 if obj.kind == OBJ_CHART:
                     start_move(obj, before)  # (the bars move from what they showed to the answer)
@@ -1086,7 +1114,7 @@ struct Main(App):
                 self.say(Activity.running(capital(object_title(self.charts.spec, self.frame)), 0.0, "starting"))
             var secs = self.charts.seconds()
             var speed = pace(self.charts.rows_done(), secs)
-            self.island.progress(self.charts.share(), String(Int(self.charts.share() * 100)) + "% · " + (speed if speed != "" else fixed(secs, 1) + " s"))
+            self.island.progress(self.charts.share(), String(Int(self.charts.share() * 100)) + "% · " + (speed if speed != "" else fixed(secs, 1) + " s"), self.font, now_ns())
         if self.col_job:
             var state = self.col_job.value().poll()
             if state != JOB_RUNNING:
@@ -1441,6 +1469,7 @@ struct Main(App):
             if k < len(self.objects):
                 _ = self.objects.pop(k)
                 self.charts.forget()  # (refs after it moved: their jobs would land on the wrong object)
+                self.held = List[Tuple[Int, SheetObject]]()
                 self.chart_undo = List[Tuple[Int, Int, SheetObject]]()  # (refs after it moved: its changes can't be undone any more)
                 self.asking = -1
                 if self.active == k:
@@ -1762,8 +1791,11 @@ struct Main(App):
             var st = self.frame.style_of(col, self.grid.cur_row) if col >= 0 else CellStyle()
             draw_swatches(surface, st.fill() if self.picking == PICK_FILL else st.ink(), self.picking == PICK_FILL, self.font, self.pal)
         elif 10 <= canvas < 10 + len(self.objects):
-            var cv = chart_view(self.objects[canvas - 10], self.frame)
+            var shown = self.held_of(canvas - 10)
+            var cv = chart_view(shown.value().copy() if shown else self.objects[canvas - 10].copy(), self.frame)
             cv.draw(surface, self.font, self.chart_palette())
+            if shown:  # (its numbers are coming: the old picture, faded, until they land)
+                draw_rect(surface, 0, 0, Float64(surface.width), Float64(surface.height), with_alpha(self.pal.card, 0.55))
             if self.objects[canvas - 10].moved < MOVE_FRAMES:  # (mid-move: the next frame draws it further along)
                 self.objects[canvas - 10].moved += 1
                 surface.again = True
