@@ -9,7 +9,7 @@ from mojoui.sheet import Sheet
 from mojoui.shared import make_dir
 from mojoui.sheetpage import (SheetObject, compute, chart_text, COMBINE_SUM, COMBINE_AVERAGE, COMBINE_COUNT, COMBINE_MEDIAN, COMBINE_P90,
                               ORDER_LARGEST, PART_MONTH, NUM_OVER)
-from mojoui.sheetjobs import chart_job, take_numbers, progress_share
+from mojoui.sheetjobs import chart_job, take_numbers, progress_share, ChartQueue, column_job
 
 
 def two(n: Int) -> String:
@@ -89,4 +89,30 @@ def main() raises:
     slow.cancel()
     var state = slow.wait()
     assert_true(state == JOB_CANCELLED or state == JOB_DONE, "cancelled (or done before the cancel was seen)")
+    # the queue: a newer spec for the running chart cancels it; another chart waits its turn; only the newest lands
+    var q = ChartQueue()
+    var a = SheetObject.chart(0, 2, 0, 0)
+    var b = a.copy()
+    b.combine = COMBINE_MEDIAN
+    q.ask(0, a, s)
+    q.ask(0, b, s)
+    q.ask(1, a, s)
+    var landed = List[Tuple[Int, Int]]()
+    while q.busy():
+        var got = q.poll(s)
+        if got:
+            landed.append((got.value()[0], got.value()[1].combine))
+    assert_equal(len(landed), 2, "two charts landed")
+    assert_equal(landed[0][0], 0)
+    assert_equal(landed[0][1], COMBINE_MEDIAN, "chart 0's newest spec")
+    assert_equal(landed[1][0], 1)
+    # a column's figures through a job equal them in place
+    var cj = column_job(s, 0, True)
+    var fig = cj.result()
+    var r = s.totals(0)
+    var m = s.median(0)
+    assert_equal(fig.sum, r.sums[0])
+    assert_equal(fig.present, r.present[0])
+    assert_equal(fig.median, Int(m[0]))
+    assert_equal(fig.distinct, s.distinct(0))
     print("CHART JOB TESTS PASSED")

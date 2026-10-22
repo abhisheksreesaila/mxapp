@@ -92,6 +92,7 @@ COMPOSITES = [
     ("Format toggles (Bold, Italic, Align…)", "mojoui/sheetchrome.mojo", ["Icon toggle shown pressed", "Lucide icon set", "Tooltips", "Divider"], "toggles="),
     ("Bottom tabs, renamed in place", "mojoui/sheetchrome.mojo", ["Button", "In-place editor", "Quiet buttons"], "BottomTabs("),
     ("Cell styles (bold, italic, underline, strikethrough, colours, alignment)", "mojoui/cellstyle.mojo", ["Canvas"], "restyle("),
+    ("Island (the window's living status: work, results, undo, errors)", "mojoui/island.mojo", ["Canvas", "Canvas: pan, zoom, tap", "Canvas frames (animation)"], "IslandView("),
     ("Swatch picker", "mojoui/swatches.mojo", ["Canvas", "Canvas: pan, zoom, tap", "Popover"], "SwatchPicker("),
     ("Column number formats", "mojoui/numformat.mojo", ["Canvas", "Text"], "set_format("),
     ("Sheet objects (charts, pivots)", "mojoui/sheetpage.mojo", ["Board: drag, resize, snap", "Canvas", "Card", "Grid"], "object_card("),
