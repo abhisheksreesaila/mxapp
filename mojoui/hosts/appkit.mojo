@@ -25,6 +25,7 @@ from mojoui.png import encode_png
 from mojoui.app import App, Event, Runtime
 from mojoui.canvas import Surface
 from mojoui.hosts.apple_canvas import CGPoint, CGRect, cfunc, cg_image, AppleCanvas
+from mojoui.hosts.mac_report import MacReport, MAX_SHOTS, pts
 from mojoui.hosts.objc import (
     cls, sel, msg, new, ns_string, ns_data, ns_array, ns_number, ns_date, date_text, sf_symbol, from_ns, constrain, prefer,
     new_class, add_method, add_protocol, register_class, pool_push,
@@ -136,6 +137,7 @@ struct AppKitHost[A: App](Movable):
     var toast_text: String
     var toast_claimed: Bool
     var has_menubar: Bool  # the screen put its own menus in the system menu bar (D-150)
+    var report: MacReport  # Debug → Record: pictures and view dumps on the Desktop (mojoui/hosts/mac_report.mojo)
 
     def __init__(out self):
         Self.A.init_shared()
@@ -160,6 +162,7 @@ struct AppKitHost[A: App](Movable):
         self.toast_text = ""
         self.toast_claimed = False
         self.has_menubar = False
+        self.report = MacReport()
 
     def ink(self) -> Int:
         return ns_color(self.pal.ink) if self.skinned else msg(cls("NSColor"), "labelColor")
@@ -543,6 +546,18 @@ struct AppKitHost[A: App](Movable):
             _ = msg(w, "setDatePickerElements:", 0x00E0)  # year, month, day
             _ = msg(w, "setDateValue:", ns_date(node.text))
             self.wire(w, i, self_addr, "date:")
+        elif node.kind == ICON and node.text == "app-logo" and self.rt.app.logo() != "":
+            # the app's mark: NSImage reads SVG itself (macOS 14+); a symbol stands in if it can't
+            var svg = self.rt.app.logo()
+            var bytes = List[UInt8](svg.as_bytes())
+            var logo = msg(msg(cls("NSImage"), "alloc"), "initWithData:", ns_data(bytes))
+            if logo == 0:
+                self.report.note("app-logo: NSImage can't read the SVG")
+                logo = msg(cls("NSImage"), "imageWithSystemSymbolName:accessibilityDescription:", ns_string("square.grid.2x2"), 0)
+            _ = msg(logo, "setSize:", Float64(node.size), Float64(node.size))
+            w = msg(cls("NSImageView"), "imageViewWithImage:", logo)
+            constrain(w, "widthAnchor", Float64(node.size))
+            constrain(w, "heightAnchor", Float64(node.size))
         elif node.kind == ICON:
             var image = msg(cls("NSImage"), "imageWithSystemSymbolName:accessibilityDescription:", ns_string(sf_symbol(node.text)), 0)
             w = msg(cls("NSImageView"), "imageViewWithImage:", image)
@@ -831,6 +846,11 @@ struct AppKitHost[A: App](Movable):
             self.toast = 0
             self.toast_text = ""
         self.toast_claimed = False
+        _ = msg(root, "setWantsLayer:", 1)  # an opaque page under everything: without it, a label's old text stayed on screen under its new text (Mac, 2026-10-22)
+        if self.skinned:
+            _ = msg(msg(root, "layer"), "setBackgroundColor:", msg(ns_color(self.pal.page), "CGColor"))
+        else:
+            _ = msg(msg(root, "layer"), "setBackgroundColor:", msg(msg(cls("NSColor"), "windowBackgroundColor"), "CGColor"))
         if self.rt.shown.nodes[0].grows or self.rt.shown.nodes[0].fills:  # the screen fills the window
             _ = msg(self.window, "setContentView:", root)
         else:
@@ -848,6 +868,7 @@ struct AppKitHost[A: App](Movable):
             # finished ending the old field's edit), with the cursor at the end.
             _ = msg(self.target, "performSelector:withObject:afterDelay:", sel("focusField:"), self.widgets[self.focus], Float64(0))
         self.focus = -1
+        self.add_debug_menu(self_addr)
 
     def copy_if_asked(mut self):
         """A Clipboard view whose version moved on: its text goes on the general pasteboard as plain text."""
@@ -860,6 +881,8 @@ struct AppKitHost[A: App](Movable):
 
     def apply(mut self, d: Diff, self_addr: Int):
         self.copy_if_asked()
+        if d.rebuild or len(d.patches) > 0:
+            self.queue_snapshot(self_addr)
         if d.rebuild:
             self.show(self_addr)
             return
@@ -909,6 +932,145 @@ struct AppKitHost[A: App](Movable):
                 _ = msg(self.widgets[k], "reloadData")
         self.wake()
 
+    # ---------- the Mac report (Debug menu) ----------
+
+    def add_debug_menu(self, self_addr: Int):
+        """Debug in the menu bar (whichever menus the screen put there): record a report, take one picture, open its folder."""
+        var bar = msg(msg(cls("NSApplication"), "sharedApplication"), "mainMenu")
+        if bar == 0 or msg(bar, "itemWithTitle:", ns_string("Debug")) != 0:
+            return
+        var item = new("NSMenuItem")
+        _ = msg(item, "setTitle:", ns_string("Debug"))
+        var menu = msg(msg(cls("NSMenu"), "alloc"), "initWithTitle:", ns_string("Debug"))
+        _ = msg(menu, "setAutoenablesItems:", 0)
+        var actions: List[Tuple[String, String, String]] = [("Record a report", "debugRecord:", "r"), ("Take a snapshot", "debugSnapshot:", "s"),
+                                                            ("Open the report folder", "debugOpen:", "")]
+        for a in actions:
+            var it = msg(menu, "addItemWithTitle:action:keyEquivalent:", ns_string(a[0]), sel(a[1]), ns_string(a[2]))
+            _ = msg(it, "setKeyEquivalentModifierMask:", (1 << 20) | (1 << 19))  # ⌘⌥
+            _ = msg(it, "setTarget:", self.target)
+            _ = msg(it, "setTag:", self_addr)
+            if a[1] == "debugRecord:" and self.report.on:
+                _ = msg(it, "setState:", 1)
+        _ = msg(item, "setSubmenu:", menu)
+        _ = msg(bar, "addItem:", item)
+
+    def start_report(mut self):
+        if self.report.on:
+            return
+        self.report.start(self.rt.app.title(), self.window)
+        var b = msg[CGRect](msg(self.window, "contentView"), "bounds")
+        self.report.note("content: " + pts(b.width) + " x " + pts(b.height) + " pt (told to the app as its size)")
+        var bar = msg(msg(cls("NSApplication"), "sharedApplication"), "mainMenu")
+        var debug = msg(bar, "itemWithTitle:", ns_string("Debug")) if bar != 0 else 0
+        if debug != 0:
+            _ = msg(msg(msg(debug, "submenu"), "itemAtIndex:", 0), "setState:", 1)
+
+    def queue_snapshot(mut self, self_addr: Int):
+        """A picture once the screen settles (0.4 s after the first change; changes in between share it)."""
+        if not self.report.on or self.report.pending or self.report.count >= MAX_SHOTS:
+            return
+        self.report.pending = True
+        _ = msg(self.target, "performSelector:withObject:afterDelay:", sel("debugQueued:"), ns_number(self_addr), Float64(0.4))
+
+    def snapshot(mut self):
+        self.report.pending = False
+        if not self.report.on or self.report.count >= MAX_SHOTS or self.window == 0:
+            return
+        var name = self.report.next_name()
+        var content = msg(self.window, "contentView")
+        var pictured = self.report.save_png(content, name + ".png")
+        var problems = List[String]()
+        var dump = self.dump_views(problems)
+        self.report.write(name + ".txt", dump)
+        var line = "snapshot " + name + ("" if pictured else " (no picture)")
+        if self.popover != 0:
+            line += " · a popover is open (not in the picture)"
+        if self.sheet != 0:
+            line += " · a dialog is open (not in the picture)"
+        self.report.note(line + " · " + String(len(problems)) + " problems")
+        for k in range(min(len(problems), 12)):
+            self.report.note("  " + problems[k])
+        self.report.cause = "change"
+
+    def dump_views(self, mut problems: List[String]) -> String:
+        """Every node of the screen, indented as the view tree: its kind, text, what it asked for and where AppKit put it."""
+        var content = msg(self.window, "contentView")
+        var cb = msg[CGRect](content, "bounds")
+        var out = String("window content " + pts(cb.width) + " x " + pts(cb.height) + " pt · x, y from the top left\n")
+        out += "kind 'text' [asked] @ x,y w x h  flags\n\n"
+        var stack: List[Tuple[Int, Int]] = [(0, 0)]
+        while len(stack) > 0:
+            var top = stack.pop()
+            var i = top[0]
+            var depth = top[1]
+            ref n = self.rt.shown.nodes[i]
+            var line = String("")
+            for _ in range(depth):
+                line += "  "
+            line += kind_name(n.kind)
+            if n.text != "" and n.kind != IMAGE:
+                var t = n.text if n.text.byte_length() <= 60 else String(n.text[byte=:57]) + "..."
+                line += " '" + t + "'"
+            var asked = String("")
+            if n.w != 0:
+                asked += " w" + String(n.w)
+            if n.h != 0:
+                asked += " h" + String(n.h)
+            if n.grows:
+                asked += " grow"
+            if n.fills:
+                asked += " fill"
+            if asked != "":
+                line += " [" + String(asked[byte=1:]) + "]"
+            var w = self.widgets[i] if i < len(self.widgets) else 0
+            if w == 0:
+                if n.kind != ITEM and n.kind != MENU and n.kind != CLIPBOARD and n.kind != DIALOG and n.kind != POPOVER and n.kind != TOAST and n.kind != SPACER:
+                    line += "  (no view)"
+            elif (msg(w, "isKindOfClass:", cls("NSView")) & 0xFF) != 0:
+                var b = msg[CGRect](w, "bounds")
+                var r = msg[CGRect](w, "convertRect:toView:", b.x, b.y, b.width, b.height, 0)
+                var top_y = cb.height - (r.y + r.height)
+                line += " @ " + pts(r.x) + "," + pts(top_y) + " " + pts(r.width) + "x" + pts(r.height)
+                var flags = String("")
+                if (msg(w, "isHiddenOrHasHiddenAncestor") & 0xFF) != 0:
+                    flags += " hidden"
+                if r.width < 1 or r.height < 1:
+                    flags += " ZERO-SIZE"
+                    problems.append(kind_name(n.kind) + " '" + n.text + "' (node " + String(i) + ") has no size: " + pts(r.width) + "x" + pts(r.height))
+                elif r.x + r.width < 1 or top_y + r.height < 1 or r.x > cb.width - 1 or top_y > cb.height - 1:
+                    flags += " OFF-WINDOW"
+                    problems.append(kind_name(n.kind) + " '" + n.text + "' (node " + String(i) + ") is outside the window")
+                if n.kind == CANVAS:
+                    var k = self.canvas_at(i)
+                    if k >= 0:
+                        flags += " canvas " + String(self.canvases[k].wpx) + "x" + String(self.canvases[k].hpx) + " px drawn v" + String(self.canvases[k].drawn) + " of v" + String(n.value)
+                        if self.canvases[k].wpx == 0:
+                            problems.append("canvas node " + String(i) + " (id " + String(n.style) + ") was never drawn")
+                if n.kind == ICON or ((n.kind == BUTTON) and n.hint != ""):
+                    var name = n.text if n.kind == ICON else n.hint
+                    if sf_symbol(name) == "questionmark.square.dashed" and name != "app-logo":
+                        flags += " NO-SYMBOL(" + name + ")"
+                        problems.append("icon '" + name + "' has no SF Symbol")
+                line += flags
+            out += line + "\n"
+            var kids = n.children.copy()
+            var j = len(kids) - 1
+            while j >= 0:
+                stack.append((kids[j], depth + 1))
+                j -= 1
+        return out^
+
+    def resized(mut self, self_addr: Int):
+        """The window's content area changed size: the app lays out to it (App.resize), as on GTK and the web."""
+        var b = msg[CGRect](msg(self.window, "contentView"), "bounds")
+        var w = Int(b.width + 0.5)
+        var h = Int(b.height + 0.5)
+        if w <= 0 or h <= 0:
+            return
+        var d = self.rt.resize(w, h)
+        self.apply(d, self_addr)
+
     # ---------- canvases ----------
 
     def canvas_at(self, node: Int) -> Int:
@@ -918,6 +1080,9 @@ struct AppKitHost[A: App](Movable):
         return -1
 
     def canvas_send(mut self, node: Int, kind: Int, x: Float64, y: Float64, dx: Float64, dy: Float64, zoom: Float64, self_addr: Int):
+        if self.report.on and kind != PAN and kind != ZOOM:
+            self.report.cause = "canvas " + gesture_name(kind)
+            self.report.note("event: canvas node " + String(node) + " " + gesture_name(kind) + " at " + pts(x) + ", " + pts(y))
         var d = self.rt.gesture(node, kind, x, y, dx, dy, zoom)
         self.apply(d, self_addr)
 
@@ -964,6 +1129,9 @@ struct AppKitHost[A: App](Movable):
             self.canvases[k].pixels = List[UInt32](length=wpx * hpx, fill=0)
         var surface = Surface(Int(self.canvases[k].pixels.unsafe_ptr()), wpx, hpx, scale)
         var d = self.rt.draw(node, surface)
+        if wpx != self.canvases[k].wpx or hpx != self.canvases[k].hpx:
+            self.report.note("canvas node " + String(node) + " (id " + String(self.rt.shown.nodes[node].style) + ") drew " + String(wpx) + "x" + String(hpx) + " px, "
+                             + pts(bounds.width) + "x" + pts(bounds.height) + " pt")
         var image = cg_image(self.canvases[k].pixels, wpx, hpx)
         var picture = msg(msg(cls("NSImage"), "alloc"), "initWithCGImage:size:", image, bounds.width, bounds.height)
         _ = msg(view, "setImage:", picture)
@@ -981,8 +1149,34 @@ struct AppKitHost[A: App](Movable):
         if message == 0:
             return
         self.focus = node if n.kind == FIELD else -1
+        if self.report.on:
+            self.report.cause = kind_name(n.kind) + " " + n.text
+            self.report.note("event: " + kind_name(n.kind) + " '" + n.text + "' (node " + String(node) + ")" + (" text '" + text + "'" if text != "" else "") + (" number " + String(number) if number != 0 else ""))
         var d = self.rt.dispatch(Event(message, text, number))
         self.apply(d, self_addr)
+
+
+def kind_name(kind: Int) -> String:
+    """A node's kind, for the report."""
+    var names: List[Tuple[Int, String]] = [(TEXT, "Text"), (BUTTON, "Button"), (VSTACK, "VStack"), (HSTACK, "HStack"), (SPACER, "Spacer"), (FIELD, "TextField"),
+        (TOGGLE, "Toggle"), (DROPDOWN, "Dropdown"), (SLIDER, "Slider"), (PROGRESS, "Progress"), (DIVIDER, "Divider"), (SCROLL, "Scroll"), (IMAGE, "Image"),
+        (SEGMENTED, "Segmented"), (RADIO, "Radio"), (TEXTAREA, "TextArea"), (ALERT, "Alert"), (TABS, "Tabs"), (NAVBAR, "NavBar"), (DATE, "Date"),
+        (ICON, "Icon"), (GRID, "Grid"), (LAZYLIST, "LazyList"), (CANVAS, "Canvas"), (BOARD, "Board"), (OVERLAY, "Overlay"), (MENUBAR, "MenuBar"),
+        (MENU, "Menu"), (ITEM, "Item"), (DIALOG, "Dialog"), (TOAST, "Toast"), (POPOVER, "Popover"), (CLIPBOARD, "Clipboard")]
+    for p in names:
+        if p[0] == kind:
+            return p[1]
+    return "kind" + String(kind)
+
+
+def gesture_name(kind: Int) -> String:
+    if kind == TAP: return "tap"
+    if kind == DOUBLE: return "double-tap"
+    if kind == PRESS: return "press"
+    if kind == RELEASE: return "release"
+    if kind == SECONDARY: return "right-click"
+    if kind == KEY: return "key"
+    return "gesture" + String(kind)
 
 
 def flexible_spacer(vertical: Bool) -> Int:
@@ -1141,6 +1335,37 @@ def on_menu_item[A: App](target: Int, cmd: Int, item: Int) abi("C"):
     var host = host_at[A](t[0])
     if t[1] < len(host[].rt.shown.nodes) and host[].rt.shown.nodes[t[1]].kind == ITEM:
         host[].send(t[1], False, "", 0, t[0])
+
+
+def on_debug_record[A: App](target: Int, cmd: Int, item: Int) abi("C"):
+    """Debug → Record a report: from now on, a picture and a view dump after every change."""
+    var host = host_at[A](msg(item, "tag"))
+    host[].start_report()
+    host[].report.cause = "record"
+    host[].snapshot()
+
+
+def on_debug_snapshot[A: App](target: Int, cmd: Int, item: Int) abi("C"):
+    var host = host_at[A](msg(item, "tag"))
+    host[].start_report()
+    host[].report.cause = "snapshot"
+    host[].snapshot()
+
+
+def on_debug_open[A: App](target: Int, cmd: Int, item: Int) abi("C"):
+    var host = host_at[A](msg(item, "tag"))
+    host[].start_report()
+    _ = msg(msg(cls("NSWorkspace"), "sharedWorkspace"), "openURL:", msg(cls("NSURL"), "fileURLWithPath:", ns_string(host[].report.dir)))
+
+
+def on_debug_queued[A: App](target: Int, cmd: Int, number: Int) abi("C"):
+    host_at[A](msg(number, "longLongValue"))[].snapshot()
+
+
+def on_window_resized[A: App](target: Int, cmd: Int, notification: Int) abi("C"):
+    var window = msg(notification, "object")
+    var addr = msg(msg(window, "identifier"), "longLongValue")
+    host_at[A](addr)[].resized(addr)
 
 
 def on_close_overlay[A: App](target: Int, cmd: Int, sender: Int) abi("C"):
@@ -1421,6 +1646,11 @@ def run[A: App]() -> c_int:
     add_method(c, "showAlert:", on_show_alert[A], "v@:@")
     add_method(c, "menuItem:", on_menu_item[A], "v@:@")
     add_method(c, "closeOverlay:", on_close_overlay[A], "v@:@")
+    add_method(c, "debugRecord:", on_debug_record[A], "v@:@")
+    add_method(c, "debugSnapshot:", on_debug_snapshot[A], "v@:@")
+    add_method(c, "debugOpen:", on_debug_open[A], "v@:@")
+    add_method(c, "debugQueued:", on_debug_queued[A], "v@:@")
+    add_method(c, "windowDidResize:", on_window_resized[A], "v@:@")
     add_method(c, "showPopover:", on_show_popover[A], "v@:@")
     add_method(c, "popoverDidClose:", on_popover_closed[A], "v@:@")
     add_method(c, "showSheet:", on_show_sheet[A], "v@:@")
@@ -1462,9 +1692,17 @@ def run[A: App]() -> c_int:
     )
     _ = msg(host[].window, "setTitle:", ns_string(title))
     _ = msg(host[].window, "setReleasedWhenClosed:", 0)
+    _ = msg(host[].window, "setIdentifier:", ns_string(String(addr)))  # (windowDidResize: finds the host by it)
+    var size = host[].rt.app.window_size()
+    _ = host[].rt.resize(size[0], size[1])  # the app lays out to its window from the first screen (App.resize)
     host[].show(addr)
     _ = msg(host[].window, "center")
     _ = msg(host[].window, "makeKeyAndOrderFront:", 0)
+    _ = msg(host[].window, "setDelegate:", host[].target)  # windowDidResize: → App.resize
     _ = msg(app, "activateIgnoringOtherApps:", 1)
+    if host[].rt.app.records():  # the app asks for a report from the start (the Mac check app)
+        host[].start_report()
+        host[].report.cause = "launch"
+        host[].queue_snapshot(addr)
     _ = msg(app, "run")
     return 0

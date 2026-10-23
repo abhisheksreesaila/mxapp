@@ -277,6 +277,8 @@ def sf_symbol(name: String) -> String:
     if name == "decimals-more": return "arrow.right.to.line"
     if name == "clear-format": return "eraser"
     if name == "rename": return "pencil"
+    if name == "copy": return "doc.on.doc"
+    if name == "settings": return "gearshape"
     return "questionmark.square.dashed"
 
 

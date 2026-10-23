@@ -93,6 +93,11 @@ trait App(Movable, Deinitable):
         it; size changes reach the screen as patches, not rebuilds. The default ignores it."""
         pass
 
+    def records(self) -> Bool:
+        """True asks the host to record a report from launch (the Mac host: pictures and a view dump of every change,
+        in ~/Desktop/omxcode-report-<app>/). Every app can still start one from the Debug menu. The default: no."""
+        return False
+
     def appearance(mut self, dark: Bool):
         """The system is in dark (or light) mode: hosts say so when the window opens and whenever the person switches.
         An app with no theme of its own draws its canvases to match (Theme.native(dark)). The default ignores it."""

@@ -2080,9 +2080,16 @@ struct GtkHost[A: App](Movable):
             var t0 = perf_counter_ns()
             var d = self.rt.frame(node, now - last if last > 0 else 16667)
             self.trace_diff("event frame", t0, d)
+            var widget = self.canvases[ci].widget
             self.apply(d, self_addr)
             if d.rebuild:
-                return False  # the new widgets get their own ticks
+                # the new widgets get their own ticks; a canvas a partial rebuild kept loses this callback, so it
+                # isn't armed any more (else arm() skips it and its frames stop: maccheck's ticker, 2026-10-22)
+                for k in range(len(self.canvases)):
+                    if self.canvases[k].widget == widget:
+                        self.canvases[k].armed = False
+                        self.arm(k, self_addr)
+                return False
         else:
             self.canvases[ci].last_us = 0
         self.draw_canvas(ci, self_addr)
